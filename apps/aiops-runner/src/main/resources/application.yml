@@ -1,0 +1,10 @@
+spring:
+  application:
+    name: aiops-runner
+server:
+  port: ${AIOPS_RUNNER_PORT:8082}
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics

@@ -1,0 +1,10 @@
+spring:
+  application:
+    name: aiops-worker
+server:
+  port: ${AIOPS_WORKER_PORT:8081}
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics

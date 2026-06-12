@@ -1,0 +1,12 @@
+{
+  "name": "aegisops",
+  "version": "0.0.1",
+  "description": "AegisOps / FaultLens AI Ops platform",
+  "private": true,
+  "scripts": {
+    "docs:init": "node scripts/docs.mjs init",
+    "docs:new": "node scripts/docs.mjs new",
+    "docs:check": "node scripts/docs.mjs check",
+    "docs:index": "node scripts/docs.mjs index"
+  }
+}

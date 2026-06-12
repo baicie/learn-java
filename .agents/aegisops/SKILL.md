@@ -1953,3 +1953,44 @@ turning raw alerts into explainable incidents,
 turning incidents into safe actions,
 turning actions into reusable knowledge.
 ```
+
+---
+
+## 25. Document Governance
+
+All project documents must follow the governance rules in:
+
+```txt
+.skills/aegisops/references/doc-governance.md
+```
+
+Key rules:
+
+```txt
+- All documents go under docs/
+- Every document requires YAML frontmatter (title, type, status, phase, owner, created, updated, related)
+- Process documents (design, review, fix) are phase-scoped: docs/designs/<phase>/, docs/reviews/<phase>/, docs/fixes/<phase>/
+- ADR uses numbered filenames: docs/adr/NNNN-slug.md
+- Process documents use date prefix: YYYY-MM-DD-slug.md
+- Accepted ADRs are never edited; create a new one to change a decision
+- docs/INDEX.md is auto-generated; never edit it manually
+```
+
+Use the docs script to create and manage documents:
+
+```txt
+node scripts/docs.mjs init    # initialize directory structure
+node scripts/docs.mjs new <type> <slug> --title "Title" --phase phase-0
+node scripts/docs.mjs check    # validate frontmatter and naming
+node scripts/docs.mjs index     # regenerate docs/INDEX.md
+```
+
+Reference docs for agents:
+
+```txt
+.skills/aegisops/references/doc-governance.md       # document rules
+.skills/aegisops/references/phase-checklist.md     # phase start/close checklist
+.skills/aegisops/references/architecture-boundaries.md  # module and app boundaries
+.skills/aegisops/references/automation-safety.md     # risk levels and safety rules
+```
+
