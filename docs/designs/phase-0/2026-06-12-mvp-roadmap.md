@@ -1,6 +1,21 @@
-可以。下面我按 **“我认为最适合你当前能力、最容易做出 MVP、后续也能商业化扩展”** 的方案来设计。
+---
+title: MVP Product & Architecture Roadmap
+type: design
+status: draft
+phase: phase-0
+owner: ai
+created: 2026-06-12
+updated: 2026-06-12
+related:
+  - docs/architecture/system-overview.md
+  - docs/phases/phase-0/README.md
+---
 
-我不会把它设计成一开始就很重的“全栈 AIOps 巨无霸”，而是设计成：
+# MVP Product & Architecture Roadmap
+
+可以。下面我按 **"我认为最适合你当前能力、最容易做出 MVP、后续也能商业化扩展"** 的方案来设计。
+
+我不会把它设计成一开始就很重的"全栈 AIOps 巨无霸"，而是设计成：
 
 ```txt
 AegisOps / FaultLens
@@ -16,7 +31,7 @@ AegisOps / FaultLens
 4. 数据源可插拔，先接 Zabbix，后接 OTel / Prometheus / RUM
 5. AI 只做分析和编排，不能直接操作生产
 6. 自动化执行必须有审批、策略、审计、回滚
-7. MVP 先跑通“告警 → 事故 → 诊断 → 处置 → 复盘”闭环
+7. MVP 先跑通"告警 → 事故 → 诊断 → 处置 → 复盘"闭环
 ```
 
 ---
@@ -44,7 +59,7 @@ AegisOps
 一句话：
 
 ```txt
-把 Zabbix、日志、指标、发布记录、Runbook 和大模型串起来，让线上故障从“人肉排查”变成“证据链诊断 + 可控处置”。
+把 Zabbix、日志、指标、发布记录、Runbook 和大模型串起来，让线上故障从"人肉排查"变成"证据链诊断 + 可控处置"。
 ```
 
 ---
@@ -118,15 +133,13 @@ AegisOps
 
 这里的关键是：**Zabbix 是数据源，Ansible 是执行器，大模型是分析器，真正的核心是 Incident 事故模型。**
 
-Spring Boot 当前官方项目页仍强调它适合创建可直接运行的生产级 Spring 应用；Spring Boot 4.1.0 的系统要求显示其最低需要 Java 17，并兼容到 Java 26，所以你用 **Java 21 + Spring Boot 4.x** 做新项目是合理的。保守企业客户环境也可以降到 Spring Boot 3.x。([Home][1])
+Spring Boot 当前官方项目页仍强调它适合创建可直接运行的生产级 Spring 应用；Spring Boot 4.1.0 的系统要求显示其最低需要 Java 17，并兼容到 Java 26，所以你用 **Java 21 + Spring Boot 4.x** 做新项目是合理的。保守企业客户环境也可以降到 Spring Boot 3.x。
 
 ---
 
 # 三、最终推荐技术栈
 
 ## 1. 前端
-
-你可以用 React，也可以未来用 Zeus / zeus-ui 做自研组件验证。但产品 MVP 我建议先用成熟栈。
 
 ```txt
 React
@@ -181,7 +194,7 @@ Micrometer
 OpenTelemetry Java Agent
 ```
 
-OpenTelemetry 官方定位是厂商中立的可观测框架，用于生成、收集和导出 traces、metrics、logs；Collector 则提供统一的接收、处理、导出管道，所以你的平台后续要兼容 OTel，而不是自定义一切采集协议。([OpenTelemetry][2])
+OpenTelemetry 官方定位是厂商中立的可观测框架，用于生成、收集和导出 traces、metrics、logs；Collector 则提供统一的接收、处理、导出管道，所以你的平台后续要兼容 OTel，而不是自定义一切采集协议。
 
 ---
 
@@ -197,7 +210,7 @@ pgvector：MVP 阶段做知识库向量检索
 Milvus：后期数据量大了再引入
 ```
 
-VictoriaMetrics 支持 Prometheus remote write 集成，适合作为指标长期存储；ClickHouse 是高性能列式 OLAP 数据库，适合日志、事件、RUM 这类大宽表分析场景。([docs.victoriametrics.com][3])
+VictoriaMetrics 支持 Prometheus remote write 集成，适合作为指标长期存储；ClickHouse 是高性能列式 OLAP 数据库，适合日志、事件、RUM 这类大宽表分析场景。
 
 ---
 
@@ -232,7 +245,6 @@ Kafka / Redpanda
 ```java
 public interface LlmProvider {
     ChatResult chat(ChatRequest request);
-
     EmbeddingResult embed(EmbeddingRequest request);
 }
 ```
@@ -409,7 +421,7 @@ aegisops/
 
 # 六、核心领域模型
 
-你这个产品的核心不是“监控项”，而是 **Incident**。
+你这个产品的核心不是"监控项"，而是 **Incident**。
 
 ## 1. Asset 资产模型
 
@@ -616,25 +628,12 @@ AI 输出必须结构化：
   "suspectedRootCause": "order-service v1.8.3 发布后 couponConfig 为空",
   "confidence": 0.82,
   "evidence": [
-    {
-      "type": "change",
-      "description": "15:20 发布 order-service v1.8.3"
-    },
-    {
-      "type": "metric",
-      "description": "15:23 后错误率从 0.2% 升至 8.7%"
-    },
-    {
-      "type": "log",
-      "description": "日志聚类出现 NullPointerException: couponConfig is null"
-    }
+    { "type": "change", "description": "15:20 发布 order-service v1.8.3" },
+    { "type": "metric", "description": "15:23 后错误率从 0.2% 升至 8.7%" },
+    { "type": "log", "description": "日志聚类出现 NullPointerException: couponConfig is null" }
   ],
   "suggestions": [
-    {
-      "title": "回滚 order-service v1.8.3",
-      "risk": "medium",
-      "requiresApproval": true
-    }
+    { "title": "回滚 order-service v1.8.3", "risk": "medium", "requiresApproval": true }
   ]
 }
 ```
@@ -768,11 +767,7 @@ R8：是否属于告警风暴中的重复告警
 每条规则输出：
 
 ```json
-{
-  "rule": "RECENT_DEPLOYMENT",
-  "score": 0.35,
-  "evidence": "事故发生前 8 分钟存在 order-service v1.8.3 发布"
-}
+{ "rule": "RECENT_DEPLOYMENT", "score": 0.35, "evidence": "事故发生前 8 分钟存在 order-service v1.8.3 发布" }
 ```
 
 最后组合成：
@@ -948,7 +943,7 @@ Worker 消费
 ## 2. AI 诊断流
 
 ```txt
-用户点击“AI 诊断”
+用户点击"AI 诊断"
   ↓
 aiops-server 创建 diagnosis task
   ↓
@@ -1153,7 +1148,7 @@ Zabbix 中出现 problem 后，平台能看到对应 AlertEvent。
 目标：
 
 ```txt
-从“告警列表”升级为“事故中心”。
+从"告警列表"升级为"事故中心"。
 ```
 
 交付物：
@@ -1229,7 +1224,7 @@ Zabbix trigger 相关历史值
 验收标准：
 
 ```txt
-进入 Incident 后，系统能自动查询事故前后 30 分钟指标，并生成“可能原因 + 证据”。
+进入 Incident 后，系统能自动查询事故前后 30 分钟指标，并生成"可能原因 + 证据"。
 ```
 
 ---
@@ -1270,7 +1265,7 @@ AI 输出模板：
 验收标准：
 
 ```txt
-点击“AI 诊断”后，平台能生成一份包含证据链的事故分析报告，而不是泛泛而谈。
+点击"AI 诊断"后，平台能生成一份包含证据链的事故分析报告，而不是泛泛而谈。
 ```
 
 ---
@@ -1280,7 +1275,7 @@ AI 输出模板：
 目标：
 
 ```txt
-从“分析问题”进入“辅助处理问题”。
+从"分析问题"进入"辅助处理问题"。
 ```
 
 交付物：
@@ -1352,7 +1347,7 @@ Incident 页面可以推荐 Runbook。
 
 ```txt
 关闭 Incident 时自动生成复盘草稿。
-下次类似告警出现时，AI 能提示“历史上发生过类似事故”。
+下次类似告警出现时，AI 能提示"历史上发生过类似事故"。
 ```
 
 ---
@@ -1554,8 +1549,8 @@ Docker Compose MVP，K8s/Helm 后置
 最重要的一点：
 
 ```txt
-不要围绕“大模型”设计产品。
-要围绕“事故闭环”设计产品。
+不要围绕"大模型"设计产品。
+要围绕"事故闭环"设计产品。
 ```
 
 大模型只是帮你解释证据、生成建议、调用工具。真正值钱的是：
@@ -1572,7 +1567,3 @@ Runbook
 ```
 
 你先把这个 MVP 做出来，就已经不是普通监控平台，而是一个真正有产品雏形的 AI Ops。
-
-[1]: https://spring.io/projects/spring-boot?utm_source=chatgpt.com "Spring Boot"
-[2]: https://opentelemetry.io/docs/?utm_source=chatgpt.com "Documentation"
-[3]: https://docs.victoriametrics.com/victoriametrics/integrations/prometheus/?utm_source=chatgpt.com "Prometheus - VictoriaMetrics: Integrations"

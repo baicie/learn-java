@@ -135,29 +135,29 @@ docs/adr/0002-use-modular-monolith.md
 Initialize docs:
 
 ```bash
-node scripts/docs.mjs init
+npx tsx scripts/docs.ts init
 ```
 
 Create a new document:
 
 ```bash
-node scripts/docs.mjs new design project-foundation --title "Project Foundation Design" --phase phase-0
-node scripts/docs.mjs new adr use-java-spring-boot --title "Use Java Spring Boot"
-node scripts/docs.mjs new fix zabbix-auth-failed --title "Fix Zabbix Auth Failed" --phase phase-1
-node scripts/docs.mjs new review phase-0-review --title "Phase 0 Implementation Review" --phase phase-0
-node scripts/docs.mjs new phase phase-1 --title "Phase 1 Zabbix Ingestion" --phase phase-1
+npx tsx scripts/docs.ts new design project-foundation --title "Project Foundation Design" --phase phase-0
+npx tsx scripts/docs.ts new adr use-java-spring-boot --title "Use Java Spring Boot"
+npx tsx scripts/docs.ts new fix zabbix-auth-failed --title "Fix Zabbix Auth Failed" --phase phase-1
+npx tsx scripts/docs.ts new review phase-0-review --title "Phase 0 Implementation Review" --phase phase-0
+npx tsx scripts/docs.ts new phase phase-1 --title "Phase 1 Zabbix Ingestion" --phase phase-1
 ```
 
 Check all documents for frontmatter and naming issues:
 
 ```bash
-node scripts/docs.mjs check
+npx tsx scripts/docs.ts check
 ```
 
 Regenerate the index:
 
 ```bash
-node scripts/docs.mjs index
+npx tsx scripts/docs.ts index
 ```
 
 ## Agent Rules

@@ -2,9 +2,11 @@
 
 import fs from 'node:fs'
 import path from 'node:path'
-import process from 'node:process'
+import { fileURLToPath } from 'node:url'
 
-const root = process.cwd()
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+const root = path.join(__dirname, '..')
 const docsRoot = path.join(root, 'docs')
 
 const VALID_TYPES = new Set([
@@ -30,7 +32,7 @@ const VALID_STATUS = new Set([
   'deprecated',
 ])
 
-const TYPE_DIRS = {
+const TYPE_DIRS: Record<string, string> = {
   architecture: 'architecture',
   adr: 'adr',
   phase: 'phases',
@@ -42,11 +44,11 @@ const TYPE_DIRS = {
   integration: 'integrations',
   ai: 'ai',
   operation: 'operations',
-  runbook: 'runbooks',
+  runbooks: 'runbooks',
   research: 'research',
 }
 
-function main() {
+function main(): void {
   const [command, ...args] = process.argv.slice(2)
 
   switch (command) {
@@ -71,58 +73,38 @@ function main() {
   }
 }
 
-function printHelp() {
+function printHelp(): void {
   console.log(`
 AegisOps docs tool
 
 Usage:
-  node scripts/docs.mjs init
-  node scripts/docs.mjs new <type> <slug> --title "Title" [--phase phase-0] [--status draft]
-  node scripts/docs.mjs check
-  node scripts/docs.mjs index
+  npx tsx scripts/docs.ts init
+  npx tsx scripts/docs.ts new <type> <slug> --title "Title" [--phase phase-0] [--status draft]
+  npx tsx scripts/docs.ts check
+  npx tsx scripts/docs.ts index
 
 Examples:
-  node scripts/docs.mjs init
-  node scripts/docs.mjs new design project-foundation --title "Project Foundation Design" --phase phase-0
-  node scripts/docs.mjs new adr use-java-spring-boot --title "Use Java Spring Boot"
-  node scripts/docs.mjs new fix zabbix-auth-failed --title "Fix Zabbix Auth Failed" --phase phase-1
-  node scripts/docs.mjs check
-  node scripts/docs.mjs index
+  npx tsx scripts/docs.ts init
+  npx tsx scripts/docs.ts new design project-foundation --title "Project Foundation Design" --phase phase-0
+  npx tsx scripts/docs.ts new adr use-java-spring-boot --title "Use Java Spring Boot"
+  npx tsx scripts/docs.ts new fix zabbix-auth-failed --title "Fix Zabbix Auth Failed" --phase phase-1
+  npx tsx scripts/docs.ts check
+  npx tsx scripts/docs.ts index
 `)
 }
 
-function initDocs() {
+function initDocs(): void {
   const dirs = [
     'architecture',
     'adr',
-    'phases/phase-0',
-    'phases/phase-1',
-    'phases/phase-2',
-    'phases/phase-3',
-    'phases/phase-4',
-    'phases/phase-5',
-    'phases/phase-6',
-    'designs/phase-0',
-    'designs/phase-1',
-    'designs/phase-2',
-    'designs/phase-3',
-    'designs/phase-4',
-    'designs/phase-5',
-    'designs/phase-6',
-    'reviews/phase-0',
-    'reviews/phase-1',
-    'reviews/phase-2',
-    'reviews/phase-3',
-    'reviews/phase-4',
-    'reviews/phase-5',
-    'reviews/phase-6',
-    'fixes/phase-0',
-    'fixes/phase-1',
-    'fixes/phase-2',
-    'fixes/phase-3',
-    'fixes/phase-4',
-    'fixes/phase-5',
-    'fixes/phase-6',
+    'phases/phase-0', 'phases/phase-1', 'phases/phase-2',
+    'phases/phase-3', 'phases/phase-4', 'phases/phase-5', 'phases/phase-6',
+    'designs/phase-0', 'designs/phase-1', 'designs/phase-2',
+    'designs/phase-3', 'designs/phase-4', 'designs/phase-5', 'designs/phase-6',
+    'reviews/phase-0', 'reviews/phase-1', 'reviews/phase-2',
+    'reviews/phase-3', 'reviews/phase-4', 'reviews/phase-5', 'reviews/phase-6',
+    'fixes/phase-0', 'fixes/phase-1', 'fixes/phase-2',
+    'fixes/phase-3', 'fixes/phase-4', 'fixes/phase-5', 'fixes/phase-6',
     'api',
     'database',
     'integrations',
@@ -235,25 +217,24 @@ Build the project foundation.
   )
 
   generateIndex()
-
   console.log('Docs structure initialized.')
 }
 
-function newDoc(args) {
+function newDoc(args: string[]): void {
   const [type, slug] = args
   const flags = parseFlags(args.slice(2))
 
   if (!type || !slug) {
-    fail('Usage: node scripts/docs.mjs new <type> <slug> --title "Title" [--phase phase-0]')
+    fail('Usage: npx tsx scripts/docs.ts new <type> <slug> --title "Title" [--phase phase-0]')
   }
 
   if (!VALID_TYPES.has(type)) {
     fail(`Invalid type "${type}". Valid types: ${Array.from(VALID_TYPES).join(', ')}`)
   }
 
-  const title = flags.title || toTitle(slug)
-  const phase = flags.phase || defaultPhaseForType(type)
-  const status = flags.status || 'draft'
+  const title = (flags['title'] as string) || toTitle(slug)
+  const phase = (flags['phase'] as string) || defaultPhaseForType(type)
+  const status = (flags['status'] as string) || 'draft'
 
   if (!VALID_STATUS.has(status)) {
     fail(`Invalid status "${status}". Valid status: ${Array.from(VALID_STATUS).join(', ')}`)
@@ -268,7 +249,7 @@ function newDoc(args) {
   const filename = type === 'adr'
     ? `${nextAdrNumber()}-${safeSlug}.md`
     : type === 'phase'
-      ? `README.md`
+      ? 'README.md'
       : `${date}-${safeSlug}.md`
 
   const filepath = path.join(baseDir, filename)
@@ -283,7 +264,7 @@ function newDoc(args) {
   console.log(`Created ${relative(filepath)}`)
 }
 
-function checkDocs() {
+function checkDocs(): void {
   const files = listMarkdownFiles(docsRoot)
     .filter((file) => !file.includes(`${path.sep}_templates${path.sep}`))
 
@@ -350,7 +331,7 @@ function checkDocs() {
   }
 }
 
-function generateIndex() {
+function generateIndex(): void {
   ensureDir(docsRoot)
 
   const files = listMarkdownFiles(docsRoot)
@@ -358,7 +339,13 @@ function generateIndex() {
     .filter((file) => !file.includes(`${path.sep}_templates${path.sep}`))
     .sort()
 
-  const groups = new Map()
+  const groups = new Map<string, Array<{
+    rel: string
+    title: string
+    status: string
+    phase: string
+    updated: string
+  }>>()
 
   for (const file of files) {
     const rel = relative(file)
@@ -370,7 +357,7 @@ function generateIndex() {
       groups.set(type, [])
     }
 
-    groups.get(type).push({
+    groups.get(type)!.push({
       rel,
       title: fm?.title || path.basename(file),
       status: fm?.status || 'unknown',
@@ -395,7 +382,7 @@ related: []
 This file is generated by:
 
 \`\`\`bash
-node scripts/docs.mjs index
+npx tsx scripts/docs.ts index
 \`\`\`
 
 Do not edit it manually.
@@ -418,7 +405,7 @@ Do not edit it manually.
   console.log('Generated docs/INDEX.md')
 }
 
-function resolveDocDir(type, phase) {
+function resolveDocDir(type: string, phase: string): string {
   const base = TYPE_DIRS[type]
 
   if (!base) {
@@ -436,7 +423,15 @@ function resolveDocDir(type, phase) {
   return path.join(docsRoot, base)
 }
 
-function renderDocByType(input) {
+interface DocInput {
+  type: string
+  title: string
+  status: string
+  phase: string
+  slug?: string
+}
+
+function renderDocByType(input: DocInput): string {
   switch (input.type) {
     case 'adr':
       return renderAdr(input)
@@ -474,12 +469,12 @@ function renderDocByType(input) {
   }
 }
 
-function renderFrontmatter({ title, type, status, phase }) {
+function renderFrontmatter(opts: { title: string; type: string; status: string; phase: string }): string {
   return `---
-title: ${title}
-type: ${type}
-status: ${status}
-phase: ${phase}
+title: ${opts.title}
+type: ${opts.type}
+status: ${opts.status}
+phase: ${opts.phase}
 owner: ai
 created: ${today()}
 updated: ${today()}
@@ -489,7 +484,7 @@ related: []
 `
 }
 
-function renderDesign(input) {
+function renderDesign(input: DocInput): string {
   return `${renderFrontmatter(input)}# ${input.title}
 
 ## 1. Scope
@@ -520,13 +515,8 @@ function renderDesign(input) {
 `
 }
 
-function renderAdr(input) {
-  return `${renderFrontmatter({
-    ...input,
-    type: 'adr',
-    status: input.status || 'draft',
-    phase: input.phase || 'global',
-  })}# ${input.title}
+function renderAdr(input: DocInput): string {
+  return `${renderFrontmatter({ ...input, type: 'adr', phase: input.phase || 'global' })}# ${input.title}
 
 ## Status
 
@@ -548,7 +538,7 @@ ${input.status || 'draft'}
 `
 }
 
-function renderPhase(input) {
+function renderPhase(input: DocInput): string {
   return `${renderFrontmatter(input)}# ${input.title}
 
 ## Goal
@@ -571,7 +561,7 @@ function renderPhase(input) {
 `
 }
 
-function renderReview(input) {
+function renderReview(input: DocInput): string {
   return `${renderFrontmatter(input)}# ${input.title}
 
 ## Review Target
@@ -601,7 +591,7 @@ function renderReview(input) {
 `
 }
 
-function renderFix(input) {
+function renderFix(input: DocInput): string {
   return `${renderFrontmatter(input)}# ${input.title}
 
 ## Problem
@@ -626,7 +616,7 @@ function renderFix(input) {
 `
 }
 
-function renderRunbook(input) {
+function renderRunbook(input: DocInput): string {
   return `${renderFrontmatter(input)}# ${input.title}
 
 ## Purpose
@@ -657,7 +647,7 @@ yes | no
 `
 }
 
-function renderResearch(input) {
+function renderResearch(input: DocInput): string {
   return `${renderFrontmatter(input)}# ${input.title}
 
 ## Research Question
@@ -678,11 +668,11 @@ function renderResearch(input) {
 `
 }
 
-function starterDoc({ title, type, status, phase, body }) {
-  return `${renderFrontmatter({ title, type, status, phase })}${body}`
+function starterDoc(opts: { title: string; type: string; status: string; phase: string; body: string }): string {
+  return `${renderFrontmatter({ title: opts.title, type: opts.type, status: opts.status, phase: opts.phase })}${opts.body}`
 }
 
-function docsReadme() {
+function docsReadme(): string {
   return `---
 title: Documentation Guide
 type: operation
@@ -736,12 +726,12 @@ related: []
 ## Commands
 
 \`\`\`bash
-node scripts/docs.mjs init
-node scripts/docs.mjs new design project-foundation --title "Project Foundation Design" --phase phase-0
-node scripts/docs.mjs new adr use-java-spring-boot --title "Use Java Spring Boot"
-node scripts/docs.mjs new fix zabbix-auth-failed --title "Fix Zabbix Auth Failed" --phase phase-1
-node scripts/docs.mjs check
-node scripts/docs.mjs index
+npx tsx scripts/docs.ts init
+npx tsx scripts/docs.ts new design project-foundation --title "Project Foundation Design" --phase phase-0
+npx tsx scripts/docs.ts new adr use-java-spring-boot --title "Use Java Spring Boot"
+npx tsx scripts/docs.ts new fix zabbix-auth-failed --title "Fix Zabbix Auth Failed" --phase phase-1
+npx tsx scripts/docs.ts check
+npx tsx scripts/docs.ts index
 \`\`\`
 
 ## Allowed Document Types
@@ -784,78 +774,40 @@ node scripts/docs.mjs index
 `
 }
 
-function templateDesign() {
-  return renderDesign({
-    title: 'Design Template',
-    type: 'design',
-    status: 'draft',
-    phase: 'phase-x',
-  })
+function templateDesign(): string {
+  return renderDesign({ title: 'Design Template', type: 'design', status: 'draft', phase: 'phase-x' })
 }
 
-function templateAdr() {
-  return renderAdr({
-    title: 'ADR Template',
-    type: 'adr',
-    status: 'draft',
-    phase: 'global',
-  })
+function templateAdr(): string {
+  return renderAdr({ title: 'ADR Template', type: 'adr', status: 'draft', phase: 'global' })
 }
 
-function templatePhase() {
-  return renderPhase({
-    title: 'Phase Template',
-    type: 'phase',
-    status: 'draft',
-    phase: 'phase-x',
-  })
+function templatePhase(): string {
+  return renderPhase({ title: 'Phase Template', type: 'phase', status: 'draft', phase: 'phase-x' })
 }
 
-function templateReview() {
-  return renderReview({
-    title: 'Review Template',
-    type: 'review',
-    status: 'draft',
-    phase: 'phase-x',
-  })
+function templateReview(): string {
+  return renderReview({ title: 'Review Template', type: 'review', status: 'draft', phase: 'phase-x' })
 }
 
-function templateFix() {
-  return renderFix({
-    title: 'Fix Template',
-    type: 'fix',
-    status: 'draft',
-    phase: 'phase-x',
-  })
+function templateFix(): string {
+  return renderFix({ title: 'Fix Template', type: 'fix', status: 'draft', phase: 'phase-x' })
 }
 
-function templateRunbook() {
-  return renderRunbook({
-    title: 'Runbook Template',
-    type: 'runbook',
-    status: 'draft',
-    phase: 'global',
-  })
+function templateRunbook(): string {
+  return renderRunbook({ title: 'Runbook Template', type: 'runbook', status: 'draft', phase: 'global' })
 }
 
-function templateResearch() {
-  return renderResearch({
-    title: 'Research Template',
-    type: 'research',
-    status: 'draft',
-    phase: 'global',
-  })
+function templateResearch(): string {
+  return renderResearch({ title: 'Research Template', type: 'research', status: 'draft', phase: 'global' })
 }
 
-function parseFlags(args) {
-  const flags = {}
+function parseFlags(args: string[]): Record<string, string | boolean> {
+  const flags: Record<string, string | boolean> = {}
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i]
-
-    if (!arg.startsWith('--')) {
-      continue
-    }
+    if (!arg.startsWith('--')) continue
 
     const key = arg.slice(2)
     const value = args[i + 1]
@@ -872,38 +824,40 @@ function parseFlags(args) {
   return flags
 }
 
-function parseFrontmatter(content) {
+interface Frontmatter {
+  title?: string
+  type?: string
+  status?: string
+  phase?: string
+  created?: string
+  updated?: string
+  owner?: string
+  related?: string[]
+  [key: string]: string | string[] | undefined
+}
+
+function parseFrontmatter(content: string): Frontmatter | null {
   const match = content.match(/^---\n([\s\S]*?)\n---/)
-  if (!match) {
-    return null
-  }
+  if (!match) return null
 
   const raw = match[1]
-  const result = {}
+  const result: Frontmatter = {}
   const lines = raw.split('\n')
 
-  let currentArrayKey = null
+  let currentArrayKey: string | null = null
 
   for (const line of lines) {
     if (/^\s*-\s+/.test(line) && currentArrayKey) {
-      result[currentArrayKey].push(line.replace(/^\s*-\s+/, '').trim())
+      ;(result[currentArrayKey] as string[]).push(line.replace(/^\s*-\s+/, '').trim())
       continue
     }
 
     const pair = line.match(/^([a-zA-Z0-9_-]+):\s*(.*)$/)
-    if (!pair) {
-      continue
-    }
+    if (!pair) continue
 
     const [, key, value] = pair
 
-    if (value === '[]') {
-      result[key] = []
-      currentArrayKey = key
-      continue
-    }
-
-    if (value === '') {
+    if (value === '[]' || value === '') {
       result[key] = []
       currentArrayKey = key
       continue
@@ -916,21 +870,17 @@ function parseFrontmatter(content) {
   return result
 }
 
-function listMarkdownFiles(dir) {
-  if (!fs.existsSync(dir)) {
-    return []
-  }
+function listMarkdownFiles(dir: string): string[] {
+  if (!fs.existsSync(dir)) return []
 
-  const result = []
+  const result: string[] = []
   const entries = fs.readdirSync(dir, { withFileTypes: true })
 
   for (const entry of entries) {
     const full = path.join(dir, entry.name)
 
     if (entry.isDirectory()) {
-      if (['node_modules', '.git', 'dist', 'build'].includes(entry.name)) {
-        continue
-      }
+      if (['node_modules', '.git', 'dist', 'build'].includes(entry.name)) continue
       result.push(...listMarkdownFiles(full))
     } else if (entry.isFile() && entry.name.endsWith('.md')) {
       result.push(full)
@@ -940,28 +890,27 @@ function listMarkdownFiles(dir) {
   return result
 }
 
-function nextAdrNumber() {
+function nextAdrNumber(): string {
   const adrDir = path.join(docsRoot, 'adr')
   ensureDir(adrDir)
 
   const nums = fs.readdirSync(adrDir)
     .map((name) => name.match(/^(\d{4})-/)?.[1])
-    .filter(Boolean)
-    .map((value) => Number(value))
+    .filter((n): n is string => Boolean(n))
+    .map((v) => Number(v))
 
   const next = nums.length > 0 ? Math.max(...nums) + 1 : 1
   return String(next).padStart(4, '0')
 }
 
-function defaultPhaseForType(type) {
+function defaultPhaseForType(type: string): string {
   if (['architecture', 'adr', 'api', 'database', 'integration', 'ai', 'operation', 'runbook', 'research'].includes(type)) {
     return 'global'
   }
-
   return 'phase-0'
 }
 
-function normalizeSlug(value) {
+function normalizeSlug(value: string): string {
   return value
     .trim()
     .toLowerCase()
@@ -969,53 +918,48 @@ function normalizeSlug(value) {
     .replace(/^-+|-+$/g, '')
 }
 
-function toTitle(slug) {
+function toTitle(slug: string): string {
   return slug
     .replace(/[-_]+/g, ' ')
     .replace(/\b\w/g, (char) => char.toUpperCase())
 }
 
-function today() {
+function today(): string {
   return new Date().toISOString().slice(0, 10)
 }
 
-function ensureDir(dir) {
+function ensureDir(dir: string): void {
   fs.mkdirSync(dir, { recursive: true })
 }
 
-function writeFileIfAbsent(file, content) {
-  if (fs.existsSync(file)) {
-    return
-  }
-
+function writeFileIfAbsent(file: string, content: string): void {
+  if (fs.existsSync(file)) return
   ensureDir(path.dirname(file))
   fs.writeFileSync(file, content, 'utf8')
 }
 
-function relative(file) {
+function relative(file: string): string {
   return path.relative(root, file).replaceAll(path.sep, '/')
 }
 
-function toMarkdownLink(rel) {
-  return rel.startsWith('docs/')
-    ? rel.slice('docs/'.length)
-    : rel
+function toMarkdownLink(rel: string): string {
+  return rel.startsWith('docs/') ? rel.slice('docs/'.length) : rel
 }
 
-function escapeTable(value) {
+function escapeTable(value: string): string {
   return String(value).replaceAll('|', '\\|')
 }
 
-function error(message) {
-  console.error(`ERROR: ${message}`)
+function error(msg: string): void {
+  console.error(`ERROR: ${msg}`)
 }
 
-function warn(message) {
-  console.warn(`WARN: ${message}`)
+function warn(msg: string): void {
+  console.warn(`WARN: ${msg}`)
 }
 
-function fail(message) {
-  console.error(message)
+function fail(msg: string): never {
+  console.error(msg)
   process.exit(1)
 }
 

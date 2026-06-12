@@ -51,12 +51,12 @@ related: []
 ## Commands
 
 ```bash
-node scripts/docs.mjs init
-node scripts/docs.mjs new design project-foundation --title "Project Foundation Design" --phase phase-0
-node scripts/docs.mjs new adr use-java-spring-boot --title "Use Java Spring Boot"
-node scripts/docs.mjs new fix zabbix-auth-failed --title "Fix Zabbix Auth Failed" --phase phase-1
-node scripts/docs.mjs check
-node scripts/docs.mjs index
+npx tsx scripts/docs.ts init
+npx tsx scripts/docs.ts new design project-foundation --title "Project Foundation Design" --phase phase-0
+npx tsx scripts/docs.ts new adr use-java-spring-boot --title "Use Java Spring Boot"
+npx tsx scripts/docs.ts new fix zabbix-auth-failed --title "Fix Zabbix Auth Failed" --phase phase-1
+npx tsx scripts/docs.ts check
+npx tsx scripts/docs.ts index
 ```
 
 ## Allowed Document Types

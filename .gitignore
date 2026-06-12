@@ -4,6 +4,8 @@
 target/
 *.iml
 *.log
+.pid-*
+logs/
 .env
 .env.*
 node_modules/

@@ -1979,10 +1979,10 @@ Key rules:
 Use the docs script to create and manage documents:
 
 ```txt
-node scripts/docs.mjs init    # initialize directory structure
-node scripts/docs.mjs new <type> <slug> --title "Title" --phase phase-0
-node scripts/docs.mjs check    # validate frontmatter and naming
-node scripts/docs.mjs index     # regenerate docs/INDEX.md
+npx tsx scripts/docs.ts init    # initialize directory structure
+npx tsx scripts/docs.ts new <type> <slug> --title "Title" --phase phase-0
+npx tsx scripts/docs.ts check    # validate frontmatter and naming
+npx tsx scripts/docs.ts index     # regenerate docs/INDEX.md
 ```
 
 Reference docs for agents:
