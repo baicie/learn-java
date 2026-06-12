@@ -26,34 +26,55 @@ OpenAPI
 
 ## 快速启动
 
+### 0. 安装依赖
+
+```bash
+# 安装 pnpm（如未安装）
+npm install -g pnpm@9
+
+# 安装前端依赖
+pnpm install
+```
+
 ### 1. 启动基础设施
 
 ```bash
 docker compose -f infra/docker-compose.yml up -d
 ```
 
-### 2. 启动后端
+### 2. 初始化后端模块
+
+仅首次运行或模块有变更时需要：
 
 ```bash
-mvn -pl apps/aiops-server -am spring-boot:run
+mvn install -DskipTests
+```
+
+### 3. 启动后端
+
+```bash
+# aiops-server（主 API 服务）
+cd apps/aiops-server && mvn spring-boot:run
+
+# 或在根目录指定模块（需要先执行步骤2）
+mvn spring-boot:run -pl apps/aiops-server
 ```
 
 Worker / Runner 可分别启动：
 
 ```bash
-mvn -pl apps/aiops-worker -am spring-boot:run
-mvn -pl apps/aiops-runner -am spring-boot:run
+mvn spring-boot:run -pl apps/aiops-worker
+mvn spring-boot:run -pl apps/aiops-runner
 ```
 
-### 3. 启动前端
+### 4. 启动前端
 
 ```bash
 cd web/console
-pnpm install
 pnpm dev
 ```
 
-### 4. 默认账号
+### 5. 默认账号
 
 ```txt
 username: admin

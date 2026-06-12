@@ -1,24 +1,17 @@
 {
   "name": "aegisops",
-  "version": "0.0.1",
-  "description": "AegisOps / FaultLens AI Ops platform",
   "private": true,
+  "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "start": "npx tsx scripts/start.ts",
-    "start:infra": "npx tsx scripts/start.ts infra",
-    "start:all": "npx tsx scripts/start.ts all",
-    "start:status": "npx tsx scripts/start.ts status",
-    "start:stop": "npx tsx scripts/start.ts stop",
-    "start:clean": "npx tsx scripts/start.ts clean",
-    "docs:init": "npx tsx scripts/docs.ts init",
-    "docs:new": "npx tsx scripts/docs.ts new",
-    "docs:check": "npx tsx scripts/docs.ts check",
-    "docs:index": "npx tsx scripts/docs.ts index"
+    "dev": "pnpm -r --parallel -C web/console dev",
+    "build": "pnpm -r -C web/console build",
+    "preview": "pnpm -r -C web/console preview",
+    "lint": "pnpm -r -C web/console lint"
   },
   "devDependencies": {
-    "@types/node": "^25.9.3",
-    "tsx": "^4.22.4",
-    "typescript": "^6.0.3"
-  }
+    "typescript": "^5.9.0"
+  },
+  "packageManager": "pnpm@10.33.4",
+  "engineStrict": true
 }
