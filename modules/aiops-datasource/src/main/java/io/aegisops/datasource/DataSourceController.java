@@ -1,6 +1,7 @@
 package io.aegisops.datasource;
 
 import io.aegisops.common.api.ApiResponse;
+import io.aegisops.common.tenant.TenantContext;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -20,11 +21,13 @@ public class DataSourceController {
 
     @GetMapping
     public ApiResponse<List<DataSourceRecord>> list() {
+        String tenantId = TenantContext.requireTenantId();
         return ApiResponse.ok(jdbc.query("""
-                select id, tenant_id, type, name, status, created_at, updated_at from datasource order by created_at desc
+                select id, tenant_id, type, name, status, created_at, updated_at
+                from datasource where tenant_id = ? order by created_at desc
                 """, (rs, rowNum) -> new DataSourceRecord(
                 rs.getString("id"), rs.getString("tenant_id"), rs.getString("type"), rs.getString("name"),
                 rs.getString("status"), rs.getObject("created_at", OffsetDateTime.class), rs.getObject("updated_at", OffsetDateTime.class)
-        )));
+        ), tenantId));
     }
 }

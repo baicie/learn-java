@@ -1,6 +1,7 @@
 package io.aegisops.audit;
 
 import io.aegisops.common.api.ApiResponse;
+import io.aegisops.common.tenant.TenantContext;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -20,13 +21,14 @@ public class AuditController {
 
     @GetMapping
     public ApiResponse<List<AuditLog>> list() {
+        String tenantId = TenantContext.requireTenantId();
         return ApiResponse.ok(jdbc.query("""
                 select id, tenant_id, actor_user_id, action, target_type, target_id, detail_json::text, created_at
-                from audit_log order by created_at desc limit 100
+                from audit_log where tenant_id = ? order by created_at desc limit 100
                 """, (rs, rowNum) -> new AuditLog(
                 rs.getString("id"), rs.getString("tenant_id"), rs.getString("actor_user_id"), rs.getString("action"),
                 rs.getString("target_type"), rs.getString("target_id"), rs.getString("detail_json"),
                 rs.getObject("created_at", OffsetDateTime.class)
-        )));
+        ), tenantId));
     }
 }

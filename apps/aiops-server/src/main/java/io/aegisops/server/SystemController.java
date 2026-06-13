@@ -1,6 +1,7 @@
 package io.aegisops.server;
 
 import io.aegisops.common.api.ApiResponse;
+import io.aegisops.common.tenant.TenantContext;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -22,11 +23,12 @@ public class SystemController {
 
     @GetMapping("/overview")
     public ApiResponse<Map<String, Object>> overview() {
-        Long tenants = jdbc.queryForObject("select count(*) from tenant", Long.class);
-        Long users = jdbc.queryForObject("select count(*) from sys_user", Long.class);
-        Long assets = jdbc.queryForObject("select count(*) from asset", Long.class);
-        Long alerts = jdbc.queryForObject("select count(*) from alert_event", Long.class);
-        Long incidents = jdbc.queryForObject("select count(*) from incident", Long.class);
+        String tenantId = TenantContext.requireTenantId();
+        Long tenants = 1L;
+        Long users = count("select count(*) from sys_user where tenant_id = ?", tenantId);
+        Long assets = count("select count(*) from asset where tenant_id = ?", tenantId);
+        Long alerts = count("select count(*) from alert_event where tenant_id = ?", tenantId);
+        Long incidents = count("select count(*) from incident where tenant_id = ?", tenantId);
         return ApiResponse.ok(Map.of(
                 "app", appName,
                 "tenants", tenants,
@@ -35,5 +37,10 @@ public class SystemController {
                 "alerts", alerts,
                 "incidents", incidents
         ));
+    }
+
+    private Long count(String sql, String tenantId) {
+        Long value = jdbc.queryForObject(sql, Long.class, tenantId);
+        return value == null ? 0L : value;
     }
 }

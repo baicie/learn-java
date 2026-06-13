@@ -4,10 +4,10 @@ Phase0 是 AIOps MVP 的工程地基，目标是先把可持续迭代的工程�
 
 ## 技术栈
 
-- Backend: Java 21 + Spring Boot 3.x + Spring Security + Flyway + JdbcTemplate
-- Frontend: React + Vite + TypeScript + Tailwind CSS + TanStack Query
-- Infra: PostgreSQL + Redis + ClickHouse + VictoriaMetrics + MinIO
-- Build: Maven multi-module + pnpm
+* Backend: Java 21 + Spring Boot 3.x + Spring Security + Flyway + JdbcTemplate
+* Frontend: React + Vite + TypeScript + Tailwind CSS + TanStack Query
+* Infra: PostgreSQL + Redis + ClickHouse + VictoriaMetrics + MinIO
+* Build: Maven multi-module + pnpm
 
 ## 本阶段交付
 
@@ -26,14 +26,16 @@ OpenAPI
 
 ## 快速启动
 
-### 0. 安装依赖
+### 0. 安装前端依赖
 
 ```bash
-# 安装 pnpm（如未安装）
+# 安装 pnpm，如未安装
 npm install -g pnpm@9
 
 # 安装前端依赖
+cd web/console
 pnpm install
+cd ../..
 ```
 
 ### 1. 启动基础设施
@@ -52,19 +54,18 @@ mvn install -DskipTests
 
 ### 3. 启动后端
 
-```bash
-# aiops-server（主 API 服务）
-cd apps/aiops-server && mvn spring-boot:run
+在仓库根目录执行：
 
-# 或在根目录指定模块（需要先执行步骤2）
-mvn spring-boot:run -pl apps/aiops-server
+```bash
+# aiops-server，主 API 服务
+mvn -pl apps/aiops-server -am spring-boot:run
 ```
 
 Worker / Runner 可分别启动：
 
 ```bash
-mvn spring-boot:run -pl apps/aiops-worker
-mvn spring-boot:run -pl apps/aiops-runner
+mvn -pl apps/aiops-worker -am spring-boot:run
+mvn -pl apps/aiops-runner -am spring-boot:run
 ```
 
 ### 4. 启动前端
@@ -83,9 +84,9 @@ password: admin123
 
 ## API
 
-- Server: http://localhost:8080
-- Swagger UI: http://localhost:8080/swagger-ui/index.html
-- Health: http://localhost:8080/actuator/health
+* Server: http://localhost:8080
+* Swagger UI: http://localhost:8080/swagger-ui/index.html
+* Health: http://localhost:8080/actuator/health
 
 ## Phase0 验收
 
@@ -99,4 +100,21 @@ password: admin123
 可以查看空 Dashboard
 可以访问 OpenAPI 文档
 Worker / Runner 可以独立启动并暴露健康检查
+```
+
+## 推荐验证命令
+
+后端：
+
+```bash
+mvn -pl apps/aiops-server -am test
+mvn -pl apps/aiops-worker -am test
+mvn -pl apps/aiops-runner -am test
+```
+
+前端：
+
+```bash
+cd web/console
+pnpm build
 ```

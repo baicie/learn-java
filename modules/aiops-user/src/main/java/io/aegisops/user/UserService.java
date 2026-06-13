@@ -5,6 +5,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class UserService {
@@ -16,8 +17,12 @@ public class UserService {
         this.passwordEncoder = passwordEncoder;
     }
 
-    public List<UserAccount> list() {
-        return repository.findAll();
+    public List<UserAccount> listByTenant(String tenantId) {
+        return repository.findAllByTenantId(tenantId);
+    }
+
+    public Optional<UserAccount> findByUsername(String username) {
+        return repository.findByUsername(username);
     }
 
     public UserAccount getByUsername(String username) {

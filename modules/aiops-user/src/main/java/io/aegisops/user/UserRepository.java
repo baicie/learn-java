@@ -6,7 +6,10 @@ import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
 
 import java.time.OffsetDateTime;
-import java.util.*;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 
 @Repository
 public class UserRepository {
@@ -45,11 +48,11 @@ public class UserRepository {
         return rows.stream().findFirst().map(this::withRoles);
     }
 
-    public List<UserAccount> findAll() {
+    public List<UserAccount> findAllByTenantId(String tenantId) {
         return jdbc.query("""
                 select id, tenant_id, username, display_name, email, password_hash, status, created_at, updated_at
-                from sys_user order by created_at desc
-                """, userMapper).stream().map(this::withRoles).toList();
+                from sys_user where tenant_id = ? order by created_at desc
+                """, userMapper, tenantId).stream().map(this::withRoles).toList();
     }
 
     public UserAccount create(String tenantId, String username, String displayName, String email, String passwordHash) {

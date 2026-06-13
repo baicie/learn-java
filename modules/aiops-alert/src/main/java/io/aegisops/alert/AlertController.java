@@ -1,6 +1,7 @@
 package io.aegisops.alert;
 
 import io.aegisops.common.api.ApiResponse;
+import io.aegisops.common.tenant.TenantContext;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -20,12 +21,14 @@ public class AlertController {
 
     @GetMapping
     public ApiResponse<List<AlertEventRecord>> list() {
+        String tenantId = TenantContext.requireTenantId();
         return ApiResponse.ok(jdbc.query("""
-                select id, tenant_id, source, severity, title, status, starts_at, created_at from alert_event order by starts_at desc limit 100
+                select id, tenant_id, source, severity, title, status, starts_at, created_at
+                from alert_event where tenant_id = ? order by starts_at desc limit 100
                 """, (rs, rowNum) -> new AlertEventRecord(
                 rs.getString("id"), rs.getString("tenant_id"), rs.getString("source"), rs.getString("severity"),
                 rs.getString("title"), rs.getString("status"), rs.getObject("starts_at", OffsetDateTime.class),
                 rs.getObject("created_at", OffsetDateTime.class)
-        )));
+        ), tenantId));
     }
 }

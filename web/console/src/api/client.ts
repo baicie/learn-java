@@ -44,11 +44,26 @@ export async function apiRequest<T>(path: string, init: RequestInit = {}): Promi
     }
   })
 
-  const payload = (await resp.json()) as ApiResponse<T>
+  const payload = await parseApiResponse<T>(resp)
   if (!resp.ok || !payload.success) {
-    throw new Error(payload.message || payload.errorCode || 'Request failed')
+    throw new Error(payload.message || payload.errorCode || `Request failed with status ${resp.status}`)
   }
   return payload.data
+}
+
+async function parseApiResponse<T>(resp: Response): Promise<ApiResponse<T>> {
+  const contentType = resp.headers.get('content-type') || ''
+  if (!contentType.includes('application/json')) {
+    const text = await resp.text()
+    return {
+      success: false,
+      data: undefined as T,
+      errorCode: `HTTP_${resp.status}`,
+      message: text || resp.statusText || 'Non-JSON response',
+      timestamp: new Date().toISOString()
+    }
+  }
+  return (await resp.json()) as ApiResponse<T>
 }
 
 export function login(username: string, password: string) {

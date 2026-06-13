@@ -31,10 +31,10 @@ public class AuthController {
 
     @PostMapping("/login")
     public ApiResponse<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
-        UserAccount user = userService.getByUsername(request.username());
-        if (!userService.passwordMatches(request.password(), user)) {
-            throw new AppException("INVALID_CREDENTIALS", "Invalid username or password");
-        }
+        UserAccount user = userService.findByUsername(request.username())
+                .filter(candidate -> userService.passwordMatches(request.password(), candidate))
+                .filter(candidate -> "active".equals(candidate.status()))
+                .orElseThrow(() -> new AppException("INVALID_CREDENTIALS", "Invalid username or password"));
         UserPrincipal principal = new UserPrincipal(user.id(), user.tenantId(), user.username(), user.displayName(), user.roles());
         String token = tokenService.issue(principal);
         auditService.record(user.tenantId(), user.id(), "auth.login", "user", user.id(), "{}");

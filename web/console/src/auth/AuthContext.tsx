@@ -5,6 +5,7 @@ type AuthContextValue = {
   token: string | null
   user: Me | null
   setSession: (token: string, user: Me) => void
+  setCurrentUser: (user: Me | null) => void
   logout: () => void
 }
 
@@ -20,6 +21,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSession(nextToken, nextUser) {
       setToken(nextToken)
       updateToken(nextToken)
+      setUser(nextUser)
+    },
+    setCurrentUser(nextUser) {
       setUser(nextUser)
     },
     logout() {
