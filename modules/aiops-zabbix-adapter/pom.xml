@@ -9,7 +9,7 @@
         <version>0.1.0-SNAPSHOT</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
-    <artifactId>aiops-datasource</artifactId>
+    <artifactId>aiops-zabbix-adapter</artifactId>
     <packaging>jar</packaging>
     <dependencies>
         <dependency>
@@ -18,23 +18,12 @@
             <version>${project.version}</version>
         </dependency>
         <dependency>
-            <groupId>io.aegisops</groupId>
-            <artifactId>aiops-zabbix-adapter</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-jdbc</artifactId>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-web</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web</artifactId>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
         </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-validation</artifactId>
-        </dependency>
-
     </dependencies>
 </project>

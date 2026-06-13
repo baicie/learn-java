@@ -837,7 +837,8 @@ interface Frontmatter {
 }
 
 function parseFrontmatter(content: string): Frontmatter | null {
-  const match = content.match(/^---\n([\s\S]*?)\n---/)
+  const normalized = content.replace(/\r\n/g, '\n')
+  const match = normalized.match(/^---\n([\s\S]*?)\n---/)
   if (!match) return null
 
   const raw = match[1]

@@ -4,8 +4,8 @@ type: operation
 status: accepted
 phase: global
 owner: script
-created: 2026-06-12
-updated: 2026-06-12
+created: 2026-06-13
+updated: 2026-06-13
 related: []
 ---
 
@@ -37,10 +37,12 @@ Do not edit it manually.
 |---|---|---|---|---|
 | MVP Product & Architecture Roadmap | draft | phase-0 | 2026-06-12 | [docs/designs/phase-0/2026-06-12-mvp-roadmap.md](designs/phase-0/2026-06-12-mvp-roadmap.md) |
 | Phase 0 Design | draft | phase-0 | 2026-06-12 | [docs/designs/phase-0/2026-06-12-phase-0-design.md](designs/phase-0/2026-06-12-phase-0-design.md) |
+| Phase 1 Design — Zabbix Datasource Sync | accepted | phase-1 | 2026-06-14 | [docs/designs/phase-1/2026-06-14-phase-1-design.md](designs/phase-1/2026-06-14-phase-1-design.md) |
 
 ## phase
 
 | Title | Status | Phase | Updated | Path |
 |---|---|---|---|---|
 | Phase 0 Foundation | draft | phase-0 | 2026-06-12 | [docs/phases/phase-0/README.md](phases/phase-0/README.md) |
+| Phase 1 Zabbix Sync | accepted | phase-1 | 2026-06-14 | [docs/phases/phase-1/README.md](phases/phase-1/README.md) |
 

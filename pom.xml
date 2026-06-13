@@ -19,6 +19,7 @@
         <module>modules/aiops-tenant</module>
         <module>modules/aiops-user</module>
         <module>modules/aiops-security</module>
+        <module>modules/aiops-zabbix-adapter</module>
         <module>modules/aiops-datasource</module>
         <module>modules/aiops-asset</module>
         <module>modules/aiops-alert</module>
@@ -70,6 +71,7 @@
                     <version>3.13.0</version>
                     <configuration>
                         <release>${java.version}</release>
+                        <parameters>true</parameters>
                     </configuration>
                 </plugin>
             </plugins>

@@ -1,0 +1,140 @@
+package io.aegisops.zabbix;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.client.MockRestServiceServer;
+import org.springframework.web.client.RestTemplate;
+
+import java.util.List;
+import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withServerError;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
+
+class DefaultZabbixClientTest {
+
+    private static final ZabbixConfig CONFIG = new ZabbixConfig(
+            "http://zabbix.test/api_jsonrpc.php",
+            "Admin",
+            "zabbix",
+            null,
+            1,
+            5
+    );
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
+    private RestTemplate restTemplate;
+    private MockRestServiceServer server;
+    private DefaultZabbixClient client;
+
+    @BeforeEach
+    void setUp() {
+        restTemplate = new RestTemplate();
+        server = MockRestServiceServer.createServer(restTemplate);
+        client = new DefaultZabbixClient(CONFIG, objectMapper, restTemplate);
+    }
+
+    @Test
+    void testConnectionReturnsApiVersion() {
+        server.expect(requestTo(CONFIG.endpoint()))
+                .andExpect(method(org.springframework.http.HttpMethod.POST))
+                .andRespond(withSuccess("{\"jsonrpc\":\"2.0\",\"result\":\"7.0.0\",\"id\":1}",
+                        MediaType.APPLICATION_JSON));
+        assertEquals("7.0.0", client.testConnection());
+    }
+
+    @Test
+    void apiErrorBecomesZabbixApiException() {
+        // First request is user.login (auth). We need a successful login to get past authToken(),
+        // then the second request (host.get) is the one that returns the API error.
+        server.expect(requestTo(CONFIG.endpoint()))
+                .andRespond(withSuccess(
+                        "{\"jsonrpc\":\"2.0\",\"result\":\"sess-1\",\"id\":1}",
+                        MediaType.APPLICATION_JSON));
+        server.expect(requestTo(CONFIG.endpoint()))
+                .andRespond(withSuccess(
+                        "{\"jsonrpc\":\"2.0\",\"error\":{\"code\":-32602,\"message\":\"Invalid params.\",\"data\":\"username field not supported\"},\"id\":2}",
+                        MediaType.APPLICATION_JSON));
+        ZabbixApiException ex = assertThrows(ZabbixApiException.class, () -> client.getHosts(10));
+        assertTrue(ex.getMessage().toLowerCase().contains("invalid params"),
+                "expected server error message in exception, was: " + ex.getMessage());
+    }
+
+    @Test
+    void authErrorFromNewerZabbixIsNotSwallowedAndRetried() {
+        // getHosts -> authToken() -> login("username") -> Zabbix rejects with an AUTH error.
+        // That error must propagate; the client must NOT retry with field=user (which would
+        // produce a misleading "not supported" message that hides the real auth failure).
+        server.expect(requestTo(CONFIG.endpoint()))
+                .andRespond(withSuccess(
+                        "{\"jsonrpc\":\"2.0\",\"error\":{\"code\":-32602,\"message\":\"Login name or password is incorrect.\"},\"id\":1}",
+                        MediaType.APPLICATION_JSON));
+        ZabbixApiException ex = assertThrows(ZabbixApiException.class, () -> client.getHosts(10));
+        assertTrue(ex.getMessage().toLowerCase().contains("login name or password is incorrect"),
+                "expected raw auth error, was: " + ex.getMessage());
+    }
+
+    @Test
+    void legacyFieldErrorTriggersFallbackLoginField() {
+        // First call (username field) -> server says "not supported".
+        // Second call (user field)    -> server returns a token.
+        server.expect(requestTo(CONFIG.endpoint()))
+                .andRespond(withSuccess(
+                        "{\"jsonrpc\":\"2.0\",\"error\":{\"code\":-32602,\"message\":\"Unsupported parameter: username\"},\"id\":1}",
+                        MediaType.APPLICATION_JSON));
+        server.expect(requestTo(CONFIG.endpoint()))
+                .andRespond(withSuccess(
+                        "{\"jsonrpc\":\"2.0\",\"result\":\"legacy-auth-token\",\"id\":2}",
+                        MediaType.APPLICATION_JSON));
+        server.expect(requestTo(CONFIG.endpoint()))
+                .andRespond(withSuccess(
+                        "{\"jsonrpc\":\"2.0\",\"result\":[{\"hostid\":\"1010\",\"host\":\"web-01\",\"name\":\"web-01\",\"status\":\"0\",\"interfaces\":[{\"ip\":\"10.0.0.1\",\"dns\":\"web-01.local\",\"main\":\"1\"}],\"groups\":[{\"groupid\":\"2\",\"name\":\"Web\"}]}],\"id\":3}",
+                        MediaType.APPLICATION_JSON));
+        List<ZabbixHost> hosts = client.getHosts(10);
+        assertEquals(1, hosts.size());
+        assertEquals("web-01", hosts.get(0).host());
+        assertEquals("10.0.0.1", hosts.get(0).ip());
+    }
+
+    @Test
+    void getProblemsParsesSeverityAndClock() {
+        server.expect(requestTo(CONFIG.endpoint()))
+                .andRespond(withSuccess(
+                        "{\"jsonrpc\":\"2.0\",\"result\":\"legacy-auth-token\",\"id\":1}",
+                        MediaType.APPLICATION_JSON));
+        server.expect(requestTo(CONFIG.endpoint()))
+                .andRespond(withSuccess(
+                        "{\"jsonrpc\":\"2.0\",\"result\":[{\"eventid\":\"99\",\"objectid\":\"500\",\"name\":\"CPU high\",\"severity\":\"4\",\"clock\":\"1700000000\",\"hosts\":[{\"hostid\":\"7\"}],\"tags\":[{\"tag\":\"env\",\"value\":\"prod\"}]}],\"id\":2}",
+                        MediaType.APPLICATION_JSON));
+        List<ZabbixProblem> problems = client.getProblems(10);
+        assertEquals(1, problems.size());
+        ZabbixProblem p = problems.get(0);
+        assertEquals("99", p.eventId());
+        assertEquals("500", p.objectId());
+        assertEquals(4, p.severity());
+        assertEquals("CPU high", p.name());
+        assertEquals(List.of("7"), p.hostIds());
+        assertEquals(Map.of("env", "prod"), p.tags());
+    }
+
+    @Test
+    void httpServerErrorIsWrapped() {
+        // user.login succeeds with a token, then host.get returns 500
+        server.expect(requestTo(CONFIG.endpoint()))
+                .andRespond(withSuccess(
+                        "{\"jsonrpc\":\"2.0\",\"result\":\"sess-1\",\"id\":1}",
+                        MediaType.APPLICATION_JSON));
+        server.expect(requestTo(CONFIG.endpoint()))
+                .andRespond(withServerError());
+        ZabbixApiException ex = assertThrows(ZabbixApiException.class, () -> client.getHosts(10));
+        assertTrue(ex.getMessage().toLowerCase().contains("failed to call zabbix api"),
+                "expected wrapped HTTP error, was: " + ex.getMessage());
+    }
+}
