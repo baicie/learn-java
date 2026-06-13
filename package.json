@@ -7,7 +7,11 @@
     "dev": "pnpm -r --parallel -C web/console dev",
     "build": "pnpm -r -C web/console build",
     "preview": "pnpm -r -C web/console preview",
-    "lint": "pnpm -r -C web/console lint"
+    "lint": "pnpm -r -C web/console lint",
+    "ci": "bash scripts/ci/verify-local.sh",
+    "ci:docs": "bash scripts/ci/docs.sh",
+    "ci:backend": "bash scripts/ci/backend.sh",
+    "ci:frontend": "bash scripts/ci/frontend.sh"
   },
   "devDependencies": {
     "typescript": "^5.9.0"
