@@ -14,16 +14,22 @@ import java.util.stream.Collectors;
 
 @Service
 public class IncidentService {
-    private static final List<String> ALLOWED_STATUSES = List.of(
+    private static final List<String> ACTIVE_STATUSES = List.of(
             "open",
             "investigating",
-            "mitigating",
+            "mitigating"
+    );
+
+    private static final List<String> TERMINAL_STATUSES = List.of(
             "resolved",
             "closed",
             "ignored"
     );
 
-    private static final List<String> TERMINAL_STATUSES = List.of(
+    private static final List<String> ALLOWED_STATUSES = List.of(
+            "open",
+            "investigating",
+            "mitigating",
             "resolved",
             "closed",
             "ignored"
@@ -68,9 +74,14 @@ public class IncidentService {
 
     @Transactional
     public IncidentAggregationResponse aggregateOpenAlerts(String tenantId, IncidentAggregateRequest request) {
-        IncidentAggregateRequest normalizedRequest = request == null ? new IncidentAggregateRequest(null, null) : request;
+        repository.acquireTenantAggregationLock(tenantId);
+
+        IncidentAggregateRequest normalizedRequest = request == null
+                ? new IncidentAggregateRequest(null, null)
+                : request;
 
         OffsetDateTime since = OffsetDateTime.now().minusMinutes(normalizedRequest.normalizedWindowMinutes());
+
         List<AlertCandidate> candidates = repository.findOpenAlertCandidates(
                 tenantId,
                 since,
@@ -99,16 +110,13 @@ public class IncidentService {
             var existingIncident = repository.findActiveIncidentByAggregationKey(tenantId, aggregationKey);
             String groupSeverity = policy.highestSeverity(alerts);
             String incidentId;
-            int baseAlertCount;
+            boolean created = false;
 
             if (existingIncident.isPresent()) {
-                IncidentSummaryRecord existing = existingIncident.get();
-                incidentId = existing.id();
-                baseAlertCount = existing.alertCount();
-                incidentsUpdated++;
+                incidentId = existingIncident.get().id();
             } else {
                 incidentId = newId("inc");
-                baseAlertCount = 0;
+                created = true;
 
                 repository.insertIncident(new IncidentCreateCommand(
                         incidentId,
@@ -119,24 +127,29 @@ public class IncidentService {
                         "system",
                         policy.primaryAssetId(alerts),
                         aggregationKey,
-                        alerts.size(),
+                        0,
                         policy.firstStartedAt(alerts),
                         OffsetDateTime.now(),
                         policy.lastSeenAt(alerts)
                 ));
-
-                incidentsCreated++;
             }
 
+            int linkedInGroup = 0;
             int index = 0;
+
             for (AlertCandidate alert : alerts) {
-                repository.linkAlert(
+                boolean linked = repository.linkAlert(
                         newId("ie"),
                         incidentId,
                         alert.id(),
                         index == 0 ? "primary" : "related",
                         alert.startsAt()
                 );
+
+                if (!linked) {
+                    index++;
+                    continue;
+                }
 
                 repository.addTimeline(new TimelineCreateCommand(
                         newId("tl"),
@@ -150,10 +163,15 @@ public class IncidentService {
                 ));
 
                 alertsLinked++;
+                linkedInGroup++;
                 index++;
             }
 
-            int actualAlertCount = baseAlertCount + alerts.size();
+            if (linkedInGroup == 0) {
+                continue;
+            }
+
+            int actualAlertCount = repository.countLinkedAlerts(incidentId);
             String mergedSeverity = existingIncident
                     .map(existing -> IncidentSeverity.max(existing.severity(), groupSeverity))
                     .orElse(groupSeverity);
@@ -167,6 +185,12 @@ public class IncidentService {
                     actualAlertCount,
                     policy.lastSeenAt(alerts)
             );
+
+            if (created) {
+                incidentsCreated++;
+            } else {
+                incidentsUpdated++;
+            }
         }
 
         return new IncidentAggregationResponse(
@@ -180,21 +204,24 @@ public class IncidentService {
 
     @Transactional
     public IncidentRecord updateStatus(String tenantId, String incidentId, IncidentStatusRequest request) {
-        ensureIncidentExists(tenantId, incidentId);
+        IncidentSummaryRecord current = repository.findIncident(tenantId, incidentId)
+                .orElseThrow(() -> new AppException("INCIDENT_NOT_FOUND", "Incident not found"));
 
-        String status = normalizeStatus(request == null ? null : request.status());
-        boolean terminal = TERMINAL_STATUSES.contains(status);
+        String targetStatus = normalizeStatus(request == null ? null : request.status());
+        validateStatusTransition(tenantId, current, targetStatus);
 
-        repository.updateStatus(tenantId, incidentId, status, terminal);
+        boolean terminal = TERMINAL_STATUSES.contains(targetStatus);
+
+        repository.updateStatus(tenantId, incidentId, targetStatus, terminal);
         repository.addTimeline(new TimelineCreateCommand(
                 newId("tl"),
                 incidentId,
                 OffsetDateTime.now(),
                 "status_changed",
-                "Incident status changed to " + status,
+                "Incident status changed to " + targetStatus,
                 request == null ? null : request.note(),
                 "user",
-                "{\"status\":\"" + status + "\"}"
+                "{\"status\":\"" + targetStatus + "\"}"
         ));
 
         return repository.findIncident(tenantId, incidentId)
@@ -214,6 +241,25 @@ public class IncidentService {
         if (repository.findIncident(tenantId, incidentId).isEmpty()) {
             throw new AppException("INCIDENT_NOT_FOUND", "Incident not found");
         }
+    }
+
+    private void validateStatusTransition(String tenantId, IncidentSummaryRecord current, String targetStatus) {
+        if (!ACTIVE_STATUSES.contains(targetStatus)) {
+            return;
+        }
+
+        if (current.aggregationKey() == null || current.aggregationKey().isBlank()) {
+            return;
+        }
+
+        repository.findActiveIncidentByAggregationKey(tenantId, current.aggregationKey())
+                .filter(active -> !active.id().equals(current.id()))
+                .ifPresent(active -> {
+                    throw new AppException(
+                            "INCIDENT_ACTIVE_CONFLICT",
+                            "Another active incident already exists for the same aggregation key"
+                    );
+                });
     }
 
     private String normalizeStatus(String status) {

@@ -18,6 +18,26 @@ public class JdbcIncidentRepository implements IncidentRepository {
     }
 
     @Override
+    public void acquireTenantAggregationLock(String tenantId) {
+        /*
+         * Serialize incident aggregation per tenant.
+         *
+         * Prevents two concurrent POST /api/incidents/aggregate requests from:
+         * 1. reading the same unlinked alert_event rows,
+         * 2. creating competing active incidents for the same aggregation_key,
+         * 3. over-counting alert_count,
+         * 4. writing duplicate timeline rows.
+         *
+         * pg_advisory_xact_lock is transaction-scoped and will be released
+         * automatically when the @Transactional aggregateOpenAlerts ends.
+         */
+        jdbc.queryForList(
+                "select pg_advisory_xact_lock(hashtext('incident_aggregate'), hashtext(?))",
+                tenantId
+        );
+    }
+
+    @Override
     public List<AlertCandidate> findOpenAlertCandidates(String tenantId, OffsetDateTime since, int limit) {
         return jdbc.query("""
                 select id, tenant_id, source, source_event_id, severity, title, description,
@@ -143,12 +163,14 @@ public class JdbcIncidentRepository implements IncidentRepository {
     }
 
     @Override
-    public void linkAlert(String id, String incidentId, String alertId, String relationType, OffsetDateTime occurredAt) {
-        jdbc.update("""
+    public boolean linkAlert(String id, String incidentId, String alertId, String relationType, OffsetDateTime occurredAt) {
+        int updated = jdbc.update("""
                 insert into incident_event(id, incident_id, event_type, event_id, relation_type, occurred_at)
                 values (?, ?, 'alert', ?, ?, ?)
                 on conflict do nothing
                 """, id, incidentId, alertId, relationType, occurredAt);
+
+        return updated > 0;
     }
 
     @Override

@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.Optional;
 
 public interface IncidentRepository {
+    void acquireTenantAggregationLock(String tenantId);
+
     List<AlertCandidate> findOpenAlertCandidates(String tenantId, OffsetDateTime since, int limit);
 
     List<IncidentSummaryRecord> listIncidents(String tenantId, int limit);
@@ -25,7 +27,7 @@ public interface IncidentRepository {
             OffsetDateTime lastSeenAt
     );
 
-    void linkAlert(
+    boolean linkAlert(
             String id,
             String incidentId,
             String alertId,
