@@ -208,7 +208,7 @@ public class DataSourceService {
     }
 
     private ZabbixConfig toZabbixConfig(ZabbixConfigRequest request) {
-        return new ZabbixConfig(
+        ZabbixConfig config = new ZabbixConfig(
                 trimToNull(request.endpoint()),
                 trimToNull(request.username()),
                 trimToNull(request.password()),
@@ -216,11 +216,28 @@ public class DataSourceService {
                 request.connectTimeoutSeconds(),
                 request.readTimeoutSeconds()
         );
+
+        validateZabbixConfig(config);
+        return config;
+    }
+
+    private void validateZabbixConfig(ZabbixConfig config) {
+        if (config.endpoint() == null || config.endpoint().isBlank()) {
+            throw new AppException("DATASOURCE_CONFIG_INVALID", "Zabbix endpoint is required");
+        }
+
+        if (!config.hasAuthentication()) {
+            throw new AppException("DATASOURCE_CONFIG_INVALID", "Zabbix username/password or apiToken is required");
+        }
     }
 
     private ZabbixConfig readZabbixConfig(String configJson) {
         try {
-            return objectMapper.readValue(configJson, ZabbixConfig.class);
+            ZabbixConfig config = objectMapper.readValue(configJson, ZabbixConfig.class);
+            validateZabbixConfig(config);
+            return config;
+        } catch (AppException ex) {
+            throw ex;
         } catch (Exception ex) {
             throw new AppException("DATASOURCE_CONFIG_INVALID", "Datasource config is invalid");
         }
@@ -228,9 +245,12 @@ public class DataSourceService {
 
     private UpsertResult upsertHostAsset(String tenantId, String datasourceId, ZabbixHost host) {
         if (host.hostId() == null || host.hostId().isBlank()) {
-            throw new AppException("ZABBIX_HOST_INVALID", "Zabbix host without hostId is ignored");
+            return UpsertResult.asUpdated();
         }
+
         String sourceId = zabbixSourceId(datasourceId, host.hostId());
+        String name = firstNonBlank(host.host(), host.name());
+        String displayName = firstNonBlank(host.name(), host.host());
         String tagsJson = writeJson(Map.of(
                 "datasourceId", datasourceId,
                 "zabbixHostId", host.hostId(),
@@ -238,30 +258,31 @@ public class DataSourceService {
         ));
         String status = "1".equals(host.status()) ? "disabled" : "active";
 
-        String existingId = findAssetIdBySourceId(tenantId, sourceId);
-        if (existingId == null) {
-            jdbc.update("""
-                    insert into asset(id, tenant_id, asset_type, name, display_name, source, source_id, ip, tags, status, created_at, updated_at)
-                    values (?, ?, 'host', ?, ?, 'zabbix', ?, ?, ?::jsonb, ?, now(), now())
-                    """, newId("asset"), tenantId, host.host(), firstNonBlank(host.name(), host.host()),
-                    sourceId, host.ip(), tagsJson, status);
-            return UpsertResult.asCreated();
-        }
+        Boolean created = jdbc.queryForObject("""
+                insert into asset(id, tenant_id, asset_type, name, display_name, source, source_id, ip, tags, status, created_at, updated_at)
+                values (?, ?, 'host', ?, ?, 'zabbix', ?, ?, ?::jsonb, ?, now(), now())
+                on conflict (tenant_id, source, source_id) where source_id is not null
+                do update set
+                  name = excluded.name,
+                  display_name = excluded.display_name,
+                  ip = excluded.ip,
+                  tags = excluded.tags,
+                  status = excluded.status,
+                  updated_at = now()
+                returning (xmax = 0) as created
+                """, Boolean.class, newId("asset"), tenantId, name, displayName, sourceId, host.ip(), tagsJson, status);
 
-        jdbc.update("""
-                update asset
-                set name = ?, display_name = ?, ip = ?, tags = ?::jsonb, status = ?, updated_at = now()
-                where tenant_id = ? and id = ?
-                """, host.host(), firstNonBlank(host.name(), host.host()), host.ip(), tagsJson, status, tenantId, existingId);
-        return UpsertResult.asUpdated();
+        return Boolean.TRUE.equals(created) ? UpsertResult.asCreated() : UpsertResult.asUpdated();
     }
 
     private UpsertResult upsertAlertEvent(String tenantId, String datasourceId, ZabbixProblem problem) {
         if (problem.eventId() == null || problem.eventId().isBlank()) {
-            throw new AppException("ZABBIX_PROBLEM_INVALID", "Zabbix problem without eventId is ignored");
+            return UpsertResult.asUpdated();
         }
+
         String sourceEventId = zabbixSourceId(datasourceId, problem.eventId());
         String assetId = null;
+
         if (!problem.hostIds().isEmpty()) {
             assetId = findAssetIdBySourceId(tenantId, zabbixSourceId(datasourceId, problem.hostIds().get(0)));
         }
@@ -276,27 +297,45 @@ public class DataSourceService {
         String rawPayloadJson = writeJson(problem.raw());
         OffsetDateTime startsAt = OffsetDateTime.ofInstant(problem.clock(), ZoneOffset.UTC);
         String severity = mapSeverity(problem.severity());
-        String fingerprint = SOURCE_ZABBIX + ":" + datasourceId + ":" + problem.eventId();
 
-        int updated = jdbc.update("""
-                update alert_event
-                set severity = ?, title = ?, description = ?, asset_id = ?, entity_type = 'host', entity_name = ?,
-                    labels = ?::jsonb, starts_at = ?, status = 'open', raw_payload = ?::jsonb
-                where tenant_id = ? and source = 'zabbix' and source_event_id = ?
-                """, severity, problem.name(), "Zabbix problem event " + problem.eventId(), assetId, problem.name(),
-                labelsJson, startsAt, rawPayloadJson, tenantId, sourceEventId);
-        if (updated > 0) {
-            return UpsertResult.asUpdated();
-        }
+        String fingerprintKey = firstNonBlank(problem.objectId(), problem.eventId());
+        String fingerprint = SOURCE_ZABBIX + ":" + datasourceId + ":" + fingerprintKey;
 
-        jdbc.update("""
+        Boolean created = jdbc.queryForObject("""
                 insert into alert_event(id, tenant_id, source, source_event_id, severity, title, description,
-                                        asset_id, entity_type, entity_name, labels, starts_at, status, raw_payload, fingerprint, created_at)
+                                        asset_id, entity_type, entity_name, labels, starts_at, status, raw_payload,
+                                        fingerprint, created_at)
                 values (?, ?, 'zabbix', ?, ?, ?, ?, ?, 'host', ?, ?::jsonb, ?, 'open', ?::jsonb, ?, now())
-                """, newId("alert"), tenantId, sourceEventId, severity, problem.name(),
-                "Zabbix problem event " + problem.eventId(), assetId, problem.name(), labelsJson, startsAt,
-                rawPayloadJson, fingerprint);
-        return UpsertResult.asCreated();
+                on conflict (tenant_id, source, source_event_id) where source_event_id is not null
+                do update set
+                  severity = excluded.severity,
+                  title = excluded.title,
+                  description = excluded.description,
+                  asset_id = excluded.asset_id,
+                  entity_type = excluded.entity_type,
+                  entity_name = excluded.entity_name,
+                  labels = excluded.labels,
+                  starts_at = excluded.starts_at,
+                  status = excluded.status,
+                  raw_payload = excluded.raw_payload,
+                  fingerprint = excluded.fingerprint
+                returning (xmax = 0) as created
+                """, Boolean.class,
+                newId("alert"),
+                tenantId,
+                sourceEventId,
+                severity,
+                problem.name(),
+                "Zabbix problem event " + problem.eventId(),
+                assetId,
+                problem.name(),
+                labelsJson,
+                startsAt,
+                rawPayloadJson,
+                fingerprint
+        );
+
+        return Boolean.TRUE.equals(created) ? UpsertResult.asCreated() : UpsertResult.asUpdated();
     }
 
     private String findAssetIdBySourceId(String tenantId, String sourceId) {

@@ -43,11 +43,39 @@ class DefaultZabbixClientTest {
 
     @Test
     void testConnectionReturnsApiVersion() {
+        // testConnection: apiinfo.version (no auth) -> user.login -> host.get (limit=1).
         server.expect(requestTo(CONFIG.endpoint()))
                 .andExpect(method(org.springframework.http.HttpMethod.POST))
                 .andRespond(withSuccess("{\"jsonrpc\":\"2.0\",\"result\":\"7.0.0\",\"id\":1}",
                         MediaType.APPLICATION_JSON));
+        server.expect(requestTo(CONFIG.endpoint()))
+                .andExpect(method(org.springframework.http.HttpMethod.POST))
+                .andRespond(withSuccess("{\"jsonrpc\":\"2.0\",\"result\":\"sess-1\",\"id\":2}",
+                        MediaType.APPLICATION_JSON));
+        server.expect(requestTo(CONFIG.endpoint()))
+                .andExpect(method(org.springframework.http.HttpMethod.POST))
+                .andRespond(withSuccess("{\"jsonrpc\":\"2.0\",\"result\":[{\"hostid\":\"1\"}],\"id\":3}",
+                        MediaType.APPLICATION_JSON));
         assertEquals("7.0.0", client.testConnection());
+    }
+
+    @Test
+    void testConnectionRejectsBadCredentials() {
+        // apiinfo.version is anonymous and always succeeds; a bad token is only
+        // detected by the follow-up authenticated host.get.
+        server.expect(requestTo(CONFIG.endpoint()))
+                .andRespond(withSuccess("{\"jsonrpc\":\"2.0\",\"result\":\"7.0.0\",\"id\":1}",
+                        MediaType.APPLICATION_JSON));
+        server.expect(requestTo(CONFIG.endpoint()))
+                .andRespond(withSuccess("{\"jsonrpc\":\"2.0\",\"result\":\"sess-1\",\"id\":2}",
+                        MediaType.APPLICATION_JSON));
+        server.expect(requestTo(CONFIG.endpoint()))
+                .andRespond(withSuccess(
+                        "{\"jsonrpc\":\"2.0\",\"error\":{\"code\":-32602,\"message\":\"Not authorized.\"},\"id\":3}",
+                        MediaType.APPLICATION_JSON));
+        ZabbixApiException ex = assertThrows(ZabbixApiException.class, () -> client.testConnection());
+        assertTrue(ex.getMessage().toLowerCase().contains("not authorized"),
+                "expected auth rejection to surface, was: " + ex.getMessage());
     }
 
     @Test
@@ -105,13 +133,20 @@ class DefaultZabbixClientTest {
 
     @Test
     void getProblemsParsesSeverityAndClock() {
+        // Zabbix 7.x: problem.get returns no hosts; client does a follow-up
+        // event.get(filter.value=1) to back-fill hostids. Each problem triggers
+        // its own event.get so the mock below is intentionally simple.
         server.expect(requestTo(CONFIG.endpoint()))
                 .andRespond(withSuccess(
                         "{\"jsonrpc\":\"2.0\",\"result\":\"legacy-auth-token\",\"id\":1}",
                         MediaType.APPLICATION_JSON));
         server.expect(requestTo(CONFIG.endpoint()))
                 .andRespond(withSuccess(
-                        "{\"jsonrpc\":\"2.0\",\"result\":[{\"eventid\":\"99\",\"objectid\":\"500\",\"name\":\"CPU high\",\"severity\":\"4\",\"clock\":\"1700000000\",\"hosts\":[{\"hostid\":\"7\"}],\"tags\":[{\"tag\":\"env\",\"value\":\"prod\"}]}],\"id\":2}",
+                        "{\"jsonrpc\":\"2.0\",\"result\":[{\"eventid\":\"99\",\"objectid\":\"500\",\"name\":\"CPU high\",\"severity\":\"4\",\"clock\":\"1700000000\",\"tags\":[{\"tag\":\"env\",\"value\":\"prod\"}]}],\"id\":2}",
+                        MediaType.APPLICATION_JSON));
+        server.expect(requestTo(CONFIG.endpoint()))
+                .andRespond(withSuccess(
+                        "{\"jsonrpc\":\"2.0\",\"result\":[{\"eventid\":\"99\",\"hosts\":[{\"hostid\":\"7\"}]}],\"id\":3}",
                         MediaType.APPLICATION_JSON));
         List<ZabbixProblem> problems = client.getProblems(10);
         assertEquals(1, problems.size());

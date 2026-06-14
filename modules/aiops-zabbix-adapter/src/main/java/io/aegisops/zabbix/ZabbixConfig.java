@@ -9,11 +9,11 @@ public record ZabbixConfig(
         Integer readTimeoutSeconds
 ) {
     public int connectTimeoutMillis() {
-        return Math.max(1, connectTimeoutSeconds == null ? 5 : connectTimeoutSeconds) * 1000;
+        return clampSeconds(connectTimeoutSeconds, 5, 1, 60) * 1000;
     }
 
     public int readTimeoutMillis() {
-        return Math.max(1, readTimeoutSeconds == null ? 15 : readTimeoutSeconds) * 1000;
+        return clampSeconds(readTimeoutSeconds, 15, 1, 180) * 1000;
     }
 
     public boolean hasApiToken() {
@@ -22,5 +22,14 @@ public record ZabbixConfig(
 
     public boolean hasUsernamePassword() {
         return username != null && !username.isBlank() && password != null && !password.isBlank();
+    }
+
+    public boolean hasAuthentication() {
+        return hasApiToken() || hasUsernamePassword();
+    }
+
+    private int clampSeconds(Integer value, int defaultValue, int min, int max) {
+        int resolved = value == null ? defaultValue : value;
+        return Math.max(min, Math.min(max, resolved));
     }
 }
