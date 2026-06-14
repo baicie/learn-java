@@ -24,6 +24,7 @@
         <module>modules/aiops-asset</module>
         <module>modules/aiops-alert</module>
         <module>modules/aiops-incident</module>
+        <module>modules/aiops-rca</module>
         <module>apps/aiops-server</module>
         <module>apps/aiops-worker</module>
         <module>apps/aiops-runner</module>

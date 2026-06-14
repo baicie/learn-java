@@ -22,6 +22,7 @@
         <dependency><groupId>io.aegisops</groupId><artifactId>aiops-asset</artifactId><version>${project.version}</version></dependency>
         <dependency><groupId>io.aegisops</groupId><artifactId>aiops-alert</artifactId><version>${project.version}</version></dependency>
         <dependency><groupId>io.aegisops</groupId><artifactId>aiops-incident</artifactId><version>${project.version}</version></dependency>
+        <dependency><groupId>io.aegisops</groupId><artifactId>aiops-rca</artifactId><version>${project.version}</version></dependency>
         <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-web</artifactId></dependency>
         <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-actuator</artifactId></dependency>
         <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-validation</artifactId></dependency>

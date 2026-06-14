@@ -92,6 +92,8 @@ export type IncidentRecord = {
   primaryAssetId?: string
   aggregationKey?: string
   alertCount: number
+  suspectedRootCause?: string
+  confidence?: number
   startedAt: string
   detectedAt: string
   lastSeenAt?: string
@@ -136,6 +138,27 @@ export type IncidentAggregationResponse = {
   incidentsCreated: number
   incidentsUpdated: number
   alertsLinked: number
+}
+
+export type RcaEvidence = {
+  ruleId: string
+  title: string
+  description: string
+  score: number
+  confidence: number
+  attributes: Record<string, unknown>
+}
+
+export type RcaAnalysisResponse = {
+  id: string
+  incidentId: string
+  status: string
+  suspectedRootCause: string
+  confidence: number
+  summary: string
+  evidence: RcaEvidence[]
+  modelVersion: string
+  createdAt: string
 }
 
 const TOKEN_KEY = 'aegisops_token'
@@ -251,4 +274,15 @@ export function resolveIncident(id: string) {
 
 export function closeIncident(id: string) {
   return apiRequest<IncidentRecord>(`/api/incidents/${id}/close`, { method: 'POST' })
+}
+
+export function analyzeIncidentRca(id: string, force = true) {
+  return apiRequest<RcaAnalysisResponse>(`/api/incidents/${id}/rca/analyze`, {
+    method: 'POST',
+    body: JSON.stringify({ force })
+  })
+}
+
+export function getLatestIncidentRca(id: string) {
+  return apiRequest<RcaAnalysisResponse>(`/api/incidents/${id}/rca/latest`)
 }

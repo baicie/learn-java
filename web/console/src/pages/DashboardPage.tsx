@@ -2,12 +2,14 @@ import { FormEvent, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   aggregateIncidents,
+  analyzeIncidentRca,
   createZabbixDataSource,
   getIncident,
   resolveIncident,
   syncDataSource,
   testDataSource
 } from '../api/client'
+import type { RcaAnalysisResponse } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import { usePhase1Queries } from '../hooks/usePhase1Queries'
 
@@ -24,6 +26,7 @@ export function DashboardPage() {
   const queryClient = useQueryClient()
   const [message, setMessage] = useState('')
   const [selectedIncidentId, setSelectedIncidentId] = useState<string | null>(null)
+  const [rcaResult, setRcaResult] = useState<RcaAnalysisResponse | null>(null)
   const [form, setForm] = useState({
     name: 'Local Zabbix',
     endpoint: 'http://localhost:8081/api_jsonrpc.php',
@@ -94,6 +97,22 @@ export function DashboardPage() {
     },
     onError: (error) => setMessage(String(error))
   })
+
+  const rcaMutation = useMutation({
+    mutationFn: (incidentId: string) => analyzeIncidentRca(incidentId, true),
+    onSuccess: async (result) => {
+      setRcaResult(result)
+      setMessage(`RCA completed: ${result.suspectedRootCause}`)
+      await invalidateAll()
+      await queryClient.invalidateQueries({ queryKey: ['incident', selectedIncidentId] })
+    },
+    onError: (error) => setMessage(String(error))
+  })
+
+  function selectIncident(id: string) {
+    setSelectedIncidentId(id)
+    setRcaResult(null)
+  }
 
   function submit(event: FormEvent) {
     event.preventDefault()
@@ -241,7 +260,7 @@ export function DashboardPage() {
                     selectedIncidentId === incident.id ? 'bg-indigo-50' : 'bg-white hover:bg-slate-50'
                   }`}
                   key={incident.id}
-                  onClick={() => setSelectedIncidentId(incident.id)}
+                  onClick={() => selectIncident(incident.id)}
                 >
                   <div className="flex items-center justify-between gap-3">
                     <div className="font-medium">{incident.title}</div>
@@ -271,14 +290,44 @@ export function DashboardPage() {
                     {incidentDetailQuery.data.incident.severity} · {incidentDetailQuery.data.incident.status}
                   </div>
                   <p className="mt-3 text-sm text-slate-600">{incidentDetailQuery.data.incident.summary}</p>
-                  <button
-                    className="mt-3 rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-60"
-                    disabled={resolveMutation.isPending}
-                    onClick={() => resolveMutation.mutate(incidentDetailQuery.data!.incident.id)}
-                  >
-                    Resolve
-                  </button>
+                  <div className="mt-3 flex">
+                    <button
+                      className="rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-60"
+                      disabled={resolveMutation.isPending}
+                      onClick={() => resolveMutation.mutate(incidentDetailQuery.data!.incident.id)}
+                    >
+                      Resolve
+                    </button>
+                    <button
+                      className="ml-2 rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-60"
+                      disabled={rcaMutation.isPending}
+                      onClick={() => rcaMutation.mutate(incidentDetailQuery.data!.incident.id)}
+                    >
+                      {rcaMutation.isPending ? 'Analyzing...' : 'Analyze RCA'}
+                    </button>
+                  </div>
                 </div>
+
+                {rcaResult && (
+                  <div>
+                    <h3 className="text-sm font-semibold">RCA Result</h3>
+                    <div className="mt-2 rounded-lg border border-indigo-200 bg-indigo-50 p-3 text-sm">
+                      <div className="font-medium">{rcaResult.suspectedRootCause}</div>
+                      <div className="mt-1 text-slate-600">confidence: {rcaResult.confidence}</div>
+                      <div className="mt-2 text-slate-700">{rcaResult.summary}</div>
+                    </div>
+
+                    <div className="mt-3 space-y-2">
+                      {rcaResult.evidence.map((item, index) => (
+                        <div className="rounded-lg border border-slate-200 p-3 text-sm" key={`${item.ruleId}-${index}`}>
+                          <div className="font-medium">{item.title}</div>
+                          <div className="text-slate-500">{item.ruleId} · score {item.score} · confidence {item.confidence}</div>
+                          <div className="mt-1 text-slate-600">{item.description}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 <div>
                   <h3 className="text-sm font-semibold">Linked Alerts</h3>
