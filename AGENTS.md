@@ -1265,11 +1265,191 @@ AI 编码 Agent 在执行任务时必须：
 9. 不把 MVP 复杂化
 10. 不绕过 aiops-runner 执行自动化动作
 11. 与用户交互、撰写文档、提交说明、代码注释、PR 描述默认使用中文；除非用户明确要求其他语言或上下文必须使用英文（例如公开协议、外部 SDK API、国际化文案）
+
+---
+
+## 17. Git 提交与变更规范
+
+所有 Commit Message、PR 标题、PR 描述、变更日志必须遵循以下规范。**违反规范的提交会被打回重写。**
+
+### 17.1 格式
+
+```txt
+<type>(<scope>): <中文主题>
+
+<中文正文，列点说明动机与变更点>
+
+<可选 Footer，英文关键字>
+```
+
+### 17.2 主题行（首行）
+
+```txt
+type    : 必填，小写，固定枚举
+scope   : 必填，小写，固定枚举；多模块用逗号分隔
+冒号    : 半角英文冒号 + 一个半角空格
+主题    : 中文，祈使句，「动词 + 名词」结构，不加句号，不超过 50 个汉字
+```
+
+#### 17.2.1 type 枚举
+
+```txt
+feat     新功能、新接口、新页面
+fix      缺陷修复
+refactor 重构，不改变行为
+perf     性能优化
+test     补齐/调整测试
+docs     文档、设计、ADR
+build    构建脚本、依赖、版本
+ci       CI / CD 流水线
+infra    docker-compose、部署脚本、基础设施
+db       数据库迁移、Schema 调整
+chore    杂项（拼写、注释、目录调整）
+revert   回滚
+```
+
+#### 17.2.2 scope 枚举
+
+按本项目实际结构收敛，新增模块时再扩展：
+
+```txt
+# 后端应用
+server, worker, runner
+
+# 后端模块
+common, web, security, tenant, user, datasource, asset, alert,
+incident, rca, ai, runbook, automation, audit, notification,
+zabbix-adapter, vm-adapter, clickhouse-adapter, otel-adapter, rum
+
+# 前端
+console
+
+# 基础设施与跨切
+infra, db, deps, config
+
+# 元数据
+docs, agent, governance
+```
+
+#### 17.2.3 主题行示例
+
+```txt
+feat(incident): 新增按时间桶聚合策略
+fix(alert): 修复 fingerprint 为空时重复入库
+refactor(server): 将 tenant 过滤下沉到 Repository
+perf(datasource): 同步主机时使用批量 upsert
+docs(mvp): 补充 Phase 2 设计与验证步骤
+db(incident): 新增 V4 事故聚合迁移
+infra(compose): 引入 VictoriaMetrics 与 MinIO
+```
+
+### 17.3 正文
+
+```txt
+- 必填，使用中文，列点说明
+- 每条以「模块/动作」开头，例如「后端:」「前端:」「迁移:」
+- 聚焦「为什么」与「影响」，不要复述 diff
+- 涉及外部接口变更必须显式写「接口:」
+- 涉及数据库变更必须显式写「迁移:」并指明版本号
+- 涉及安全、权限、审计必须显式写「安全:」
+- 总长度建议控制在 30 行内
+```
+
+#### 17.3.1 正文示例
+
+```txt
+feat(incident): 新增按时间桶聚合策略
+
+后端:
+- IncidentService 引入 TimeBucketPolicy，key = asset_id + severity，
+  默认 30 分钟；命中已开事故时只追加 incident_alert。
+- 同桶内告警数超过阈值时按严重度升级事故（warning → critical）。
+- 新增 IncidentAggregationPolicy 配置类，支持按租户覆盖。
+
+迁移:
+- V4__phase2_incident_aggregation.sql：incidents、incident_alerts、
+  incident_timeline 三张表，tenant_id 必填。
+
+接口:
+- POST /api/incidents/aggregate
+- GET  /api/incidents/{id}/timeline
+- POST /api/incidents/{id}/status
+
+安全:
+- 所有接口强制 tenant 过滤，复用 TenantContext
+```
+
+### 17.4 Footer
+
+```txt
+可选项；用于自动化与关联追踪，关键字使用英文半角
+Refs:    #关联 issue / 文档（不关闭）
+Closes:  #关闭 issue
+Breaks:  #破坏性变更，必须列出影响面
+Refs-Tests:  #测试覆盖说明
+```
+
+示例：
+
+```txt
+Refs: docs/mvp/design/phase2.md
+Closes: #42
+Breaks: /api/incidents 响应增加 severity 字段
+```
+
+### 17.5 PR 规范
+
+```txt
+标题：与提交主题行同格式，例 feat(incident): 新增按时间桶聚合策略
+描述：必须包含
+  1. 背景（为什么）
+  2. 主要变更（列点）
+  3. 验证方式（curl / SQL / 截图 / 录屏）
+  4. 风险与回滚
+  5. 关联 issue / 文档
+合并：仅允许 squash merge 或 rebase merge；merge commit 会污染主线历史
+```
+
+### 17.6 反例（禁止写法）
+
+```txt
+# 1. 没有 type 和 scope
+add zabbix integration
+
+# 2. 主题用英文
+feat(incident): add time bucket policy
+
+# 3. 主题过长，超过 50 字
+feat(incident): 新增按时间桶聚合策略并支持严重度自动升级以及自定义租户配置
+
+# 4. scope 自由发挥
+feat(my-module): xxx
+
+# 5. 多件事塞一个提交
+feat(server, worker, runner): 重构、重写、修复若干问题
+```
+
+### 17.7 Agent 自检清单
+
+每次准备 `git commit` 之前必须确认：
+
+```txt
+[ ] 首行符合 <type>(<scope>): 中文主题 格式
+[ ] type 在固定枚举内
+[ ] scope 在固定枚举内
+[ ] 主题 ≤ 50 字，无句号
+[ ] 正文列点，每点带「模块/动作」前缀
+[ ] 涉及接口变更已写「接口:」
+[ ] 涉及数据库变更已写「迁移:」并指明版本号
+[ ] 涉及安全变更已写「安全:」
+[ ] Footer 关键字使用英文
+[ ] 提交前已跑过 mvn verify 或对应模块的测试
+```
 ```
 
 ---
 
-## 17. 当前最优先任务
+## 18. 当前最优先任务
 
 当前 MVP 起步时，Agent 应按以下顺序推进：
 
@@ -1294,7 +1474,7 @@ AI 编码 Agent 在执行任务时必须：
 
 ---
 
-## 18. 最终验收 Demo
+## 19. 最终验收 Demo
 
 MVP 完成后必须能演示：
 
@@ -1318,7 +1498,7 @@ MVP 完成后必须能演示：
 
 ---
 
-## 19. 最高优先级提醒
+## 20. 最高优先级提醒
 
 永远优先保证：
 

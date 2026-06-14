@@ -81,6 +81,63 @@ export type AlertEventRecord = {
   createdAt: string
 }
 
+export type IncidentRecord = {
+  id: string
+  tenantId: string
+  title: string
+  summary?: string
+  severity: string
+  status: string
+  source: string
+  primaryAssetId?: string
+  aggregationKey?: string
+  alertCount: number
+  startedAt: string
+  detectedAt: string
+  lastSeenAt?: string
+  resolvedAt?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export type IncidentAlertRecord = {
+  id: string
+  source: string
+  sourceEventId?: string
+  severity: string
+  title: string
+  status: string
+  assetId?: string
+  entityName?: string
+  fingerprint: string
+  startsAt: string
+  relationType: string
+}
+
+export type IncidentTimelineRecord = {
+  id: string
+  eventTime: string
+  eventType: string
+  title: string
+  description?: string
+  source: string
+  payloadJson: string
+}
+
+export type IncidentDetailRecord = {
+  incident: IncidentRecord
+  alerts: IncidentAlertRecord[]
+  timeline: IncidentTimelineRecord[]
+}
+
+export type IncidentAggregationResponse = {
+  scannedAlerts: number
+  groups: number
+  incidentsCreated: number
+  incidentsUpdated: number
+  alertsLinked: number
+}
+
 const TOKEN_KEY = 'aegisops_token'
 
 export function getToken() {
@@ -168,4 +225,30 @@ export function listAssets() {
 
 export function listAlerts() {
   return apiRequest<AlertEventRecord[]>('/api/alerts')
+}
+
+export function listIncidents() {
+  return apiRequest<IncidentRecord[]>('/api/incidents')
+}
+
+export function aggregateIncidents() {
+  return apiRequest<IncidentAggregationResponse>('/api/incidents/aggregate', {
+    method: 'POST',
+    body: JSON.stringify({
+      windowMinutes: 1440,
+      limit: 1000
+    })
+  })
+}
+
+export function getIncident(id: string) {
+  return apiRequest<IncidentDetailRecord>(`/api/incidents/${id}`)
+}
+
+export function resolveIncident(id: string) {
+  return apiRequest<IncidentRecord>(`/api/incidents/${id}/resolve`, { method: 'POST' })
+}
+
+export function closeIncident(id: string) {
+  return apiRequest<IncidentRecord>(`/api/incidents/${id}/close`, { method: 'POST' })
 }

@@ -1,7 +1,10 @@
 import { FormEvent, useState } from 'react'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
+  aggregateIncidents,
   createZabbixDataSource,
+  getIncident,
+  resolveIncident,
   syncDataSource,
   testDataSource
 } from '../api/client'
@@ -18,16 +21,31 @@ const cards = [
 
 export function DashboardPage() {
   const auth = useAuth()
+  const queryClient = useQueryClient()
   const [message, setMessage] = useState('')
+  const [selectedIncidentId, setSelectedIncidentId] = useState<string | null>(null)
   const [form, setForm] = useState({
     name: 'Local Zabbix',
-    endpoint: 'http://localhost:8080/api_jsonrpc.php',
+    endpoint: 'http://localhost:8081/api_jsonrpc.php',
     username: 'Admin',
     password: '',
     apiToken: ''
   })
 
-  const { overviewQuery, datasourceQuery, assetQuery, alertQuery, invalidateAll } = usePhase1Queries()
+  const {
+    overviewQuery,
+    datasourceQuery,
+    assetQuery,
+    alertQuery,
+    incidentQuery,
+    invalidateAll
+  } = usePhase1Queries()
+
+  const incidentDetailQuery = useQuery({
+    queryKey: ['incident', selectedIncidentId],
+    queryFn: () => getIncident(selectedIncidentId!),
+    enabled: Boolean(selectedIncidentId)
+  })
 
   const createMutation = useMutation({
     mutationFn: createZabbixDataSource,
@@ -56,6 +74,27 @@ export function DashboardPage() {
     onError: (error) => setMessage(String(error))
   })
 
+  const aggregateMutation = useMutation({
+    mutationFn: aggregateIncidents,
+    onSuccess: async (result) => {
+      setMessage(
+        `Aggregated ${result.scannedAlerts} alerts, created ${result.incidentsCreated}, updated ${result.incidentsUpdated}, linked ${result.alertsLinked}`
+      )
+      await invalidateAll()
+    },
+    onError: (error) => setMessage(String(error))
+  })
+
+  const resolveMutation = useMutation({
+    mutationFn: resolveIncident,
+    onSuccess: async () => {
+      setMessage('Incident resolved')
+      await invalidateAll()
+      await queryClient.invalidateQueries({ queryKey: ['incident', selectedIncidentId] })
+    },
+    onError: (error) => setMessage(String(error))
+  })
+
   function submit(event: FormEvent) {
     event.preventDefault()
     createMutation.mutate({
@@ -78,7 +117,7 @@ export function DashboardPage() {
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
           <div>
             <h1 className="text-xl font-bold">AegisOps Console</h1>
-            <p className="text-sm text-slate-500">Phase1 Zabbix datasource sync</p>
+            <p className="text-sm text-slate-500">Phase2 Incident aggregation center</p>
           </div>
           <div className="flex items-center gap-4">
             <span className="text-sm text-slate-600">{auth.user?.displayName || 'Admin'}</span>
@@ -86,10 +125,25 @@ export function DashboardPage() {
           </div>
         </div>
       </header>
+
       <section className="mx-auto max-w-6xl px-6 py-8">
         <div className="mb-6 rounded-2xl bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-semibold">System Overview</h2>
-          <p className="mt-1 text-sm text-slate-500">Phase1 已接入 Zabbix 数据源、资产同步和告警同步。</p>
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <h2 className="text-lg font-semibold">System Overview</h2>
+              <p className="mt-1 text-sm text-slate-500">
+                Phase2 已支持 Zabbix 告警同步、AlertEvent 聚合、Incident 详情与时间线。
+              </p>
+            </div>
+            <button
+              className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
+              disabled={aggregateMutation.isPending}
+              onClick={() => aggregateMutation.mutate()}
+            >
+              {aggregateMutation.isPending ? 'Aggregating...' : 'Aggregate Incidents'}
+            </button>
+          </div>
+
           {message && <div className="mt-4 rounded-lg bg-slate-100 px-4 py-3 text-sm text-slate-700">{message}</div>}
         </div>
 
@@ -176,6 +230,84 @@ export function DashboardPage() {
             </div>
           </section>
         </div>
+
+        <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_420px]">
+          <section className="rounded-2xl bg-white p-6 shadow-sm">
+            <h2 className="text-lg font-semibold">Incidents</h2>
+            <div className="mt-4 overflow-hidden rounded-xl border border-slate-200">
+              {incidentQuery.data?.map((incident) => (
+                <button
+                  className={`block w-full border-b border-slate-100 px-4 py-3 text-left text-sm last:border-0 ${
+                    selectedIncidentId === incident.id ? 'bg-indigo-50' : 'bg-white hover:bg-slate-50'
+                  }`}
+                  key={incident.id}
+                  onClick={() => setSelectedIncidentId(incident.id)}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="font-medium">{incident.title}</div>
+                    <StatusChip status={incident.status} />
+                  </div>
+                  <div className="mt-1 text-slate-500">
+                    {incident.severity} · alerts {incident.alertCount} · {incident.startedAt}
+                  </div>
+                </button>
+              ))}
+              {!incidentQuery.data?.length && <div className="px-4 py-6 text-sm text-slate-500">No incidents yet. Click Aggregate Incidents after syncing alerts.</div>}
+            </div>
+          </section>
+
+          <section className="rounded-2xl bg-white p-6 shadow-sm">
+            <h2 className="text-lg font-semibold">Incident Detail</h2>
+            {!selectedIncidentId && <div className="mt-4 text-sm text-slate-500">Select an incident.</div>}
+
+            {incidentDetailQuery.isLoading && <div className="mt-4 text-sm text-slate-500">Loading incident...</div>}
+            {incidentDetailQuery.error && <div className="mt-4 text-sm text-red-600">{String(incidentDetailQuery.error)}</div>}
+
+            {incidentDetailQuery.data && (
+              <div className="mt-4 space-y-5">
+                <div>
+                  <div className="text-base font-semibold">{incidentDetailQuery.data.incident.title}</div>
+                  <div className="mt-1 text-sm text-slate-500">
+                    {incidentDetailQuery.data.incident.severity} · {incidentDetailQuery.data.incident.status}
+                  </div>
+                  <p className="mt-3 text-sm text-slate-600">{incidentDetailQuery.data.incident.summary}</p>
+                  <button
+                    className="mt-3 rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-60"
+                    disabled={resolveMutation.isPending}
+                    onClick={() => resolveMutation.mutate(incidentDetailQuery.data!.incident.id)}
+                  >
+                    Resolve
+                  </button>
+                </div>
+
+                <div>
+                  <h3 className="text-sm font-semibold">Linked Alerts</h3>
+                  <div className="mt-2 space-y-2">
+                    {incidentDetailQuery.data.alerts.map((alert) => (
+                      <div className="rounded-lg border border-slate-200 p-3 text-sm" key={alert.id}>
+                        <div className="font-medium">{alert.title}</div>
+                        <div className="text-slate-500">{alert.relationType} · {alert.severity} · {alert.startsAt}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-sm font-semibold">Timeline</h3>
+                  <div className="mt-2 space-y-2">
+                    {incidentDetailQuery.data.timeline.map((item) => (
+                      <div className="rounded-lg border border-slate-200 p-3 text-sm" key={item.id}>
+                        <div className="font-medium">{item.title}</div>
+                        <div className="text-slate-500">{item.eventType} · {item.eventTime}</div>
+                        {item.description && <div className="mt-1 text-slate-600">{item.description}</div>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </section>
+        </div>
       </section>
     </main>
   )
@@ -208,7 +340,13 @@ function Field({
 const STATUS_STYLES: Record<string, string> = {
   active: 'bg-emerald-100 text-emerald-800 border-emerald-200',
   error: 'bg-rose-100 text-rose-800 border-rose-200',
-  inactive: 'bg-slate-100 text-slate-700 border-slate-200'
+  inactive: 'bg-slate-100 text-slate-700 border-slate-200',
+  open: 'bg-rose-100 text-rose-800 border-rose-200',
+  investigating: 'bg-amber-100 text-amber-800 border-amber-200',
+  mitigating: 'bg-blue-100 text-blue-800 border-blue-200',
+  resolved: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+  closed: 'bg-slate-100 text-slate-700 border-slate-200',
+  ignored: 'bg-slate-100 text-slate-700 border-slate-200'
 }
 
 function StatusChip({ status }: { status: string }) {

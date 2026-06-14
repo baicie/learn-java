@@ -4,15 +4,17 @@ import {
   AlertEventRecord,
   AssetRecord,
   DataSourceRecord,
+  IncidentRecord,
   listAlerts,
   listAssets,
   listDataSources,
+  listIncidents,
   overview
 } from '../api/client'
 
 type Overview = Record<string, number | string>
 
-const PHASE1_QUERY_KEYS = ['overview', 'datasources', 'assets', 'alerts'] as const
+const CONSOLE_QUERY_KEYS = ['overview', 'datasources', 'assets', 'alerts', 'incidents'] as const
 
 export function usePhase1Queries() {
   const queryClient = useQueryClient()
@@ -37,10 +39,15 @@ export function usePhase1Queries() {
     queryFn: listAlerts
   })
 
+  const incidentQuery = useQuery<IncidentRecord[]>({
+    queryKey: ['incidents'],
+    queryFn: listIncidents
+  })
+
   const invalidateAll = useCallback(
     async () => {
       await Promise.all(
-        PHASE1_QUERY_KEYS.map((key) =>
+        CONSOLE_QUERY_KEYS.map((key) =>
           queryClient.invalidateQueries({ queryKey: [key] })
         )
       )
@@ -53,6 +60,7 @@ export function usePhase1Queries() {
     datasourceQuery,
     assetQuery,
     alertQuery,
+    incidentQuery,
     invalidateAll
   } as const
 }
