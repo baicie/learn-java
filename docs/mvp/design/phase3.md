@@ -1,8 +1,8 @@
 # Phase3：RCA 规则引擎与证据链
 
-当前仓库已经具备 Phase0/Phase1/Phase2 的基础：根 `pom.xml` 已经是 Maven 多模块，并包含 `aiops-incident`，server 也已经依赖 `aiops-incident`；`incident` 表里也已经预留了 `suspected_root_cause` 与 `confidence` 字段。  
+当前仓库已经具备 Phase0/Phase1/Phase2 的基础：根 `pom.xml` 已经是 Maven 多模块，并包含 `aiops-incident`，server 也已经依赖 `aiops-incident`；`incident` 表里也已经预留了 `suspected_root_cause` 与 `confidence` 字段。
 
-Phase2 目前已经能把 `alert_event` 聚合成 `incident`，并提供事故详情、状态流转、告警关联与时间线。 
+Phase2 目前已经能把 `alert_event` 聚合成 `incident`，并提供事故详情、状态流转、告警关联与时间线。
 
 所以 Phase3 不应该再改 Incident 聚合，而是在 Incident 之上新增一个独立能力：
 
@@ -88,12 +88,17 @@ pom.xml
 apps/aiops-server/pom.xml
 web/console/src/api/client.ts
 web/console/src/pages/DashboardPage.tsx
+web/console/src/components/console/incident-detail-card.tsx
 ```
+
+> 说明：RCA 按钮与结果展示的 React 组件并没有塞回 `DashboardPage.tsx`，
+> 而是落在 `incident-detail-card.tsx` 中由 `DashboardPage` 透传
+> `rcaResult` / `isAnalyzing` / `onAnalyze` props，遵循关注点分离。
 
 ## 3.2 新增文件
 
 ```txt
-apps/aiops-server/src/main/resources/db/migration/V4__phase3_rca_analysis.sql
+apps/aiops-server/src/main/resources/db/migration/V5__phase3_rca_analysis.sql
 
 modules/aiops-rca/pom.xml
 
@@ -337,7 +342,11 @@ apps/aiops-server/pom.xml
 
 # 5. 数据库迁移
 
-## `apps/aiops-server/src/main/resources/db/migration/V4__phase3_rca_analysis.sql`
+> 迁移文件编号为 `V5` 而非 `V4`：`V4__phase2_incident_aggregation.sql` 已被
+> Phase2 占用，所以 Phase3 顺延为 `V5__phase3_rca_analysis.sql`。
+> 这条规则由 Flyway 按字母序递增版本号强制保证。
+
+## `apps/aiops-server/src/main/resources/db/migration/V5__phase3_rca_analysis.sql`
 
 ```sql
 create table if not exists rca_analysis (
@@ -2202,292 +2211,307 @@ class RcaServiceTest {
 
 ```ts
 export type ApiResponse<T> = {
-  success: boolean
-  data: T
-  errorCode?: string
-  message?: string
-  timestamp: string
-}
+  success: boolean;
+  data: T;
+  errorCode?: string;
+  message?: string;
+  timestamp: string;
+};
 
 export type LoginResponse = {
-  token: string
-  user: Me
-}
+  token: string;
+  user: Me;
+};
 
 export type Me = {
-  id: string
-  tenantId: string
-  username: string
-  displayName: string
-  roles: string[]
-}
+  id: string;
+  tenantId: string;
+  username: string;
+  displayName: string;
+  roles: string[];
+};
 
 export type DataSourceRecord = {
-  id: string
-  tenantId: string
-  type: string
-  name: string
-  status: string
-  createdAt: string
-  updatedAt: string
-  lastSyncAt?: string
-}
+  id: string;
+  tenantId: string;
+  type: string;
+  name: string;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+  lastSyncAt?: string;
+};
 
 export type CreateZabbixDataSourcePayload = {
-  type: 'zabbix'
-  name: string
+  type: "zabbix";
+  name: string;
   zabbix: {
-    endpoint: string
-    username?: string
-    password?: string
-    apiToken?: string
-    connectTimeoutSeconds?: number
-    readTimeoutSeconds?: number
-  }
-}
+    endpoint: string;
+    username?: string;
+    password?: string;
+    apiToken?: string;
+    connectTimeoutSeconds?: number;
+    readTimeoutSeconds?: number;
+  };
+};
 
 export type TestDataSourceResponse = {
-  ok: boolean
-  message: string
-  version?: string
-}
+  ok: boolean;
+  message: string;
+  version?: string;
+};
 
 export type SyncDataSourceResponse = {
-  runId: string
-  status: string
-  hostsCreated: number
-  hostsUpdated: number
-  alertsCreated: number
-  alertsUpdated: number
-  message: string
-}
+  runId: string;
+  status: string;
+  hostsCreated: number;
+  hostsUpdated: number;
+  alertsCreated: number;
+  alertsUpdated: number;
+  message: string;
+};
 
 export type AssetRecord = {
-  id: string
-  tenantId: string
-  assetType: string
-  name: string
-  displayName?: string
-  source: string
-  status: string
-  createdAt: string
-}
+  id: string;
+  tenantId: string;
+  assetType: string;
+  name: string;
+  displayName?: string;
+  source: string;
+  status: string;
+  createdAt: string;
+};
 
 export type AlertEventRecord = {
-  id: string
-  tenantId: string
-  source: string
-  severity: string
-  title: string
-  status: string
-  startsAt: string
-  createdAt: string
-}
+  id: string;
+  tenantId: string;
+  source: string;
+  severity: string;
+  title: string;
+  status: string;
+  startsAt: string;
+  createdAt: string;
+};
 
 export type IncidentRecord = {
-  id: string
-  tenantId: string
-  title: string
-  summary?: string
-  severity: string
-  status: string
-  source: string
-  primaryAssetId?: string
-  aggregationKey?: string
-  alertCount: number
-  suspectedRootCause?: string
-  confidence?: number
-  startedAt: string
-  detectedAt: string
-  lastSeenAt?: string
-  resolvedAt?: string
-  createdAt: string
-  updatedAt: string
-}
+  id: string;
+  tenantId: string;
+  title: string;
+  summary?: string;
+  severity: string;
+  status: string;
+  source: string;
+  primaryAssetId?: string;
+  aggregationKey?: string;
+  alertCount: number;
+  suspectedRootCause?: string;
+  confidence?: number;
+  startedAt: string;
+  detectedAt: string;
+  lastSeenAt?: string;
+  resolvedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+};
 
 export type IncidentAlertRecord = {
-  id: string
-  source: string
-  sourceEventId?: string
-  severity: string
-  title: string
-  status: string
-  assetId?: string
-  entityName?: string
-  fingerprint: string
-  startsAt: string
-  relationType: string
-}
+  id: string;
+  source: string;
+  sourceEventId?: string;
+  severity: string;
+  title: string;
+  status: string;
+  assetId?: string;
+  entityName?: string;
+  fingerprint: string;
+  startsAt: string;
+  relationType: string;
+};
 
 export type IncidentTimelineRecord = {
-  id: string
-  eventTime: string
-  eventType: string
-  title: string
-  description?: string
-  source: string
-  payloadJson: string
-}
+  id: string;
+  eventTime: string;
+  eventType: string;
+  title: string;
+  description?: string;
+  source: string;
+  payloadJson: string;
+};
 
 export type IncidentDetailRecord = {
-  incident: IncidentRecord
-  alerts: IncidentAlertRecord[]
-  timeline: IncidentTimelineRecord[]
-}
+  incident: IncidentRecord;
+  alerts: IncidentAlertRecord[];
+  timeline: IncidentTimelineRecord[];
+};
 
 export type IncidentAggregationResponse = {
-  scannedAlerts: number
-  groups: number
-  incidentsCreated: number
-  incidentsUpdated: number
-  alertsLinked: number
-}
+  scannedAlerts: number;
+  groups: number;
+  incidentsCreated: number;
+  incidentsUpdated: number;
+  alertsLinked: number;
+};
 
 export type RcaEvidence = {
-  ruleId: string
-  title: string
-  description: string
-  score: number
-  confidence: number
-  attributes: Record<string, unknown>
-}
+  ruleId: string;
+  title: string;
+  description: string;
+  score: number;
+  confidence: number;
+  attributes: Record<string, unknown>;
+};
 
 export type RcaAnalysisResponse = {
-  id: string
-  incidentId: string
-  status: string
-  suspectedRootCause: string
-  confidence: number
-  summary: string
-  evidence: RcaEvidence[]
-  modelVersion: string
-  createdAt: string
-}
+  id: string;
+  incidentId: string;
+  status: string;
+  suspectedRootCause: string;
+  confidence: number;
+  summary: string;
+  evidence: RcaEvidence[];
+  modelVersion: string;
+  createdAt: string;
+};
 
-const TOKEN_KEY = 'aegisops_token'
+const TOKEN_KEY = "aegisops_token";
 
 export function getToken() {
-  return localStorage.getItem(TOKEN_KEY)
+  return localStorage.getItem(TOKEN_KEY);
 }
 
 export function setToken(token: string) {
-  localStorage.setItem(TOKEN_KEY, token)
+  localStorage.setItem(TOKEN_KEY, token);
 }
 
 export function clearToken() {
-  localStorage.removeItem(TOKEN_KEY)
+  localStorage.removeItem(TOKEN_KEY);
 }
 
-export async function apiRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const token = getToken()
+export async function apiRequest<T>(
+  path: string,
+  init: RequestInit = {},
+): Promise<T> {
+  const token = getToken();
   const resp = await fetch(path, {
     ...init,
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(init.headers || {})
-    }
-  })
+      ...(init.headers || {}),
+    },
+  });
 
-  const payload = await parseApiResponse<T>(resp)
+  const payload = await parseApiResponse<T>(resp);
   if (!resp.ok || !payload.success) {
-    throw new Error(payload.message || payload.errorCode || `Request failed with status ${resp.status}`)
+    throw new Error(
+      payload.message ||
+        payload.errorCode ||
+        `Request failed with status ${resp.status}`,
+    );
   }
-  return payload.data
+  return payload.data;
 }
 
 async function parseApiResponse<T>(resp: Response): Promise<ApiResponse<T>> {
-  const contentType = resp.headers.get('content-type') || ''
-  if (!contentType.includes('application/json')) {
-    const text = await resp.text()
+  const contentType = resp.headers.get("content-type") || "";
+  if (!contentType.includes("application/json")) {
+    const text = await resp.text();
     return {
       success: false,
       data: undefined as T,
       errorCode: `HTTP_${resp.status}`,
-      message: text || resp.statusText || 'Non-JSON response',
-      timestamp: new Date().toISOString()
-    }
+      message: text || resp.statusText || "Non-JSON response",
+      timestamp: new Date().toISOString(),
+    };
   }
-  return (await resp.json()) as ApiResponse<T>
+  return (await resp.json()) as ApiResponse<T>;
 }
 
 export function login(username: string, password: string) {
-  return apiRequest<LoginResponse>('/api/auth/login', {
-    method: 'POST',
-    body: JSON.stringify({ username, password })
-  })
+  return apiRequest<LoginResponse>("/api/auth/login", {
+    method: "POST",
+    body: JSON.stringify({ username, password }),
+  });
 }
 
 export function me() {
-  return apiRequest<Me>('/api/auth/me')
+  return apiRequest<Me>("/api/auth/me");
 }
 
 export function overview() {
-  return apiRequest<Record<string, number | string>>('/api/system/overview')
+  return apiRequest<Record<string, number | string>>("/api/system/overview");
 }
 
 export function listDataSources() {
-  return apiRequest<DataSourceRecord[]>('/api/datasources')
+  return apiRequest<DataSourceRecord[]>("/api/datasources");
 }
 
 export function createZabbixDataSource(payload: CreateZabbixDataSourcePayload) {
-  return apiRequest<DataSourceRecord>('/api/datasources', {
-    method: 'POST',
-    body: JSON.stringify(payload)
-  })
+  return apiRequest<DataSourceRecord>("/api/datasources", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
 }
 
 export function testDataSource(id: string) {
-  return apiRequest<TestDataSourceResponse>(`/api/datasources/${id}/test`, { method: 'POST' })
+  return apiRequest<TestDataSourceResponse>(`/api/datasources/${id}/test`, {
+    method: "POST",
+  });
 }
 
 export function syncDataSource(id: string) {
-  return apiRequest<SyncDataSourceResponse>(`/api/datasources/${id}/sync`, { method: 'POST' })
+  return apiRequest<SyncDataSourceResponse>(`/api/datasources/${id}/sync`, {
+    method: "POST",
+  });
 }
 
 export function listAssets() {
-  return apiRequest<AssetRecord[]>('/api/assets')
+  return apiRequest<AssetRecord[]>("/api/assets");
 }
 
 export function listAlerts() {
-  return apiRequest<AlertEventRecord[]>('/api/alerts')
+  return apiRequest<AlertEventRecord[]>("/api/alerts");
 }
 
 export function listIncidents() {
-  return apiRequest<IncidentRecord[]>('/api/incidents')
+  return apiRequest<IncidentRecord[]>("/api/incidents");
 }
 
 export function aggregateIncidents() {
-  return apiRequest<IncidentAggregationResponse>('/api/incidents/aggregate', {
-    method: 'POST',
+  return apiRequest<IncidentAggregationResponse>("/api/incidents/aggregate", {
+    method: "POST",
     body: JSON.stringify({
       windowMinutes: 1440,
-      limit: 1000
-    })
-  })
+      limit: 1000,
+    }),
+  });
 }
 
 export function getIncident(id: string) {
-  return apiRequest<IncidentDetailRecord>(`/api/incidents/${id}`)
+  return apiRequest<IncidentDetailRecord>(`/api/incidents/${id}`);
 }
 
 export function resolveIncident(id: string) {
-  return apiRequest<IncidentRecord>(`/api/incidents/${id}/resolve`, { method: 'POST' })
+  return apiRequest<IncidentRecord>(`/api/incidents/${id}/resolve`, {
+    method: "POST",
+  });
 }
 
 export function closeIncident(id: string) {
-  return apiRequest<IncidentRecord>(`/api/incidents/${id}/close`, { method: 'POST' })
+  return apiRequest<IncidentRecord>(`/api/incidents/${id}/close`, {
+    method: "POST",
+  });
 }
 
 export function analyzeIncidentRca(id: string, force = true) {
   return apiRequest<RcaAnalysisResponse>(`/api/incidents/${id}/rca/analyze`, {
-    method: 'POST',
-    body: JSON.stringify({ force })
-  })
+    method: "POST",
+    body: JSON.stringify({ force }),
+  });
 }
 
 export function getLatestIncidentRca(id: string) {
-  return apiRequest<RcaAnalysisResponse>(`/api/incidents/${id}/rca/latest`)
+  return apiRequest<RcaAnalysisResponse>(`/api/incidents/${id}/rca/latest`);
 }
 ```
 
@@ -2507,14 +2531,16 @@ import {
   getIncident,
   resolveIncident,
   syncDataSource,
-  testDataSource
-} from '../api/client'
+  testDataSource,
+} from "../api/client";
 ```
 
 ### state 增加
 
 ```tsx
-const [rcaResult, setRcaResult] = useState<Awaited<ReturnType<typeof analyzeIncidentRca>> | null>(null)
+const [rcaResult, setRcaResult] = useState<Awaited<
+  ReturnType<typeof analyzeIncidentRca>
+> | null>(null);
 ```
 
 ### mutation 增加
@@ -2523,13 +2549,15 @@ const [rcaResult, setRcaResult] = useState<Awaited<ReturnType<typeof analyzeInci
 const rcaMutation = useMutation({
   mutationFn: (incidentId: string) => analyzeIncidentRca(incidentId, true),
   onSuccess: async (result) => {
-    setRcaResult(result)
-    setMessage(`RCA completed: ${result.suspectedRootCause}`)
-    await invalidateAll()
-    await queryClient.invalidateQueries({ queryKey: ['incident', selectedIncidentId] })
+    setRcaResult(result);
+    setMessage(`RCA completed: ${result.suspectedRootCause}`);
+    await invalidateAll();
+    await queryClient.invalidateQueries({
+      queryKey: ["incident", selectedIncidentId],
+    });
   },
-  onError: (error) => setMessage(String(error))
-})
+  onError: (error) => setMessage(String(error)),
+});
 ```
 
 ### selected incident 变化时清空 RCA
@@ -2538,8 +2566,8 @@ const rcaMutation = useMutation({
 
 ```tsx
 function selectIncident(id: string) {
-  setSelectedIncidentId(id)
-  setRcaResult(null)
+  setSelectedIncidentId(id);
+  setRcaResult(null);
 }
 ```
 
@@ -2565,7 +2593,7 @@ onClick={() => selectIncident(incident.id)}
   disabled={rcaMutation.isPending}
   onClick={() => rcaMutation.mutate(incidentDetailQuery.data!.incident.id)}
 >
-  {rcaMutation.isPending ? 'Analyzing...' : 'Analyze RCA'}
+  {rcaMutation.isPending ? "Analyzing..." : "Analyze RCA"}
 </button>
 ```
 
@@ -2574,26 +2602,35 @@ onClick={() => selectIncident(incident.id)}
 放在 Linked Alerts 前面：
 
 ```tsx
-{rcaResult && (
-  <div>
-    <h3 className="text-sm font-semibold">RCA Result</h3>
-    <div className="mt-2 rounded-lg border border-indigo-200 bg-indigo-50 p-3 text-sm">
-      <div className="font-medium">{rcaResult.suspectedRootCause}</div>
-      <div className="mt-1 text-slate-600">confidence: {rcaResult.confidence}</div>
-      <div className="mt-2 text-slate-700">{rcaResult.summary}</div>
-    </div>
-
-    <div className="mt-3 space-y-2">
-      {rcaResult.evidence.map((item, index) => (
-        <div className="rounded-lg border border-slate-200 p-3 text-sm" key={`${item.ruleId}-${index}`}>
-          <div className="font-medium">{item.title}</div>
-          <div className="text-slate-500">{item.ruleId} · score {item.score} · confidence {item.confidence}</div>
-          <div className="mt-1 text-slate-600">{item.description}</div>
+{
+  rcaResult && (
+    <div>
+      <h3 className="text-sm font-semibold">RCA Result</h3>
+      <div className="mt-2 rounded-lg border border-indigo-200 bg-indigo-50 p-3 text-sm">
+        <div className="font-medium">{rcaResult.suspectedRootCause}</div>
+        <div className="mt-1 text-slate-600">
+          confidence: {rcaResult.confidence}
         </div>
-      ))}
+        <div className="mt-2 text-slate-700">{rcaResult.summary}</div>
+      </div>
+
+      <div className="mt-3 space-y-2">
+        {rcaResult.evidence.map((item, index) => (
+          <div
+            className="rounded-lg border border-slate-200 p-3 text-sm"
+            key={`${item.ruleId}-${index}`}
+          >
+            <div className="font-medium">{item.title}</div>
+            <div className="text-slate-500">
+              {item.ruleId} · score {item.score} · confidence {item.confidence}
+            </div>
+            <div className="mt-1 text-slate-600">{item.description}</div>
+          </div>
+        ))}
+      </div>
     </div>
-  </div>
-)}
+  );
+}
 ```
 
 ---
