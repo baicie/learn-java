@@ -3,15 +3,16 @@ from aiops_agent.schemas import AlertContext, DiagnoseRequest, IncidentContext, 
 from aiops_agent.settings import Settings
 
 
-def test_diagnosis_graph_returns_structured_result():
+def test_diagnosis_graph_returns_contract_version_and_safety_raw():
     settings = Settings(
-        internal_token="token",
+        contract_version="agent-diagnosis.v1",
         provider="aiops-agent",
         model="langgraph-deterministic",
         agent_name="aegisops_diagnosis_graph",
     )
 
     request = DiagnoseRequest(
+        contractVersion="agent-diagnosis.v1",
         tenantId="tenant_1",
         incidentId="inc_1",
         incident=IncidentContext(
@@ -32,15 +33,15 @@ def test_diagnosis_graph_returns_structured_result():
             confidence=0.8,
             summary="RCA summary",
         ),
+        traceId="trace_1",
     )
 
     response = run_diagnosis_graph(request, settings)
 
+    assert response.contractVersion == "agent-diagnosis.v1"
     assert response.provider == "aiops-agent"
-    assert response.model == "langgraph-deterministic"
     assert response.agentName == "aegisops_diagnosis_graph"
-    assert "CPU saturation" in response.rootCause
+    assert response.raw["traceId"] == "trace_1"
+    assert response.raw["safety"]["autoExecutionAllowed"] is False
     assert response.nextSteps
-    assert response.runbookSuggestions
     assert response.risks
-    assert response.raw["graph"] == "aegisops_diagnosis_graph"

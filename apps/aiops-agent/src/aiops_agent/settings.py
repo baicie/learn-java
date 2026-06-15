@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     )
 
     internal_token: str = "dev-internal-token"
+
     provider: str = "aiops-agent"
     model: str = "langgraph-deterministic"
 
@@ -23,9 +24,9 @@ class Settings(BaseSettings):
     )
 
     default_locale: str = "zh-CN"
+    contract_version: str = "agent-diagnosis.v1"
 
-    # Reserved for Phase4.2.
-    # Current graph still runs deterministic mode, but exposing this now avoids another schema change later.
+    # deterministic | openai-compatible
     generation_mode: str = "deterministic"
 
     def normalized_generation_mode(self) -> str:

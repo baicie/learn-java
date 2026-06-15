@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aegisops.local/contracts/agent/diagnosis-request.schema.json",
+  "title": "AegisOps Agent Diagnosis Request",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contractVersion",
+    "tenantId",
+    "incidentId",
+    "incident",
+    "alerts",
+    "locale",
+    "traceId"
+  ],
+  "properties": {
+    "contractVersion": {
+      "type": "string",
+      "const": "agent-diagnosis.v1"
+    },
+    "tenantId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "incidentId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "incident": {
+      "type": "object",
+      "required": ["id"],
+      "additionalProperties": true,
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "title": { "type": ["string", "null"] },
+        "summary": { "type": ["string", "null"] },
+        "severity": { "type": ["string", "null"] },
+        "status": { "type": ["string", "null"] },
+        "source": { "type": ["string", "null"] },
+        "primaryAssetId": { "type": ["string", "null"] },
+        "aggregationKey": { "type": ["string", "null"] },
+        "alertCount": { "type": "integer", "minimum": 0 },
+        "suspectedRootCause": { "type": ["string", "null"] },
+        "confidence": { "type": ["number", "null"] },
+        "startedAt": { "type": ["string", "null"] },
+        "detectedAt": { "type": ["string", "null"] },
+        "lastSeenAt": { "type": ["string", "null"] }
+      }
+    },
+    "alerts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id"],
+        "additionalProperties": true,
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "source": { "type": ["string", "null"] },
+          "sourceEventId": { "type": ["string", "null"] },
+          "severity": { "type": ["string", "null"] },
+          "title": { "type": ["string", "null"] },
+          "description": { "type": ["string", "null"] },
+          "assetId": { "type": ["string", "null"] },
+          "entityType": { "type": ["string", "null"] },
+          "entityName": { "type": ["string", "null"] },
+          "fingerprint": { "type": ["string", "null"] },
+          "labelsJson": { "type": ["string", "null"] },
+          "startsAt": { "type": ["string", "null"] }
+        }
+      }
+    },
+    "rca": {
+      "type": ["object", "null"],
+      "additionalProperties": true,
+      "properties": {
+        "id": { "type": "string" },
+        "suspectedRootCause": { "type": ["string", "null"] },
+        "confidence": { "type": ["number", "null"] },
+        "summary": { "type": ["string", "null"] },
+        "evidenceJson": { "type": ["string", "null"] },
+        "modelVersion": { "type": ["string", "null"] },
+        "createdAt": { "type": ["string", "null"] }
+      }
+    },
+    "locale": {
+      "type": "string",
+      "minLength": 1
+    },
+    "traceId": {
+      "type": "string",
+      "minLength": 1
+    }
+  }
+}

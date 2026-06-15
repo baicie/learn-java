@@ -4,6 +4,7 @@ from typing import Any, TypedDict
 
 from langgraph.graph import END, START, StateGraph
 
+from aiops_agent.safety import apply_safety_boundary
 from aiops_agent.schemas import DiagnoseRequest, DiagnoseResponse
 from aiops_agent.settings import Settings
 from aiops_agent.tools import (
@@ -126,6 +127,9 @@ def generate_diagnosis(settings: Settings):
 
         raw = {
             "graph": "aegisops_diagnosis_graph",
+            "contractVersion": settings.contract_version,
+            "traceId": request.traceId,
+            "generationMode": settings.normalized_generation_mode(),
             "incident": incident,
             "alerts": alerts,
             "rca": rca,
@@ -133,19 +137,22 @@ def generate_diagnosis(settings: Settings):
             "logs": state.get("logs", {}),
         }
 
+        response = DiagnoseResponse(
+            contractVersion=settings.contract_version,
+            provider=settings.provider,
+            model=settings.model,
+            agentName=settings.agent_name,
+            summary=summary,
+            rootCause=str(root_cause),
+            impact=impact,
+            nextSteps=next_steps,
+            runbookSuggestions=runbooks,
+            risks=risks,
+            raw=raw,
+        )
+
         return {
-            "diagnosis": DiagnoseResponse(
-                provider=settings.provider,
-                model=settings.model,
-                agentName=settings.agent_name,
-                summary=summary,
-                rootCause=str(root_cause),
-                impact=impact,
-                nextSteps=next_steps,
-                runbookSuggestions=runbooks,
-                risks=risks,
-                raw=raw,
-            )
+            "diagnosis": apply_safety_boundary(response),
         }
 
     return _node

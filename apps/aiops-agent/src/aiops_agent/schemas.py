@@ -49,16 +49,18 @@ class RcaContext(BaseModel):
 
 
 class DiagnoseRequest(BaseModel):
+    contractVersion: str = "agent-diagnosis.v1"
     tenantId: str
     incidentId: str
     incident: IncidentContext
     alerts: list[AlertContext] = Field(default_factory=list)
     rca: RcaContext | None = None
     locale: str = "zh-CN"
-    traceId: str | None = None
+    traceId: str
 
 
 class DiagnoseResponse(BaseModel):
+    contractVersion: str = "agent-diagnosis.v1"
     provider: str = "aiops-agent"
     model: str = "langgraph-deterministic"
     agentName: str = "aegisops_diagnosis_graph"
@@ -76,4 +78,11 @@ class HealthResponse(BaseModel):
     provider: str
     model: str
     agentName: str
-    generationMode: str = "deterministic"
+    contractVersion: str
+    generationMode: str
+
+
+class ContractResponse(BaseModel):
+    contractVersion: str
+    requestSchema: dict[str, Any]
+    responseSchema: dict[str, Any]

@@ -1,0 +1,48 @@
+{
+  "contractVersion": "agent-diagnosis.v1",
+  "tenantId": "tenant_1",
+  "incidentId": "inc_1",
+  "incident": {
+    "id": "inc_1",
+    "title": "CPU high",
+    "summary": "CPU usage is high on host-1",
+    "severity": "critical",
+    "status": "open",
+    "source": "zabbix",
+    "primaryAssetId": "asset_1",
+    "aggregationKey": "zabbix:fp_cpu",
+    "alertCount": 2,
+    "suspectedRootCause": "CPU saturation",
+    "confidence": 0.8,
+    "startedAt": "2026-06-14T10:00:00+09:00",
+    "detectedAt": "2026-06-14T10:01:00+09:00",
+    "lastSeenAt": "2026-06-14T10:05:00+09:00"
+  },
+  "alerts": [
+    {
+      "id": "alert_1",
+      "source": "zabbix",
+      "sourceEventId": "event_1",
+      "severity": "critical",
+      "title": "CPU high",
+      "description": "CPU usage is above threshold",
+      "assetId": "asset_1",
+      "entityType": "host",
+      "entityName": "host-1",
+      "fingerprint": "fp_cpu",
+      "labelsJson": "{}",
+      "startsAt": "2026-06-14T10:00:00+09:00"
+    }
+  ],
+  "rca": {
+    "id": "rca_1",
+    "suspectedRootCause": "CPU saturation",
+    "confidence": 0.8,
+    "summary": "High severity CPU alerts concentrated on one host.",
+    "evidenceJson": "[]",
+    "modelVersion": "rules-v1",
+    "createdAt": "2026-06-14T10:06:00+09:00"
+  },
+  "locale": "zh-CN",
+  "traceId": "trace_1"
+}

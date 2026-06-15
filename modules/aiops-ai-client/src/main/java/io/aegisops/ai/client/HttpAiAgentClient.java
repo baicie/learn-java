@@ -17,55 +17,64 @@ import org.springframework.web.client.RestTemplate;
 @Component
 @EnableConfigurationProperties(AgentClientProperties.class)
 public class HttpAiAgentClient implements AiAgentClient {
-  private final AgentClientProperties properties;
-  private final ObjectMapper objectMapper;
-  private final RestTemplate restTemplate;
+    private final AgentClientProperties properties;
+    private final ObjectMapper objectMapper;
+    private final RestTemplate restTemplate;
+    private final AgentContractValidator contractValidator;
 
-  public HttpAiAgentClient(AgentClientProperties properties, ObjectMapper objectMapper) {
-    this(properties, objectMapper, createRestTemplate(properties));
-  }
-
-  HttpAiAgentClient(
-      AgentClientProperties properties, ObjectMapper objectMapper, RestTemplate restTemplate) {
-    this.properties = properties;
-    this.objectMapper = objectMapper;
-    this.restTemplate = restTemplate;
-  }
-
-  @Override
-  public AgentDiagnosisResponse diagnose(AgentDiagnosisRequest request) {
-    try {
-      HttpHeaders headers = new HttpHeaders();
-      headers.setContentType(MediaType.APPLICATION_JSON);
-      headers.set("X-AegisOps-Internal-Token", properties.normalizedInternalToken());
-
-      HttpEntity<String> entity =
-          new HttpEntity<>(objectMapper.writeValueAsString(request), headers);
-
-      ResponseEntity<AgentDiagnosisResponse> response =
-          restTemplate.exchange(
-              properties.normalizedBaseUrl() + "/v1/diagnose",
-              HttpMethod.POST,
-              entity,
-              AgentDiagnosisResponse.class);
-
-      AgentDiagnosisResponse body = response.getBody();
-      if (body == null) {
-        throw new AppException("AI_AGENT_EMPTY_RESPONSE", "AI agent returned empty response");
-      }
-
-      return body;
-    } catch (AppException ex) {
-      throw ex;
-    } catch (Exception ex) {
-      throw new AppException("AI_AGENT_CALL_FAILED", "Failed to call AI diagnosis agent");
+    public HttpAiAgentClient(AgentClientProperties properties, ObjectMapper objectMapper) {
+        this(properties, objectMapper, createRestTemplate(properties), new AgentContractValidator());
     }
-  }
 
-  private static RestTemplate createRestTemplate(AgentClientProperties properties) {
-    SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-    factory.setConnectTimeout(properties.normalizedConnectTimeoutMillis());
-    factory.setReadTimeout(properties.normalizedReadTimeoutMillis());
-    return new RestTemplate(factory);
-  }
+    HttpAiAgentClient(
+            AgentClientProperties properties,
+            ObjectMapper objectMapper,
+            RestTemplate restTemplate,
+            AgentContractValidator contractValidator
+    ) {
+        this.properties = properties;
+        this.objectMapper = objectMapper;
+        this.restTemplate = restTemplate;
+        this.contractValidator = contractValidator;
+    }
+
+    @Override
+    public AgentDiagnosisResponse diagnose(AgentDiagnosisRequest request) {
+        try {
+            contractValidator.validateRequest(request);
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.set(AgentContract.INTERNAL_TOKEN_HEADER, properties.normalizedInternalToken());
+            headers.set(AgentContract.TRACE_ID_HEADER, request.traceId());
+            headers.set(AgentContract.CONTRACT_VERSION_HEADER, AgentContract.DIAGNOSIS_CONTRACT_VERSION);
+
+            HttpEntity<String> entity = new HttpEntity<>(objectMapper.writeValueAsString(request), headers);
+
+            ResponseEntity<AgentDiagnosisResponse> response = restTemplate.exchange(
+                    properties.normalizedBaseUrl() + "/v1/diagnose",
+                    HttpMethod.POST,
+                    entity,
+                    AgentDiagnosisResponse.class
+            );
+
+            AgentDiagnosisResponse body = response.getBody();
+            contractValidator.validateResponse(body);
+
+            return body;
+        } catch (AgentContractViolationException ex) {
+            throw ex;
+        } catch (AppException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            throw new AppException("AI_AGENT_CALL_FAILED", "Failed to call AI diagnosis agent");
+        }
+    }
+
+    private static RestTemplate createRestTemplate(AgentClientProperties properties) {
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(properties.normalizedConnectTimeoutMillis());
+        factory.setReadTimeout(properties.normalizedReadTimeoutMillis());
+        return new RestTemplate(factory);
+    }
 }

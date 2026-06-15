@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aegisops.local/contracts/agent/diagnosis-response.schema.json",
+  "title": "AegisOps Agent Diagnosis Response",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contractVersion",
+    "provider",
+    "model",
+    "agentName",
+    "summary",
+    "rootCause",
+    "impact",
+    "nextSteps",
+    "runbookSuggestions",
+    "risks",
+    "raw"
+  ],
+  "properties": {
+    "contractVersion": {
+      "type": "string",
+      "const": "agent-diagnosis.v1"
+    },
+    "provider": {
+      "type": "string",
+      "minLength": 1
+    },
+    "model": {
+      "type": "string",
+      "minLength": 1
+    },
+    "agentName": {
+      "type": "string",
+      "minLength": 1
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 1
+    },
+    "rootCause": {
+      "type": "string",
+      "minLength": 1
+    },
+    "impact": {
+      "type": "string",
+      "minLength": 1
+    },
+    "nextSteps": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "runbookSuggestions": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "risks": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "raw": {
+      "type": "object"
+    }
+  }
+}

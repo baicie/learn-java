@@ -1,0 +1,19 @@
+{
+  "contractVersion": "agent-diagnosis.v1",
+  "provider": "aiops-agent",
+  "model": "langgraph-deterministic",
+  "agentName": "aegisops_diagnosis_graph",
+  "summary": "Incident inc_1 is open with severity critical. 1 linked alert(s) were analyzed.",
+  "rootCause": "CPU saturation",
+  "impact": "The primary impact may be concentrated on asset_1.",
+  "nextSteps": [
+    "Confirm whether the dominant fingerprint `fp_cpu` is still firing.",
+    "Check the primary asset `asset_1` around the incident start time."
+  ],
+  "runbookSuggestions": ["Host resource saturation investigation"],
+  "risks": ["Do not execute remediation automatically in Phase4.1."],
+  "raw": {
+    "graph": "aegisops_diagnosis_graph",
+    "generationMode": "deterministic"
+  }
+}

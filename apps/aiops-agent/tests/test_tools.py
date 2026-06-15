@@ -22,6 +22,7 @@ def test_inspect_rca_evidence_handles_missing_rca():
         tenantId="tenant_1",
         incidentId="inc_1",
         incident=IncidentContext(id="inc_1"),
+        traceId="trace_1",
     )
 
     result = inspect_rca_evidence(request)
@@ -37,6 +38,7 @@ def test_runbook_stub_recommends_cpu_runbook():
         incident=IncidentContext(id="inc_1"),
         alerts=[AlertContext(id="a1", title="CPU high", severity="critical")],
         rca=RcaContext(id="rca_1", suspectedRootCause="CPU saturation"),
+        traceId="trace_1",
     )
 
     alert_analysis = inspect_alerts(request.alerts)
