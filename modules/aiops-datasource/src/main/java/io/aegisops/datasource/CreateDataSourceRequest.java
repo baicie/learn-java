@@ -5,7 +5,4 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
 public record CreateDataSourceRequest(
-        @NotBlank String type,
-        @NotBlank String name,
-        @Valid @NotNull ZabbixConfigRequest zabbix
-) {}
+    @NotBlank String type, @NotBlank String name, @Valid @NotNull ZabbixConfigRequest zabbix) {}

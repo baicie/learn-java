@@ -4,8 +4,4 @@ import java.math.BigDecimal;
 import java.util.List;
 
 public record RcaAnalysisResult(
-        String suspectedRootCause,
-        BigDecimal confidence,
-        String summary,
-        List<RcaEvidence> evidence
-) {}
+    String suspectedRootCause, BigDecimal confidence, String summary, List<RcaEvidence> evidence) {}

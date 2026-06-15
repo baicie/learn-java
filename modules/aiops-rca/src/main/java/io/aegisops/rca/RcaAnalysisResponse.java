@@ -5,13 +5,12 @@ import java.time.OffsetDateTime;
 import java.util.List;
 
 public record RcaAnalysisResponse(
-        String id,
-        String incidentId,
-        String status,
-        String suspectedRootCause,
-        BigDecimal confidence,
-        String summary,
-        List<RcaEvidence> evidence,
-        String modelVersion,
-        OffsetDateTime createdAt
-) {}
+    String id,
+    String incidentId,
+    String status,
+    String suspectedRootCause,
+    BigDecimal confidence,
+    String summary,
+    List<RcaEvidence> evidence,
+    String modelVersion,
+    OffsetDateTime createdAt) {}

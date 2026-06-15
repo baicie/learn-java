@@ -6,8 +6,8 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class CommonAutoConfiguration {
-    @Bean
-    public TimeProvider timeProvider() {
-        return new TimeProvider();
-    }
+  @Bean
+  public TimeProvider timeProvider() {
+    return new TimeProvider();
+  }
 }

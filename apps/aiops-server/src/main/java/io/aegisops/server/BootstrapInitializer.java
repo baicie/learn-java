@@ -11,20 +11,20 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class BootstrapInitializer implements ApplicationRunner {
-    private static final Logger log = LoggerFactory.getLogger(BootstrapInitializer.class);
+  private static final Logger log = LoggerFactory.getLogger(BootstrapInitializer.class);
 
-    private final TenantService tenantService;
-    private final UserService userService;
+  private final TenantService tenantService;
+  private final UserService userService;
 
-    public BootstrapInitializer(TenantService tenantService, UserService userService) {
-        this.tenantService = tenantService;
-        this.userService = userService;
-    }
+  public BootstrapInitializer(TenantService tenantService, UserService userService) {
+    this.tenantService = tenantService;
+    this.userService = userService;
+  }
 
-    @Override
-    public void run(ApplicationArguments args) {
-        Tenant tenant = tenantService.getOrCreateDefaultTenant();
-        userService.createAdminIfAbsent(tenant.id(), "admin", "admin123");
-        log.info("Bootstrap completed. Default login: admin / admin123");
-    }
+  @Override
+  public void run(ApplicationArguments args) {
+    Tenant tenant = tenantService.getOrCreateDefaultTenant();
+    userService.createAdminIfAbsent(tenant.id(), "admin", "admin123");
+    log.info("Bootstrap completed. Default login: admin / admin123");
+  }
 }

@@ -2,12 +2,13 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { CircleCheckIcon, InfoIcon, TriangleAlertIcon } from 'lucide-react'
 import { useState } from 'react'
 
-import type { RcaAnalysisResponse } from '@/api/client'
+import type { AiDiagnosisResponse, RcaAnalysisResponse } from '@/api/client'
 
 import {
   aggregateIncidents,
   analyzeIncidentRca,
   createZabbixDataSource,
+  diagnoseIncidentAi,
   getIncident,
   resolveIncident,
   syncDataSource,
@@ -45,6 +46,7 @@ export function DashboardPage() {
   } | null>(null)
   const [selectedIncidentId, setSelectedIncidentId] = useState<string | null>(null)
   const [rcaResult, setRcaResult] = useState<RcaAnalysisResponse | null>(null)
+  const [aiDiagnosis, setAiDiagnosis] = useState<AiDiagnosisResponse | null>(null)
   const [form, setForm] = useState<DatasourceForm>(initialForm)
 
   const { overviewQuery, datasourceQuery, assetQuery, alertQuery, incidentQuery, invalidateAll } =
@@ -122,9 +124,20 @@ export function DashboardPage() {
     onError: (error) => setBanner({ tone: 'warning', text: String(error) }),
   })
 
+  const aiDiagnosisMutation = useMutation({
+    mutationFn: (incidentId: string) => diagnoseIncidentAi(incidentId, true),
+    onSuccess: async (result) => {
+      setAiDiagnosis(result)
+      setBanner({ tone: 'info', text: `AI diagnosis completed: ${result.summary}` })
+      await queryClient.invalidateQueries({ queryKey: ['incident', selectedIncidentId] })
+    },
+    onError: (error) => setBanner({ tone: 'warning', text: String(error) }),
+  })
+
   function selectIncident(id: string) {
     setSelectedIncidentId(id)
     setRcaResult(null)
+    setAiDiagnosis(null)
   }
 
   return (
@@ -197,10 +210,13 @@ export function DashboardPage() {
             isLoading={incidentDetailQuery.isLoading}
             error={incidentDetailQuery.error}
             rcaResult={rcaResult}
+            aiDiagnosis={aiDiagnosis}
             isResolving={resolveMutation.isPending}
             isAnalyzing={rcaMutation.isPending}
+            isAiDiagnosing={aiDiagnosisMutation.isPending}
             onResolve={(id) => resolveMutation.mutate(id)}
             onAnalyze={(id) => rcaMutation.mutate(id)}
+            onAiDiagnose={(id) => aiDiagnosisMutation.mutate(id)}
           />
         </section>
       </main>

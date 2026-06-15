@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 
 import type {
+  AiDiagnosisResponse,
   IncidentAlertRecord,
   IncidentDetailRecord,
   IncidentTimelineRecord,
@@ -27,19 +28,25 @@ export function IncidentDetailCard({
   isLoading,
   error,
   rcaResult,
+  aiDiagnosis,
   isResolving,
   isAnalyzing,
+  isAiDiagnosing,
   onResolve,
   onAnalyze,
+  onAiDiagnose,
 }: {
   detail: IncidentDetailRecord | undefined
   isLoading: boolean
   error: Error | null
   rcaResult: RcaAnalysisResponse | null
+  aiDiagnosis: AiDiagnosisResponse | null
   isResolving: boolean
   isAnalyzing: boolean
+  isAiDiagnosing: boolean
   onResolve: (id: string) => void
   onAnalyze: (id: string) => void
+  onAiDiagnose: (id: string) => void
 }) {
   return (
     <Card>
@@ -128,6 +135,24 @@ export function IncidentDetailCard({
                     </>
                   )}
                 </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={isAiDiagnosing}
+                  onClick={() => onAiDiagnose(detail.incident.id)}
+                >
+                  {isAiDiagnosing ? (
+                    <>
+                      <Spinner data-icon="inline-start" />
+                      Diagnosing
+                    </>
+                  ) : (
+                    <>
+                      <SparklesIcon data-icon="inline-start" />
+                      AI Diagnose
+                    </>
+                  )}
+                </Button>
               </div>
             </section>
 
@@ -159,6 +184,68 @@ export function IncidentDetailCard({
                     </li>
                   ))}
                 </ul>
+              </section>
+            )}
+
+            {aiDiagnosis && (
+              <section className="flex flex-col gap-3 rounded-lg border border-purple-200 bg-purple-50 p-3">
+                <div className="flex items-center gap-2 text-sm font-semibold text-purple-700">
+                  <SparklesIcon className="size-4" />
+                  AI Diagnosis Agent
+                </div>
+                <p className="text-sm text-foreground/90">{aiDiagnosis.summary}</p>
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground">Root cause</p>
+                  <p className="text-sm">{aiDiagnosis.rootCause}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground">Impact</p>
+                  <p className="text-sm">{aiDiagnosis.impact}</p>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {aiDiagnosis.provider} · {aiDiagnosis.model} · {aiDiagnosis.agentName} ·{' '}
+                  {aiDiagnosis.createdAt}
+                </p>
+                <Separator />
+                <div className="flex flex-col gap-2">
+                  <h4 className="text-xs font-semibold text-muted-foreground">Next Steps</h4>
+                  {aiDiagnosis.nextSteps.map((step, index) => (
+                    <div
+                      className="rounded-md border bg-card p-2.5 text-xs"
+                      key={`ai-step-${index}`}
+                    >
+                      {index + 1}. {step}
+                    </div>
+                  ))}
+                </div>
+                {aiDiagnosis.runbookSuggestions.length > 0 && (
+                  <div className="flex flex-col gap-2">
+                    <h4 className="text-xs font-semibold text-muted-foreground">
+                      Runbook Suggestions
+                    </h4>
+                    {aiDiagnosis.runbookSuggestions.map((item, index) => (
+                      <div
+                        className="rounded-md border bg-card p-2.5 text-xs"
+                        key={`ai-runbook-${index}`}
+                      >
+                        {item}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {aiDiagnosis.risks.length > 0 && (
+                  <div className="flex flex-col gap-2">
+                    <h4 className="text-xs font-semibold text-amber-600">Risks</h4>
+                    {aiDiagnosis.risks.map((item, index) => (
+                      <div
+                        className="rounded-md border border-amber-200 bg-amber-50 p-2.5 text-xs"
+                        key={`ai-risk-${index}`}
+                      >
+                        {item}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </section>
             )}
 

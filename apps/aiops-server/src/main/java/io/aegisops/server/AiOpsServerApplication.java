@@ -7,7 +7,7 @@ import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 @SpringBootApplication(scanBasePackages = "io.aegisops")
 @ConfigurationPropertiesScan(basePackages = "io.aegisops")
 public class AiOpsServerApplication {
-    public static void main(String[] args) {
-        SpringApplication.run(AiOpsServerApplication.class, args);
-    }
+  public static void main(String[] args) {
+    SpringApplication.run(AiOpsServerApplication.class, args);
+  }
 }

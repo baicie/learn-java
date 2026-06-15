@@ -1,0 +1,250 @@
+package io.aegisops.ai.client;
+
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.aegisops.ai.client.dto.AgentAlertContext;
+import io.aegisops.ai.client.dto.AgentDiagnosisRequest;
+import io.aegisops.ai.client.dto.AgentDiagnosisResponse;
+import io.aegisops.ai.client.dto.AgentIncidentContext;
+import io.aegisops.ai.client.dto.AgentRcaContext;
+import io.aegisops.ai.client.dto.AiAlertRecord;
+import io.aegisops.ai.client.dto.AiDiagnoseRequest;
+import io.aegisops.ai.client.dto.AiDiagnosisRecord;
+import io.aegisops.ai.client.dto.AiDiagnosisResponse;
+import io.aegisops.ai.client.dto.AiIncidentRecord;
+import io.aegisops.ai.client.dto.AiRcaRecord;
+import io.aegisops.ai.client.dto.SaveDiagnosisCommand;
+import io.aegisops.ai.client.dto.TimelineCommand;
+import io.aegisops.common.exception.AppException;
+import java.time.OffsetDateTime;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+public class AiDiagnosisService {
+  private final AiRepository repository;
+  private final AiAgentClient agentClient;
+  private final ObjectMapper objectMapper;
+
+  public AiDiagnosisService(
+      AiRepository repository, AiAgentClient agentClient, ObjectMapper objectMapper) {
+    this.repository = repository;
+    this.agentClient = agentClient;
+    this.objectMapper = objectMapper;
+  }
+
+  public AiDiagnosisResponse latest(String tenantId, String incidentId) {
+    ensureIncidentExists(tenantId, incidentId);
+    return repository
+        .findLatestDiagnosis(tenantId, incidentId)
+        .map(this::toResponse)
+        .orElseThrow(() -> new AppException("AI_DIAGNOSIS_NOT_FOUND", "AI diagnosis not found"));
+  }
+
+  @Transactional
+  public AiDiagnosisResponse diagnose(
+      String tenantId, String incidentId, AiDiagnoseRequest request) {
+    AiDiagnoseRequest normalized =
+        request == null ? new AiDiagnoseRequest(false, "zh-CN") : request;
+
+    AiIncidentRecord incident =
+        repository
+            .findIncident(tenantId, incidentId)
+            .orElseThrow(() -> new AppException("INCIDENT_NOT_FOUND", "Incident not found"));
+
+    if (!normalized.forceEnabled()) {
+      var latest = repository.findLatestDiagnosis(tenantId, incidentId);
+      if (latest.isPresent() && isReusableLatest(incident, latest.get())) {
+        return toResponse(latest.get());
+      }
+    }
+
+    List<AiAlertRecord> alerts = repository.listIncidentAlerts(tenantId, incidentId);
+    AiRcaRecord rca = repository.findLatestRca(tenantId, incidentId).orElse(null);
+
+    AgentDiagnosisRequest agentRequest =
+        new AgentDiagnosisRequest(
+            tenantId,
+            incidentId,
+            toAgentIncident(incident),
+            alerts.stream().map(this::toAgentAlert).toList(),
+            rca == null ? null : toAgentRca(rca),
+            normalized.normalizedLocale(),
+            UUID.randomUUID().toString());
+
+    AgentDiagnosisResponse agentResponse =
+        sanitizeAgentResponse(agentClient.diagnose(agentRequest));
+
+    String diagnosisId = newId("diag");
+    String requestJson = writeJson(agentRequest);
+    String rawJson = writeJson(agentResponse.raw() == null ? Map.of() : agentResponse.raw());
+    String nextStepsJson = writeJson(agentResponse.nextSteps());
+    String runbookSuggestionsJson = writeJson(agentResponse.runbookSuggestions());
+    String risksJson = writeJson(agentResponse.risks());
+
+    repository.saveDiagnosis(
+        new SaveDiagnosisCommand(
+            diagnosisId,
+            tenantId,
+            incidentId,
+            agentResponse,
+            requestJson,
+            rawJson,
+            nextStepsJson,
+            runbookSuggestionsJson,
+            risksJson));
+
+    repository.addIncidentTimeline(
+        new TimelineCommand(
+            newId("tl"),
+            incidentId,
+            OffsetDateTime.now(),
+            "AI diagnosis completed",
+            agentResponse.summary(),
+            writeJson(
+                Map.of(
+                    "aiDiagnosisId", diagnosisId,
+                    "provider", agentResponse.provider(),
+                    "model", agentResponse.model(),
+                    "agentName", agentResponse.agentName(),
+                    "rootCause", agentResponse.rootCause()))));
+
+    return repository
+        .findDiagnosis(tenantId, diagnosisId)
+        .map(this::toResponse)
+        .orElseThrow(
+            () -> new AppException("AI_DIAGNOSIS_NOT_FOUND", "AI diagnosis not found after save"));
+  }
+
+  private AgentDiagnosisResponse sanitizeAgentResponse(AgentDiagnosisResponse response) {
+    if (response == null) {
+      throw new AppException("AI_AGENT_EMPTY_RESPONSE", "AI agent returned empty response");
+    }
+
+    return new AgentDiagnosisResponse(
+        blankToDefault(response.provider(), "aiops-agent"),
+        blankToDefault(response.model(), "langgraph-deterministic"),
+        blankToDefault(response.agentName(), "aegisops_diagnosis_graph"),
+        blankToDefault(response.summary(), "No summary generated."),
+        blankToDefault(response.rootCause(), "No root cause generated."),
+        blankToDefault(response.impact(), "Impact is unknown."),
+        response.nextSteps() == null ? List.of() : response.nextSteps(),
+        response.runbookSuggestions() == null ? List.of() : response.runbookSuggestions(),
+        response.risks() == null ? List.of() : response.risks(),
+        response.raw() == null ? Map.of() : response.raw());
+  }
+
+  private boolean isReusableLatest(AiIncidentRecord incident, AiDiagnosisRecord latest) {
+    if (latest.createdAt() == null) {
+      return false;
+    }
+
+    OffsetDateTime baseline = incident.lastSeenAt();
+    if (baseline == null) {
+      baseline = incident.updatedAt();
+    }
+    if (baseline == null) {
+      baseline = incident.createdAt();
+    }
+
+    return baseline != null && !latest.createdAt().isBefore(baseline);
+  }
+
+  private AgentIncidentContext toAgentIncident(AiIncidentRecord incident) {
+    return new AgentIncidentContext(
+        incident.id(),
+        incident.title(),
+        incident.summary(),
+        incident.severity(),
+        incident.status(),
+        incident.source(),
+        incident.primaryAssetId(),
+        incident.aggregationKey(),
+        incident.alertCount(),
+        incident.suspectedRootCause(),
+        incident.confidence(),
+        incident.startedAt(),
+        incident.detectedAt(),
+        incident.lastSeenAt());
+  }
+
+  private AgentAlertContext toAgentAlert(AiAlertRecord alert) {
+    return new AgentAlertContext(
+        alert.id(),
+        alert.source(),
+        alert.sourceEventId(),
+        alert.severity(),
+        alert.title(),
+        alert.description(),
+        alert.assetId(),
+        alert.entityType(),
+        alert.entityName(),
+        alert.fingerprint(),
+        alert.labelsJson(),
+        alert.startsAt());
+  }
+
+  private AgentRcaContext toAgentRca(AiRcaRecord rca) {
+    return new AgentRcaContext(
+        rca.id(),
+        rca.suspectedRootCause(),
+        rca.confidence(),
+        rca.summary(),
+        rca.evidenceJson(),
+        rca.modelVersion(),
+        rca.createdAt());
+  }
+
+  private AiDiagnosisResponse toResponse(AiDiagnosisRecord record) {
+    return new AiDiagnosisResponse(
+        record.id(),
+        record.incidentId(),
+        record.status(),
+        record.provider(),
+        record.model(),
+        record.agentName(),
+        record.summary(),
+        record.rootCause(),
+        record.impact(),
+        readStringList(record.nextStepsJson()),
+        readStringList(record.runbookSuggestionsJson()),
+        readStringList(record.risksJson()),
+        record.createdAt());
+  }
+
+  private void ensureIncidentExists(String tenantId, String incidentId) {
+    if (repository.findIncident(tenantId, incidentId).isEmpty()) {
+      throw new AppException("INCIDENT_NOT_FOUND", "Incident not found");
+    }
+  }
+
+  private String writeJson(Object value) {
+    try {
+      return objectMapper.writeValueAsString(value);
+    } catch (Exception ex) {
+      throw new AppException("AI_DIAGNOSIS_INVALID", "Failed to serialize AI diagnosis payload");
+    }
+  }
+
+  private List<String> readStringList(String json) {
+    try {
+      if (json == null || json.isBlank()) {
+        return List.of();
+      }
+      return objectMapper.readValue(json, new TypeReference<List<String>>() {});
+    } catch (Exception ex) {
+      throw new AppException("AI_DIAGNOSIS_INVALID", "AI diagnosis JSON is invalid");
+    }
+  }
+
+  private String blankToDefault(String value, String fallback) {
+    return value == null || value.isBlank() ? fallback : value;
+  }
+
+  private String newId(String prefix) {
+    return prefix + "_" + UUID.randomUUID().toString().replace("-", "");
+  }
+}

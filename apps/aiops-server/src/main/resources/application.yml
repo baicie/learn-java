@@ -26,6 +26,11 @@ aiops:
   jwt:
     secret: ${AIOPS_JWT_SECRET:dev-secret-change-me-change-me-change-me}
     ttl-seconds: ${AIOPS_JWT_TTL_SECONDS:86400}
+  agent:
+    base-url: ${AIOPS_AGENT_BASE_URL:http://localhost:9008}
+    internal-token: ${AIOPS_AGENT_INTERNAL_TOKEN:dev-internal-token}
+    connect-timeout-millis: ${AIOPS_AGENT_CONNECT_TIMEOUT:3000}
+    read-timeout-millis: ${AIOPS_AGENT_READ_TIMEOUT:30000}
 
 springdoc:
   swagger-ui:

@@ -123,6 +123,20 @@ services:
       - "10050:10050"
     restart: unless-stopped
 
+  aiops-agent:
+    build:
+      context: ../apps/aiops-agent
+      dockerfile: Dockerfile
+    container_name: aegisops-agent
+    environment:
+      AIOPS_AGENT_INTERNAL_TOKEN: dev-internal-token
+      AIOPS_AGENT_PROVIDER: aiops-agent
+      AIOPS_AGENT_MODEL: langgraph-deterministic
+      AIOPS_AGENT_NAME: aegisops_diagnosis_graph
+    ports:
+      - "9008:9008"
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   redis_data:

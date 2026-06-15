@@ -1,7 +1,7 @@
 package io.aegisops.rca;
 
 public interface RcaRule {
-    String id();
+  String id();
 
-    RcaRuleResult evaluate(RcaAnalysisContext context);
+  RcaRuleResult evaluate(RcaAnalysisContext context);
 }

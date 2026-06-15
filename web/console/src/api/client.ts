@@ -288,3 +288,30 @@ export function analyzeIncidentRca(id: string, force = true) {
 export function getLatestIncidentRca(id: string) {
   return apiRequest<RcaAnalysisResponse>(`/api/incidents/${id}/rca/latest`)
 }
+
+export type AiDiagnosisResponse = {
+  id: string
+  incidentId: string
+  status: string
+  provider: string
+  model: string
+  agentName: string
+  summary: string
+  rootCause: string
+  impact: string
+  nextSteps: string[]
+  runbookSuggestions: string[]
+  risks: string[]
+  createdAt: string
+}
+
+export function diagnoseIncidentAi(id: string, force = true) {
+  return apiRequest<AiDiagnosisResponse>(`/api/incidents/${id}/ai/diagnose`, {
+    method: 'POST',
+    body: JSON.stringify({ force, locale: 'zh-CN' }),
+  })
+}
+
+export function getLatestIncidentAiDiagnosis(id: string) {
+  return apiRequest<AiDiagnosisResponse>(`/api/incidents/${id}/ai/latest`)
+}
