@@ -76,3 +76,4 @@ class HealthResponse(BaseModel):
     provider: str
     model: str
     agentName: str
+    generationMode: str = "deterministic"

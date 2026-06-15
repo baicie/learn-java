@@ -28,6 +28,7 @@ def health() -> HealthResponse:
         provider=settings.provider,
         model=settings.model,
         agentName=settings.agent_name,
+        generationMode=settings.normalized_generation_mode(),
     )
 
 

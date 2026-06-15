@@ -11,8 +11,10 @@ def test_health():
     response = client.get("/health")
 
     assert response.status_code == 200
-    assert response.json()["ok"] is True
-    assert response.json()["agentName"] == settings.agent_name
+    body = response.json()
+    assert body["ok"] is True
+    assert body["agentName"] == settings.agent_name
+    assert body["generationMode"] == settings.normalized_generation_mode()
 
 
 def test_diagnose_rejects_missing_token():

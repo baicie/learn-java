@@ -133,6 +133,8 @@ services:
       AIOPS_AGENT_PROVIDER: aiops-agent
       AIOPS_AGENT_MODEL: langgraph-deterministic
       AIOPS_AGENT_NAME: aegisops_diagnosis_graph
+      AIOPS_AGENT_AGENT_NAME: aegisops_diagnosis_graph
+      AIOPS_AGENT_GENERATION_MODE: deterministic
     ports:
       - "9008:9008"
     restart: unless-stopped
