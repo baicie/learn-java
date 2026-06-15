@@ -1253,7 +1253,7 @@ AutomationJob 状态流转
 
 AI 编码 Agent 在执行任务时必须：
 
-```txt
+````txt
 1. 先阅读本 AGENTS.md
 2. 明确当前属于哪个 Phase
 3. 不越级实现后续阶段功能
@@ -1265,6 +1265,9 @@ AI 编码 Agent 在执行任务时必须：
 9. 不把 MVP 复杂化
 10. 不绕过 aiops-runner 执行自动化动作
 11. 与用户交互、撰写文档、提交说明、代码注释、PR 描述默认使用中文；除非用户明确要求其他语言或上下文必须使用英文（例如公开协议、外部 SDK API、国际化文案）
+12. 写前端 UI 前先 `pnpm dlx shadcn@latest add` 拉取组件，禁止自封 div + 颜色 class 拼 UI（详见第 21 节）
+13. 改完代码必须跑对应工程的 `lint` / `format` / `test` / `build` 四件套并自检通过，提交前不得有未处理告警
+14. 严禁在主分支或 phase 分支上直接 push；所有变更走 Pull Request，PR 至少需要 1 名 Owner 审阅通过
 
 ---
 
@@ -1280,7 +1283,7 @@ AI 编码 Agent 在执行任务时必须：
 <中文正文，列点说明动机与变更点>
 
 <可选 Footer，英文关键字>
-```
+````
 
 ### 17.2 主题行（首行）
 
@@ -1445,7 +1448,8 @@ feat(server, worker, runner): 重构、重写、修复若干问题
 [ ] Footer 关键字使用英文
 [ ] 提交前已跑过 mvn verify 或对应模块的测试
 ```
-```
+
+````
 
 ---
 
@@ -1470,7 +1474,7 @@ feat(server, worker, runner): 重构、重写、修复若干问题
 14. 实现 RCA 规则
 15. 实现 AI 诊断
 16. 实现 Runbook 和 Ansible Runner
-```
+````
 
 ---
 
@@ -1521,6 +1525,152 @@ MVP 闭环
 完全自动修复
 全量采集平台
 ```
+
+---
+
+## 21. 工程纪律与代码质量
+
+本节是横切规则，优先级高于个人风格偏好。**违反本节的代码必须打回。**
+
+### 21.1 Lint / Format / Typecheck / Test / Build 五件套
+
+所有工程必须配置并跑通以下五件套，提交前不得有任何一项失败。
+
+| 工程                         | 类型检查                     | 静态检查                             | 格式化   | 测试          | 构建                         |
+| ---------------------------- | ---------------------------- | ------------------------------------ | -------- | ------------- | ---------------------------- |
+| `apps/*` `modules/*`（Java） | `mvn -q -DskipTests compile` | Spotless + Checkstyle（见 21.2）     | Spotless | `mvn -q test` | `mvn -q -DskipTests package` |
+| `web/console`（TS/React）    | `pnpm exec tsc -b`           | ESLint + `eslint-plugin-tailwindcss` | Prettier | `pnpm test`   | `pnpm build`                 |
+| `infra/`                     | —                            | `docker compose config`              | —        | —             | `docker compose build`       |
+
+四件套脚本统一收敛在根 `package.json` 的 `scripts`：
+
+```jsonc
+{
+  "scripts": {
+    "lint": "pnpm -r --parallel run lint",
+    "format": "pnpm -r --parallel run format",
+    "typecheck": "pnpm -r --parallel run typecheck",
+    "test": "pnpm -r --parallel run test",
+    "build": "pnpm -r --parallel run build",
+  },
+}
+```
+
+CI 流水线（`.github/workflows/ci.yml`）必须串行执行 `lint → typecheck → test → build`，任一失败即阻断合并。
+
+### 21.2 后端代码质量硬要求
+
+```txt
+- Spotless 强制格式：2 空格缩进、UTF-8、LF 行尾、去除尾部空白；import 按字母序
+- Checkstyle 规则：方法 ≤ 80 行、类 ≤ 500 行、参数列表 ≤ 5 个、嵌套深度 ≤ 4
+- 强制开启的 Spotbugs 规则：EI_EXPOSE_REP、SQL_INJECTION、REC_CATCH_EXCEPTION
+- 公共 API 类必须有 Javadoc；领域 Service 方法描述业务意图而非实现
+- 异常必须继承 AiopsException 子类，禁止裸 throw new RuntimeException
+- 日志格式：MDC 必须含 traceId / tenantId / userId / requestPath，缺失即告警
+- 业务包禁止依赖 org.springframework.web；org.springframework.web 只能出现在 controller / filter / config 层
+- Repository / Mapper 不允许返回 Map<String,Object>，必须用 Entity / DTO
+- 任何跨模块调用必须经过 Application Service，禁止 Module A 直接注入 Module B 的 Repository
+- 任何外部系统（Zabbix、VM、ClickHouse、LLM、Ansible）调用必须经过 aiops-*-adapter 抽象，禁止 Service 直接 HttpClient
+```
+
+### 21.3 前端代码质量硬要求
+
+```txt
+- ESLint 必须开启的规则集：
+  - @typescript-eslint/no-explicit-any            error
+  - @typescript-eslint/no-unused-vars             error (忽略 _ 前缀)
+  - @typescript-eslint/consistent-type-imports    error
+  - react-hooks/rules-of-hooks                    error
+  - react-hooks/exhaustive-deps                   error
+  - tailwindcss/classnames-order                  warn
+  - tailwindcss/no-custom-classname               error  // 配合 21.4 强制语义化
+  - import/order                                 warn
+- Prettier：单引号、printWidth 100、trailingComma all、semi false（与 Vite 模板一致）
+- 任何 src/**/*.tsx 不允许出现以下自封模式：
+  - 散落的 className="rounded-2xl bg-white p-6 shadow-sm" 等手搓卡片
+  - 散落的 className="rounded-full border bg-xxx text-xxx" 手搓徽章
+  - className="space-y-*" / "space-x-*"  // 一律改为 flex + gap-*
+  - 自定义 <Field>、<StatusChip>、<EmptyState> 等与 shadcn 等价的私有组件
+- 新页面必须先 `pnpm dlx shadcn@latest add` 再写代码；如确认 shadcn 暂无对应组件，必须在本节末位追加「本项目 shadcn 缺口」清单
+- API 客户端类型必须从 `src/api/client.ts` 集中维护或由 OpenAPI 生成；禁止页面里散落手写 DTO interface
+- Hook 命名以 use 开头；超过 80 行或包含多步副作用的 Hook 必须拆为 useXxx + useXxxMutation 配对
+```
+
+### 21.4 Tailwind / shadcn 强制规则
+
+```txt
+- 颜色：必须用 bg-primary / text-muted-foreground / ring 等语义 token；禁止 bg-blue-500、text-slate-600 这类 raw 颜色
+- 间距：使用 gap-*；禁止 space-y-* / space-x-*
+- 等宽高：使用 size-*；禁止 w-10 h-10 同时出现
+- 截断：使用 truncate；禁止手写 overflow-hidden text-ellipsis whitespace-nowrap
+- 暗色：禁止手动 dark: 覆盖颜色；通过 .dark 父级 + 语义 token 自动生效
+- 条件类：必须用 cn() 工具函数；禁止手写三元 template literal
+- z-index：shadcn 已内置的 Dialog/Sheet/Popover/Tooltip 禁止再覆盖 z-index
+- 按钮：使用 Button 组件 + variant；禁止 <button className="rounded-lg bg-indigo-600 ..."> 自封
+- 徽章：使用 Badge 组件；禁止 <span className="rounded-full bg-rose-100 ..."> 自封
+- 卡片：使用 Card + CardHeader + CardTitle + CardDescription + CardContent + CardFooter 完整组合；禁止 <div className="rounded-2xl bg-white shadow-sm"> 简化版
+- 表单：使用 FieldGroup + Field + FieldLabel + FieldDescription + FieldError；禁止 <label className="block"><span>Label</span><input /></label> 自封
+- 校验：Field 写 data-invalid，控件写 aria-invalid；FieldSet + FieldLegend 用于分组
+- 图标：使用 lucide-react；Button 内的 icon 必须用 data-icon="inline-start" / data-icon="inline-end"，不允许手写 size-4
+- 空态：使用 Empty + EmptyMedia + EmptyTitle + EmptyDescription；禁止 <div className="text-center text-slate-500">No data</div>
+- 加载占位：使用 Skeleton；禁止 <div className="animate-pulse bg-slate-200" />
+- 反馈：Toast 统一走 sonner 的 toast()；禁止 <div className="absolute top-2 right-2 bg-emerald-500">Saved</div>
+```
+
+### 21.5 安全与多租户
+
+```txt
+- 任何 HTTP 出口必须设置 connectTimeout 与 readTimeout，缺省值 ≤ 10s
+- 任何写接口必须经 TenantGuard / PermissionGuard 双层校验；缺一即不合规
+- 写操作必须经 AuditLogger 落库 audit_log；缺失即视为绕过审计
+- 自动化执行类动作必须走 aiops-runner；禁止 aiops-server / aiops-worker 直接 SSH / Ansible
+- 凭据类字段（password、apiToken、secret）禁止写入普通日志；Logback Filter 必须 mask
+- 导出文件 / 上传文件必须经过 mime + size + name 校验，禁止前端单点校验
+```
+
+### 21.6 依赖与版本
+
+```txt
+- 新增依赖前必须经 Owner 评审；同一类需求已有依赖时不得引入竞品
+- 禁止引入：lodash（全量）、moment（请用 dayjs / date-fns）、@ant-design/*、element-plus（与 shadcn 冲突）、nivo、bizcharts（统一 ECharts）
+- 锁文件必须提交；不得出现 package-lock.json + pnpm-lock.yaml + yarn.lock 并存
+- 升级主版本（major）必须单列 PR，PR 描述需写明 Breaking 影响面
+- 内部模块之间禁止循环依赖；arch-unit 或自定义脚本必须每 CI 跑一次
+```
+
+### 21.7 测试与覆盖率
+
+```txt
+- 单元测试覆盖率门槛：domain/service 层 ≥ 80%，controller 层 ≥ 60%
+- 新增 Service 公共方法必须含至少 1 个单测：覆盖正常路径 + 至少 1 个异常路径
+- Adapter 必须含集成测试，允许 mock 外部 HTTP；测试用例至少覆盖：成功、超时、4xx、5xx
+- 前端关键页面必须含 1 个 smoke test：组件挂载 + 核心交互至少 1 次
+- Bug 修复必须先写复现单测再修复；修复后单测必须先红后绿
+```
+
+### 21.8 AI Agent 自检清单（提交前必走）
+
+```txt
+[ ] 第 16 节 14 条全部满足
+[ ] 第 17 节 commit 规范自检 10 条全部勾选
+[ ] 第 21.1 节五件套全部通过，CI 全绿
+[ ] 第 21.3 节自封模式 grep 0 命中
+[ ] 第 21.4 节 raw 颜色 / space-y-* / 自封按钮 grep 0 命中
+[ ] 第 21.5 节审计 / 凭据 mask 兜底存在
+[ ] 第 21.7 节新方法有单测、Bug 修复有复现单测
+[ ] PR 描述包含：背景 / 主要变更 / 验证方式 / 风险与回滚 / 关联 issue
+[ ] 至少 1 名 Owner 审阅通过
+```
+
+### 21.9 本项目 shadcn 缺口
+
+记录经评审确认 shadcn 暂无等价、必须自封的组件。**新增条目需 Owner 同意。**
+
+```txt
+（暂无）
+```
+
+---
 
 本项目真正有价值的不是“接入了多少数据源”，而是：
 

@@ -1,6 +1,14 @@
-import { FormEvent, useState } from 'react'
-import { login } from '../api/client'
-import { useAuth } from '../auth/AuthContext'
+import { ShieldCheckIcon, TriangleAlertIcon } from 'lucide-react'
+import { type FormEvent, useState } from 'react'
+
+import { login } from '@/api/client'
+import { useAuth } from '@/auth/AuthContext'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/components/ui/field'
+import { Input } from '@/components/ui/input'
+import { Spinner } from '@/components/ui/spinner'
 
 export function LoginPage() {
   const auth = useAuth()
@@ -24,33 +32,66 @@ export function LoginPage() {
   }
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-slate-950 p-6">
-      <form onSubmit={onSubmit} className="w-full max-w-sm rounded-2xl bg-white p-8 shadow-2xl">
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold">AegisOps</h1>
-          <p className="mt-2 text-sm text-slate-500">AI Ops incident diagnosis platform</p>
-        </div>
-        <label className="block text-sm font-medium text-slate-700">Username</label>
-        <input
-          className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-slate-900"
-          value={username}
-          onChange={event => setUsername(event.target.value)}
-        />
-        <label className="mt-4 block text-sm font-medium text-slate-700">Password</label>
-        <input
-          className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-slate-900"
-          type="password"
-          value={password}
-          onChange={event => setPassword(event.target.value)}
-        />
-        {error && <div className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>}
-        <button
-          className="mt-6 w-full rounded-lg bg-slate-950 px-4 py-2 font-medium text-white disabled:opacity-60"
-          disabled={loading}
-        >
-          {loading ? 'Signing in...' : 'Sign in'}
-        </button>
-      </form>
+    <main className="flex min-h-screen items-center justify-center bg-background p-6">
+      <Card className="w-full max-w-sm shadow-lg">
+        <CardHeader>
+          <div className="mb-2 flex items-center gap-2 text-primary">
+            <ShieldCheckIcon className="size-5" data-icon="inline-start" />
+            <span className="text-sm font-semibold tracking-wide uppercase">AegisOps</span>
+          </div>
+          <CardTitle className="text-2xl">Sign in</CardTitle>
+          <CardDescription>AI Ops incident diagnosis platform</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={onSubmit} className="flex flex-col gap-5">
+            <FieldGroup>
+              <Field>
+                <FieldLabel htmlFor="login-username">Username</FieldLabel>
+                <Input
+                  id="login-username"
+                  autoComplete="username"
+                  value={username}
+                  onChange={(event) => setUsername(event.target.value)}
+                  required
+                />
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="login-password">Password</FieldLabel>
+                <Input
+                  id="login-password"
+                  type="password"
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  required
+                />
+                <FieldDescription>
+                  Default credentials are pre-filled for the local Phase 1 environment.
+                </FieldDescription>
+              </Field>
+            </FieldGroup>
+
+            {error && (
+              <Alert variant="destructive">
+                <TriangleAlertIcon data-icon="inline-start" />
+                <AlertTitle>Sign in failed</AlertTitle>
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+
+            <Button type="submit" size="lg" disabled={loading} className="w-full">
+              {loading ? (
+                <>
+                  <Spinner data-icon="inline-start" />
+                  Signing in
+                </>
+              ) : (
+                'Sign in'
+              )}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
     </main>
   )
 }

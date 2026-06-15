@@ -1,0 +1,33 @@
+# AegisOps Code Owners
+# 每个变更必须由指定 owner 团队审阅通过才能合并。
+# 参考 AGENTS.md §16.14。
+
+# 默认：所有变更都需 Owner 团队审阅
+*                              @aegisops/owners
+
+# 后端 Java 模块
+/apps/                         @aegisops/owners-backend
+/modules/                      @aegisops/owners-backend
+/pom.xml                       @aegisops/owners-backend
+
+# 前端 Console
+/web/                          @aegisops/owners-frontend
+/pnpm-workspace.yaml           @aegisops/owners-frontend
+
+# 数据库迁移
+**/db/migration/                @aegisops/owners-backend @aegisops/owners-dba
+**/src/main/resources/db/      @aegisops/owners-backend @aegisops/owners-dba
+
+# 安全相关
+**/security/                   @aegisops/owners-security
+**/audit/                      @aegisops/owners-security
+/apps/aiops-runner/            @aegisops/owners-security
+
+# 基础设施
+/infra/                        @aegisops/owners-platform
+/.github/workflows/            @aegisops/owners-platform
+/docker-compose*.yml           @aegisops/owners-platform
+
+# 元数据：治理与 Agent 规则
+/AGENTS.md                     @aegisops/owners-governance
+/.agents/                      @aegisops/owners-governance

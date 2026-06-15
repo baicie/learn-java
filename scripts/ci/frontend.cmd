@@ -18,8 +18,23 @@ if errorlevel 1 (
 
 pushd "%FRONTEND_DIR%"
 call pnpm install
-call pnpm run typecheck
-call pnpm run build
+
+call :run_if "format:check"
+call :run_if "lint"
+call :run_if "typecheck"
+call :run_if "test"
+call :run_if "build"
+
 popd
 
 endlocal
+exit /b 0
+
+:run_if
+node -e "const p=require('./package.json'); process.exit(p.scripts && p.scripts['%~1'] ? 0 : 1)" >nul 2>&1
+if errorlevel 1 (
+    echo Skip %~1: script not found.
+    exit /b 0
+)
+call pnpm run %~1
+exit /b %errorlevel%

@@ -11,11 +11,32 @@
     "ci": "bash scripts/ci/verify-local.sh",
     "ci:docs": "bash scripts/ci/docs.sh",
     "ci:backend": "bash scripts/ci/backend.sh",
-    "ci:frontend": "bash scripts/ci/frontend.sh"
+    "ci:frontend": "bash scripts/ci/frontend.sh",
+    "postinstall": "simple-git-hooks"
   },
   "devDependencies": {
+    "@baicie/scripts": "^0.1.2",
+    "eslint": "^10.5.0",
+    "lint-staged": "^17.0.7",
+    "prettier": "^3.8.4",
+    "simple-git-hooks": "^2.13.1",
     "typescript": "^5.9.0"
   },
   "packageManager": "pnpm@10.33.4",
+  "engines": {
+    "node": ">=20.11"
+  },
+  "simple-git-hooks": {
+    "pre-commit": "pnpm lint-staged",
+    "commit-msg": "node -e \"import('@baicie/scripts').then(m => m.verifyCommit())\""
+  },
+  "lint-staged": {
+    "*.{js,json,md,ts,tsx,yaml,yml}": [
+      "prettier --write --cache --cache-location node_modules/.cache/.prettiercache"
+    ],
+    "*.ts?(x)": [
+      "prettier --parser=typescript --write --cache --cache-location node_modules/.cache/.prettiercache"
+    ]
+  },
   "engineStrict": true
 }

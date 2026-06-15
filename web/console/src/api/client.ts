@@ -182,13 +182,15 @@ export async function apiRequest<T>(path: string, init: RequestInit = {}): Promi
     headers: {
       'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(init.headers || {})
-    }
+      ...(init.headers || {}),
+    },
   })
 
   const payload = await parseApiResponse<T>(resp)
   if (!resp.ok || !payload.success) {
-    throw new Error(payload.message || payload.errorCode || `Request failed with status ${resp.status}`)
+    throw new Error(
+      payload.message || payload.errorCode || `Request failed with status ${resp.status}`,
+    )
   }
   return payload.data
 }
@@ -202,7 +204,7 @@ async function parseApiResponse<T>(resp: Response): Promise<ApiResponse<T>> {
       data: undefined as T,
       errorCode: `HTTP_${resp.status}`,
       message: text || resp.statusText || 'Non-JSON response',
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     }
   }
   return (await resp.json()) as ApiResponse<T>
@@ -211,7 +213,7 @@ async function parseApiResponse<T>(resp: Response): Promise<ApiResponse<T>> {
 export function login(username: string, password: string) {
   return apiRequest<LoginResponse>('/api/auth/login', {
     method: 'POST',
-    body: JSON.stringify({ username, password })
+    body: JSON.stringify({ username, password }),
   })
 }
 
@@ -230,7 +232,7 @@ export function listDataSources() {
 export function createZabbixDataSource(payload: CreateZabbixDataSourcePayload) {
   return apiRequest<DataSourceRecord>('/api/datasources', {
     method: 'POST',
-    body: JSON.stringify(payload)
+    body: JSON.stringify(payload),
   })
 }
 
@@ -259,8 +261,8 @@ export function aggregateIncidents() {
     method: 'POST',
     body: JSON.stringify({
       windowMinutes: 1440,
-      limit: 1000
-    })
+      limit: 1000,
+    }),
   })
 }
 
@@ -279,7 +281,7 @@ export function closeIncident(id: string) {
 export function analyzeIncidentRca(id: string, force = true) {
   return apiRequest<RcaAnalysisResponse>(`/api/incidents/${id}/rca/analyze`, {
     method: 'POST',
-    body: JSON.stringify({ force })
+    body: JSON.stringify({ force }),
   })
 }
 

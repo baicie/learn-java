@@ -1,5 +1,6 @@
-import { useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { useEffect } from 'react'
+
 import { me } from './api/client'
 import { useAuth } from './auth/AuthContext'
 import { DashboardPage } from './pages/DashboardPage'
@@ -11,7 +12,7 @@ export function App() {
     queryKey: ['me', auth.token],
     queryFn: me,
     enabled: Boolean(auth.token),
-    retry: false
+    retry: false,
   })
 
   useEffect(() => {

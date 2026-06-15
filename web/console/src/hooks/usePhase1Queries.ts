@@ -1,15 +1,16 @@
-import { useCallback } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useCallback } from 'react'
+
 import {
-  AlertEventRecord,
-  AssetRecord,
-  DataSourceRecord,
-  IncidentRecord,
+  type AlertEventRecord,
+  type AssetRecord,
+  type DataSourceRecord,
+  type IncidentRecord,
   listAlerts,
   listAssets,
   listDataSources,
   listIncidents,
-  overview
+  overview,
 } from '../api/client'
 
 type Overview = Record<string, number | string>
@@ -21,39 +22,34 @@ export function usePhase1Queries() {
 
   const overviewQuery = useQuery<Overview>({
     queryKey: ['overview'],
-    queryFn: overview
+    queryFn: overview,
   })
 
   const datasourceQuery = useQuery<DataSourceRecord[]>({
     queryKey: ['datasources'],
-    queryFn: listDataSources
+    queryFn: listDataSources,
   })
 
   const assetQuery = useQuery<AssetRecord[]>({
     queryKey: ['assets'],
-    queryFn: listAssets
+    queryFn: listAssets,
   })
 
   const alertQuery = useQuery<AlertEventRecord[]>({
     queryKey: ['alerts'],
-    queryFn: listAlerts
+    queryFn: listAlerts,
   })
 
   const incidentQuery = useQuery<IncidentRecord[]>({
     queryKey: ['incidents'],
-    queryFn: listIncidents
+    queryFn: listIncidents,
   })
 
-  const invalidateAll = useCallback(
-    async () => {
-      await Promise.all(
-        CONSOLE_QUERY_KEYS.map((key) =>
-          queryClient.invalidateQueries({ queryKey: [key] })
-        )
-      )
-    },
-    [queryClient]
-  )
+  const invalidateAll = useCallback(async () => {
+    await Promise.all(
+      CONSOLE_QUERY_KEYS.map((key) => queryClient.invalidateQueries({ queryKey: [key] })),
+    )
+  }, [queryClient])
 
   return {
     overviewQuery,
@@ -61,6 +57,6 @@ export function usePhase1Queries() {
     assetQuery,
     alertQuery,
     incidentQuery,
-    invalidateAll
+    invalidateAll,
   } as const
 }

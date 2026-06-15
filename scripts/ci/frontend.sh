@@ -12,8 +12,12 @@ fi
 
 cd "${FRONTEND_DIR}"
 
-if command -v corepack > /dev/null 2>&1; then
-  corepack enable
+# Prefer system pnpm (CI restores it via setup-node cache). corepack may try
+# to refetch a tarball offline and fail, so it's only a best-effort fallback.
+if ! command -v pnpm > /dev/null 2>&1; then
+  if command -v corepack > /dev/null 2>&1; then
+    corepack enable || true
+  fi
 fi
 
 if [ -f "pnpm-lock.yaml" ]; then
@@ -26,26 +30,19 @@ has_script() {
   node -e "const p=require('./package.json'); process.exit(p.scripts && p.scripts['$1'] ? 0 : 1)"
 }
 
-if has_script "typecheck"; then
-  pnpm run typecheck
-else
-  echo "Skip typecheck: script not found."
-fi
+run_script() {
+  local name="$1"
+  if has_script "${name}"; then
+    pnpm run "${name}"
+  else
+    echo "Skip ${name}: script not found."
+  fi
+}
 
-if has_script "lint"; then
-  pnpm run lint
-else
-  echo "Skip lint: script not found."
-fi
-
-if has_script "test"; then
-  pnpm run test
-else
-  echo "Skip test: script not found."
-fi
-
-if has_script "build"; then
-  pnpm run build
-else
-  echo "Skip build: script not found."
-fi
+# AGENTS.md §21.1 顺序：format → lint → typecheck → test → build
+# format 放最前是为了让 lint 不被格式问题污染输出。
+run_script "format:check"
+run_script "lint"
+run_script "typecheck"
+run_script "test"
+run_script "build"
