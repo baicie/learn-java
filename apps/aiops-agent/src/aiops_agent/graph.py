@@ -4,6 +4,13 @@ from typing import Any, TypedDict
 
 from langgraph.graph import END, START, StateGraph
 
+from aiops_agent.llm import (
+    LlmClient,
+    OpenAiCompatibleLlmClient,
+    diagnosis_response_from_draft,
+    parse_diagnosis_json,
+)
+from aiops_agent.prompt import build_diagnosis_prompt
 from aiops_agent.safety import apply_safety_boundary
 from aiops_agent.schemas import DiagnoseRequest, DiagnoseResponse
 from aiops_agent.settings import Settings
@@ -79,86 +86,137 @@ def safety_check(state: DiagnosisState) -> DiagnosisState:
     }
 
 
-def generate_diagnosis(settings: Settings):
+def deterministic_diagnosis(
+    state: DiagnosisState,
+    settings: Settings,
+    fallback_reason: str | None = None,
+) -> DiagnoseResponse:
+    request = state["request"]
+    incident = state.get("incident_summary", {})
+    alerts = state.get("alert_analysis", {})
+    rca = state.get("rca_analysis", {})
+    runbooks = state.get("runbook_suggestions", [])
+    risks = state.get("risks", [])
+
+    root_cause = (
+        rca.get("rootCause")
+        or incident.get("suspectedRootCause")
+        or "No strong root cause has been confirmed. Start from the dominant alert and primary asset."
+    )
+
+    dominant_asset = (
+        alerts.get("dominantAssetId")
+        or incident.get("primaryAssetId")
+        or "unknown asset"
+    )
+
+    dominant_fingerprint = (
+        alerts.get("dominantFingerprint")
+        or incident.get("aggregationKey")
+        or "unknown fingerprint"
+    )
+
+    summary = (
+        f"Incident {request.incidentId} is {incident.get('status', 'unknown')} "
+        f"with severity {incident.get('severity', alerts.get('topSeverity', 'info'))}. "
+        f"{alerts.get('count', 0)} linked alert(s) were analyzed."
+    )
+
+    impact = (
+        f"The primary impact may be concentrated on {dominant_asset}. "
+        "Downstream services may be affected if this asset is part of a dependency path."
+    )
+
+    next_steps = [
+        f"Confirm whether the dominant fingerprint `{dominant_fingerprint}` is still firing.",
+        f"Check the primary asset `{dominant_asset}` around the incident start time.",
+        "Compare metrics before and after incident detection.",
+        "Review recent deployments, restarts, configuration changes, and dependency health.",
+        "Validate RCA evidence before taking remediation action.",
+    ]
+
+    raw = {
+        "graph": "aegisops_diagnosis_graph",
+        "contractVersion": settings.contract_version,
+        "traceId": request.traceId,
+        "generationMode": "deterministic",
+        "fallbackReason": fallback_reason or "",
+        "incident": incident,
+        "alerts": alerts,
+        "rca": rca,
+        "metrics": state.get("metrics", {}),
+        "logs": state.get("logs", {}),
+    }
+
+    response = DiagnoseResponse(
+        contractVersion=settings.contract_version,
+        provider=settings.provider,
+        model=settings.model,
+        agentName=settings.agent_name,
+        summary=summary,
+        rootCause=str(root_cause),
+        impact=impact,
+        nextSteps=next_steps,
+        runbookSuggestions=runbooks,
+        risks=risks,
+        raw=raw,
+    )
+
+    return apply_safety_boundary(response)
+
+
+def generate_diagnosis(settings: Settings, llm_client: LlmClient | None = None):
     def _node(state: DiagnosisState) -> DiagnosisState:
-        request = state["request"]
-        incident = state.get("incident_summary", {})
-        alerts = state.get("alert_analysis", {})
-        rca = state.get("rca_analysis", {})
-        runbooks = state.get("runbook_suggestions", [])
-        risks = state.get("risks", [])
+        if settings.normalized_generation_mode() != "openai-compatible":
+            return {
+                "diagnosis": deterministic_diagnosis(state, settings),
+            }
 
-        root_cause = (
-            rca.get("rootCause")
-            or incident.get("suspectedRootCause")
-            or "No strong root cause has been confirmed. Start from the dominant alert and primary asset."
+        client = llm_client or OpenAiCompatibleLlmClient(settings)
+
+        messages = build_diagnosis_prompt(
+            request=state["request"],
+            incident_summary=state.get("incident_summary", {}),
+            alert_analysis=state.get("alert_analysis", {}),
+            rca_analysis=state.get("rca_analysis", {}),
+            metrics=state.get("metrics", {}),
+            logs=state.get("logs", {}),
+            runbook_suggestions=state.get("runbook_suggestions", []),
+            risks=state.get("risks", []),
         )
 
-        dominant_asset = (
-            alerts.get("dominantAssetId")
-            or incident.get("primaryAssetId")
-            or "unknown asset"
-        )
+        try:
+            content = client.complete_json(messages)
+            draft = parse_diagnosis_json(content)
+            response = diagnosis_response_from_draft(
+                draft,
+                settings,
+                raw={
+                    "graph": "aegisops_diagnosis_graph",
+                    "contractVersion": settings.contract_version,
+                    "traceId": state["request"].traceId,
+                    "generationMode": "openai-compatible",
+                    "llmContent": content,
+                },
+                provider="openai-compatible",
+            )
 
-        dominant_fingerprint = (
-            alerts.get("dominantFingerprint")
-            or incident.get("aggregationKey")
-            or "unknown fingerprint"
-        )
-
-        summary = (
-            f"Incident {request.incidentId} is {incident.get('status', 'unknown')} "
-            f"with severity {incident.get('severity', alerts.get('topSeverity', 'info'))}. "
-            f"{alerts.get('count', 0)} linked alert(s) were analyzed."
-        )
-
-        impact = (
-            f"The primary impact may be concentrated on {dominant_asset}. "
-            "Downstream services may be affected if this asset is part of a dependency path."
-        )
-
-        next_steps = [
-            f"Confirm whether the dominant fingerprint `{dominant_fingerprint}` is still firing.",
-            f"Check the primary asset `{dominant_asset}` around the incident start time.",
-            "Compare metrics before and after incident detection.",
-            "Review recent deployments, restarts, configuration changes, and dependency health.",
-            "Validate RCA evidence before taking remediation action.",
-        ]
-
-        raw = {
-            "graph": "aegisops_diagnosis_graph",
-            "contractVersion": settings.contract_version,
-            "traceId": request.traceId,
-            "generationMode": settings.normalized_generation_mode(),
-            "incident": incident,
-            "alerts": alerts,
-            "rca": rca,
-            "metrics": state.get("metrics", {}),
-            "logs": state.get("logs", {}),
-        }
-
-        response = DiagnoseResponse(
-            contractVersion=settings.contract_version,
-            provider=settings.provider,
-            model=settings.model,
-            agentName=settings.agent_name,
-            summary=summary,
-            rootCause=str(root_cause),
-            impact=impact,
-            nextSteps=next_steps,
-            runbookSuggestions=runbooks,
-            risks=risks,
-            raw=raw,
-        )
-
-        return {
-            "diagnosis": apply_safety_boundary(response),
-        }
+            return {
+                "diagnosis": apply_safety_boundary(response),
+            }
+        except Exception as exc:
+            return {
+                "diagnosis": deterministic_diagnosis(
+                    state,
+                    settings,
+                    fallback_reason=f"{type(exc).__name__}: {exc}",
+                )
+            }
 
     return _node
 
 
-def build_diagnosis_graph(settings: Settings):
+def build_diagnosis_graph(settings: Settings, llm_client: LlmClient | None = None):
     graph = StateGraph(DiagnosisState)
 
     graph.add_node("load_context", load_context)
@@ -168,7 +226,7 @@ def build_diagnosis_graph(settings: Settings):
     graph.add_node("query_logs", query_logs)
     graph.add_node("search_runbooks", search_runbooks)
     graph.add_node("safety_check", safety_check)
-    graph.add_node("generate_diagnosis", generate_diagnosis(settings))
+    graph.add_node("generate_diagnosis", generate_diagnosis(settings, llm_client))
 
     graph.add_edge(START, "load_context")
     graph.add_edge("load_context", "analyze_alerts")
@@ -183,8 +241,12 @@ def build_diagnosis_graph(settings: Settings):
     return graph.compile()
 
 
-def run_diagnosis_graph(request: DiagnoseRequest, settings: Settings) -> DiagnoseResponse:
-    compiled = build_diagnosis_graph(settings)
+def run_diagnosis_graph(
+    request: DiagnoseRequest,
+    settings: Settings,
+    llm_client: LlmClient | None = None,
+) -> DiagnoseResponse:
+    compiled = build_diagnosis_graph(settings, llm_client)
     result = compiled.invoke({"request": request})
     diagnosis = result.get("diagnosis")
     if not isinstance(diagnosis, DiagnoseResponse):

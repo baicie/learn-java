@@ -29,10 +29,27 @@ class Settings(BaseSettings):
     # deterministic | openai-compatible
     generation_mode: str = "deterministic"
 
+    # OpenAI-compatible /chat/completions settings.
+    # Examples:
+    #   AIOPS_AGENT_OPENAI_BASE_URL=https://api.openai.com/v1
+    #   AIOPS_AGENT_OPENAI_BASE_URL=https://api.deepseek.com/v1
+    #   AIOPS_AGENT_OPENAI_BASE_URL=http://localhost:11434/v1
+    openai_base_url: str = ""
+    openai_api_key: str = ""
+    openai_timeout_seconds: float = 30.0
+    openai_temperature: float = 0.2
+    openai_max_tokens: int = 1200
+
     def normalized_generation_mode(self) -> str:
         value = (self.generation_mode or "deterministic").strip().lower()
         if value not in {"deterministic", "openai-compatible"}:
             return "deterministic"
+        return value
+
+    def normalized_openai_base_url(self) -> str:
+        value = (self.openai_base_url or "").strip()
+        while value.endswith("/"):
+            value = value[:-1]
         return value
 
 

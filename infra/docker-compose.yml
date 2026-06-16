@@ -136,6 +136,12 @@ services:
       AIOPS_AGENT_AGENT_NAME: aegisops_diagnosis_graph
       AIOPS_AGENT_CONTRACT_VERSION: agent-diagnosis.v1
       AIOPS_AGENT_GENERATION_MODE: deterministic
+      # Phase4.2 optional LLM provider. Keep empty in local/CI deterministic mode.
+      AIOPS_AGENT_OPENAI_BASE_URL: ""
+      AIOPS_AGENT_OPENAI_API_KEY: ""
+      AIOPS_AGENT_OPENAI_TIMEOUT_SECONDS: 30
+      AIOPS_AGENT_OPENAI_TEMPERATURE: 0.2
+      AIOPS_AGENT_OPENAI_MAX_TOKENS: 1200
     ports:
       - "9008:9008"
     restart: unless-stopped
