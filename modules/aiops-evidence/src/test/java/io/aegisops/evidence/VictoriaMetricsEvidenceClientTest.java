@@ -69,6 +69,7 @@ class VictoriaMetricsEvidenceClientTest {
                 OffsetDateTime.parse("2026-06-16T10:00:00+09:00"),
                 OffsetDateTime.parse("2026-06-16T10:10:00+09:00"),
                 List.of(),
+                List.of(),
                 List.of()));
 
     assertTrue(evidence.available());
@@ -97,6 +98,7 @@ class VictoriaMetricsEvidenceClientTest {
                 "asset_1",
                 OffsetDateTime.now().minusMinutes(10),
                 OffsetDateTime.now(),
+                List.of(),
                 List.of(),
                 List.of()));
 

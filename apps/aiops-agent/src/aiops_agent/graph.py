@@ -4,7 +4,7 @@ from typing import Any, TypedDict
 
 from langgraph.graph import END, START, StateGraph
 
-from aiops_agent.evidence import EvidenceClient, create_evidence_client
+from aiops_agent.evidence import EvidenceClient, create_evidence_client, unavailable_bundle
 from aiops_agent.llm import (
     LlmClient,
     OpenAiCompatibleLlmClient,
@@ -61,7 +61,13 @@ def analyze_rca(state: DiagnosisState) -> DiagnosisState:
 def query_evidence(settings: Settings, evidence_client: EvidenceClient | None = None):
     def _node(state: DiagnosisState) -> DiagnosisState:
         client = evidence_client or create_evidence_client(settings)
-        bundle = client.query(state["request"])
+
+        try:
+            bundle = client.query(state["request"])
+        except Exception as exc:
+            bundle = unavailable_bundle(
+                f"Evidence client failed: {type(exc).__name__}: {exc}"
+            )
 
         return {
             "metrics": bundle.metrics,

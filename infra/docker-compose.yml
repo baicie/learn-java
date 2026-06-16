@@ -144,7 +144,7 @@ services:
       AIOPS_AGENT_OPENAI_MAX_TOKENS: 1200
       AIOPS_AGENT_OPENAI_RESPONSE_FORMAT_ENABLED: "true"
       # Phase4.3 evidence tool. Disabled by default to keep local stack self-contained.
-      AIOPS_AGENT_EVIDENCE_ENABLED: "true"
+      AIOPS_AGENT_EVIDENCE_ENABLED: "false"
       AIOPS_AGENT_EVIDENCE_BASE_URL: http://aiops-server:8080/internal/agent/evidence
       AIOPS_AGENT_EVIDENCE_INTERNAL_TOKEN: dev-internal-token
       AIOPS_AGENT_EVIDENCE_TIMEOUT_SECONDS: 5

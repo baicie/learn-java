@@ -237,3 +237,30 @@ def test_llm_graph_includes_evidence_in_raw():
     assert response.raw["logs"]["available"] is True
     assert response.raw["changes"]["available"] is True
     assert response.rootCause == "deployment may be related"
+
+
+class FailingEvidenceClient:
+    def query(self, request):
+        raise RuntimeError("evidence client crashed")
+
+
+def test_graph_keeps_diagnosis_when_evidence_client_raises():
+    settings = Settings(
+        generation_mode="deterministic",
+        provider="aiops-agent",
+        model="langgraph-deterministic",
+        agent_name="aegisops_diagnosis_graph",
+    )
+
+    response = run_diagnosis_graph(
+        request(),
+        settings,
+        evidence_client=FailingEvidenceClient(),
+    )
+
+    assert response.raw["metrics"]["available"] is False
+    assert response.raw["logs"]["available"] is False
+    assert response.raw["changes"]["available"] is False
+    assert "evidence client crashed" in response.raw["metrics"]["reason"]
+    assert response.summary
+    assert response.nextSteps

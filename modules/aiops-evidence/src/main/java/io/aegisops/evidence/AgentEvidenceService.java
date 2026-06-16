@@ -28,9 +28,9 @@ public class AgentEvidenceService {
   public EvidenceQueryResponse query(EvidenceQueryRequest request) {
     EvidenceQueryRequest normalized = normalizeWindow(request);
 
-    MetricEvidence metrics = metricsClient.queryMetrics(normalized);
-    LogEvidence logs = repository.queryLogs(normalized, properties.normalizedMaxLogPatterns());
-    ChangeEvidence changes = repository.queryChanges(normalized, properties.normalizedMaxChanges());
+    MetricEvidence metrics = safeMetrics(normalized);
+    LogEvidence logs = safeLogs(normalized);
+    ChangeEvidence changes = safeChanges(normalized);
 
     return new EvidenceQueryResponse(
         normalized.contractVersion(),
@@ -40,6 +40,33 @@ public class AgentEvidenceService {
         metrics,
         logs,
         changes);
+  }
+
+  private MetricEvidence safeMetrics(EvidenceQueryRequest request) {
+    try {
+      return metricsClient.queryMetrics(request);
+    } catch (Exception ex) {
+      return MetricEvidence.unavailable(
+          "Metric evidence query failed: " + ex.getClass().getSimpleName());
+    }
+  }
+
+  private LogEvidence safeLogs(EvidenceQueryRequest request) {
+    try {
+      return repository.queryLogs(request, properties.normalizedMaxLogPatterns());
+    } catch (Exception ex) {
+      return LogEvidence.unavailable(
+          "Log evidence query failed: " + ex.getClass().getSimpleName());
+    }
+  }
+
+  private ChangeEvidence safeChanges(EvidenceQueryRequest request) {
+    try {
+      return repository.queryChanges(request, properties.normalizedMaxChanges());
+    } catch (Exception ex) {
+      return ChangeEvidence.unavailable(
+          "Change evidence query failed: " + ex.getClass().getSimpleName());
+    }
   }
 
   private EvidenceQueryRequest normalizeWindow(EvidenceQueryRequest request) {
@@ -58,6 +85,7 @@ public class AgentEvidenceService {
         start,
         end,
         request.normalizedAlertFingerprints(),
-        request.normalizedAlertTitles());
+        request.normalizedAlertTitles(),
+        request.normalizedServiceNames());
   }
 }

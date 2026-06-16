@@ -2,6 +2,7 @@ from aiops_agent.evidence import (
     DisabledEvidenceClient,
     HttpEvidenceClient,
     build_evidence_query_payload,
+    unavailable_bundle,
 )
 from aiops_agent.schemas import AlertContext, DiagnoseRequest, IncidentContext
 from aiops_agent.settings import Settings
@@ -30,7 +31,20 @@ def request() -> DiagnoseRequest:
             lastSeenAt="2026-06-16T10:10:00+09:00",
         ),
         alerts=[
-            AlertContext(id="a1", title="CPU high", fingerprint="fp_cpu"),
+            AlertContext(
+                id="a1",
+                title="CPU high",
+                fingerprint="fp_cpu",
+                entityType="service",
+                entityName="checkout-service",
+            ),
+            AlertContext(
+                id="a2",
+                title="Host CPU high",
+                fingerprint="fp_host",
+                entityType="host",
+                entityName="host-1",
+            ),
         ],
         traceId="trace_1",
     )
@@ -44,14 +58,23 @@ def test_disabled_evidence_client_returns_unavailable_bundle():
     assert bundle.changes["available"] is False
 
 
+def test_unavailable_bundle_sets_all_sections():
+    bundle = unavailable_bundle("failed")
+
+    assert bundle.metrics["reason"] == "failed"
+    assert bundle.logs["reason"] == "failed"
+    assert bundle.changes["reason"] == "failed"
+
+
 def test_build_evidence_query_payload():
     payload = build_evidence_query_payload(request())
 
     assert payload["tenantId"] == "tenant_1"
     assert payload["incidentId"] == "inc_1"
     assert payload["primaryAssetId"] == "asset_1"
-    assert payload["alertFingerprints"] == ["fp_cpu"]
-    assert payload["alertTitles"] == ["CPU high"]
+    assert payload["alertFingerprints"] == ["fp_cpu", "fp_host"]
+    assert payload["alertTitles"] == ["CPU high", "Host CPU high"]
+    assert payload["serviceNames"] == ["checkout-service"]
 
 
 def test_http_evidence_client_posts_internal_request(monkeypatch):
@@ -62,13 +85,11 @@ def test_http_evidence_client_posts_internal_request(monkeypatch):
         captured["headers"] = headers
         captured["json"] = json
         captured["timeout"] = timeout
-        return FakeHttpxResponse(
-            {
-                "metrics": {"available": True, "series": []},
-                "logs": {"available": True, "patterns": []},
-                "changes": {"available": True, "events": []},
-            }
-        )
+        return FakeHttpxResponse({
+            "metrics": {"available": True, "series": []},
+            "logs": {"available": True, "patterns": []},
+            "changes": {"available": True, "events": []},
+        })
 
     monkeypatch.setattr("aiops_agent.evidence.httpx.post", fake_post)
 
@@ -84,6 +105,7 @@ def test_http_evidence_client_posts_internal_request(monkeypatch):
     assert captured["url"] == "http://server:8080/internal/agent/evidence/query"
     assert captured["headers"]["X-AegisOps-Internal-Token"] == "evidence-token"
     assert captured["json"]["traceId"] == "trace_1"
+    assert captured["json"]["serviceNames"] == ["checkout-service"]
     assert captured["timeout"] == 3
     assert bundle.metrics["available"] is True
 

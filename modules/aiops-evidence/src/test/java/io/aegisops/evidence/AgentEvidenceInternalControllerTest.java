@@ -72,7 +72,8 @@ class AgentEvidenceInternalControllerTest {
         OffsetDateTime.parse("2026-06-16T10:00:00+09:00"),
         OffsetDateTime.parse("2026-06-16T10:10:00+09:00"),
         List.of("fp_cpu"),
-        List.of("CPU high"));
+        List.of("CPU high"),
+        List.of("checkout-service"));
   }
 
   private String json(Object value) throws Exception {

@@ -1,6 +1,7 @@
 package io.aegisops.evidence;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -42,12 +43,80 @@ class AgentEvidenceServiceTest {
                 null,
                 OffsetDateTime.parse("2026-06-16T10:00:00+09:00"),
                 List.of("fp_cpu"),
-                List.of("CPU high")));
+                List.of("CPU high"),
+                List.of("checkout-service")));
 
     assertEquals("tenant_1", response.tenantId());
     assertTrue(response.metrics().available());
     assertTrue(response.logs().available());
     assertTrue(response.changes().available());
+  }
+
+  @Test
+  void queryKeepsMetricsWhenLogsAndChangesFail() {
+    AgentEvidenceProperties properties = new AgentEvidenceProperties("token", 60, 10, 10);
+
+    AgentEvidenceService service =
+        new AgentEvidenceService(
+            properties,
+            request ->
+                new MetricEvidence(
+                    true,
+                    "",
+                    List.of(new MetricSeriesSummary("cpu", "query", null, null, null, null, 0))),
+            new FailingEvidenceRepository());
+
+    EvidenceQueryResponse response =
+        service.query(
+            new EvidenceQueryRequest(
+                "agent-diagnosis.v1",
+                "tenant_1",
+                "inc_1",
+                "trace_1",
+                "asset_1",
+                OffsetDateTime.parse("2026-06-16T09:00:00+09:00"),
+                OffsetDateTime.parse("2026-06-16T10:00:00+09:00"),
+                List.of(),
+                List.of(),
+                List.of()));
+
+    assertTrue(response.metrics().available());
+    assertFalse(response.logs().available());
+    assertFalse(response.changes().available());
+    assertTrue(response.logs().reason().contains("Log evidence query failed"));
+    assertTrue(response.changes().reason().contains("Change evidence query failed"));
+  }
+
+  @Test
+  void queryKeepsLogsAndChangesWhenMetricsFail() {
+    AgentEvidenceProperties properties = new AgentEvidenceProperties("token", 60, 10, 10);
+
+    AgentEvidenceService service =
+        new AgentEvidenceService(
+            properties,
+            request -> {
+              throw new RuntimeException("victoria down");
+            },
+            new FakeEvidenceRepository());
+
+    EvidenceQueryResponse response =
+        service.query(
+            new EvidenceQueryRequest(
+                "agent-diagnosis.v1",
+                "tenant_1",
+                "inc_1",
+                "trace_1",
+                "asset_1",
+                OffsetDateTime.parse("2026-06-16T09:00:00+09:00"),
+                OffsetDateTime.parse("2026-06-16T10:00:00+09:00"),
+                List.of(),
+                List.of(),
+                List.of()));
+
+    assertFalse(response.metrics().available());
+    assertTrue(response.logs().available());
+    assertTrue(response.changes().available());
+    assertTrue(response.metrics().reason().contains("Metric evidence query failed"));
   }
 
   private static final class FakeEvidenceRepository implements EvidenceRepository {
@@ -76,6 +145,18 @@ class AgentEvidenceServiceTest {
                   "alice",
                   "medium",
                   request.lastSeenAt())));
+    }
+  }
+
+  private static final class FailingEvidenceRepository implements EvidenceRepository {
+    @Override
+    public LogEvidence queryLogs(EvidenceQueryRequest request, int maxPatterns) {
+      throw new RuntimeException("log table unavailable");
+    }
+
+    @Override
+    public ChangeEvidence queryChanges(EvidenceQueryRequest request, int maxChanges) {
+      throw new RuntimeException("change table unavailable");
     }
   }
 }

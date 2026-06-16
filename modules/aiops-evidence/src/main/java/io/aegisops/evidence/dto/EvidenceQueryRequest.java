@@ -12,12 +12,29 @@ public record EvidenceQueryRequest(
     OffsetDateTime startedAt,
     OffsetDateTime lastSeenAt,
     List<String> alertFingerprints,
-    List<String> alertTitles) {
+    List<String> alertTitles,
+    List<String> serviceNames) {
   public List<String> normalizedAlertFingerprints() {
-    return alertFingerprints == null ? List.of() : alertFingerprints;
+    return normalize(alertFingerprints);
   }
 
   public List<String> normalizedAlertTitles() {
-    return alertTitles == null ? List.of() : alertTitles;
+    return normalize(alertTitles);
+  }
+
+  public List<String> normalizedServiceNames() {
+    return normalize(serviceNames);
+  }
+
+  private static List<String> normalize(List<String> values) {
+    if (values == null) {
+      return List.of();
+    }
+
+    return values.stream()
+        .filter(value -> value != null && !value.isBlank())
+        .map(String::trim)
+        .distinct()
+        .toList();
   }
 }

@@ -32,13 +32,17 @@ def _unavailable_changes(reason: str) -> dict[str, Any]:
     return {"available": False, "reason": reason, "events": []}
 
 
+def unavailable_bundle(reason: str) -> EvidenceBundle:
+    return EvidenceBundle(
+        metrics=_unavailable_metrics(reason),
+        logs=_unavailable_logs(reason),
+        changes=_unavailable_changes(reason),
+    )
+
+
 class DisabledEvidenceClient:
     def query(self, request: DiagnoseRequest) -> EvidenceBundle:
-        return EvidenceBundle(
-            metrics=_unavailable_metrics("Evidence client is disabled."),
-            logs=_unavailable_logs("Evidence client is disabled."),
-            changes=_unavailable_changes("Evidence client is disabled."),
-        )
+        return unavailable_bundle("Evidence client is disabled.")
 
 
 class HttpEvidenceClient:
@@ -69,17 +73,12 @@ class HttpEvidenceClient:
             data = response.json()
 
             return EvidenceBundle(
-                metrics=data.get("metrics") or {},
-                logs=data.get("logs") or {},
-                changes=data.get("changes") or {},
+                metrics=data.get("metrics") or _unavailable_metrics("Metric evidence is missing."),
+                logs=data.get("logs") or _unavailable_logs("Log evidence is missing."),
+                changes=data.get("changes") or _unavailable_changes("Change evidence is missing."),
             )
         except Exception as exc:
-            reason = f"Evidence query failed: {type(exc).__name__}: {exc}"
-            return EvidenceBundle(
-                metrics=_unavailable_metrics(reason),
-                logs=_unavailable_logs(reason),
-                changes=_unavailable_changes(reason),
-            )
+            return unavailable_bundle(f"Evidence query failed: {type(exc).__name__}: {exc}")
 
 
 def build_evidence_query_payload(request: DiagnoseRequest) -> dict[str, Any]:
@@ -93,6 +92,11 @@ def build_evidence_query_payload(request: DiagnoseRequest) -> dict[str, Any]:
         "lastSeenAt": request.incident.lastSeenAt.isoformat() if request.incident.lastSeenAt else None,
         "alertFingerprints": [alert.fingerprint for alert in request.alerts if alert.fingerprint],
         "alertTitles": [alert.title for alert in request.alerts if alert.title],
+        "serviceNames": [
+            alert.entityName
+            for alert in request.alerts
+            if alert.entityName and (not alert.entityType or alert.entityType.lower() == "service")
+        ],
     }
 
 
