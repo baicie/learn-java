@@ -13,6 +13,7 @@ def build_diagnosis_prompt(
     rca_analysis: dict[str, Any],
     metrics: dict[str, Any],
     logs: dict[str, Any],
+    changes: dict[str, Any],
     runbook_suggestions: list[str],
     risks: list[str],
 ) -> list[dict[str, str]]:
@@ -22,7 +23,7 @@ def build_diagnosis_prompt(
         "You must not execute commands. "
         "You must not modify systems. "
         "You must not restart services, rollback deployments, delete resources, or close incidents. "
-        "All remediation is suggestion-only in Phase4.2. "
+        "All remediation is suggestion-only in Phase4.3. "
         "Return strict JSON only. Do not wrap JSON in markdown."
     )
 
@@ -38,6 +39,7 @@ def build_diagnosis_prompt(
             "rca": rca_analysis,
             "metrics": metrics,
             "logs": logs,
+            "changes": changes,
             "runbookSuggestions": runbook_suggestions,
             "safetyRisks": risks,
         },
@@ -52,7 +54,8 @@ def build_diagnosis_prompt(
         "rules": [
             "Return JSON only.",
             "Do not include markdown fences.",
-            "Do not invent metrics or logs.",
+            "Do not invent metrics, logs, or changes.",
+            "If metrics/logs/changes are unavailable, say so.",
             "Separate confirmed evidence from hypothesis.",
             "Do not suggest automatic execution.",
             "Do not suggest destructive commands.",

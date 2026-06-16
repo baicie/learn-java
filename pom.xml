@@ -23,6 +23,7 @@
     <module>modules/aiops-alert</module>
     <module>modules/aiops-incident</module>
     <module>modules/aiops-rca</module>
+    <module>modules/aiops-evidence</module>
     <module>modules/aiops-ai-client</module>
     <module>apps/aiops-server</module>
     <module>apps/aiops-worker</module>

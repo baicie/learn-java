@@ -4,6 +4,7 @@ from typing import Any, TypedDict
 
 from langgraph.graph import END, START, StateGraph
 
+from aiops_agent.evidence import EvidenceClient, create_evidence_client
 from aiops_agent.llm import (
     LlmClient,
     OpenAiCompatibleLlmClient,
@@ -17,8 +18,6 @@ from aiops_agent.settings import Settings
 from aiops_agent.tools import (
     inspect_alerts,
     inspect_rca_evidence,
-    query_logs_stub,
-    query_metrics_stub,
     safety_guard,
     search_runbooks_stub,
     summarize_incident_context,
@@ -32,6 +31,7 @@ class DiagnosisState(TypedDict, total=False):
     rca_analysis: dict[str, Any]
     metrics: dict[str, Any]
     logs: dict[str, Any]
+    changes: dict[str, Any]
     runbook_suggestions: list[str]
     risks: list[str]
     diagnosis: DiagnoseResponse
@@ -58,16 +58,18 @@ def analyze_rca(state: DiagnosisState) -> DiagnosisState:
     }
 
 
-def query_metrics(state: DiagnosisState) -> DiagnosisState:
-    return {
-        "metrics": query_metrics_stub(state["request"]),
-    }
+def query_evidence(settings: Settings, evidence_client: EvidenceClient | None = None):
+    def _node(state: DiagnosisState) -> DiagnosisState:
+        client = evidence_client or create_evidence_client(settings)
+        bundle = client.query(state["request"])
 
+        return {
+            "metrics": bundle.metrics,
+            "logs": bundle.logs,
+            "changes": bundle.changes,
+        }
 
-def query_logs(state: DiagnosisState) -> DiagnosisState:
-    return {
-        "logs": query_logs_stub(state["request"]),
-    }
+    return _node
 
 
 def search_runbooks(state: DiagnosisState) -> DiagnosisState:
@@ -98,8 +100,13 @@ def deterministic_diagnosis(
     runbooks = state.get("runbook_suggestions", [])
     risks = state.get("risks", [])
 
+    metrics = state.get("metrics", {})
+    logs = state.get("logs", {})
+    changes = state.get("changes", {})
+
     root_cause = (
-        rca.get("rootCause")
+        _root_cause_from_change_evidence(changes)
+        or rca.get("rootCause")
         or incident.get("suspectedRootCause")
         or "No strong root cause has been confirmed. Start from the dominant alert and primary asset."
     )
@@ -116,11 +123,16 @@ def deterministic_diagnosis(
         or "unknown fingerprint"
     )
 
+    metric_hint = _metric_hint(metrics)
+    log_hint = _log_hint(logs)
+    change_hint = _change_hint(changes)
+
     summary = (
         f"Incident {request.incidentId} is {incident.get('status', 'unknown')} "
         f"with severity {incident.get('severity', alerts.get('topSeverity', 'info'))}. "
-        f"{alerts.get('count', 0)} linked alert(s) were analyzed."
-    )
+        f"{alerts.get('count', 0)} linked alert(s) were analyzed. "
+        f"{metric_hint} {log_hint} {change_hint}"
+    ).strip()
 
     impact = (
         f"The primary impact may be concentrated on {dominant_asset}. "
@@ -131,8 +143,9 @@ def deterministic_diagnosis(
         f"Confirm whether the dominant fingerprint `{dominant_fingerprint}` is still firing.",
         f"Check the primary asset `{dominant_asset}` around the incident start time.",
         "Compare metrics before and after incident detection.",
+        "Review error log patterns around the incident window.",
         "Review recent deployments, restarts, configuration changes, and dependency health.",
-        "Validate RCA evidence before taking remediation action.",
+        "Validate RCA and evidence before taking remediation action.",
     ]
 
     raw = {
@@ -144,8 +157,9 @@ def deterministic_diagnosis(
         "incident": incident,
         "alerts": alerts,
         "rca": rca,
-        "metrics": state.get("metrics", {}),
-        "logs": state.get("logs", {}),
+        "metrics": metrics,
+        "logs": logs,
+        "changes": changes,
     }
 
     response = DiagnoseResponse(
@@ -181,6 +195,7 @@ def generate_diagnosis(settings: Settings, llm_client: LlmClient | None = None):
             rca_analysis=state.get("rca_analysis", {}),
             metrics=state.get("metrics", {}),
             logs=state.get("logs", {}),
+            changes=state.get("changes", {}),
             runbook_suggestions=state.get("runbook_suggestions", []),
             risks=state.get("risks", []),
         )
@@ -197,6 +212,9 @@ def generate_diagnosis(settings: Settings, llm_client: LlmClient | None = None):
                     "traceId": state["request"].traceId,
                     "generationMode": "openai-compatible",
                     "llmContent": content,
+                    "metrics": state.get("metrics", {}),
+                    "logs": state.get("logs", {}),
+                    "changes": state.get("changes", {}),
                 },
                 provider="openai-compatible",
             )
@@ -216,14 +234,17 @@ def generate_diagnosis(settings: Settings, llm_client: LlmClient | None = None):
     return _node
 
 
-def build_diagnosis_graph(settings: Settings, llm_client: LlmClient | None = None):
+def build_diagnosis_graph(
+    settings: Settings,
+    llm_client: LlmClient | None = None,
+    evidence_client: EvidenceClient | None = None,
+):
     graph = StateGraph(DiagnosisState)
 
     graph.add_node("load_context", load_context)
     graph.add_node("analyze_alerts", analyze_alerts)
     graph.add_node("analyze_rca", analyze_rca)
-    graph.add_node("query_metrics", query_metrics)
-    graph.add_node("query_logs", query_logs)
+    graph.add_node("query_evidence", query_evidence(settings, evidence_client))
     graph.add_node("search_runbooks", search_runbooks)
     graph.add_node("safety_check", safety_check)
     graph.add_node("generate_diagnosis", generate_diagnosis(settings, llm_client))
@@ -231,9 +252,8 @@ def build_diagnosis_graph(settings: Settings, llm_client: LlmClient | None = Non
     graph.add_edge(START, "load_context")
     graph.add_edge("load_context", "analyze_alerts")
     graph.add_edge("analyze_alerts", "analyze_rca")
-    graph.add_edge("analyze_rca", "query_metrics")
-    graph.add_edge("query_metrics", "query_logs")
-    graph.add_edge("query_logs", "search_runbooks")
+    graph.add_edge("analyze_rca", "query_evidence")
+    graph.add_edge("query_evidence", "search_runbooks")
     graph.add_edge("search_runbooks", "safety_check")
     graph.add_edge("safety_check", "generate_diagnosis")
     graph.add_edge("generate_diagnosis", END)
@@ -245,10 +265,50 @@ def run_diagnosis_graph(
     request: DiagnoseRequest,
     settings: Settings,
     llm_client: LlmClient | None = None,
+    evidence_client: EvidenceClient | None = None,
 ) -> DiagnoseResponse:
-    compiled = build_diagnosis_graph(settings, llm_client)
+    compiled = build_diagnosis_graph(settings, llm_client, evidence_client)
     result = compiled.invoke({"request": request})
     diagnosis = result.get("diagnosis")
     if not isinstance(diagnosis, DiagnoseResponse):
         raise RuntimeError("diagnosis graph did not return DiagnoseResponse")
     return diagnosis
+
+
+def _metric_hint(metrics: dict[str, Any]) -> str:
+    if metrics.get("available"):
+        count = len(metrics.get("series") or [])
+        return f"{count} metric series were available."
+    return "Metric evidence is unavailable."
+
+
+def _log_hint(logs: dict[str, Any]) -> str:
+    if logs.get("available"):
+        count = len(logs.get("patterns") or [])
+        return f"{count} log pattern(s) were found."
+    return "Log evidence is unavailable."
+
+
+def _change_hint(changes: dict[str, Any]) -> str:
+    if changes.get("available"):
+        count = len(changes.get("events") or [])
+        return f"{count} recent change event(s) were found."
+    return "Change evidence is unavailable."
+
+
+def _root_cause_from_change_evidence(changes: dict[str, Any]) -> str | None:
+    if not changes.get("available"):
+        return None
+
+    events = changes.get("events") or []
+    if not events:
+        return None
+
+    first = events[0]
+    title = first.get("title") if isinstance(first, dict) else None
+    change_type = first.get("changeType") if isinstance(first, dict) else None
+
+    if title:
+        return f"Recent {change_type or 'change'} may be related: {title}"
+
+    return None

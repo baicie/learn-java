@@ -60,3 +60,36 @@ The LLM must return strict JSON:
 If LLM call fails or returns invalid JSON, the graph falls back to deterministic diagnosis.
 
 Phase4.2 still does not execute remediation.
+
+## Phase4.3 Evidence Tools
+
+Python Agent does not connect to databases or production systems directly.
+
+It queries Java internal evidence API:
+
+```bash
+AIOPS_AGENT_EVIDENCE_ENABLED=true
+AIOPS_AGENT_EVIDENCE_BASE_URL=http://localhost:8080/internal/agent/evidence
+AIOPS_AGENT_EVIDENCE_INTERNAL_TOKEN=dev-internal-token
+```
+
+Evidence sections:
+
+```json
+{
+  "metrics": {
+    "available": true,
+    "series": []
+  },
+  "logs": {
+    "available": true,
+    "patterns": []
+  },
+  "changes": {
+    "available": true,
+    "events": []
+  }
+}
+```
+
+If evidence query fails, diagnosis still succeeds with evidence unavailable markers.

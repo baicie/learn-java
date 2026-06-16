@@ -1,6 +1,31 @@
+from aiops_agent.evidence import EvidenceBundle
 from aiops_agent.graph import run_diagnosis_graph
 from aiops_agent.schemas import AlertContext, DiagnoseRequest, IncidentContext, RcaContext
 from aiops_agent.settings import Settings
+
+
+class FakeEvidenceClient:
+    def query(self, request):
+        return EvidenceBundle(
+            metrics={
+                "available": True,
+                "series": [
+                    {"name": "cpu_usage", "max": "0.95", "latest": "0.92"},
+                ],
+            },
+            logs={
+                "available": True,
+                "patterns": [
+                    {"severity": "error", "sample": "timeout", "count": 3},
+                ],
+            },
+            changes={
+                "available": True,
+                "events": [
+                    {"changeType": "deploy", "title": "deploy checkout-service v2"},
+                ],
+            },
+        )
 
 
 class FakeLlmClient:
@@ -34,8 +59,13 @@ def request() -> DiagnoseRequest:
             alertCount=2,
         ),
         alerts=[
-            AlertContext(id="a1", title="CPU high", severity="critical", assetId="asset_1", fingerprint="fp_cpu"),
-            AlertContext(id="a2", title="CPU high", severity="warning", assetId="asset_1", fingerprint="fp_cpu"),
+            AlertContext(
+                id="a1",
+                title="CPU high",
+                severity="critical",
+                assetId="asset_1",
+                fingerprint="fp_cpu",
+            ),
         ],
         rca=RcaContext(
             id="rca_1",
@@ -77,7 +107,8 @@ def test_openai_compatible_graph_uses_llm_client():
         agent_name="aegisops_diagnosis_graph",
     )
 
-    fake = FakeLlmClient("""
+    fake = FakeLlmClient(
+        """
     {
       "summary": "LLM summary",
       "rootCause": "LLM root cause",
@@ -86,7 +117,8 @@ def test_openai_compatible_graph_uses_llm_client():
       "runbookSuggestions": ["runbook 1"],
       "risks": ["risk 1"]
     }
-    """)
+    """
+    )
 
     response = run_diagnosis_graph(request(), settings, fake)
 
@@ -130,7 +162,8 @@ def test_openai_compatible_graph_sanitizes_unsafe_llm_response():
         agent_name="aegisops_diagnosis_graph",
     )
 
-    fake = FakeLlmClient("""
+    fake = FakeLlmClient(
+        """
     {
       "summary": "summary",
       "rootCause": "root",
@@ -139,7 +172,8 @@ def test_openai_compatible_graph_sanitizes_unsafe_llm_response():
       "runbookSuggestions": [],
       "risks": []
     }
-    """)
+    """
+    )
 
     response = run_diagnosis_graph(request(), settings, fake)
 
@@ -150,3 +184,56 @@ def test_openai_compatible_graph_sanitizes_unsafe_llm_response():
     assert all("rm -rf" not in step.lower() for step in response.nextSteps)
     assert any("Blocked unsafe remediation suggestion" in step for step in response.nextSteps)
     assert any("unsafe remediation wording" in risk for risk in response.risks)
+
+
+def test_deterministic_graph_includes_evidence_in_raw():
+    settings = Settings(
+        generation_mode="deterministic",
+        provider="aiops-agent",
+        model="langgraph-deterministic",
+        agent_name="aegisops_diagnosis_graph",
+    )
+
+    response = run_diagnosis_graph(
+        request(),
+        settings,
+        evidence_client=FakeEvidenceClient(),
+    )
+
+    assert response.raw["metrics"]["available"] is True
+    assert response.raw["logs"]["available"] is True
+    assert response.raw["changes"]["available"] is True
+    assert "deploy checkout-service v2" in response.rootCause
+
+
+def test_llm_graph_includes_evidence_in_raw():
+    settings = Settings(
+        generation_mode="openai-compatible",
+        provider="aiops-agent",
+        model="test-model",
+        agent_name="aegisops_diagnosis_graph",
+    )
+
+    response = run_diagnosis_graph(
+        request(),
+        settings,
+        llm_client=FakeLlmClient(
+            """
+            {
+              "summary": "LLM summary with evidence",
+              "rootCause": "deployment may be related",
+              "impact": "latency increase",
+              "nextSteps": ["check deployment diff"],
+              "runbookSuggestions": ["deployment rollback checklist"],
+              "risks": ["manual approval required"]
+            }
+            """
+        ),
+        evidence_client=FakeEvidenceClient(),
+    )
+
+    assert response.provider == "openai-compatible"
+    assert response.raw["metrics"]["available"] is True
+    assert response.raw["logs"]["available"] is True
+    assert response.raw["changes"]["available"] is True
+    assert response.rootCause == "deployment may be related"

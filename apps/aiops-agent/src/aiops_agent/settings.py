@@ -44,6 +44,13 @@ class Settings(BaseSettings):
     # Keep enabled by default for stricter JSON when provider supports it.
     openai_response_format_enabled: bool = True
 
+    # Phase4.3 evidence tool. When disabled, the agent uses
+    # DisabledEvidenceClient and the raw response shows unavailable markers.
+    evidence_enabled: bool = False
+    evidence_base_url: str = ""
+    evidence_internal_token: str = "dev-internal-token"
+    evidence_timeout_seconds: float = 5.0
+
     def normalized_generation_mode(self) -> str:
         value = (self.generation_mode or "deterministic").strip().lower()
         if value not in {"deterministic", "openai-compatible"}:
@@ -52,6 +59,12 @@ class Settings(BaseSettings):
 
     def normalized_openai_base_url(self) -> str:
         value = (self.openai_base_url or "").strip()
+        while value.endswith("/"):
+            value = value[:-1]
+        return value
+
+    def normalized_evidence_base_url(self) -> str:
+        value = (self.evidence_base_url or "").strip()
         while value.endswith("/"):
             value = value[:-1]
         return value

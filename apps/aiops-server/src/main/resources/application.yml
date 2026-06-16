@@ -31,6 +31,17 @@ aiops:
     internal-token: ${AIOPS_AGENT_INTERNAL_TOKEN:dev-internal-token}
     connect-timeout-millis: ${AIOPS_AGENT_CONNECT_TIMEOUT:3000}
     read-timeout-millis: ${AIOPS_AGENT_READ_TIMEOUT:30000}
+    evidence:
+      internal-token: ${AIOPS_AGENT_EVIDENCE_INTERNAL_TOKEN:dev-internal-token}
+      default-lookback-minutes: ${AIOPS_AGENT_EVIDENCE_DEFAULT_LOOKBACK_MINUTES:60}
+      max-log-patterns: ${AIOPS_AGENT_EVIDENCE_MAX_LOG_PATTERNS:20}
+      max-changes: ${AIOPS_AGENT_EVIDENCE_MAX_CHANGES:20}
+  evidence:
+    victoria:
+      enabled: ${AIOPS_EVIDENCE_VICTORIA_ENABLED:false}
+      base-url: ${AIOPS_EVIDENCE_VICTORIA_BASE_URL:http://localhost:8428}
+      timeout-millis: ${AIOPS_EVIDENCE_VICTORIA_TIMEOUT_MILLIS:3000}
+      step: ${AIOPS_EVIDENCE_VICTORIA_STEP:60s}
 
 springdoc:
   swagger-ui:
