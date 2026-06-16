@@ -148,6 +148,9 @@ services:
       AIOPS_AGENT_EVIDENCE_BASE_URL: http://aiops-server:8080/internal/agent/evidence
       AIOPS_AGENT_EVIDENCE_INTERNAL_TOKEN: dev-internal-token
       AIOPS_AGENT_EVIDENCE_TIMEOUT_SECONDS: 5
+      # Phase4.4 observability. When enabled, response.raw carries agentRun + agentEval.
+      AIOPS_AGENT_TRACE_ENABLED: "true"
+      AIOPS_AGENT_EVAL_ENABLED: "true"
     ports:
       - "9008:9008"
     restart: unless-stopped

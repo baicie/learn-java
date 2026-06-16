@@ -51,6 +51,11 @@ class Settings(BaseSettings):
     evidence_internal_token: str = "dev-internal-token"
     evidence_timeout_seconds: float = 5.0
 
+    # Phase4.4 observability. When disabled, response.raw will not contain
+    # agentRun / agentEval sections.
+    trace_enabled: bool = True
+    eval_enabled: bool = True
+
     def normalized_generation_mode(self) -> str:
         value = (self.generation_mode or "deterministic").strip().lower()
         if value not in {"deterministic", "openai-compatible"}:

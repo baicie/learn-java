@@ -1,9 +1,15 @@
 package io.aegisops.ai.client;
 
 import io.aegisops.ai.client.dto.AgentDiagnosisResponse;
+import io.aegisops.ai.client.dto.AgentEvalResultCommand;
+import io.aegisops.ai.client.dto.AgentEvalResultRecord;
+import io.aegisops.ai.client.dto.AgentRunRecord;
+import io.aegisops.ai.client.dto.AgentRunStepCommand;
+import io.aegisops.ai.client.dto.AgentRunStepRecord;
 import io.aegisops.ai.client.dto.AiAlertRecord;
 import io.aegisops.ai.client.dto.AiIncidentRecord;
 import io.aegisops.ai.client.dto.AiRcaRecord;
+import io.aegisops.ai.client.dto.SaveAgentRunCommand;
 import io.aegisops.ai.client.dto.SaveDiagnosisCommand;
 import io.aegisops.ai.client.dto.TimelineCommand;
 import java.time.OffsetDateTime;
@@ -196,5 +202,183 @@ public class JdbcAiRepository implements AiRepository {
         command.title(),
         command.description(),
         command.payloadJson());
+  }
+
+  @Override
+  public void saveAgentRun(SaveAgentRunCommand command) {
+    jdbc.update(
+        """
+        insert into agent_run(
+          id, diagnosis_id, tenant_id, incident_id, trace_id,
+          contract_version, generation_mode, provider, model, status,
+          started_at, finished_at, duration_ms, fallback_reason,
+          safety, eval_result, created_at
+        )
+        values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?::jsonb, now())
+        """,
+        command.id(),
+        command.diagnosisId(),
+        command.tenantId(),
+        command.incidentId(),
+        command.traceId(),
+        command.contractVersion(),
+        command.generationMode(),
+        command.provider(),
+        command.model(),
+        command.status(),
+        command.startedAt(),
+        command.finishedAt(),
+        command.durationMs(),
+        command.fallbackReason(),
+        command.safetyJson(),
+        command.evalJson());
+  }
+
+  @Override
+  public void saveAgentRunSteps(List<AgentRunStepCommand> commands) {
+    jdbc.batchUpdate(
+        """
+        insert into agent_run_step(
+          id, run_id, sequence_no, step_name, step_type, status,
+          started_at, finished_at, duration_ms,
+          input_summary, output_summary, error_message, metadata, created_at
+        )
+        values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb, now())
+        """,
+        commands,
+        commands.size(),
+        (ps, command) -> {
+          ps.setString(1, command.id());
+          ps.setString(2, command.runId());
+          ps.setInt(3, command.sequenceNo());
+          ps.setString(4, command.stepName());
+          ps.setString(5, command.stepType());
+          ps.setString(6, command.status());
+          ps.setObject(7, command.startedAt());
+          ps.setObject(8, command.finishedAt());
+          ps.setLong(9, command.durationMs());
+          ps.setString(10, command.inputSummary());
+          ps.setString(11, command.outputSummary());
+          ps.setString(12, command.errorMessage());
+          ps.setString(13, command.metadataJson());
+        });
+  }
+
+  @Override
+  public void saveAgentEvalResults(List<AgentEvalResultCommand> commands) {
+    jdbc.batchUpdate(
+        """
+        insert into agent_eval_result(
+          id, run_id, evaluator_name, check_name, passed, score,
+          reason, details, created_at
+        )
+        values (?, ?, ?, ?, ?, ?, ?, ?::jsonb, now())
+        """,
+        commands,
+        commands.size(),
+        (ps, command) -> {
+          ps.setString(1, command.id());
+          ps.setString(2, command.runId());
+          ps.setString(3, command.evaluatorName());
+          ps.setString(4, command.checkName());
+          ps.setBoolean(5, command.passed());
+          ps.setBigDecimal(6, command.score());
+          ps.setString(7, command.reason());
+          ps.setString(8, command.detailsJson());
+        });
+  }
+
+  @Override
+  public Optional<AgentRunRecord> findLatestAgentRun(String tenantId, String incidentId) {
+    try {
+      return Optional.ofNullable(
+          jdbc.queryForObject(
+              """
+              select id, diagnosis_id, incident_id, trace_id, contract_version,
+                     generation_mode, provider, model, status,
+                     started_at, finished_at, duration_ms, fallback_reason,
+                     safety::text as safety_json,
+                     eval_result::text as eval_json,
+                     created_at
+              from agent_run
+              where tenant_id = ? and incident_id = ?
+              order by created_at desc
+              limit 1
+              """,
+              (rs, rowNum) ->
+                  new AgentRunRecord(
+                      rs.getString("id"),
+                      rs.getString("diagnosis_id"),
+                      rs.getString("incident_id"),
+                      rs.getString("trace_id"),
+                      rs.getString("contract_version"),
+                      rs.getString("generation_mode"),
+                      rs.getString("provider"),
+                      rs.getString("model"),
+                      rs.getString("status"),
+                      rs.getObject("started_at", OffsetDateTime.class),
+                      rs.getObject("finished_at", OffsetDateTime.class),
+                      rs.getLong("duration_ms"),
+                      rs.getString("fallback_reason"),
+                      rs.getString("safety_json"),
+                      rs.getString("eval_json"),
+                      rs.getObject("created_at", OffsetDateTime.class)),
+              tenantId,
+              incidentId));
+    } catch (EmptyResultDataAccessException ex) {
+      return Optional.empty();
+    }
+  }
+
+  @Override
+  public List<AgentRunStepRecord> listAgentRunSteps(String runId) {
+    return jdbc.query(
+        """
+        select id, sequence_no, step_name, step_type, status,
+               started_at, finished_at, duration_ms,
+               input_summary, output_summary, error_message,
+               metadata::text as metadata_json
+        from agent_run_step
+        where run_id = ?
+        order by sequence_no asc
+        """,
+        (rs, rowNum) ->
+            new AgentRunStepRecord(
+                rs.getString("id"),
+                rs.getInt("sequence_no"),
+                rs.getString("step_name"),
+                rs.getString("step_type"),
+                rs.getString("status"),
+                rs.getObject("started_at", OffsetDateTime.class),
+                rs.getObject("finished_at", OffsetDateTime.class),
+                rs.getLong("duration_ms"),
+                rs.getString("input_summary"),
+                rs.getString("output_summary"),
+                rs.getString("error_message"),
+                rs.getString("metadata_json")),
+        runId);
+  }
+
+  @Override
+  public List<AgentEvalResultRecord> listAgentEvalResults(String runId) {
+    return jdbc.query(
+        """
+        select id, evaluator_name, check_name, passed, score,
+               reason, details::text as details_json, created_at
+        from agent_eval_result
+        where run_id = ?
+        order by created_at asc
+        """,
+        (rs, rowNum) ->
+            new AgentEvalResultRecord(
+                rs.getString("id"),
+                rs.getString("evaluator_name"),
+                rs.getString("check_name"),
+                rs.getBoolean("passed"),
+                rs.getBigDecimal("score"),
+                rs.getString("reason"),
+                rs.getString("details_json"),
+                rs.getObject("created_at", OffsetDateTime.class)),
+        runId);
   }
 }

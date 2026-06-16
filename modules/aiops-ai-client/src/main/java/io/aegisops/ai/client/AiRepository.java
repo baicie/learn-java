@@ -1,9 +1,15 @@
 package io.aegisops.ai.client;
 
+import io.aegisops.ai.client.dto.AgentEvalResultCommand;
+import io.aegisops.ai.client.dto.AgentEvalResultRecord;
+import io.aegisops.ai.client.dto.AgentRunRecord;
+import io.aegisops.ai.client.dto.AgentRunStepCommand;
+import io.aegisops.ai.client.dto.AgentRunStepRecord;
 import io.aegisops.ai.client.dto.AiAlertRecord;
 import io.aegisops.ai.client.dto.AiDiagnosisRecord;
 import io.aegisops.ai.client.dto.AiIncidentRecord;
 import io.aegisops.ai.client.dto.AiRcaRecord;
+import io.aegisops.ai.client.dto.SaveAgentRunCommand;
 import io.aegisops.ai.client.dto.SaveDiagnosisCommand;
 import io.aegisops.ai.client.dto.TimelineCommand;
 import java.util.List;
@@ -23,4 +29,22 @@ public interface AiRepository {
   void saveDiagnosis(SaveDiagnosisCommand command);
 
   void addIncidentTimeline(TimelineCommand command);
+
+  default void saveAgentRun(SaveAgentRunCommand command) {}
+
+  default void saveAgentRunSteps(List<AgentRunStepCommand> commands) {}
+
+  default void saveAgentEvalResults(List<AgentEvalResultCommand> commands) {}
+
+  default Optional<AgentRunRecord> findLatestAgentRun(String tenantId, String incidentId) {
+    return Optional.empty();
+  }
+
+  default List<AgentRunStepRecord> listAgentRunSteps(String runId) {
+    return List.of();
+  }
+
+  default List<AgentEvalResultRecord> listAgentEvalResults(String runId) {
+    return List.of();
+  }
 }

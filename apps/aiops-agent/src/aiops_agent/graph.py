@@ -4,6 +4,7 @@ from typing import Any, TypedDict
 
 from langgraph.graph import END, START, StateGraph
 
+from aiops_agent.eval import evaluate_diagnosis
 from aiops_agent.evidence import EvidenceClient, create_evidence_client, unavailable_bundle
 from aiops_agent.llm import (
     LlmClient,
@@ -22,6 +23,7 @@ from aiops_agent.tools import (
     search_runbooks_stub,
     summarize_incident_context,
 )
+from aiops_agent.trace import AgentTracer
 
 
 class DiagnosisState(TypedDict, total=False):
@@ -244,16 +246,23 @@ def build_diagnosis_graph(
     settings: Settings,
     llm_client: LlmClient | None = None,
     evidence_client: EvidenceClient | None = None,
+    tracer: AgentTracer | None = None,
 ):
     graph = StateGraph(DiagnosisState)
+    active_tracer = tracer
 
-    graph.add_node("load_context", load_context)
-    graph.add_node("analyze_alerts", analyze_alerts)
-    graph.add_node("analyze_rca", analyze_rca)
-    graph.add_node("query_evidence", query_evidence(settings, evidence_client))
-    graph.add_node("search_runbooks", search_runbooks)
-    graph.add_node("safety_check", safety_check)
-    graph.add_node("generate_diagnosis", generate_diagnosis(settings, llm_client))
+    def node(name: str, step_type: str, func):
+        if active_tracer is None:
+            return func
+        return active_tracer.wrap(name, step_type, func)
+
+    graph.add_node("load_context", node("load_context", "node", load_context))
+    graph.add_node("analyze_alerts", node("analyze_alerts", "node", analyze_alerts))
+    graph.add_node("analyze_rca", node("analyze_rca", "node", analyze_rca))
+    graph.add_node("query_evidence", node("query_evidence", "tool", query_evidence(settings, evidence_client)))
+    graph.add_node("search_runbooks", node("search_runbooks", "tool", search_runbooks))
+    graph.add_node("safety_check", node("safety_check", "safety", safety_check))
+    graph.add_node("generate_diagnosis", node("generate_diagnosis", "llm" if settings.normalized_generation_mode() == "openai-compatible" else "node", generate_diagnosis(settings, llm_client)))
 
     graph.add_edge(START, "load_context")
     graph.add_edge("load_context", "analyze_alerts")
@@ -273,12 +282,42 @@ def run_diagnosis_graph(
     llm_client: LlmClient | None = None,
     evidence_client: EvidenceClient | None = None,
 ) -> DiagnoseResponse:
-    compiled = build_diagnosis_graph(settings, llm_client, evidence_client)
+    tracer = AgentTracer(settings, request, enabled=settings.trace_enabled)
+
+    compiled = build_diagnosis_graph(settings, llm_client, evidence_client, tracer)
     result = compiled.invoke({"request": request})
+
     diagnosis = result.get("diagnosis")
     if not isinstance(diagnosis, DiagnoseResponse):
         raise RuntimeError("diagnosis graph did not return DiagnoseResponse")
-    return diagnosis
+
+    return _attach_observability(diagnosis, tracer, settings)
+
+
+def _attach_observability(
+    diagnosis: DiagnoseResponse,
+    tracer: AgentTracer,
+    settings: Settings,
+) -> DiagnoseResponse:
+    raw = dict(diagnosis.raw or {})
+    safety = raw.get("safety") or {}
+    fallback_reason = str(raw.get("fallbackReason") or "")
+
+    agent_run = tracer.finish(
+        status="completed",
+        provider=diagnosis.provider,
+        model=diagnosis.model,
+        fallback_reason=fallback_reason,
+        safety=safety,
+    )
+
+    if agent_run:
+        raw["agentRun"] = agent_run
+
+    if settings.eval_enabled:
+        raw["agentEval"] = evaluate_diagnosis(diagnosis.model_copy(update={"raw": raw}))
+
+    return diagnosis.model_copy(update={"raw": raw})
 
 
 def _metric_hint(metrics: dict[str, Any]) -> str:

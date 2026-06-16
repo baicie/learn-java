@@ -264,3 +264,51 @@ def test_graph_keeps_diagnosis_when_evidence_client_raises():
     assert "evidence client crashed" in response.raw["metrics"]["reason"]
     assert response.summary
     assert response.nextSteps
+
+
+def test_graph_attaches_agent_run_and_eval():
+    settings = Settings(
+        generation_mode="deterministic",
+        trace_enabled=True,
+        eval_enabled=True,
+        provider="aiops-agent",
+        model="langgraph-deterministic",
+        agent_name="aegisops_diagnosis_graph",
+    )
+
+    response = run_diagnosis_graph(request(), settings)
+
+    assert "agentRun" in response.raw
+    assert "agentEval" in response.raw
+
+    run = response.raw["agentRun"]
+    assert run["runId"].startswith("run_")
+    assert run["traceId"] == "trace_1"
+    assert run["status"] == "completed"
+    assert run["durationMs"] >= 0
+    assert len(run["steps"]) >= 6
+
+    step_names = [step["stepName"] for step in run["steps"]]
+    assert "load_context" in step_names
+    assert "query_evidence" in step_names
+    assert "generate_diagnosis" in step_names
+
+    eval_result = response.raw["agentEval"]
+    assert eval_result["evaluatorName"] == "aegisops-basic-eval-v1"
+    assert eval_result["checks"]
+
+
+def test_graph_can_disable_trace_and_eval():
+    settings = Settings(
+        generation_mode="deterministic",
+        trace_enabled=False,
+        eval_enabled=False,
+        provider="aiops-agent",
+        model="langgraph-deterministic",
+        agent_name="aegisops_diagnosis_graph",
+    )
+
+    response = run_diagnosis_graph(request(), settings)
+
+    assert "agentRun" not in response.raw
+    assert "agentEval" not in response.raw

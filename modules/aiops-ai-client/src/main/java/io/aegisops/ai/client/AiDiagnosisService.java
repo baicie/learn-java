@@ -7,6 +7,7 @@ import io.aegisops.ai.client.dto.AgentDiagnosisRequest;
 import io.aegisops.ai.client.dto.AgentDiagnosisResponse;
 import io.aegisops.ai.client.dto.AgentIncidentContext;
 import io.aegisops.ai.client.dto.AgentRcaContext;
+import io.aegisops.ai.client.dto.AgentRunDetailResponse;
 import io.aegisops.ai.client.dto.AiAlertRecord;
 import io.aegisops.ai.client.dto.AiDiagnoseRequest;
 import io.aegisops.ai.client.dto.AiDiagnosisRecord;
@@ -29,12 +30,14 @@ public class AiDiagnosisService {
     private final AiAgentClient agentClient;
     private final ObjectMapper objectMapper;
     private final AgentContractValidator contractValidator;
+    private final AgentObservabilityExtractor observabilityExtractor;
 
     public AiDiagnosisService(
             AiRepository repository,
             AiAgentClient agentClient,
             ObjectMapper objectMapper) {
-        this(repository, agentClient, objectMapper, new AgentContractValidator());
+        this(repository, agentClient, objectMapper, new AgentContractValidator(),
+                new AgentObservabilityExtractor(objectMapper));
     }
 
     public AiDiagnosisService(
@@ -42,10 +45,21 @@ public class AiDiagnosisService {
             AiAgentClient agentClient,
             ObjectMapper objectMapper,
             AgentContractValidator contractValidator) {
+        this(repository, agentClient, objectMapper, contractValidator,
+                new AgentObservabilityExtractor(objectMapper));
+    }
+
+    public AiDiagnosisService(
+            AiRepository repository,
+            AiAgentClient agentClient,
+            ObjectMapper objectMapper,
+            AgentContractValidator contractValidator,
+            AgentObservabilityExtractor observabilityExtractor) {
         this.repository = repository;
         this.agentClient = agentClient;
         this.objectMapper = objectMapper;
         this.contractValidator = contractValidator;
+        this.observabilityExtractor = observabilityExtractor;
     }
 
     public AiDiagnosisResponse latest(String tenantId, String incidentId) {
@@ -54,6 +68,54 @@ public class AiDiagnosisService {
                 .findLatestDiagnosis(tenantId, incidentId)
                 .map(this::toResponse)
                 .orElseThrow(() -> new AppException("AI_DIAGNOSIS_NOT_FOUND", "AI diagnosis not found"));
+    }
+
+    public AgentRunDetailResponse latestRun(String tenantId, String incidentId) {
+        ensureIncidentExists(tenantId, incidentId);
+
+        var run =
+                repository
+                        .findLatestAgentRun(tenantId, incidentId)
+                        .orElseThrow(() -> new AppException("AGENT_RUN_NOT_FOUND", "Agent run not found"));
+
+        return new AgentRunDetailResponse(
+                run.id(),
+                run.diagnosisId(),
+                run.incidentId(),
+                run.traceId(),
+                run.contractVersion(),
+                run.generationMode(),
+                run.provider(),
+                run.model(),
+                run.status(),
+                run.startedAt(),
+                run.finishedAt(),
+                run.durationMs(),
+                run.fallbackReason(),
+                run.safetyJson(),
+                run.evalJson(),
+                repository.listAgentRunSteps(run.id()),
+                repository.listAgentEvalResults(run.id()),
+                run.createdAt());
+    }
+
+    private void persistAgentObservability(
+            String diagnosisId,
+            String tenantId,
+            String incidentId,
+            String traceId,
+            AgentDiagnosisResponse response) {
+        var data = observabilityExtractor.extract(diagnosisId, tenantId, incidentId, traceId, response);
+
+        data.run().ifPresent(repository::saveAgentRun);
+
+        if (!data.steps().isEmpty()) {
+            repository.saveAgentRunSteps(data.steps());
+        }
+
+        if (!data.evalResults().isEmpty()) {
+            repository.saveAgentEvalResults(data.evalResults());
+        }
     }
 
     @Transactional
@@ -112,6 +174,13 @@ public class AiDiagnosisService {
                         nextStepsJson,
                         runbookSuggestionsJson,
                         risksJson));
+
+        persistAgentObservability(
+                diagnosisId,
+                tenantId,
+                incidentId,
+                agentRequest.traceId(),
+                agentResponse);
 
         repository.addIncidentTimeline(
                 new TimelineCommand(

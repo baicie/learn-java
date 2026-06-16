@@ -1,5 +1,6 @@
 package io.aegisops.ai.client;
 
+import io.aegisops.ai.client.dto.AgentRunDetailResponse;
 import io.aegisops.ai.client.dto.AiDiagnoseRequest;
 import io.aegisops.ai.client.dto.AiDiagnosisResponse;
 import io.aegisops.common.api.ApiResponse;
@@ -30,5 +31,10 @@ public class AiDiagnosisController {
       @PathVariable String incidentId, @RequestBody(required = false) AiDiagnoseRequest request) {
     return ApiResponse.ok(
         diagnosisService.diagnose(TenantContext.requireTenantId(), incidentId, request));
+  }
+
+  @GetMapping("/runs/latest")
+  public ApiResponse<AgentRunDetailResponse> latestRun(@PathVariable String incidentId) {
+    return ApiResponse.ok(diagnosisService.latestRun(TenantContext.requireTenantId(), incidentId));
   }
 }
