@@ -28,3 +28,15 @@ def test_generation_mode_accepts_openai_compatible():
     settings = Settings(generation_mode="openai-compatible")
 
     assert settings.normalized_generation_mode() == "openai-compatible"
+
+
+def test_openai_base_url_trims_trailing_slashes():
+    settings = Settings(openai_base_url="https://example.com/v1///")
+
+    assert settings.normalized_openai_base_url() == "https://example.com/v1"
+
+
+def test_openai_response_format_enabled_defaults_true():
+    settings = Settings()
+
+    assert settings.openai_response_format_enabled is True

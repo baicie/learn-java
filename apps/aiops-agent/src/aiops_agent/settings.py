@@ -40,6 +40,10 @@ class Settings(BaseSettings):
     openai_temperature: float = 0.2
     openai_max_tokens: int = 1200
 
+    # Some OpenAI-compatible gateways do not support response_format.
+    # Keep enabled by default for stricter JSON when provider supports it.
+    openai_response_format_enabled: bool = True
+
     def normalized_generation_mode(self) -> str:
         value = (self.generation_mode or "deterministic").strip().lower()
         if value not in {"deterministic", "openai-compatible"}:

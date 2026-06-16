@@ -121,7 +121,7 @@ def test_openai_compatible_graph_falls_back_when_llm_fails():
     assert response.nextSteps
 
 
-def test_openai_compatible_graph_applies_safety_to_llm_response():
+def test_openai_compatible_graph_sanitizes_unsafe_llm_response():
     settings = Settings(
         contract_version="agent-diagnosis.v1",
         generation_mode="openai-compatible",
@@ -145,5 +145,8 @@ def test_openai_compatible_graph_applies_safety_to_llm_response():
 
     assert response.provider == "openai-compatible"
     assert response.raw["safety"]["autoExecutionAllowed"] is False
+    assert response.raw["safety"]["sanitized"] is True
     assert "rm -rf" in response.raw["safety"]["blockedKeywords"]
-    assert any("unsafe" in risk.lower() for risk in response.risks)
+    assert all("rm -rf" not in step.lower() for step in response.nextSteps)
+    assert any("Blocked unsafe remediation suggestion" in step for step in response.nextSteps)
+    assert any("unsafe remediation wording" in risk for risk in response.risks)

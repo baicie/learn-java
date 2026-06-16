@@ -37,13 +37,15 @@ class OpenAiCompatibleLlmClient:
         if self.settings.openai_api_key:
             headers["Authorization"] = f"Bearer {self.settings.openai_api_key}"
 
-        payload = {
+        payload: dict[str, Any] = {
             "model": self.settings.model,
             "messages": messages,
             "temperature": self.settings.openai_temperature,
             "max_tokens": self.settings.openai_max_tokens,
-            "response_format": {"type": "json_object"},
         }
+
+        if self.settings.openai_response_format_enabled:
+            payload["response_format"] = {"type": "json_object"}
 
         response = httpx.post(
             f"{base_url}/chat/completions",

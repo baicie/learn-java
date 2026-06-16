@@ -34,7 +34,43 @@ def test_apply_safety_boundary_adds_mandatory_risks():
     safe = apply_safety_boundary(response)
 
     assert safe.raw["safety"]["autoExecutionAllowed"] is False
+    assert safe.raw["safety"]["sanitized"] is False
     assert any("Do not execute remediation automatically" in risk for risk in safe.risks)
+
+
+def test_apply_safety_boundary_removes_unsafe_next_step():
+    response = response_with_step("run rm -rf / automatically")
+
+    safe = apply_safety_boundary(response)
+
+    assert safe.raw["safety"]["autoExecutionAllowed"] is False
+    assert safe.raw["safety"]["sanitized"] is True
+    assert "rm -rf" in safe.raw["safety"]["blockedKeywords"]
+    assert all("rm -rf" not in step.lower() for step in safe.nextSteps)
+    assert any("Blocked unsafe remediation suggestion" in step for step in safe.nextSteps)
+    assert any("unsafe remediation wording" in risk for risk in safe.risks)
+
+
+def test_apply_safety_boundary_sanitizes_inline_text_fields():
+    response = DiagnoseResponse(
+        contractVersion="agent-diagnosis.v1",
+        provider="aiops-agent",
+        model="langgraph-deterministic",
+        agentName="aegisops_diagnosis_graph",
+        summary="summary with drop database suggestion",
+        rootCause="root",
+        impact="impact",
+        nextSteps=[],
+        runbookSuggestions=[],
+        risks=[],
+        raw={},
+    )
+
+    safe = apply_safety_boundary(response)
+
+    assert "drop database" not in safe.summary.lower()
+    assert "[blocked unsafe remediation wording]" in safe.summary
+    assert safe.raw["safety"]["sanitized"] is True
 
 
 def test_assert_safe_response_raises_for_unsafe_keyword():
