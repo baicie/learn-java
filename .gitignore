@@ -13,3 +13,10 @@ dist/
 coverage/
 .pnpm-store/
 temp/
+
+# Python build artefacts
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.pytest_cache/
