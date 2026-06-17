@@ -141,6 +141,45 @@ class ApprovalServiceTest {
                 "tenant_1", "approval_1", new ApprovalDecisionRequest("reviewer_1", "again")));
   }
 
+  @Test
+  void submitFailsWhenPlanStatusUpdateFails() {
+    FakeApprovalRepository repository = new FakeApprovalRepository();
+    repository.plan = plan("draft", "medium");
+    repository.policy = policy("medium", 1, false);
+    repository.failPlanStatusUpdate = true;
+
+    ApprovalService service = new ApprovalService(repository, new ObjectMapper());
+
+    AppException ex =
+        assertThrows(
+            AppException.class,
+            () ->
+                service.submit(
+                    "tenant_1", "plan_1", new SubmitApprovalRequest("alice", "Need approval")));
+
+    assertEquals("AUTOMATION_PLAN_UPDATE_FAILED", ex.errorCode());
+  }
+
+  @Test
+  void approveFailsWhenApprovalProgressUpdateFails() {
+    FakeApprovalRepository repository = new FakeApprovalRepository();
+    repository.plan = plan("pending_approval", "medium");
+    repository.policy = policy("medium", 1, false);
+    repository.approval = ApprovalTestBuilder.pending("medium", 1, 0, 0, "submitter").toRecord();
+    repository.failApprovalProgressUpdate = true;
+
+    ApprovalService service = new ApprovalService(repository, new ObjectMapper());
+
+    AppException ex =
+        assertThrows(
+            AppException.class,
+            () ->
+                service.approve(
+                    "tenant_1", "approval_1", new ApprovalDecisionRequest("reviewer_1", "ok")));
+
+    assertEquals("APPROVAL_UPDATE_FAILED", ex.errorCode());
+  }
+
   private AutomationPlanRecord plan(String status, String riskLevel) {
     return new AutomationPlanRecord(
         "plan_1",
@@ -179,6 +218,8 @@ class ApprovalServiceTest {
     ApprovalPolicyRecord policy;
     String planStatus;
     String existingDecisionReviewer;
+    boolean failPlanStatusUpdate;
+    boolean failApprovalProgressUpdate;
     final List<ApprovalDecisionRecord> decisions = new ArrayList<>();
     final List<String> timelineTypes = new ArrayList<>();
 
@@ -189,6 +230,9 @@ class ApprovalServiceTest {
 
     @Override
     public boolean updatePlanStatus(String tenantId, String planId, String status) {
+      if (failPlanStatusUpdate) {
+        return false;
+      }
       planStatus = status;
       if (plan != null) {
         plan =
@@ -257,6 +301,9 @@ class ApprovalServiceTest {
 
     @Override
     public boolean updateApprovalProgress(ApprovalProgressUpdateCommand cmd) {
+      if (failApprovalProgressUpdate) {
+        return false;
+      }
       approval =
           new AutomationApprovalRecord(
               approval.id(),
@@ -278,9 +325,14 @@ class ApprovalServiceTest {
     }
 
     @Override
-    public boolean decisionExists(String approvalId, String reviewer) {
+    public boolean decisionExists(String tenantId, String approvalId, String reviewer) {
       return reviewer.equals(existingDecisionReviewer)
-          || decisions.stream().anyMatch(item -> item.reviewer().equals(reviewer));
+          || decisions.stream()
+              .anyMatch(
+                  item ->
+                      item.tenantId().equals(tenantId)
+                          && item.approvalId().equals(approvalId)
+                          && item.reviewer().equals(reviewer));
     }
 
     @Override

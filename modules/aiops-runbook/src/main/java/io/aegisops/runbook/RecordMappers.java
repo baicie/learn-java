@@ -19,9 +19,7 @@ import io.aegisops.runbook.dto.RunbookRecord;
 import io.aegisops.runbook.dto.RunbookStepTemplateRecord;
 import org.jooq.Record;
 
-/**
- * jOOQ record-to-DTO mappers shared across repository implementations.
- */
+/** jOOQ record-to-DTO mappers shared across repository implementations. */
 final class RecordMappers {
 
   private RecordMappers() {}

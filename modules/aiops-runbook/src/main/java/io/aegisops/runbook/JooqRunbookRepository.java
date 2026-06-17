@@ -80,8 +80,10 @@ public class JooqRunbookRepository implements RunbookRepository {
             ALERT_EVENT.FINGERPRINT,
             ALERT_EVENT.LABELS.cast(String.class).as("labels_json"))
         .from(INCIDENT_EVENT)
-        .join(INCIDENT).on(INCIDENT.ID.eq(INCIDENT_EVENT.INCIDENT_ID))
-        .join(ALERT_EVENT).on(ALERT_EVENT.ID.eq(INCIDENT_EVENT.EVENT_ID))
+        .join(INCIDENT)
+        .on(INCIDENT.ID.eq(INCIDENT_EVENT.INCIDENT_ID))
+        .join(ALERT_EVENT)
+        .on(ALERT_EVENT.ID.eq(INCIDENT_EVENT.EVENT_ID))
         .where(INCIDENT.TENANT_ID.eq(tenantId))
         .and(INCIDENT.ID.eq(incidentId))
         .and(INCIDENT_EVENT.EVENT_TYPE.eq("alert"))
@@ -91,7 +93,8 @@ public class JooqRunbookRepository implements RunbookRepository {
   }
 
   @Override
-  public Optional<AiDiagnosisForPlanRecord> findLatestDiagnosis(String tenantId, String incidentId) {
+  public Optional<AiDiagnosisForPlanRecord> findLatestDiagnosis(
+      String tenantId, String incidentId) {
     return dsl.select(
             AI_DIAGNOSIS.ID,
             AI_DIAGNOSIS.SUMMARY,
@@ -133,11 +136,17 @@ public class JooqRunbookRepository implements RunbookRepository {
       c = c.and(RUNBOOK.ENABLED.isTrue());
     }
     return dsl.select(
-            RUNBOOK.ID, RUNBOOK.TENANT_ID, RUNBOOK.NAME, RUNBOOK.DESCRIPTION, RUNBOOK.CATEGORY,
-            RUNBOOK.RISK_LEVEL, RUNBOOK.ENABLED,
+            RUNBOOK.ID,
+            RUNBOOK.TENANT_ID,
+            RUNBOOK.NAME,
+            RUNBOOK.DESCRIPTION,
+            RUNBOOK.CATEGORY,
+            RUNBOOK.RISK_LEVEL,
+            RUNBOOK.ENABLED,
             RUNBOOK.MATCHERS.cast(String.class).as("matchers_json"),
             RUNBOOK.VARIABLES.cast(String.class).as("variables_json"),
-            RUNBOOK.CREATED_AT, RUNBOOK.UPDATED_AT)
+            RUNBOOK.CREATED_AT,
+            RUNBOOK.UPDATED_AT)
         .from(RUNBOOK)
         .where(c)
         .orderBy(RUNBOOK.TENANT_ID.asc().nullsFirst(), RUNBOOK.NAME.asc())
@@ -147,11 +156,17 @@ public class JooqRunbookRepository implements RunbookRepository {
   @Override
   public Optional<RunbookRecord> findRunbook(String tenantId, String runbookId) {
     return dsl.select(
-            RUNBOOK.ID, RUNBOOK.TENANT_ID, RUNBOOK.NAME, RUNBOOK.DESCRIPTION, RUNBOOK.CATEGORY,
-            RUNBOOK.RISK_LEVEL, RUNBOOK.ENABLED,
+            RUNBOOK.ID,
+            RUNBOOK.TENANT_ID,
+            RUNBOOK.NAME,
+            RUNBOOK.DESCRIPTION,
+            RUNBOOK.CATEGORY,
+            RUNBOOK.RISK_LEVEL,
+            RUNBOOK.ENABLED,
             RUNBOOK.MATCHERS.cast(String.class).as("matchers_json"),
             RUNBOOK.VARIABLES.cast(String.class).as("variables_json"),
-            RUNBOOK.CREATED_AT, RUNBOOK.UPDATED_AT)
+            RUNBOOK.CREATED_AT,
+            RUNBOOK.UPDATED_AT)
         .from(RUNBOOK)
         .where(RUNBOOK.ID.eq(runbookId))
         .and(RUNBOOK.TENANT_ID.eq(tenantId).or(RUNBOOK.TENANT_ID.isNull()))
@@ -161,12 +176,18 @@ public class JooqRunbookRepository implements RunbookRepository {
   @Override
   public List<RunbookStepTemplateRecord> listRunbookSteps(String runbookId) {
     return dsl.select(
-            RUNBOOK_STEP_TEMPLATE.ID, RUNBOOK_STEP_TEMPLATE.RUNBOOK_ID,
-            RUNBOOK_STEP_TEMPLATE.SEQUENCE_NO, RUNBOOK_STEP_TEMPLATE.NAME,
-            RUNBOOK_STEP_TEMPLATE.ACTION_TYPE, RUNBOOK_STEP_TEMPLATE.TARGET_TYPE,
-            RUNBOOK_STEP_TEMPLATE.COMMAND_TEMPLATE, RUNBOOK_STEP_TEMPLATE.DESCRIPTION,
-            RUNBOOK_STEP_TEMPLATE.EXPECTED_RESULT, RUNBOOK_STEP_TEMPLATE.ROLLBACK_HINT,
-            RUNBOOK_STEP_TEMPLATE.REQUIRES_APPROVAL, RUNBOOK_STEP_TEMPLATE.TIMEOUT_SECONDS,
+            RUNBOOK_STEP_TEMPLATE.ID,
+            RUNBOOK_STEP_TEMPLATE.RUNBOOK_ID,
+            RUNBOOK_STEP_TEMPLATE.SEQUENCE_NO,
+            RUNBOOK_STEP_TEMPLATE.NAME,
+            RUNBOOK_STEP_TEMPLATE.ACTION_TYPE,
+            RUNBOOK_STEP_TEMPLATE.TARGET_TYPE,
+            RUNBOOK_STEP_TEMPLATE.COMMAND_TEMPLATE,
+            RUNBOOK_STEP_TEMPLATE.DESCRIPTION,
+            RUNBOOK_STEP_TEMPLATE.EXPECTED_RESULT,
+            RUNBOOK_STEP_TEMPLATE.ROLLBACK_HINT,
+            RUNBOOK_STEP_TEMPLATE.REQUIRES_APPROVAL,
+            RUNBOOK_STEP_TEMPLATE.TIMEOUT_SECONDS,
             RUNBOOK_STEP_TEMPLATE.METADATA.cast(String.class).as("metadata_json"))
         .from(RUNBOOK_STEP_TEMPLATE)
         .where(RUNBOOK_STEP_TEMPLATE.RUNBOOK_ID.eq(runbookId))
@@ -177,9 +198,12 @@ public class JooqRunbookRepository implements RunbookRepository {
   @Override
   public void createRunbook(RunbookCreateCommand cmd) {
     dsl.insertInto(RUNBOOK)
-        .set(RUNBOOK.ID, cmd.id()).set(RUNBOOK.TENANT_ID, cmd.tenantId())
-        .set(RUNBOOK.NAME, cmd.name()).set(RUNBOOK.DESCRIPTION, cmd.description())
-        .set(RUNBOOK.CATEGORY, cmd.category()).set(RUNBOOK.RISK_LEVEL, cmd.riskLevel())
+        .set(RUNBOOK.ID, cmd.id())
+        .set(RUNBOOK.TENANT_ID, cmd.tenantId())
+        .set(RUNBOOK.NAME, cmd.name())
+        .set(RUNBOOK.DESCRIPTION, cmd.description())
+        .set(RUNBOOK.CATEGORY, cmd.category())
+        .set(RUNBOOK.RISK_LEVEL, cmd.riskLevel())
         .set(RUNBOOK.ENABLED, cmd.enabled())
         .set(RUNBOOK.MATCHERS, jsonbValue(cmd.matchersJson()))
         .set(RUNBOOK.VARIABLES, jsonbValue(cmd.variablesJson()))
@@ -277,13 +301,19 @@ public class JooqRunbookRepository implements RunbookRepository {
   @Override
   public List<AutomationPlanStepRecord> listPlanSteps(String planId) {
     return dsl.select(
-            AUTOMATION_PLAN_STEP.ID, AUTOMATION_PLAN_STEP.PLAN_ID,
-            AUTOMATION_PLAN_STEP.SEQUENCE_NO, AUTOMATION_PLAN_STEP.NAME,
-            AUTOMATION_PLAN_STEP.ACTION_TYPE, AUTOMATION_PLAN_STEP.TARGET_TYPE,
+            AUTOMATION_PLAN_STEP.ID,
+            AUTOMATION_PLAN_STEP.PLAN_ID,
+            AUTOMATION_PLAN_STEP.SEQUENCE_NO,
+            AUTOMATION_PLAN_STEP.NAME,
+            AUTOMATION_PLAN_STEP.ACTION_TYPE,
+            AUTOMATION_PLAN_STEP.TARGET_TYPE,
             AUTOMATION_PLAN_STEP.ACTION_PAYLOAD.cast(String.class).as("action_payload_json"),
-            AUTOMATION_PLAN_STEP.DESCRIPTION, AUTOMATION_PLAN_STEP.EXPECTED_RESULT,
-            AUTOMATION_PLAN_STEP.ROLLBACK_HINT, AUTOMATION_PLAN_STEP.REQUIRES_APPROVAL,
-            AUTOMATION_PLAN_STEP.STATUS, AUTOMATION_PLAN_STEP.CREATED_AT)
+            AUTOMATION_PLAN_STEP.DESCRIPTION,
+            AUTOMATION_PLAN_STEP.EXPECTED_RESULT,
+            AUTOMATION_PLAN_STEP.ROLLBACK_HINT,
+            AUTOMATION_PLAN_STEP.REQUIRES_APPROVAL,
+            AUTOMATION_PLAN_STEP.STATUS,
+            AUTOMATION_PLAN_STEP.CREATED_AT)
         .from(AUTOMATION_PLAN_STEP)
         .where(AUTOMATION_PLAN_STEP.PLAN_ID.eq(planId))
         .orderBy(AUTOMATION_PLAN_STEP.SEQUENCE_NO.asc())
@@ -293,15 +323,18 @@ public class JooqRunbookRepository implements RunbookRepository {
   @Override
   public void createPlan(AutomationPlanCreateCommand cmd) {
     dsl.insertInto(AUTOMATION_PLAN)
-        .set(AUTOMATION_PLAN.ID, cmd.id()).set(AUTOMATION_PLAN.TENANT_ID, cmd.tenantId())
+        .set(AUTOMATION_PLAN.ID, cmd.id())
+        .set(AUTOMATION_PLAN.TENANT_ID, cmd.tenantId())
         .set(AUTOMATION_PLAN.INCIDENT_ID, cmd.incidentId())
         .set(AUTOMATION_PLAN.RUNBOOK_ID, cmd.runbookId())
         .set(AUTOMATION_PLAN.AI_DIAGNOSIS_ID, cmd.aiDiagnosisId())
         .set(AUTOMATION_PLAN.RCA_ANALYSIS_ID, cmd.rcaAnalysisId())
-        .set(AUTOMATION_PLAN.SOURCE, cmd.source()).set(AUTOMATION_PLAN.STATUS, cmd.status())
+        .set(AUTOMATION_PLAN.SOURCE, cmd.source())
+        .set(AUTOMATION_PLAN.STATUS, cmd.status())
         .set(AUTOMATION_PLAN.RISK_LEVEL, cmd.riskLevel())
         .set(AUTOMATION_PLAN.CONFIDENCE, cmd.confidence())
-        .set(AUTOMATION_PLAN.TITLE, cmd.title()).set(AUTOMATION_PLAN.SUMMARY, cmd.summary())
+        .set(AUTOMATION_PLAN.TITLE, cmd.title())
+        .set(AUTOMATION_PLAN.SUMMARY, cmd.summary())
         .set(AUTOMATION_PLAN.EVIDENCE, jsonbValue(cmd.evidenceJson()))
         .set(AUTOMATION_PLAN.CREATED_BY, cmd.createdBy())
         .set(AUTOMATION_PLAN.CREATED_AT, DSL.currentOffsetDateTime())
@@ -363,7 +396,8 @@ public class JooqRunbookRepository implements RunbookRepository {
   }
 
   @Override
-  public Optional<AutomationApprovalRecord> findLatestApprovalByPlan(String tenantId, String planId) {
+  public Optional<AutomationApprovalRecord> findLatestApprovalByPlan(
+      String tenantId, String planId) {
     return approvalSupport.findLatestApprovalByPlan(tenantId, planId);
   }
 
@@ -373,8 +407,8 @@ public class JooqRunbookRepository implements RunbookRepository {
   }
 
   @Override
-  public boolean decisionExists(String approvalId, String reviewer) {
-    return approvalSupport.decisionExists(approvalId, reviewer);
+  public boolean decisionExists(String tenantId, String approvalId, String reviewer) {
+    return approvalSupport.decisionExists(tenantId, approvalId, reviewer);
   }
 
   @Override

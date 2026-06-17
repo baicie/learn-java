@@ -126,7 +126,7 @@ abstract class FakeRunbookRepositoryBase implements RunbookRepository {
   }
 
   @Override
-  public boolean decisionExists(String approvalId, String reviewer) {
+  public boolean decisionExists(String tenantId, String approvalId, String reviewer) {
     return false;
   }
 

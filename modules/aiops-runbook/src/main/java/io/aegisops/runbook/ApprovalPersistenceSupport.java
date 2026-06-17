@@ -147,11 +147,12 @@ final class ApprovalPersistenceSupport {
     return updated > 0;
   }
 
-  boolean decisionExists(String approvalId, String reviewer) {
+  boolean decisionExists(String tenantId, String approvalId, String reviewer) {
     return dsl.fetchExists(
         dsl.selectOne()
             .from(APPROVAL_DECISION)
-            .where(APPROVAL_DECISION.APPROVAL_ID.eq(approvalId))
+            .where(APPROVAL_DECISION.TENANT_ID.eq(tenantId))
+            .and(APPROVAL_DECISION.APPROVAL_ID.eq(approvalId))
             .and(APPROVAL_DECISION.REVIEWER.eq(reviewer)));
   }
 

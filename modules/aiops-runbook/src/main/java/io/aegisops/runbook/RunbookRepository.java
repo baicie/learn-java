@@ -65,7 +65,7 @@ public interface RunbookRepository {
 
   Optional<AutomationApprovalRecord> findLatestApprovalByPlan(String tenantId, String planId);
 
-  boolean decisionExists(String approvalId, String reviewer);
+  boolean decisionExists(String tenantId, String approvalId, String reviewer);
 
   void createDecision(ApprovalDecisionCommand command);
 

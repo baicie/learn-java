@@ -77,7 +77,11 @@ public class ApprovalService {
 
     repository.createApproval(command);
 
-    repository.updatePlanStatus(tenantId, planId, autoApproved ? "approved" : "pending_approval");
+    ensureUpdated(
+        repository.updatePlanStatus(
+            tenantId, planId, autoApproved ? "approved" : "pending_approval"),
+        "AUTOMATION_PLAN_UPDATE_FAILED",
+        "Automation plan status was not updated");
 
     repository.addTimeline(
         timeline(
@@ -130,7 +134,7 @@ public class ApprovalService {
           "APPROVAL_COMMENT_REQUIRED", "Approval comment is required for this risk level");
     }
 
-    ensureReviewerCanDecide(approval, reviewer);
+    ensureReviewerCanDecide(tenantId, approval, reviewer);
 
     int approvedCount = approval.approvedCount() + 1;
     int rejectedCount = approval.rejectedCount();
@@ -147,17 +151,24 @@ public class ApprovalService {
             comment,
             OffsetDateTime.now()));
 
-    repository.updateApprovalProgress(
-        new ApprovalProgressUpdateCommand(
-            tenantId,
-            approval.id(),
-            completed ? "approved" : "pending",
-            approvedCount,
-            rejectedCount,
-            completed ? OffsetDateTime.now() : null));
+    ensureUpdated(
+        repository.updateApprovalProgress(
+            new ApprovalProgressUpdateCommand(
+                tenantId,
+                approval.id(),
+                completed ? "approved" : "pending",
+                approvedCount,
+                rejectedCount,
+                completed ? OffsetDateTime.now() : null)),
+        "APPROVAL_UPDATE_FAILED",
+        "Approval progress was not updated");
 
     if (completed) {
-      repository.updatePlanStatus(tenantId, approval.planId(), "approved");
+      ensureUpdated(
+          repository.updatePlanStatus(tenantId, approval.planId(), "approved"),
+          "AUTOMATION_PLAN_UPDATE_FAILED",
+          "Automation plan status was not updated");
+
       repository.addTimeline(
           timeline(
               approval.incidentId(),
@@ -185,7 +196,7 @@ public class ApprovalService {
       throw new AppException("APPROVAL_REJECT_COMMENT_REQUIRED", "Reject comment is required");
     }
 
-    ensureReviewerCanDecide(approval, reviewer);
+    ensureReviewerCanDecide(tenantId, approval, reviewer);
 
     int approvedCount = approval.approvedCount();
     int rejectedCount = approval.rejectedCount() + 1;
@@ -201,16 +212,22 @@ public class ApprovalService {
             comment,
             OffsetDateTime.now()));
 
-    repository.updateApprovalProgress(
-        new ApprovalProgressUpdateCommand(
-            tenantId,
-            approval.id(),
-            "rejected",
-            approvedCount,
-            rejectedCount,
-            OffsetDateTime.now()));
+    ensureUpdated(
+        repository.updateApprovalProgress(
+            new ApprovalProgressUpdateCommand(
+                tenantId,
+                approval.id(),
+                "rejected",
+                approvedCount,
+                rejectedCount,
+                OffsetDateTime.now())),
+        "APPROVAL_UPDATE_FAILED",
+        "Approval progress was not updated");
 
-    repository.updatePlanStatus(tenantId, approval.planId(), "rejected");
+    ensureUpdated(
+        repository.updatePlanStatus(tenantId, approval.planId(), "rejected"),
+        "AUTOMATION_PLAN_UPDATE_FAILED",
+        "Automation plan status was not updated");
 
     repository.addTimeline(
         timeline(
@@ -233,16 +250,22 @@ public class ApprovalService {
     String reviewer = requiredReviewer(request);
     String comment = request == null ? null : request.comment();
 
-    repository.updateApprovalProgress(
-        new ApprovalProgressUpdateCommand(
-            tenantId,
-            approval.id(),
-            "cancelled",
-            approval.approvedCount(),
-            approval.rejectedCount(),
-            OffsetDateTime.now()));
+    ensureUpdated(
+        repository.updateApprovalProgress(
+            new ApprovalProgressUpdateCommand(
+                tenantId,
+                approval.id(),
+                "cancelled",
+                approval.approvedCount(),
+                approval.rejectedCount(),
+                OffsetDateTime.now())),
+        "APPROVAL_UPDATE_FAILED",
+        "Approval progress was not updated");
 
-    repository.updatePlanStatus(tenantId, approval.planId(), "draft");
+    ensureUpdated(
+        repository.updatePlanStatus(tenantId, approval.planId(), "draft"),
+        "AUTOMATION_PLAN_UPDATE_FAILED",
+        "Automation plan status was not updated");
 
     repository.addTimeline(
         timeline(
@@ -283,13 +306,14 @@ public class ApprovalService {
     return approval;
   }
 
-  private void ensureReviewerCanDecide(AutomationApprovalRecord approval, String reviewer) {
+  private void ensureReviewerCanDecide(
+      String tenantId, AutomationApprovalRecord approval, String reviewer) {
     if (approval.submittedBy().equals(reviewer)) {
       throw new AppException(
           "APPROVAL_REVIEWER_INVALID", "Submitter cannot approve or reject own automation plan");
     }
 
-    if (repository.decisionExists(approval.id(), reviewer)) {
+    if (repository.decisionExists(tenantId, approval.id(), reviewer)) {
       throw new AppException(
           "APPROVAL_DECISION_DUPLICATED", "Reviewer already made a decision for this approval");
     }
@@ -355,6 +379,12 @@ public class ApprovalService {
 
   private String blankToDefault(String value, String fallback) {
     return value == null || value.isBlank() ? fallback : value.trim();
+  }
+
+  private void ensureUpdated(boolean updated, String code, String message) {
+    if (!updated) {
+      throw new AppException(code, message);
+    }
   }
 
   private String newId(String prefix) {
