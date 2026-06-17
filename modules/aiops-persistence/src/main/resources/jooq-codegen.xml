@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration xmlns="https://www.jooq.org/xsd/jooq-codegen-3.20.0.xsd">
+  <logging>WARN</logging>
+
+  <generator>
+    <name>org.jooq.codegen.JavaGenerator</name>
+
+    <database>
+      <name>org.jooq.meta.extensions.ddl.DDLDatabase</name>
+
+      <properties>
+        <!--
+         * Read existing Flyway migrations as the schema source of truth.
+         * Pass the directory; DDLDatabase picks up all *.sql inside.
+         -->
+        <property>
+          <key>scripts</key>
+          <value>../../apps/aiops-server/src/main/resources/db/migration</value>
+        </property>
+
+        <!-- Match Flyway migration ordering. -->
+        <property>
+          <key>sort</key>
+          <value>flyway</value>
+        </property>
+
+        <!-- PostgreSQL lower-case unquoted identifiers. -->
+        <property>
+          <key>defaultNameCase</key>
+          <value>lower</value>
+        </property>
+
+        <property>
+          <key>unqualifiedSchema</key>
+          <value>public</value>
+        </property>
+
+        <!-- Keep parser tolerant of vendor-specific DDL if we later add extensions. -->
+        <property>
+          <key>parseIgnoreComments</key>
+          <value>true</value>
+        </property>
+      </properties>
+
+      <includes>
+        tenant | sys_user | sys_role | sys_permission | sys_user_role | sys_role_permission |
+        datasource | datasource_sync_run | asset | asset_relation | alert_event | incident |
+        incident_event | incident_timeline | audit_log | rca_analysis | ai_diagnosis |
+        agent_run | agent_run_step | agent_eval_result | log_event | change_event
+      </includes>
+
+      <excludes>flyway_schema_history</excludes>
+
+      <forcedTypes>
+        <forcedType>
+          <userType>org.jooq.JSONB</userType>
+          <includeTypes>JSON</includeTypes>
+        </forcedType>
+      </forcedTypes>
+    </database>
+
+    <generate>
+      <deprecated>false</deprecated>
+      <records>true</records>
+      <pojos>false</pojos>
+      <daos>false</daos>
+      <fluentSetters>true</fluentSetters>
+      <javaTimeTypes>true</javaTimeTypes>
+    </generate>
+
+    <target>
+      <packageName>io.aegisops.persistence.jooq</packageName>
+      <directory>target/generated-sources/jooq</directory>
+    </target>
+  </generator>
+</configuration>

@@ -10,8 +10,9 @@ import org.jooq.impl.DSL;
 /**
  * no-codegen jOOQ 表与字段常量。
  *
- * <p>Phase4.5 不做 codegen，先用 {@link DSL#table(org.jooq.Name)} + 别名 + 字段工厂写最小可用的表/字段引用。 Phase4.6 再用
- * jOOQ codegen 替换为生成的 Tables。
+ * <p>Phase4.5 使用本类作为过渡层，Phase4.6 引入 {@code io.aegisops.persistence.jooq} generated Tables，新代码优先使用
+ * generated Tables；本类保留给 {@code aiops-ai-client} 与 {@code aiops-rca} 等尚未迁移的 Repository 使用。Phase4.7
+ * 完成全量迁移后将删除本类。
  */
 public final class AegisTables {
   private AegisTables() {}

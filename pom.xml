@@ -38,6 +38,7 @@
     <spotless.version>2.44.5</spotless.version>
     <maven-checkstyle-plugin.version>3.6.0</maven-checkstyle-plugin.version>
     <checkstyle.version>10.21.1</checkstyle.version>
+    <jooq.version>3.19.28</jooq.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.compiler.release>${java.version}</maven.compiler.release>
   </properties>

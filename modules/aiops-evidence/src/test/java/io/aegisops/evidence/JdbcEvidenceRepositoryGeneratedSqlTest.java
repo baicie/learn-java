@@ -15,9 +15,9 @@ import org.jooq.tools.jdbc.MockDataProvider;
 import org.jooq.tools.jdbc.MockResult;
 import org.junit.jupiter.api.Test;
 
-class JdbcEvidenceRepositoryJooqSqlTest {
+class JdbcEvidenceRepositoryGeneratedSqlTest {
   @Test
-  void queryChangesUsesJooqInConditionForServiceNames() {
+  void queryChangesUsesGeneratedTablesAndServiceNameInCondition() {
     AtomicReference<String> sqlRef = new AtomicReference<>();
 
     MockDataProvider provider =
@@ -33,35 +33,14 @@ class JdbcEvidenceRepositoryJooqSqlTest {
 
     String sql = sqlRef.get().toLowerCase();
 
+    assertTrue(sql.contains("change_event"));
     assertTrue(sql.contains("service_name"));
     assertTrue(sql.contains("asset_id"));
-    assertTrue(sql.contains("change_event"));
+    assertTrue(sql.contains("tenant_id"));
   }
 
   @Test
-  void queryLogsReturnsUnavailableWhenNoEntityScope() {
-    JdbcEvidenceRepository repository = new JdbcEvidenceRepository(DSL.using(SQLDialect.POSTGRES));
-
-    var result =
-        repository.queryLogs(
-            new EvidenceQueryRequest(
-                "agent-diagnosis.v1",
-                "tenant_1",
-                "inc_1",
-                "trace_1",
-                null,
-                OffsetDateTime.parse("2026-06-16T09:00:00+09:00"),
-                OffsetDateTime.parse("2026-06-16T10:00:00+09:00"),
-                List.of(),
-                List.of(),
-                List.of()),
-            10);
-
-    assertTrue(result.reason().contains("Primary asset id and service names are empty"));
-  }
-
-  @Test
-  void queryLogsMapsCountAsLongAndSelectsLogCountAlias() {
+  void queryLogsMapsGeneratedResult() {
     AtomicReference<String> sqlRef = new AtomicReference<>();
 
     Field<String> severityField = DSL.field("severity", String.class);
@@ -73,6 +52,7 @@ class JdbcEvidenceRepositoryJooqSqlTest {
     MockDataProvider provider =
         context -> {
           sqlRef.set(context.sql());
+
           var dsl = DSL.using(SQLDialect.POSTGRES);
 
           var result =
@@ -102,7 +82,30 @@ class JdbcEvidenceRepositoryJooqSqlTest {
     assertEquals(3L, result.patterns().get(0).count());
 
     String sql = sqlRef.get().toLowerCase();
+    assertTrue(sql.contains("log_event"));
     assertTrue(sql.contains("log_count"));
+  }
+
+  @Test
+  void queryLogsReturnsUnavailableWhenNoEntityScope() {
+    JdbcEvidenceRepository repository = new JdbcEvidenceRepository(DSL.using(SQLDialect.POSTGRES));
+
+    var result =
+        repository.queryLogs(
+            new EvidenceQueryRequest(
+                "agent-diagnosis.v1",
+                "tenant_1",
+                "inc_1",
+                "trace_1",
+                null,
+                OffsetDateTime.parse("2026-06-16T09:00:00+09:00"),
+                OffsetDateTime.parse("2026-06-16T10:00:00+09:00"),
+                List.of(),
+                List.of(),
+                List.of()),
+            10);
+
+    assertTrue(result.reason().contains("Primary asset id and service names are empty"));
   }
 
   private EvidenceQueryRequest request() {
