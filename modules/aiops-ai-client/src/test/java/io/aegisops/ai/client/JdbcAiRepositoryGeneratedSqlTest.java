@@ -14,9 +14,9 @@ import org.jooq.tools.jdbc.MockDataProvider;
 import org.jooq.tools.jdbc.MockResult;
 import org.junit.jupiter.api.Test;
 
-class JdbcAiRepositoryJooqSqlTest {
+class JdbcAiRepositoryGeneratedSqlTest {
   @Test
-  void saveDiagnosisUsesJsonbCasts() {
+  void saveDiagnosisUsesGeneratedTableAndJsonbCasts() {
     AtomicReference<String> sqlRef = new AtomicReference<>();
 
     MockDataProvider provider =
@@ -59,7 +59,7 @@ class JdbcAiRepositoryJooqSqlTest {
   }
 
   @Test
-  void listIncidentAlertsRendersTenantGuard() {
+  void listIncidentAlertsRendersGeneratedJoinAndTenantGuard() {
     AtomicReference<String> sqlRef = new AtomicReference<>();
 
     MockDataProvider provider =
@@ -76,7 +76,32 @@ class JdbcAiRepositoryJooqSqlTest {
     String sql = sqlRef.get().toLowerCase();
 
     assertTrue(sql.contains("incident_event"));
+    assertTrue(sql.contains("incident"));
     assertTrue(sql.contains("alert_event"));
     assertTrue(sql.contains("tenant_id"));
+    assertTrue(sql.contains("event_type"));
+  }
+
+  @Test
+  void findLatestAgentRunRendersAgentRunQuery() {
+    AtomicReference<String> sqlRef = new AtomicReference<>();
+
+    MockDataProvider provider =
+        context -> {
+          sqlRef.set(context.sql());
+          return new MockResult[] {new MockResult(0, DSL.using(SQLDialect.POSTGRES).newResult())};
+        };
+
+    JdbcAiRepository repository =
+        new JdbcAiRepository(DSL.using(new MockConnection(provider), SQLDialect.POSTGRES));
+
+    repository.findLatestAgentRun("tenant_1", "inc_1");
+
+    String sql = sqlRef.get().toLowerCase();
+
+    assertTrue(sql.contains("agent_run"));
+    assertTrue(sql.contains("tenant_id"));
+    assertTrue(sql.contains("incident_id"));
+    assertTrue(sql.contains("created_at"));
   }
 }

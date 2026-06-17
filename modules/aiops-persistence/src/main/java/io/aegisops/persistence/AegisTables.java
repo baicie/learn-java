@@ -10,10 +10,10 @@ import org.jooq.impl.DSL;
 /**
  * no-codegen jOOQ 表与字段常量。
  *
- * <p>Phase4.5 使用本类作为过渡层，Phase4.6 引入 {@code io.aegisops.persistence.jooq} generated Tables，新代码优先使用
- * generated Tables；本类保留给 {@code aiops-ai-client} 与 {@code aiops-rca} 等尚未迁移的 Repository 使用。Phase4.7
- * 完成全量迁移后将删除本类。
+ * <p>Phase4.5 过渡层。Phase4.6 起新代码应优先使用 {@code io.aegisops.persistence.jooq.Tables}。Phase4.7 迁移
+ * aiops-ai-client / aiops-rca 后， 本类只保留给尚未迁移的旧代码或紧急回滚使用。
  */
+@Deprecated(since = "4.7", forRemoval = false)
 public final class AegisTables {
   private AegisTables() {}
 

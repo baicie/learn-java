@@ -12,9 +12,9 @@ import org.jooq.tools.jdbc.MockDataProvider;
 import org.jooq.tools.jdbc.MockResult;
 import org.junit.jupiter.api.Test;
 
-class JdbcRcaRepositoryJooqSqlTest {
+class JdbcRcaRepositoryGeneratedSqlTest {
   @Test
-  void listAssetRelationsUsesInInsteadOfSqlArrayBinding() {
+  void listAssetRelationsUsesGeneratedTablesAndInCondition() {
     AtomicReference<String> sqlRef = new AtomicReference<>();
 
     MockDataProvider provider =
@@ -37,37 +37,7 @@ class JdbcRcaRepositoryJooqSqlTest {
   }
 
   @Test
-  void saveAnalysisUsesJsonbCast() {
-    AtomicReference<String> sqlRef = new AtomicReference<>();
-
-    MockDataProvider provider =
-        context -> {
-          sqlRef.set(context.sql());
-          return new MockResult[] {new MockResult(1, DSL.using(SQLDialect.POSTGRES).newResult())};
-        };
-
-    JdbcRcaRepository repository =
-        new JdbcRcaRepository(DSL.using(new MockConnection(provider), SQLDialect.POSTGRES));
-
-    repository.saveAnalysis(
-        "rca_1",
-        "tenant_1",
-        "inc_1",
-        "root",
-        BigDecimal.valueOf(0.8),
-        "summary",
-        "{\"evidence\":[]}",
-        "rules-v1");
-
-    String sql = sqlRef.get().toLowerCase();
-
-    assertTrue(sql.contains("insert into"));
-    assertTrue(sql.contains("rca_analysis"));
-    assertTrue(sql.contains("::jsonb"));
-  }
-
-  @Test
-  void saveAnalysisBindsEvidenceThroughJsonbArrayCast() {
+  void saveAnalysisUsesJsonbArrayForEvidence() {
     AtomicReference<String> sqlRef = new AtomicReference<>();
 
     MockDataProvider provider =
@@ -86,7 +56,31 @@ class JdbcRcaRepositoryJooqSqlTest {
 
     assertTrue(sql.contains("insert into"));
     assertTrue(sql.contains("rca_analysis"));
-    // evidence 列写入走 jsonbArrayValue，SQL 必然包含 ?::jsonb cast 标记。
-    assertTrue(sql.contains("?::jsonb"), "expected ?::jsonb cast for evidence column; sql=" + sql);
+    assertTrue(sql.contains("evidence"));
+    assertTrue(sql.contains("?::jsonb"));
+  }
+
+  @Test
+  void listIncidentAlertsRendersGeneratedJoinAndTenantGuard() {
+    AtomicReference<String> sqlRef = new AtomicReference<>();
+
+    MockDataProvider provider =
+        context -> {
+          sqlRef.set(context.sql());
+          return new MockResult[] {new MockResult(0, DSL.using(SQLDialect.POSTGRES).newResult())};
+        };
+
+    JdbcRcaRepository repository =
+        new JdbcRcaRepository(DSL.using(new MockConnection(provider), SQLDialect.POSTGRES));
+
+    repository.listIncidentAlerts("tenant_1", "inc_1");
+
+    String sql = sqlRef.get().toLowerCase();
+
+    assertTrue(sql.contains("incident_event"));
+    assertTrue(sql.contains("incident"));
+    assertTrue(sql.contains("alert_event"));
+    assertTrue(sql.contains("tenant_id"));
+    assertTrue(sql.contains("event_type"));
   }
 }
