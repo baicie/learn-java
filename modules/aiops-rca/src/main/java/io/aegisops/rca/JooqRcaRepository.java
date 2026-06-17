@@ -21,10 +21,10 @@ import org.springframework.stereotype.Repository;
 
 /** jOOQ generated Tables based RCA repository. */
 @Repository
-public class JdbcRcaRepository implements RcaRepository {
+public class JooqRcaRepository implements RcaRepository {
   private final DSLContext dsl;
 
-  public JdbcRcaRepository(DSLContext dsl) {
+  public JooqRcaRepository(DSLContext dsl) {
     this.dsl = dsl;
   }
 
@@ -52,7 +52,7 @@ public class JdbcRcaRepository implements RcaRepository {
         .from(INCIDENT)
         .where(INCIDENT.TENANT_ID.eq(tenantId))
         .and(INCIDENT.ID.eq(incidentId))
-        .fetchOptional(JdbcRcaRepository::toIncidentRecord);
+        .fetchOptional(JooqRcaRepository::toIncidentRecord);
   }
 
   @Override
@@ -81,7 +81,7 @@ public class JdbcRcaRepository implements RcaRepository {
         .and(INCIDENT_EVENT.EVENT_TYPE.eq("alert"))
         .and(ALERT_EVENT.TENANT_ID.eq(tenantId))
         .orderBy(ALERT_EVENT.STARTS_AT.asc())
-        .fetch(JdbcRcaRepository::toAlertRecord);
+        .fetch(JooqRcaRepository::toAlertRecord);
   }
 
   @Override
@@ -101,7 +101,7 @@ public class JdbcRcaRepository implements RcaRepository {
         .where(ASSET_RELATION.TENANT_ID.eq(tenantId))
         .and(ASSET_RELATION.FROM_ASSET_ID.in(assetIds).or(ASSET_RELATION.TO_ASSET_ID.in(assetIds)))
         .orderBy(ASSET_RELATION.CONFIDENCE.desc())
-        .fetch(JdbcRcaRepository::toAssetRelationRecord);
+        .fetch(JooqRcaRepository::toAssetRelationRecord);
   }
 
   @Override
@@ -190,7 +190,7 @@ public class JdbcRcaRepository implements RcaRepository {
             .orderBy(latest ? RCA_ANALYSIS.CREATED_AT.desc() : RCA_ANALYSIS.ID.asc())
             .limit(1);
 
-    return query.fetchOptional(JdbcRcaRepository::toAnalysisRecord);
+    return query.fetchOptional(JooqRcaRepository::toAnalysisRecord);
   }
 
   private static RcaIncidentRecord toIncidentRecord(org.jooq.Record record) {

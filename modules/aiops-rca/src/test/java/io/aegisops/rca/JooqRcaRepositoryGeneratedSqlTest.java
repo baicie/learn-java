@@ -12,7 +12,7 @@ import org.jooq.tools.jdbc.MockDataProvider;
 import org.jooq.tools.jdbc.MockResult;
 import org.junit.jupiter.api.Test;
 
-class JdbcRcaRepositoryGeneratedSqlTest {
+class JooqRcaRepositoryGeneratedSqlTest {
   @Test
   void listAssetRelationsUsesGeneratedTablesAndInCondition() {
     AtomicReference<String> sqlRef = new AtomicReference<>();
@@ -23,8 +23,8 @@ class JdbcRcaRepositoryGeneratedSqlTest {
           return new MockResult[] {new MockResult(0, DSL.using(SQLDialect.POSTGRES).newResult())};
         };
 
-    JdbcRcaRepository repository =
-        new JdbcRcaRepository(DSL.using(new MockConnection(provider), SQLDialect.POSTGRES));
+    JooqRcaRepository repository =
+        new JooqRcaRepository(DSL.using(new MockConnection(provider), SQLDialect.POSTGRES));
 
     repository.listAssetRelations("tenant_1", List.of("asset_1", "asset_2"));
 
@@ -46,8 +46,8 @@ class JdbcRcaRepositoryGeneratedSqlTest {
           return new MockResult[] {new MockResult(1, DSL.using(SQLDialect.POSTGRES).newResult())};
         };
 
-    JdbcRcaRepository repository =
-        new JdbcRcaRepository(DSL.using(new MockConnection(provider), SQLDialect.POSTGRES));
+    JooqRcaRepository repository =
+        new JooqRcaRepository(DSL.using(new MockConnection(provider), SQLDialect.POSTGRES));
 
     repository.saveAnalysis(
         "rca_1", "tenant_1", "inc_1", "root", BigDecimal.valueOf(0.8), "summary", "", "rules-v1");
@@ -70,8 +70,8 @@ class JdbcRcaRepositoryGeneratedSqlTest {
           return new MockResult[] {new MockResult(0, DSL.using(SQLDialect.POSTGRES).newResult())};
         };
 
-    JdbcRcaRepository repository =
-        new JdbcRcaRepository(DSL.using(new MockConnection(provider), SQLDialect.POSTGRES));
+    JooqRcaRepository repository =
+        new JooqRcaRepository(DSL.using(new MockConnection(provider), SQLDialect.POSTGRES));
 
     repository.listIncidentAlerts("tenant_1", "inc_1");
 

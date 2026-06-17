@@ -33,17 +33,12 @@ import org.jooq.DSLContext;
 import org.jooq.impl.DSL;
 import org.springframework.stereotype.Repository;
 
-/**
- * jOOQ generated Tables based repository for the AI client.
- *
- * <p>Phase4.7 将本类从 Phase4.5 的 no-codegen AegisTables 迁移到 {@code
- * io.aegisops.persistence.jooq.Tables}。
- */
+/** jOOQ generated Tables based repository for the AI client. */
 @Repository
-public class JdbcAiRepository implements AiRepository {
+public class JooqAiRepository implements AiRepository {
   private final DSLContext dsl;
 
-  public JdbcAiRepository(DSLContext dsl) {
+  public JooqAiRepository(DSLContext dsl) {
     this.dsl = dsl;
   }
 
@@ -69,7 +64,7 @@ public class JdbcAiRepository implements AiRepository {
             INCIDENT.UPDATED_AT)
         .from(INCIDENT)
         .where(incidentMatch(tenantId, incidentId))
-        .fetchOptional(JdbcAiRepository::toAiIncidentRecord);
+        .fetchOptional(JooqAiRepository::toAiIncidentRecord);
   }
 
   @Override
@@ -96,7 +91,7 @@ public class JdbcAiRepository implements AiRepository {
         .and(INCIDENT_EVENT.EVENT_TYPE.eq("alert"))
         .and(ALERT_EVENT.TENANT_ID.eq(tenantId))
         .orderBy(ALERT_EVENT.STARTS_AT.asc())
-        .fetch(JdbcAiRepository::toAiAlertRecord);
+        .fetch(JooqAiRepository::toAiAlertRecord);
   }
 
   @Override
@@ -114,7 +109,7 @@ public class JdbcAiRepository implements AiRepository {
         .and(RCA_ANALYSIS.INCIDENT_ID.eq(incidentId))
         .orderBy(RCA_ANALYSIS.CREATED_AT.desc())
         .limit(1)
-        .fetchOptional(JdbcAiRepository::toAiRcaRecord);
+        .fetchOptional(JooqAiRepository::toAiRcaRecord);
   }
 
   @Override
@@ -255,7 +250,7 @@ public class JdbcAiRepository implements AiRepository {
         .and(AGENT_RUN.INCIDENT_ID.eq(incidentId))
         .orderBy(AGENT_RUN.CREATED_AT.desc())
         .limit(1)
-        .fetchOptional(JdbcAiRepository::toAgentRunRecord);
+        .fetchOptional(JooqAiRepository::toAgentRunRecord);
   }
 
   @Override
@@ -276,7 +271,7 @@ public class JdbcAiRepository implements AiRepository {
         .from(AGENT_RUN_STEP)
         .where(AGENT_RUN_STEP.RUN_ID.eq(runId))
         .orderBy(AGENT_RUN_STEP.SEQUENCE_NO.asc())
-        .fetch(JdbcAiRepository::toAgentRunStepRecord);
+        .fetch(JooqAiRepository::toAgentRunStepRecord);
   }
 
   @Override
@@ -293,7 +288,7 @@ public class JdbcAiRepository implements AiRepository {
         .from(AGENT_EVAL_RESULT)
         .where(AGENT_EVAL_RESULT.RUN_ID.eq(runId))
         .orderBy(AGENT_EVAL_RESULT.CREATED_AT.asc())
-        .fetch(JdbcAiRepository::toAgentEvalResultRecord);
+        .fetch(JooqAiRepository::toAgentEvalResultRecord);
   }
 
   private Optional<AiDiagnosisRecord> findDiagnosisByCondition(
@@ -319,7 +314,7 @@ public class JdbcAiRepository implements AiRepository {
             .orderBy(latest ? AI_DIAGNOSIS.CREATED_AT.desc() : AI_DIAGNOSIS.ID.asc())
             .limit(1);
 
-    return query.fetchOptional(JdbcAiRepository::toAiDiagnosisRecord);
+    return query.fetchOptional(JooqAiRepository::toAiDiagnosisRecord);
   }
 
   private static Condition incidentMatch(String tenantId, String incidentId) {

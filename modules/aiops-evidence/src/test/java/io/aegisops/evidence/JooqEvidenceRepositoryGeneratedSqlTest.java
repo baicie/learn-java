@@ -15,7 +15,7 @@ import org.jooq.tools.jdbc.MockDataProvider;
 import org.jooq.tools.jdbc.MockResult;
 import org.junit.jupiter.api.Test;
 
-class JdbcEvidenceRepositoryGeneratedSqlTest {
+class JooqEvidenceRepositoryGeneratedSqlTest {
   @Test
   void queryChangesUsesGeneratedTablesAndServiceNameInCondition() {
     AtomicReference<String> sqlRef = new AtomicReference<>();
@@ -26,8 +26,8 @@ class JdbcEvidenceRepositoryGeneratedSqlTest {
           return new MockResult[] {new MockResult(0, DSL.using(SQLDialect.POSTGRES).newResult())};
         };
 
-    JdbcEvidenceRepository repository =
-        new JdbcEvidenceRepository(DSL.using(new MockConnection(provider), SQLDialect.POSTGRES));
+    JooqEvidenceRepository repository =
+        new JooqEvidenceRepository(DSL.using(new MockConnection(provider), SQLDialect.POSTGRES));
 
     repository.queryChanges(request(), 10);
 
@@ -72,8 +72,8 @@ class JdbcEvidenceRepositoryGeneratedSqlTest {
           return new MockResult[] {new MockResult(1, result)};
         };
 
-    JdbcEvidenceRepository repository =
-        new JdbcEvidenceRepository(DSL.using(new MockConnection(provider), SQLDialect.POSTGRES));
+    JooqEvidenceRepository repository =
+        new JooqEvidenceRepository(DSL.using(new MockConnection(provider), SQLDialect.POSTGRES));
 
     var result = repository.queryLogs(request(), 10);
 
@@ -88,7 +88,7 @@ class JdbcEvidenceRepositoryGeneratedSqlTest {
 
   @Test
   void queryLogsReturnsUnavailableWhenNoEntityScope() {
-    JdbcEvidenceRepository repository = new JdbcEvidenceRepository(DSL.using(SQLDialect.POSTGRES));
+    JooqEvidenceRepository repository = new JooqEvidenceRepository(DSL.using(SQLDialect.POSTGRES));
 
     var result =
         repository.queryLogs(

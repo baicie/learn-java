@@ -14,7 +14,7 @@ import org.jooq.tools.jdbc.MockDataProvider;
 import org.jooq.tools.jdbc.MockResult;
 import org.junit.jupiter.api.Test;
 
-class JdbcAiRepositoryGeneratedSqlTest {
+class JooqAiRepositoryGeneratedSqlTest {
   @Test
   void saveDiagnosisUsesGeneratedTableAndJsonbCasts() {
     AtomicReference<String> sqlRef = new AtomicReference<>();
@@ -25,8 +25,8 @@ class JdbcAiRepositoryGeneratedSqlTest {
           return new MockResult[] {new MockResult(1, DSL.using(SQLDialect.POSTGRES).newResult())};
         };
 
-    JdbcAiRepository repository =
-        new JdbcAiRepository(DSL.using(new MockConnection(provider), SQLDialect.POSTGRES));
+    JooqAiRepository repository =
+        new JooqAiRepository(DSL.using(new MockConnection(provider), SQLDialect.POSTGRES));
 
     repository.saveDiagnosis(
         new SaveDiagnosisCommand(
@@ -68,8 +68,8 @@ class JdbcAiRepositoryGeneratedSqlTest {
           return new MockResult[] {new MockResult(0, DSL.using(SQLDialect.POSTGRES).newResult())};
         };
 
-    JdbcAiRepository repository =
-        new JdbcAiRepository(DSL.using(new MockConnection(provider), SQLDialect.POSTGRES));
+    JooqAiRepository repository =
+        new JooqAiRepository(DSL.using(new MockConnection(provider), SQLDialect.POSTGRES));
 
     repository.listIncidentAlerts("tenant_1", "inc_1");
 
@@ -92,8 +92,8 @@ class JdbcAiRepositoryGeneratedSqlTest {
           return new MockResult[] {new MockResult(0, DSL.using(SQLDialect.POSTGRES).newResult())};
         };
 
-    JdbcAiRepository repository =
-        new JdbcAiRepository(DSL.using(new MockConnection(provider), SQLDialect.POSTGRES));
+    JooqAiRepository repository =
+        new JooqAiRepository(DSL.using(new MockConnection(provider), SQLDialect.POSTGRES));
 
     repository.findLatestAgentRun("tenant_1", "inc_1");
 

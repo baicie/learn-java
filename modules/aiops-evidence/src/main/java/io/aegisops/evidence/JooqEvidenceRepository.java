@@ -19,10 +19,10 @@ import org.springframework.stereotype.Repository;
 
 /** jOOQ generated Tables based evidence repository. */
 @Repository
-public class JdbcEvidenceRepository implements EvidenceRepository {
+public class JooqEvidenceRepository implements EvidenceRepository {
   private final DSLContext dsl;
 
-  public JdbcEvidenceRepository(DSLContext dsl) {
+  public JooqEvidenceRepository(DSLContext dsl) {
     this.dsl = dsl;
   }
 
@@ -48,7 +48,7 @@ public class JdbcEvidenceRepository implements EvidenceRepository {
             .groupBy(severity, DSL.field("left({0}, 160)", String.class, LOG_EVENT.MESSAGE))
             .orderBy(logCount.desc(), DSL.max(occurredAt).desc())
             .limit(maxPatterns)
-            .fetch(JdbcEvidenceRepository::toLogPattern);
+            .fetch(JooqEvidenceRepository::toLogPattern);
 
     if (patterns.isEmpty()) {
       return LogEvidence.unavailable("No error log evidence found.");
@@ -77,7 +77,7 @@ public class JdbcEvidenceRepository implements EvidenceRepository {
             .where(baseChangeCondition(request))
             .orderBy(CHANGE_EVENT.OCCURRED_AT.desc())
             .limit(maxChanges)
-            .fetch(JdbcEvidenceRepository::toChangeEvent);
+            .fetch(JooqEvidenceRepository::toChangeEvent);
 
     if (events.isEmpty()) {
       return ChangeEvidence.unavailable("No change evidence found.");
