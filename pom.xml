@@ -13,6 +13,7 @@
   <modules>
     <module>modules/aiops-common</module>
     <module>modules/aiops-web</module>
+    <module>modules/aiops-persistence</module>
     <module>modules/aiops-audit</module>
     <module>modules/aiops-tenant</module>
     <module>modules/aiops-user</module>

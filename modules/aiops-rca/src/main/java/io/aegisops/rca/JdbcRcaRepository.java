@@ -1,75 +1,90 @@
 package io.aegisops.rca;
 
+import static io.aegisops.persistence.AegisJooq.jsonbValue;
+import static io.aegisops.persistence.AegisTables.ALERT_EVENT;
+import static io.aegisops.persistence.AegisTables.ASSET_RELATION;
+import static io.aegisops.persistence.AegisTables.INCIDENT;
+import static io.aegisops.persistence.AegisTables.INCIDENT_EVENT;
+import static io.aegisops.persistence.AegisTables.INCIDENT_TIMELINE;
+import static io.aegisops.persistence.AegisTables.RCA_ANALYSIS;
+import static io.aegisops.persistence.AegisTables.decimal;
+import static io.aegisops.persistence.AegisTables.integer;
+import static io.aegisops.persistence.AegisTables.jsonb;
+import static io.aegisops.persistence.AegisTables.str;
+import static io.aegisops.persistence.AegisTables.time;
+
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
-import org.springframework.dao.EmptyResultDataAccessException;
-import org.springframework.jdbc.core.JdbcTemplate;
+import org.jooq.Condition;
+import org.jooq.DSLContext;
+import org.jooq.impl.DSL;
 import org.springframework.stereotype.Repository;
 
+/** jOOQ based RCA repository. */
 @Repository
 public class JdbcRcaRepository implements RcaRepository {
-  private final JdbcTemplate jdbc;
+  private final DSLContext dsl;
 
-  public JdbcRcaRepository(JdbcTemplate jdbc) {
-    this.jdbc = jdbc;
+  public JdbcRcaRepository(DSLContext dsl) {
+    this.dsl = dsl;
   }
 
   @Override
   public Optional<RcaIncidentRecord> findIncident(String tenantId, String incidentId) {
-    try {
-      return Optional.ofNullable(
-          jdbc.queryForObject(
-              """
-                    select id, tenant_id, title, summary, severity, status, source, primary_asset_id,
-                           aggregation_key, alert_count, suspected_root_cause, confidence,
-                           started_at, detected_at, last_seen_at, resolved_at, created_at, updated_at
-                    from incident
-                    where tenant_id = ? and id = ?
-                    """,
-              (rs, rowNum) -> RcaRows.incident(rs),
-              tenantId,
-              incidentId));
-    } catch (EmptyResultDataAccessException ex) {
-      return Optional.empty();
-    }
+    return dsl.select(
+            str(INCIDENT, "id"),
+            str(INCIDENT, "tenant_id"),
+            str(INCIDENT, "title"),
+            str(INCIDENT, "summary"),
+            str(INCIDENT, "severity"),
+            str(INCIDENT, "status"),
+            str(INCIDENT, "source"),
+            str(INCIDENT, "primary_asset_id"),
+            str(INCIDENT, "aggregation_key"),
+            integer(INCIDENT, "alert_count"),
+            str(INCIDENT, "suspected_root_cause"),
+            decimal(INCIDENT, "confidence"),
+            time(INCIDENT, "started_at"),
+            time(INCIDENT, "detected_at"),
+            time(INCIDENT, "last_seen_at"),
+            time(INCIDENT, "resolved_at"),
+            time(INCIDENT, "created_at"),
+            time(INCIDENT, "updated_at"))
+        .from(INCIDENT)
+        .where(str(INCIDENT, "tenant_id").eq(tenantId))
+        .and(str(INCIDENT, "id").eq(incidentId))
+        .fetchOptional(JdbcRcaRepository::toIncidentRecord);
   }
 
   @Override
   public List<RcaAlertRecord> listIncidentAlerts(String tenantId, String incidentId) {
-    return jdbc.query(
-        """
-                select a.id, a.source, a.source_event_id, a.severity, a.title, a.description,
-                       a.asset_id, a.entity_type, a.entity_name, a.fingerprint, a.labels::text,
-                       a.starts_at, a.created_at
-                from incident_event ie
-                join incident i on i.id = ie.incident_id
-                join alert_event a on a.id = ie.event_id
-                where i.tenant_id = ?
-                  and i.id = ?
-                  and ie.event_type = 'alert'
-                  and a.tenant_id = ?
-                order by a.starts_at asc
-                """,
-        (rs, rowNum) ->
-            new RcaAlertRecord(
-                rs.getString("id"),
-                rs.getString("source"),
-                rs.getString("source_event_id"),
-                rs.getString("severity"),
-                rs.getString("title"),
-                rs.getString("description"),
-                rs.getString("asset_id"),
-                rs.getString("entity_type"),
-                rs.getString("entity_name"),
-                rs.getString("fingerprint"),
-                rs.getString("labels"),
-                rs.getObject("starts_at", OffsetDateTime.class),
-                rs.getObject("created_at", OffsetDateTime.class)),
-        tenantId,
-        incidentId,
-        tenantId);
+    return dsl.select(
+            str(ALERT_EVENT, "id"),
+            str(ALERT_EVENT, "source"),
+            str(ALERT_EVENT, "source_event_id"),
+            str(ALERT_EVENT, "severity"),
+            str(ALERT_EVENT, "title"),
+            str(ALERT_EVENT, "description"),
+            str(ALERT_EVENT, "asset_id"),
+            str(ALERT_EVENT, "entity_type"),
+            str(ALERT_EVENT, "entity_name"),
+            str(ALERT_EVENT, "fingerprint"),
+            jsonb(ALERT_EVENT, "labels").cast(String.class).as("labels"),
+            time(ALERT_EVENT, "starts_at"),
+            time(ALERT_EVENT, "created_at"))
+        .from(INCIDENT_EVENT)
+        .join(INCIDENT)
+        .on(str(INCIDENT, "id").eq(str(INCIDENT_EVENT, "incident_id")))
+        .join(ALERT_EVENT)
+        .on(str(ALERT_EVENT, "id").eq(str(INCIDENT_EVENT, "event_id")))
+        .where(str(INCIDENT, "tenant_id").eq(tenantId))
+        .and(str(INCIDENT, "id").eq(incidentId))
+        .and(str(INCIDENT_EVENT, "event_type").eq("alert"))
+        .and(str(ALERT_EVENT, "tenant_id").eq(tenantId))
+        .orderBy(time(ALERT_EVENT, "starts_at").asc())
+        .fetch(JdbcRcaRepository::toAlertRecord);
   }
 
   @Override
@@ -78,51 +93,30 @@ public class JdbcRcaRepository implements RcaRepository {
       return List.of();
     }
 
-    return jdbc.query(
-        """
-                select id, from_asset_id, to_asset_id, relation_type, confidence, source
-                from asset_relation
-                where tenant_id = ?
-                  and (
-                    from_asset_id = any(?)
-                    or to_asset_id = any(?)
-                  )
-                order by confidence desc
-                """,
-        ps -> {
-          ps.setString(1, tenantId);
-          ps.setArray(2, ps.getConnection().createArrayOf("varchar", assetIds.toArray()));
-          ps.setArray(3, ps.getConnection().createArrayOf("varchar", assetIds.toArray()));
-        },
-        (rs, rowNum) ->
-            new RcaAssetRelationRecord(
-                rs.getString("id"),
-                rs.getString("from_asset_id"),
-                rs.getString("to_asset_id"),
-                rs.getString("relation_type"),
-                rs.getBigDecimal("confidence"),
-                rs.getString("source")));
+    return dsl.select(
+            str(ASSET_RELATION, "id"),
+            str(ASSET_RELATION, "from_asset_id"),
+            str(ASSET_RELATION, "to_asset_id"),
+            str(ASSET_RELATION, "relation_type"),
+            decimal(ASSET_RELATION, "confidence"),
+            str(ASSET_RELATION, "source"))
+        .from(ASSET_RELATION)
+        .where(str(ASSET_RELATION, "tenant_id").eq(tenantId))
+        .and(
+            str(ASSET_RELATION, "from_asset_id")
+                .in(assetIds)
+                .or(str(ASSET_RELATION, "to_asset_id").in(assetIds)))
+        .orderBy(decimal(ASSET_RELATION, "confidence").desc())
+        .fetch(JdbcRcaRepository::toAssetRelationRecord);
   }
 
   @Override
   public Optional<RcaAnalysisRecord> findLatestAnalysis(String tenantId, String incidentId) {
-    try {
-      return Optional.ofNullable(
-          jdbc.queryForObject(
-              """
-                    select id, tenant_id, incident_id, status, suspected_root_cause, confidence,
-                           summary, evidence::text, model_version, created_at
-                    from rca_analysis
-                    where tenant_id = ? and incident_id = ?
-                    order by created_at desc
-                    limit 1
-                    """,
-              (rs, rowNum) -> RcaRows.analysis(rs),
-              tenantId,
-              incidentId));
-    } catch (EmptyResultDataAccessException ex) {
-      return Optional.empty();
-    }
+    return findAnalysisByCondition(
+        str(RCA_ANALYSIS, "tenant_id")
+            .eq(tenantId)
+            .and(str(RCA_ANALYSIS, "incident_id").eq(incidentId)),
+        true);
   }
 
   @Override
@@ -135,56 +129,36 @@ public class JdbcRcaRepository implements RcaRepository {
       String summary,
       String evidenceJson,
       String modelVersion) {
-    jdbc.update(
-        """
-                insert into rca_analysis(id, tenant_id, incident_id, status, suspected_root_cause,
-                                         confidence, summary, evidence, model_version, created_at)
-                values (?, ?, ?, 'completed', ?, ?, ?, ?::jsonb, ?, now())
-                """,
-        id,
-        tenantId,
-        incidentId,
-        suspectedRootCause,
-        confidence,
-        summary,
-        evidenceJson,
-        modelVersion);
+    dsl.insertInto(RCA_ANALYSIS)
+        .set(str(RCA_ANALYSIS, "id"), id)
+        .set(str(RCA_ANALYSIS, "tenant_id"), tenantId)
+        .set(str(RCA_ANALYSIS, "incident_id"), incidentId)
+        .set(str(RCA_ANALYSIS, "status"), "completed")
+        .set(str(RCA_ANALYSIS, "suspected_root_cause"), suspectedRootCause)
+        .set(decimal(RCA_ANALYSIS, "confidence"), confidence)
+        .set(str(RCA_ANALYSIS, "summary"), summary)
+        .set(jsonb(RCA_ANALYSIS, "evidence"), jsonbValue(evidenceJson))
+        .set(str(RCA_ANALYSIS, "model_version"), modelVersion)
+        .set(time(RCA_ANALYSIS, "created_at"), DSL.currentOffsetDateTime())
+        .execute();
   }
 
   @Override
   public Optional<RcaAnalysisRecord> findAnalysis(String tenantId, String id) {
-    try {
-      return Optional.ofNullable(
-          jdbc.queryForObject(
-              """
-                    select id, tenant_id, incident_id, status, suspected_root_cause, confidence,
-                           summary, evidence::text, model_version, created_at
-                    from rca_analysis
-                    where tenant_id = ? and id = ?
-                    """,
-              (rs, rowNum) -> RcaRows.analysis(rs),
-              tenantId,
-              id));
-    } catch (EmptyResultDataAccessException ex) {
-      return Optional.empty();
-    }
+    return findAnalysisByCondition(
+        str(RCA_ANALYSIS, "tenant_id").eq(tenantId).and(str(RCA_ANALYSIS, "id").eq(id)), false);
   }
 
   @Override
   public void updateIncidentRca(
       String tenantId, String incidentId, String suspectedRootCause, BigDecimal confidence) {
-    jdbc.update(
-        """
-                update incident
-                set suspected_root_cause = ?,
-                    confidence = ?,
-                    updated_at = now()
-                where tenant_id = ? and id = ?
-                """,
-        suspectedRootCause,
-        confidence,
-        tenantId,
-        incidentId);
+    dsl.update(INCIDENT)
+        .set(str(INCIDENT, "suspected_root_cause"), suspectedRootCause)
+        .set(decimal(INCIDENT, "confidence"), confidence)
+        .set(time(INCIDENT, "updated_at"), DSL.currentOffsetDateTime())
+        .where(str(INCIDENT, "tenant_id").eq(tenantId))
+        .and(str(INCIDENT, "id").eq(incidentId))
+        .execute();
   }
 
   @Override
@@ -195,16 +169,104 @@ public class JdbcRcaRepository implements RcaRepository {
       String title,
       String description,
       String payloadJson) {
-    jdbc.update(
-        """
-                insert into incident_timeline(id, incident_id, event_time, event_type, title, description, source, payload)
-                values (?, ?, ?, 'rca_analyzed', ?, ?, 'system', ?::jsonb)
-                """,
-        id,
-        incidentId,
-        eventTime,
-        title,
-        description,
-        payloadJson);
+    dsl.insertInto(INCIDENT_TIMELINE)
+        .set(str(INCIDENT_TIMELINE, "id"), id)
+        .set(str(INCIDENT_TIMELINE, "incident_id"), incidentId)
+        .set(time(INCIDENT_TIMELINE, "event_time"), eventTime)
+        .set(str(INCIDENT_TIMELINE, "event_type"), "rca_analyzed")
+        .set(str(INCIDENT_TIMELINE, "title"), title)
+        .set(str(INCIDENT_TIMELINE, "description"), description)
+        .set(str(INCIDENT_TIMELINE, "source"), "system")
+        .set(jsonb(INCIDENT_TIMELINE, "payload"), jsonbValue(payloadJson))
+        .execute();
+  }
+
+  private Optional<RcaAnalysisRecord> findAnalysisByCondition(Condition condition, boolean latest) {
+    var query =
+        dsl.select(
+                str(RCA_ANALYSIS, "id"),
+                str(RCA_ANALYSIS, "tenant_id"),
+                str(RCA_ANALYSIS, "incident_id"),
+                str(RCA_ANALYSIS, "status"),
+                str(RCA_ANALYSIS, "suspected_root_cause"),
+                decimal(RCA_ANALYSIS, "confidence"),
+                str(RCA_ANALYSIS, "summary"),
+                jsonb(RCA_ANALYSIS, "evidence").cast(String.class).as("evidence"),
+                str(RCA_ANALYSIS, "model_version"),
+                time(RCA_ANALYSIS, "created_at"))
+            .from(RCA_ANALYSIS)
+            .where(condition)
+            .orderBy(
+                latest ? time(RCA_ANALYSIS, "created_at").desc() : str(RCA_ANALYSIS, "id").asc())
+            .limit(1);
+
+    return query.fetchOptional(JdbcRcaRepository::toAnalysisRecord);
+  }
+
+  private static RcaIncidentRecord toIncidentRecord(org.jooq.Record record) {
+    return new RcaIncidentRecord(
+        record.get(str(INCIDENT, "id")),
+        record.get(str(INCIDENT, "tenant_id")),
+        record.get(str(INCIDENT, "title")),
+        record.get(str(INCIDENT, "summary")),
+        record.get(str(INCIDENT, "severity")),
+        record.get(str(INCIDENT, "status")),
+        record.get(str(INCIDENT, "source")),
+        record.get(str(INCIDENT, "primary_asset_id")),
+        record.get(str(INCIDENT, "aggregation_key")),
+        value(record.get(integer(INCIDENT, "alert_count"))),
+        record.get(str(INCIDENT, "suspected_root_cause")),
+        record.get(decimal(INCIDENT, "confidence")),
+        record.get(time(INCIDENT, "started_at")),
+        record.get(time(INCIDENT, "detected_at")),
+        record.get(time(INCIDENT, "last_seen_at")),
+        record.get(time(INCIDENT, "resolved_at")),
+        record.get(time(INCIDENT, "created_at")),
+        record.get(time(INCIDENT, "updated_at")));
+  }
+
+  private static RcaAlertRecord toAlertRecord(org.jooq.Record record) {
+    return new RcaAlertRecord(
+        record.get(str(ALERT_EVENT, "id")),
+        record.get(str(ALERT_EVENT, "source")),
+        record.get(str(ALERT_EVENT, "source_event_id")),
+        record.get(str(ALERT_EVENT, "severity")),
+        record.get(str(ALERT_EVENT, "title")),
+        record.get(str(ALERT_EVENT, "description")),
+        record.get(str(ALERT_EVENT, "asset_id")),
+        record.get(str(ALERT_EVENT, "entity_type")),
+        record.get(str(ALERT_EVENT, "entity_name")),
+        record.get(str(ALERT_EVENT, "fingerprint")),
+        record.get("labels", String.class),
+        record.get(time(ALERT_EVENT, "starts_at")),
+        record.get(time(ALERT_EVENT, "created_at")));
+  }
+
+  private static RcaAssetRelationRecord toAssetRelationRecord(org.jooq.Record record) {
+    return new RcaAssetRelationRecord(
+        record.get(str(ASSET_RELATION, "id")),
+        record.get(str(ASSET_RELATION, "from_asset_id")),
+        record.get(str(ASSET_RELATION, "to_asset_id")),
+        record.get(str(ASSET_RELATION, "relation_type")),
+        record.get(decimal(ASSET_RELATION, "confidence")),
+        record.get(str(ASSET_RELATION, "source")));
+  }
+
+  private static RcaAnalysisRecord toAnalysisRecord(org.jooq.Record record) {
+    return new RcaAnalysisRecord(
+        record.get(str(RCA_ANALYSIS, "id")),
+        record.get(str(RCA_ANALYSIS, "tenant_id")),
+        record.get(str(RCA_ANALYSIS, "incident_id")),
+        record.get(str(RCA_ANALYSIS, "status")),
+        record.get(str(RCA_ANALYSIS, "suspected_root_cause")),
+        record.get(decimal(RCA_ANALYSIS, "confidence")),
+        record.get(str(RCA_ANALYSIS, "summary")),
+        record.get("evidence", String.class),
+        record.get(str(RCA_ANALYSIS, "model_version")),
+        record.get(time(RCA_ANALYSIS, "created_at")));
+  }
+
+  private static int value(Integer value) {
+    return value == null ? 0 : value;
   }
 }

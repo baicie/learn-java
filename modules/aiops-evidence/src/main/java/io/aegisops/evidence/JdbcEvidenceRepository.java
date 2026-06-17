@@ -1,23 +1,29 @@
 package io.aegisops.evidence;
 
+import static io.aegisops.persistence.AegisTables.CHANGE_EVENT;
+import static io.aegisops.persistence.AegisTables.LOG_EVENT;
+import static io.aegisops.persistence.AegisTables.str;
+import static io.aegisops.persistence.AegisTables.time;
+
 import io.aegisops.evidence.dto.ChangeEvidence;
 import io.aegisops.evidence.dto.ChangeEvidenceEvent;
 import io.aegisops.evidence.dto.EvidenceQueryRequest;
 import io.aegisops.evidence.dto.LogEvidence;
 import io.aegisops.evidence.dto.LogPattern;
 import java.time.OffsetDateTime;
-import java.util.ArrayList;
 import java.util.List;
-import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
-import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.jooq.Condition;
+import org.jooq.DSLContext;
+import org.jooq.impl.DSL;
 import org.springframework.stereotype.Repository;
 
+/** jOOQ based evidence repository. */
 @Repository
 public class JdbcEvidenceRepository implements EvidenceRepository {
-  private final NamedParameterJdbcTemplate jdbc;
+  private final DSLContext dsl;
 
-  public JdbcEvidenceRepository(NamedParameterJdbcTemplate jdbc) {
-    this.jdbc = jdbc;
+  public JdbcEvidenceRepository(DSLContext dsl) {
+    this.dsl = dsl;
   }
 
   @Override
@@ -26,53 +32,30 @@ public class JdbcEvidenceRepository implements EvidenceRepository {
       return LogEvidence.unavailable("Primary asset id and service names are empty.");
     }
 
-    MapSqlParameterSource params =
-        baseParams(request)
-            .addValue("maxPatterns", maxPatterns)
-            .addValue("serviceNames", request.normalizedServiceNames());
-
-    List<String> filters = new ArrayList<>();
-    filters.add("tenant_id = :tenantId");
-    filters.add("occurred_at >= :startedAt");
-    filters.add("occurred_at <= :lastSeenAt");
-    filters.add("severity in ('error', 'fatal', 'critical', 'warn', 'warning')");
-
-    List<String> entityFilters = new ArrayList<>();
-    if (!isBlank(request.primaryAssetId())) {
-      entityFilters.add("asset_id = :primaryAssetId");
-    }
-    if (!request.normalizedServiceNames().isEmpty()) {
-      entityFilters.add("service_name in (:serviceNames)");
-    }
-
-    filters.add("(" + String.join(" or ", entityFilters) + ")");
-
-    String sql =
-        """
-        select severity,
-               min(message) as sample,
-               count(*) as count,
-               min(occurred_at) as first_seen_at,
-               max(occurred_at) as last_seen_at
-        from log_event
-        where %s
-        group by severity, left(message, 160)
-        order by count(*) desc, max(occurred_at) desc
-        limit :maxPatterns
-        """
-            .formatted(String.join("\n  and ", filters));
+    var severity = str(LOG_EVENT, "severity");
+    var message = str(LOG_EVENT, "message");
+    var occurredAt = time(LOG_EVENT, "occurred_at");
 
     List<LogPattern> patterns =
-        jdbc.query(
-            sql,
-            params,
-            (rs, rowNum) ->
-                new LogPattern(
-                    rs.getString("severity"),
-                    rs.getString("sample"),
-                    rs.getLong("count"),
-                    rs.getObject("first_seen_at", OffsetDateTime.class),
-                    rs.getObject("last_seen_at", OffsetDateTime.class)));
+        dsl.select(
+                severity,
+                DSL.min(message).as("sample"),
+                DSL.count().as("count"),
+                DSL.min(occurredAt).as("first_seen_at"),
+                DSL.max(occurredAt).as("last_seen_at"))
+            .from(LOG_EVENT)
+            .where(baseLogCondition(request))
+            .groupBy(severity, DSL.field("left({0}, 160)", String.class, message))
+            .orderBy(DSL.count().desc(), DSL.max(occurredAt).desc())
+            .limit(maxPatterns)
+            .fetch(
+                record ->
+                    new LogPattern(
+                        record.get(severity),
+                        record.get("sample", String.class),
+                        record.get("count", Long.class),
+                        record.get("first_seen_at", OffsetDateTime.class),
+                        record.get("last_seen_at", OffsetDateTime.class)));
 
     if (patterns.isEmpty()) {
       return LogEvidence.unavailable("No error log evidence found.");
@@ -87,50 +70,32 @@ public class JdbcEvidenceRepository implements EvidenceRepository {
       return ChangeEvidence.unavailable("Primary asset id and service names are empty.");
     }
 
-    MapSqlParameterSource params =
-        baseParams(request)
-            .addValue("maxChanges", maxChanges)
-            .addValue("serviceNames", request.normalizedServiceNames());
-
-    List<String> filters = new ArrayList<>();
-    filters.add("tenant_id = :tenantId");
-    filters.add("occurred_at >= :startedAt");
-    filters.add("occurred_at <= :lastSeenAt");
-
-    List<String> entityFilters = new ArrayList<>();
-    if (!isBlank(request.primaryAssetId())) {
-      entityFilters.add("asset_id = :primaryAssetId");
-    }
-    if (!request.normalizedServiceNames().isEmpty()) {
-      entityFilters.add("service_name in (:serviceNames)");
-    }
-
-    filters.add("(" + String.join(" or ", entityFilters) + ")");
-
-    String sql =
-        """
-        select id, change_type, title, description, source, operator, risk_level, occurred_at
-        from change_event
-        where %s
-        order by occurred_at desc
-        limit :maxChanges
-        """
-            .formatted(String.join("\n  and ", filters));
+    var id = str(CHANGE_EVENT, "id");
+    var changeType = str(CHANGE_EVENT, "change_type");
+    var title = str(CHANGE_EVENT, "title");
+    var description = str(CHANGE_EVENT, "description");
+    var source = str(CHANGE_EVENT, "source");
+    var operator = str(CHANGE_EVENT, "operator");
+    var riskLevel = str(CHANGE_EVENT, "risk_level");
+    var occurredAt = time(CHANGE_EVENT, "occurred_at");
 
     List<ChangeEvidenceEvent> events =
-        jdbc.query(
-            sql,
-            params,
-            (rs, rowNum) ->
-                new ChangeEvidenceEvent(
-                    rs.getString("id"),
-                    rs.getString("change_type"),
-                    rs.getString("title"),
-                    rs.getString("description"),
-                    rs.getString("source"),
-                    rs.getString("operator"),
-                    rs.getString("risk_level"),
-                    rs.getObject("occurred_at", OffsetDateTime.class)));
+        dsl.select(id, changeType, title, description, source, operator, riskLevel, occurredAt)
+            .from(CHANGE_EVENT)
+            .where(baseChangeCondition(request))
+            .orderBy(occurredAt.desc())
+            .limit(maxChanges)
+            .fetch(
+                record ->
+                    new ChangeEvidenceEvent(
+                        record.get(id),
+                        record.get(changeType),
+                        record.get(title),
+                        record.get(description),
+                        record.get(source),
+                        record.get(operator),
+                        record.get(riskLevel),
+                        record.get(occurredAt)));
 
     if (events.isEmpty()) {
       return ChangeEvidence.unavailable("No change evidence found.");
@@ -139,12 +104,35 @@ public class JdbcEvidenceRepository implements EvidenceRepository {
     return new ChangeEvidence(true, "", events);
   }
 
-  private MapSqlParameterSource baseParams(EvidenceQueryRequest request) {
-    return new MapSqlParameterSource()
-        .addValue("tenantId", request.tenantId())
-        .addValue("primaryAssetId", request.primaryAssetId())
-        .addValue("startedAt", request.startedAt())
-        .addValue("lastSeenAt", request.lastSeenAt());
+  private Condition baseLogCondition(EvidenceQueryRequest request) {
+    return str(LOG_EVENT, "tenant_id")
+        .eq(request.tenantId())
+        .and(time(LOG_EVENT, "occurred_at").ge(request.startedAt()))
+        .and(time(LOG_EVENT, "occurred_at").le(request.lastSeenAt()))
+        .and(str(LOG_EVENT, "severity").in("error", "fatal", "critical", "warn", "warning"))
+        .and(entityCondition(LOG_EVENT, request));
+  }
+
+  private Condition baseChangeCondition(EvidenceQueryRequest request) {
+    return str(CHANGE_EVENT, "tenant_id")
+        .eq(request.tenantId())
+        .and(time(CHANGE_EVENT, "occurred_at").ge(request.startedAt()))
+        .and(time(CHANGE_EVENT, "occurred_at").le(request.lastSeenAt()))
+        .and(entityCondition(CHANGE_EVENT, request));
+  }
+
+  private Condition entityCondition(org.jooq.Table<?> table, EvidenceQueryRequest request) {
+    Condition condition = DSL.falseCondition();
+
+    if (!isBlank(request.primaryAssetId())) {
+      condition = condition.or(str(table, "asset_id").eq(request.primaryAssetId()));
+    }
+
+    if (!request.normalizedServiceNames().isEmpty()) {
+      condition = condition.or(str(table, "service_name").in(request.normalizedServiceNames()));
+    }
+
+    return condition;
   }
 
   private boolean isBlank(String value) {

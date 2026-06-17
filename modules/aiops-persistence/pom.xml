@@ -9,31 +9,13 @@
     <relativePath>../../pom.xml</relativePath>
   </parent>
 
-  <artifactId>aiops-ai-client</artifactId>
+  <artifactId>aiops-persistence</artifactId>
   <packaging>jar</packaging>
 
   <dependencies>
     <dependency>
-      <groupId>io.aegisops</groupId>
-      <artifactId>aiops-common</artifactId>
-      <version>${project.version}</version>
-    </dependency>
-
-    <dependency>
-      <groupId>io.aegisops</groupId>
-      <artifactId>aiops-persistence</artifactId>
-      <version>${project.version}</version>
-    </dependency>
-
-    <dependency>
-      <groupId>io.aegisops</groupId>
-      <artifactId>aiops-web</artifactId>
-      <version>${project.version}</version>
-    </dependency>
-
-    <dependency>
       <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-web</artifactId>
+      <artifactId>spring-boot-starter-jooq</artifactId>
     </dependency>
   </dependencies>
 </project>

@@ -1,0 +1,68 @@
+package io.aegisops.rca;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
+import org.jooq.SQLDialect;
+import org.jooq.impl.DSL;
+import org.jooq.tools.jdbc.MockConnection;
+import org.jooq.tools.jdbc.MockDataProvider;
+import org.jooq.tools.jdbc.MockResult;
+import org.junit.jupiter.api.Test;
+
+class JdbcRcaRepositoryJooqSqlTest {
+  @Test
+  void listAssetRelationsUsesInInsteadOfSqlArrayBinding() {
+    AtomicReference<String> sqlRef = new AtomicReference<>();
+
+    MockDataProvider provider =
+        context -> {
+          sqlRef.set(context.sql());
+          return new MockResult[] {new MockResult(0, DSL.using(SQLDialect.POSTGRES).newResult())};
+        };
+
+    JdbcRcaRepository repository =
+        new JdbcRcaRepository(DSL.using(new MockConnection(provider), SQLDialect.POSTGRES));
+
+    repository.listAssetRelations("tenant_1", List.of("asset_1", "asset_2"));
+
+    String sql = sqlRef.get().toLowerCase();
+
+    assertTrue(sql.contains("asset_relation"));
+    assertTrue(sql.contains("from_asset_id"));
+    assertTrue(sql.contains("to_asset_id"));
+    assertTrue(sql.contains(" in "));
+  }
+
+  @Test
+  void saveAnalysisUsesJsonbCast() {
+    AtomicReference<String> sqlRef = new AtomicReference<>();
+
+    MockDataProvider provider =
+        context -> {
+          sqlRef.set(context.sql());
+          return new MockResult[] {new MockResult(1, DSL.using(SQLDialect.POSTGRES).newResult())};
+        };
+
+    JdbcRcaRepository repository =
+        new JdbcRcaRepository(DSL.using(new MockConnection(provider), SQLDialect.POSTGRES));
+
+    repository.saveAnalysis(
+        "rca_1",
+        "tenant_1",
+        "inc_1",
+        "root",
+        BigDecimal.valueOf(0.8),
+        "summary",
+        "{\"evidence\":[]}",
+        "rules-v1");
+
+    String sql = sqlRef.get().toLowerCase();
+
+    assertTrue(sql.contains("insert into"));
+    assertTrue(sql.contains("rca_analysis"));
+    assertTrue(sql.contains("::jsonb"));
+  }
+}
