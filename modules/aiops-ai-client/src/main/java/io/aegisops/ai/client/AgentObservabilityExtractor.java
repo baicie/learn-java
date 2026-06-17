@@ -8,6 +8,7 @@ import io.aegisops.ai.client.dto.AgentRunStepCommand;
 import io.aegisops.ai.client.dto.SaveAgentRunCommand;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -36,6 +37,7 @@ public class AgentObservabilityExtractor {
     }
 
     String runId = string(agentRun.get("runId"), newId("run"));
+
     SaveAgentRunCommand run =
         new SaveAgentRunCommand(
             runId,
@@ -48,9 +50,9 @@ public class AgentObservabilityExtractor {
             string(agentRun.get("provider"), response.provider()),
             string(agentRun.get("model"), response.model()),
             string(agentRun.get("status"), "completed"),
-            offset(agentRun.get("startedAt")),
-            offset(agentRun.get("finishedAt")),
-            longValue(agentRun.get("durationMs")),
+            offsetOrNull(agentRun.get("startedAt")),
+            offsetOrNull(agentRun.get("finishedAt")),
+            longValue(agentRun.get("durationMs"), 0L),
             string(agentRun.get("fallbackReason"), string(raw.get("fallbackReason"), "")),
             writeJson(asMap(agentRun.get("safety"))),
             writeJson(agentEval));
@@ -72,13 +74,13 @@ public class AgentObservabilityExtractor {
     return new AgentRunStepCommand(
         string(step.get("id"), newId("step")),
         runId,
-        intValue(step.get("sequenceNo")),
+        intValue(step.get("sequenceNo"), 0),
         string(step.get("stepName"), "unknown"),
         string(step.get("stepType"), "node"),
         string(step.get("status"), "completed"),
-        offset(step.get("startedAt")),
-        offset(step.get("finishedAt")),
-        longValue(step.get("durationMs")),
+        offsetOrNull(step.get("startedAt")),
+        offsetOrNull(step.get("finishedAt")),
+        longValue(step.get("durationMs"), 0L),
         string(step.get("inputSummary"), ""),
         string(step.get("outputSummary"), ""),
         string(step.get("errorMessage"), ""),
@@ -91,8 +93,8 @@ public class AgentObservabilityExtractor {
         runId,
         evaluatorName,
         string(check.get("name"), "unknown"),
-        bool(check.get("passed")),
-        decimal(check.get("score")),
+        bool(check.get("passed"), false),
+        decimal(check.get("score"), BigDecimal.ZERO),
         string(check.get("reason"), ""),
         writeJson(asMap(check.get("details"))));
   }
@@ -120,52 +122,85 @@ public class AgentObservabilityExtractor {
     if (value == null) {
       return fallback;
     }
+
     String text = String.valueOf(value);
     return text.isBlank() ? fallback : text;
   }
 
-  private OffsetDateTime offset(Object value) {
+  private OffsetDateTime offsetOrNull(Object value) {
     if (value == null || String.valueOf(value).isBlank()) {
       return null;
     }
-    return OffsetDateTime.parse(String.valueOf(value).replace("Z", "+00:00"));
+
+    try {
+      return OffsetDateTime.parse(String.valueOf(value).replace("Z", "+00:00"));
+    } catch (DateTimeParseException ex) {
+      return null;
+    }
   }
 
-  private int intValue(Object value) {
+  private int intValue(Object value, int fallback) {
     if (value instanceof Number number) {
       return number.intValue();
     }
-    if (value == null) {
-      return 0;
+
+    if (value == null || String.valueOf(value).isBlank()) {
+      return fallback;
     }
-    return Integer.parseInt(String.valueOf(value));
+
+    try {
+      return Integer.parseInt(String.valueOf(value));
+    } catch (NumberFormatException ex) {
+      return fallback;
+    }
   }
 
-  private long longValue(Object value) {
+  private long longValue(Object value, long fallback) {
     if (value instanceof Number number) {
       return number.longValue();
     }
-    if (value == null) {
-      return 0L;
+
+    if (value == null || String.valueOf(value).isBlank()) {
+      return fallback;
     }
-    return Long.parseLong(String.valueOf(value));
+
+    try {
+      return Long.parseLong(String.valueOf(value));
+    } catch (NumberFormatException ex) {
+      return fallback;
+    }
   }
 
-  private boolean bool(Object value) {
+  private boolean bool(Object value, boolean fallback) {
     if (value instanceof Boolean b) {
       return b;
     }
+
+    if (value == null || String.valueOf(value).isBlank()) {
+      return fallback;
+    }
+
     return Boolean.parseBoolean(String.valueOf(value));
   }
 
-  private BigDecimal decimal(Object value) {
+  private BigDecimal decimal(Object value, BigDecimal fallback) {
+    if (value instanceof BigDecimal decimal) {
+      return decimal;
+    }
+
     if (value instanceof Number number) {
       return BigDecimal.valueOf(number.doubleValue());
     }
-    if (value == null) {
-      return BigDecimal.ZERO;
+
+    if (value == null || String.valueOf(value).isBlank()) {
+      return fallback;
     }
-    return new BigDecimal(String.valueOf(value));
+
+    try {
+      return new BigDecimal(String.valueOf(value));
+    } catch (NumberFormatException ex) {
+      return fallback;
+    }
   }
 
   private String writeJson(Object value) {

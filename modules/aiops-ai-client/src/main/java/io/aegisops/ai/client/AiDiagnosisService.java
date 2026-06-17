@@ -21,11 +21,15 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class AiDiagnosisService {
+    private static final Logger log = LoggerFactory.getLogger(AiDiagnosisService.class);
+
     private final AiRepository repository;
     private final AiAgentClient agentClient;
     private final ObjectMapper objectMapper;
@@ -105,16 +109,30 @@ public class AiDiagnosisService {
             String incidentId,
             String traceId,
             AgentDiagnosisResponse response) {
-        var data = observabilityExtractor.extract(diagnosisId, tenantId, incidentId, traceId, response);
+        try {
+            var data = observabilityExtractor.extract(diagnosisId, tenantId, incidentId, traceId, response);
 
-        data.run().ifPresent(repository::saveAgentRun);
+            if (data.run().isEmpty()) {
+                return;
+            }
 
-        if (!data.steps().isEmpty()) {
-            repository.saveAgentRunSteps(data.steps());
-        }
+            repository.saveAgentRun(data.run().get());
 
-        if (!data.evalResults().isEmpty()) {
-            repository.saveAgentEvalResults(data.evalResults());
+            if (!data.steps().isEmpty()) {
+                repository.saveAgentRunSteps(data.steps());
+            }
+
+            if (!data.evalResults().isEmpty()) {
+                repository.saveAgentEvalResults(data.evalResults());
+            }
+        } catch (Exception ex) {
+            log.warn(
+                    "Failed to persist agent observability. tenantId={}, incidentId={}, diagnosisId={}, traceId={}",
+                    tenantId,
+                    incidentId,
+                    diagnosisId,
+                    traceId,
+                    ex);
         }
     }
 
