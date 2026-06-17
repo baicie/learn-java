@@ -9,6 +9,7 @@ import static io.aegisops.persistence.jooq.Tables.RCA_ANALYSIS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
+import org.jooq.JSONB;
 import org.junit.jupiter.api.Test;
 
 class JooqGeneratedSchemaTest {
@@ -30,5 +31,14 @@ class JooqGeneratedSchemaTest {
     assertEquals("generation_mode", AGENT_RUN.GENERATION_MODE.getName());
     assertEquals("service_name", LOG_EVENT.SERVICE_NAME.getName());
     assertEquals("change_type", CHANGE_EVENT.CHANGE_TYPE.getName());
+  }
+
+  @Test
+  void generatedJsonColumnsUseJsonbType() {
+    assertEquals(JSONB.class, RCA_ANALYSIS.EVIDENCE.getType());
+    assertEquals(JSONB.class, AI_DIAGNOSIS.RESPONSE_RAW.getType());
+    assertEquals(JSONB.class, AGENT_RUN.SAFETY.getType());
+    assertEquals(JSONB.class, LOG_EVENT.ATTRIBUTES.getType());
+    assertEquals(JSONB.class, CHANGE_EVENT.ATTRIBUTES.getType());
   }
 }

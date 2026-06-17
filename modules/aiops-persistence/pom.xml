@@ -13,16 +13,6 @@
   <packaging>jar</packaging>
 
   <dependencies>
-
-    <!--
-     * Required by org.jooq.meta.extensions.ddl.DDLDatabase when reading Flyway
-     * SQL migrations as the schema source for jOOQ codegen.
-     -->
-    <dependency>
-      <groupId>org.jooq</groupId>
-      <artifactId>jooq-meta-extensions</artifactId>
-      <version>${jooq.version}</version>
-    </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-jooq</artifactId>
@@ -31,7 +21,6 @@
 
   <build>
     <plugins>
-
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>build-helper-maven-plugin</artifactId>
@@ -51,6 +40,7 @@
           </execution>
         </executions>
       </plugin>
+
       <plugin>
         <groupId>org.jooq</groupId>
         <artifactId>jooq-codegen-maven</artifactId>
