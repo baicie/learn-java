@@ -46,7 +46,8 @@
         tenant | sys_user | sys_role | sys_permission | sys_user_role | sys_role_permission |
         datasource | datasource_sync_run | asset | asset_relation | alert_event | incident |
         incident_event | incident_timeline | audit_log | rca_analysis | ai_diagnosis |
-        agent_run | agent_run_step | agent_eval_result | log_event | change_event
+        agent_run | agent_run_step | agent_eval_result | log_event | change_event |
+        runbook | runbook_step_template | automation_plan | automation_plan_step
       </includes>
 
       <excludes>flyway_schema_history</excludes>
