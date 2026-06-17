@@ -91,7 +91,11 @@ public class AutomationPlanService {
           "RUNBOOK_GLOBAL_READ_ONLY", "Global runbook cannot be enabled or disabled by tenant API");
     }
 
-    repository.setRunbookEnabled(tenantId, runbookId, enabled);
+    boolean updated = repository.setRunbookEnabled(tenantId, runbookId, enabled);
+    if (!updated) {
+      throw new AppException("RUNBOOK_UPDATE_FAILED", "Runbook enabled status was not updated");
+    }
+
     return getRunbook(tenantId, runbookId);
   }
 

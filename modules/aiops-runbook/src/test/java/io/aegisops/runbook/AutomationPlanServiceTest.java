@@ -7,7 +7,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.aegisops.common.exception.AppException;
-import io.aegisops.runbook.dto.AiDiagnosisForPlanRecord;
 import io.aegisops.runbook.dto.AlertForPlanRecord;
 import io.aegisops.runbook.dto.AutomationPlanCreateCommand;
 import io.aegisops.runbook.dto.AutomationPlanRecord;
@@ -16,7 +15,6 @@ import io.aegisops.runbook.dto.AutomationPlanStepRecord;
 import io.aegisops.runbook.dto.CreateRunbookRequest;
 import io.aegisops.runbook.dto.CreateRunbookStepRequest;
 import io.aegisops.runbook.dto.IncidentForPlanRecord;
-import io.aegisops.runbook.dto.RcaForPlanRecord;
 import io.aegisops.runbook.dto.RecommendPlanRequest;
 import io.aegisops.runbook.dto.RunbookCreateCommand;
 import io.aegisops.runbook.dto.RunbookRecord;
@@ -259,7 +257,7 @@ class AutomationPlanServiceTest {
             "{}"));
   }
 
-  private static class FakeRunbookRepository implements RunbookRepository {
+  private static class FakeRunbookRepository extends FakeRunbookRepositoryBase {
     IncidentForPlanRecord incident;
     final List<AlertForPlanRecord> alerts = new ArrayList<>();
     final List<RunbookRecord> runbooks = new ArrayList<>();
@@ -278,17 +276,6 @@ class AutomationPlanServiceTest {
     @Override
     public List<AlertForPlanRecord> listIncidentAlerts(String tenantId, String incidentId) {
       return alerts;
-    }
-
-    @Override
-    public Optional<AiDiagnosisForPlanRecord> findLatestDiagnosis(
-        String tenantId, String incidentId) {
-      return Optional.empty();
-    }
-
-    @Override
-    public Optional<RcaForPlanRecord> findLatestRca(String tenantId, String incidentId) {
-      return Optional.empty();
     }
 
     @Override
@@ -363,7 +350,7 @@ class AutomationPlanServiceTest {
     }
 
     @Override
-    public void setRunbookEnabled(String tenantId, String runbookId, boolean enabled) {
+    public boolean setRunbookEnabled(String tenantId, String runbookId, boolean enabled) {
       if (createdRunbook != null && createdRunbook.id().equals(runbookId)) {
         createdRunbook =
             new RunbookCreateCommand(
@@ -376,12 +363,14 @@ class AutomationPlanServiceTest {
                 enabled,
                 createdRunbook.matchersJson(),
                 createdRunbook.variablesJson());
+        return true;
       }
+      return false;
     }
 
     @Override
-    public Optional<AutomationPlanRecord> findLatestPlan(String tenantId, String incidentId) {
-      return Optional.empty();
+    public boolean updatePlanStatus(String tenantId, String planId, String status) {
+      return true;
     }
 
     @Override
@@ -389,7 +378,6 @@ class AutomationPlanServiceTest {
       if (savedPlan == null || !savedPlan.id().equals(planId)) {
         return Optional.empty();
       }
-
       return Optional.of(
           new AutomationPlanRecord(
               savedPlan.id(),
