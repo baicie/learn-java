@@ -2,9 +2,18 @@ spring:
   application:
     name: aiops-runner
 server:
-  port: ${AIOPS_RUNNER_PORT:8082}
+  port: ${AIOPS_RUNNER_PORT:8092}
 management:
   endpoints:
     web:
       exposure:
         include: health,info,metrics
+aiops:
+  execution:
+    api-enabled: false
+    live-enabled: false
+  runner:
+    enabled: true
+    runner-id: ${AIOPS_RUNNER_ID:local-runner}
+    poll-delay-ms: ${AIOPS_RUNNER_POLL_MS:5000}
+    max-runs-per-tick: ${AIOPS_RUNNER_MAX_PER_TICK:1}

@@ -1,0 +1,10 @@
+package io.aegisops.execution.dto;
+
+public record ExecutionRunCreateCommand(
+    String id,
+    String tenantId,
+    String incidentId,
+    String planId,
+    String status,
+    String mode,
+    String requestedBy) {}
