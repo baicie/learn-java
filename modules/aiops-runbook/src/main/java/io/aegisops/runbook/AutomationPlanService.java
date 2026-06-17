@@ -18,8 +18,11 @@ import io.aegisops.runbook.dto.RunbookStepTemplateCreateCommand;
 import io.aegisops.runbook.dto.RunbookStepTemplateRecord;
 import io.aegisops.runbook.dto.TimelineCreateCommand;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -78,9 +81,15 @@ public class AutomationPlanService {
 
   @Transactional
   public RunbookResponse setRunbookEnabled(String tenantId, String runbookId, boolean enabled) {
-    repository
-        .findRunbook(tenantId, runbookId)
-        .orElseThrow(() -> new AppException("RUNBOOK_NOT_FOUND", "Runbook not found"));
+    RunbookRecord runbook =
+        repository
+            .findRunbook(tenantId, runbookId)
+            .orElseThrow(() -> new AppException("RUNBOOK_NOT_FOUND", "Runbook not found"));
+
+    if (runbook.tenantId() == null || !tenantId.equals(runbook.tenantId())) {
+      throw new AppException(
+          "RUNBOOK_GLOBAL_READ_ONLY", "Global runbook cannot be enabled or disabled by tenant API");
+    }
 
     repository.setRunbookEnabled(tenantId, runbookId, enabled);
     return getRunbook(tenantId, runbookId);
@@ -206,13 +215,48 @@ public class AutomationPlanService {
 
   private List<RunbookStepTemplateCreateCommand> toStepTemplateCreateCommands(
       String runbookId, List<CreateRunbookStepRequest> stepRequests) {
-    return stepRequests.stream().map(step -> toStepTemplateCreateCommand(runbookId, step)).toList();
+    List<RunbookStepTemplateCreateCommand> commands = new ArrayList<>();
+    Set<Integer> usedSequences = new HashSet<>();
+    int nextSequence = 1;
+
+    for (CreateRunbookStepRequest step : stepRequests) {
+      int sequenceNo;
+      if (step.sequenceNo() == null) {
+        sequenceNo = nextAvailableSequence(usedSequences, nextSequence);
+      } else {
+        sequenceNo = step.sequenceNo();
+      }
+      validateSequenceNo(sequenceNo, usedSequences);
+      usedSequences.add(sequenceNo);
+      nextSequence = Math.max(nextSequence, sequenceNo + 1);
+      commands.add(toStepTemplateCreateCommand(runbookId, step, sequenceNo));
+    }
+
+    return commands;
+  }
+
+  private int nextAvailableSequence(Set<Integer> usedSequences, int start) {
+    int sequence = start;
+    while (usedSequences.contains(sequence)) {
+      sequence++;
+    }
+    return sequence;
+  }
+
+  private void validateSequenceNo(int sequenceNo, Set<Integer> usedSequences) {
+    if (sequenceNo <= 0) {
+      throw new AppException(
+          "RUNBOOK_STEP_SEQUENCE_INVALID", "Runbook step sequenceNo must be greater than 0");
+    }
+    if (usedSequences.contains(sequenceNo)) {
+      throw new AppException(
+          "RUNBOOK_STEP_SEQUENCE_DUPLICATED",
+          "Runbook step sequenceNo must be unique within one runbook");
+    }
   }
 
   private RunbookStepTemplateCreateCommand toStepTemplateCreateCommand(
-      String runbookId, CreateRunbookStepRequest step) {
-    int sequenceNo = step.sequenceNo() == null ? 1 : step.sequenceNo();
-
+      String runbookId, CreateRunbookStepRequest step, int sequenceNo) {
     return new RunbookStepTemplateCreateCommand(
         newId("rbstep"),
         runbookId,

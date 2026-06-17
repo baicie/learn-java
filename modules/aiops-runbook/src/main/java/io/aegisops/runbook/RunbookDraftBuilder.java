@@ -1,7 +1,6 @@
 package io.aegisops.runbook;
 
 import io.aegisops.runbook.dto.AiDiagnosisForPlanRecord;
-import io.aegisops.runbook.dto.AlertForPlanRecord;
 import io.aegisops.runbook.dto.AutomationPlanCreateCommand;
 import io.aegisops.runbook.dto.AutomationPlanStepCreateCommand;
 import io.aegisops.runbook.dto.IncidentForPlanRecord;

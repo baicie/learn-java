@@ -2,26 +2,32 @@ package io.aegisops.runbook;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.aegisops.common.exception.AppException;
 import io.aegisops.runbook.dto.AiDiagnosisForPlanRecord;
 import io.aegisops.runbook.dto.AlertForPlanRecord;
 import io.aegisops.runbook.dto.AutomationPlanCreateCommand;
 import io.aegisops.runbook.dto.AutomationPlanRecord;
 import io.aegisops.runbook.dto.AutomationPlanStepCreateCommand;
 import io.aegisops.runbook.dto.AutomationPlanStepRecord;
+import io.aegisops.runbook.dto.CreateRunbookRequest;
+import io.aegisops.runbook.dto.CreateRunbookStepRequest;
 import io.aegisops.runbook.dto.IncidentForPlanRecord;
 import io.aegisops.runbook.dto.RcaForPlanRecord;
 import io.aegisops.runbook.dto.RecommendPlanRequest;
 import io.aegisops.runbook.dto.RunbookCreateCommand;
 import io.aegisops.runbook.dto.RunbookRecord;
+import io.aegisops.runbook.dto.RunbookResponse;
 import io.aegisops.runbook.dto.RunbookStepTemplateCreateCommand;
 import io.aegisops.runbook.dto.RunbookStepTemplateRecord;
 import io.aegisops.runbook.dto.TimelineCreateCommand;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
@@ -69,6 +75,138 @@ class AutomationPlanServiceTest {
     assertEquals(null, response.runbookId());
     assertEquals(2, response.steps().size());
     assertTrue(response.summary().contains("No runbook matched"));
+  }
+
+  @Test
+  void createRunbookAssignsDistinctSequenceNumbersWhenSequenceNoMissing() {
+    FakeRunbookRepository repository = new FakeRunbookRepository();
+    AutomationPlanService service = new AutomationPlanService(repository, new ObjectMapper());
+
+    RunbookResponse response =
+        service.createRunbook(
+            "tenant_1",
+            new CreateRunbookRequest(
+                "CPU runbook",
+                "desc",
+                "host",
+                "medium",
+                Map.of("keywords", List.of("cpu")),
+                Map.of(),
+                List.of(
+                    new CreateRunbookStepRequest(
+                        null,
+                        "Step A",
+                        "manual",
+                        "human",
+                        "",
+                        "desc A",
+                        "ok",
+                        "rollback",
+                        true,
+                        300,
+                        Map.of()),
+                    new CreateRunbookStepRequest(
+                        null,
+                        "Step B",
+                        "manual",
+                        "human",
+                        "",
+                        "desc B",
+                        "ok",
+                        "rollback",
+                        true,
+                        300,
+                        Map.of()),
+                    new CreateRunbookStepRequest(
+                        null,
+                        "Step C",
+                        "manual",
+                        "human",
+                        "",
+                        "desc C",
+                        "ok",
+                        "rollback",
+                        true,
+                        300,
+                        Map.of()))));
+
+    assertEquals(3, response.steps().size());
+    assertEquals(1, response.steps().get(0).sequenceNo());
+    assertEquals(2, response.steps().get(1).sequenceNo());
+    assertEquals(3, response.steps().get(2).sequenceNo());
+  }
+
+  @Test
+  void createRunbookRejectsDuplicatedSequenceNo() {
+    FakeRunbookRepository repository = new FakeRunbookRepository();
+    AutomationPlanService service = new AutomationPlanService(repository, new ObjectMapper());
+
+    AppException ex =
+        assertThrows(
+            AppException.class,
+            () ->
+                service.createRunbook(
+                    "tenant_1",
+                    new CreateRunbookRequest(
+                        "CPU runbook",
+                        "desc",
+                        "host",
+                        "medium",
+                        Map.of(),
+                        Map.of(),
+                        List.of(
+                            new CreateRunbookStepRequest(
+                                1,
+                                "Step A",
+                                "manual",
+                                "human",
+                                "",
+                                "desc A",
+                                "ok",
+                                "rollback",
+                                true,
+                                300,
+                                Map.of()),
+                            new CreateRunbookStepRequest(
+                                1,
+                                "Step B",
+                                "manual",
+                                "human",
+                                "",
+                                "desc B",
+                                "ok",
+                                "rollback",
+                                true,
+                                300,
+                                Map.of())))));
+
+    assertEquals("RUNBOOK_STEP_SEQUENCE_DUPLICATED", ex.errorCode());
+  }
+
+  @Test
+  void setRunbookEnabledRejectsGlobalRunbook() {
+    FakeRunbookRepository repository = new FakeRunbookRepository();
+    repository.runbooks.add(
+        new RunbookRecord(
+            "rb_global",
+            null,
+            "Global CPU runbook",
+            "desc",
+            "host",
+            "medium",
+            true,
+            "{\"keywords\":[\"cpu\"]}",
+            "{}",
+            OffsetDateTime.now(),
+            OffsetDateTime.now()));
+
+    AutomationPlanService service = new AutomationPlanService(repository, new ObjectMapper());
+
+    AppException ex =
+        assertThrows(
+            AppException.class, () -> service.setRunbookEnabled("tenant_1", "rb_global", false));
+
+    assertEquals("RUNBOOK_GLOBAL_READ_ONLY", ex.errorCode());
   }
 
   private static void seedCpuScenario(FakeRunbookRepository repository) {
@@ -127,6 +265,8 @@ class AutomationPlanServiceTest {
     final List<RunbookRecord> runbooks = new ArrayList<>();
     final List<RunbookStepTemplateRecord> templates = new ArrayList<>();
     final List<TimelineCreateCommand> timelines = new ArrayList<>();
+    RunbookCreateCommand createdRunbook;
+    final List<RunbookStepTemplateCreateCommand> createdStepTemplates = new ArrayList<>();
     AutomationPlanCreateCommand savedPlan;
     final List<AutomationPlanStepCreateCommand> savedSteps = new ArrayList<>();
 
@@ -158,22 +298,86 @@ class AutomationPlanServiceTest {
 
     @Override
     public Optional<RunbookRecord> findRunbook(String tenantId, String runbookId) {
-      return runbooks.stream().filter(item -> item.id().equals(runbookId)).findFirst();
+      return runbooks.stream()
+          .filter(item -> item.id().equals(runbookId))
+          .findFirst()
+          .or(
+              () -> {
+                if (createdRunbook == null || !createdRunbook.id().equals(runbookId)) {
+                  return Optional.empty();
+                }
+                return Optional.of(
+                    new RunbookRecord(
+                        createdRunbook.id(),
+                        createdRunbook.tenantId(),
+                        createdRunbook.name(),
+                        createdRunbook.description(),
+                        createdRunbook.category(),
+                        createdRunbook.riskLevel(),
+                        createdRunbook.enabled(),
+                        createdRunbook.matchersJson(),
+                        createdRunbook.variablesJson(),
+                        OffsetDateTime.now(),
+                        OffsetDateTime.now()));
+              });
     }
 
     @Override
     public List<RunbookStepTemplateRecord> listRunbookSteps(String runbookId) {
-      return templates.stream().filter(item -> item.runbookId().equals(runbookId)).toList();
+      List<RunbookStepTemplateRecord> existing =
+          templates.stream().filter(item -> item.runbookId().equals(runbookId)).toList();
+
+      if (!existing.isEmpty()) {
+        return existing;
+      }
+
+      return createdStepTemplates.stream()
+          .filter(item -> item.runbookId().equals(runbookId))
+          .map(
+              item ->
+                  new RunbookStepTemplateRecord(
+                      item.id(),
+                      item.runbookId(),
+                      item.sequenceNo(),
+                      item.name(),
+                      item.actionType(),
+                      item.targetType(),
+                      item.commandTemplate(),
+                      item.description(),
+                      item.expectedResult(),
+                      item.rollbackHint(),
+                      item.requiresApproval(),
+                      item.timeoutSeconds(),
+                      item.metadataJson()))
+          .toList();
     }
 
     @Override
-    public void createRunbook(RunbookCreateCommand command) {}
+    public void createRunbook(RunbookCreateCommand command) {
+      createdRunbook = command;
+    }
 
     @Override
-    public void createRunbookSteps(List<RunbookStepTemplateCreateCommand> commands) {}
+    public void createRunbookSteps(List<RunbookStepTemplateCreateCommand> commands) {
+      createdStepTemplates.addAll(commands);
+    }
 
     @Override
-    public void setRunbookEnabled(String tenantId, String runbookId, boolean enabled) {}
+    public void setRunbookEnabled(String tenantId, String runbookId, boolean enabled) {
+      if (createdRunbook != null && createdRunbook.id().equals(runbookId)) {
+        createdRunbook =
+            new RunbookCreateCommand(
+                createdRunbook.id(),
+                createdRunbook.tenantId(),
+                createdRunbook.name(),
+                createdRunbook.description(),
+                createdRunbook.category(),
+                createdRunbook.riskLevel(),
+                enabled,
+                createdRunbook.matchersJson(),
+                createdRunbook.variablesJson());
+      }
+    }
 
     @Override
     public Optional<AutomationPlanRecord> findLatestPlan(String tenantId, String incidentId) {
