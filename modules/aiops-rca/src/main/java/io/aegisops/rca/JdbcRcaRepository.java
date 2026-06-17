@@ -1,5 +1,7 @@
 package io.aegisops.rca;
 
+import static io.aegisops.persistence.AegisJooq.jsonArrayOrEmpty;
+import static io.aegisops.persistence.AegisJooq.jsonbArrayValue;
 import static io.aegisops.persistence.AegisJooq.jsonbValue;
 import static io.aegisops.persistence.AegisTables.ALERT_EVENT;
 import static io.aegisops.persistence.AegisTables.ASSET_RELATION;
@@ -137,7 +139,7 @@ public class JdbcRcaRepository implements RcaRepository {
         .set(str(RCA_ANALYSIS, "suspected_root_cause"), suspectedRootCause)
         .set(decimal(RCA_ANALYSIS, "confidence"), confidence)
         .set(str(RCA_ANALYSIS, "summary"), summary)
-        .set(jsonb(RCA_ANALYSIS, "evidence"), jsonbValue(evidenceJson))
+        .set(jsonb(RCA_ANALYSIS, "evidence"), jsonbArrayValue(jsonArrayOrEmpty(evidenceJson)))
         .set(str(RCA_ANALYSIS, "model_version"), modelVersion)
         .set(time(RCA_ANALYSIS, "created_at"), DSL.currentOffsetDateTime())
         .execute();

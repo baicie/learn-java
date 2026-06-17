@@ -65,4 +65,28 @@ class JdbcRcaRepositoryJooqSqlTest {
     assertTrue(sql.contains("rca_analysis"));
     assertTrue(sql.contains("::jsonb"));
   }
+
+  @Test
+  void saveAnalysisBindsEvidenceThroughJsonbArrayCast() {
+    AtomicReference<String> sqlRef = new AtomicReference<>();
+
+    MockDataProvider provider =
+        context -> {
+          sqlRef.set(context.sql());
+          return new MockResult[] {new MockResult(1, DSL.using(SQLDialect.POSTGRES).newResult())};
+        };
+
+    JdbcRcaRepository repository =
+        new JdbcRcaRepository(DSL.using(new MockConnection(provider), SQLDialect.POSTGRES));
+
+    repository.saveAnalysis(
+        "rca_1", "tenant_1", "inc_1", "root", BigDecimal.valueOf(0.8), "summary", "", "rules-v1");
+
+    String sql = sqlRef.get().toLowerCase();
+
+    assertTrue(sql.contains("insert into"));
+    assertTrue(sql.contains("rca_analysis"));
+    // evidence 列写入走 jsonbArrayValue，SQL 必然包含 ?::jsonb cast 标记。
+    assertTrue(sql.contains("?::jsonb"), "expected ?::jsonb cast for evidence column; sql=" + sql);
+  }
 }

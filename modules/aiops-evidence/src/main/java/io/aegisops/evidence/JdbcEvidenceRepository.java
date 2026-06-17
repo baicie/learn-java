@@ -35,25 +35,26 @@ public class JdbcEvidenceRepository implements EvidenceRepository {
     var severity = str(LOG_EVENT, "severity");
     var message = str(LOG_EVENT, "message");
     var occurredAt = time(LOG_EVENT, "occurred_at");
+    var logCount = DSL.count().as("log_count");
 
     List<LogPattern> patterns =
         dsl.select(
                 severity,
                 DSL.min(message).as("sample"),
-                DSL.count().as("count"),
+                logCount,
                 DSL.min(occurredAt).as("first_seen_at"),
                 DSL.max(occurredAt).as("last_seen_at"))
             .from(LOG_EVENT)
             .where(baseLogCondition(request))
             .groupBy(severity, DSL.field("left({0}, 160)", String.class, message))
-            .orderBy(DSL.count().desc(), DSL.max(occurredAt).desc())
+            .orderBy(logCount.desc(), DSL.max(occurredAt).desc())
             .limit(maxPatterns)
             .fetch(
                 record ->
                     new LogPattern(
                         record.get(severity),
                         record.get("sample", String.class),
-                        record.get("count", Long.class),
+                        numberAsLong(record.get("log_count")),
                         record.get("first_seen_at", OffsetDateTime.class),
                         record.get("last_seen_at", OffsetDateTime.class)));
 
@@ -133,6 +134,18 @@ public class JdbcEvidenceRepository implements EvidenceRepository {
     }
 
     return condition;
+  }
+
+  private static long numberAsLong(Object value) {
+    if (value instanceof Number number) {
+      return number.longValue();
+    }
+
+    if (value == null) {
+      return 0L;
+    }
+
+    return Long.parseLong(String.valueOf(value));
   }
 
   private boolean isBlank(String value) {
