@@ -175,6 +175,21 @@ public class JooqExecutionRepository implements ExecutionRepository {
   }
 
   @Override
+  public boolean cancelExecutionSteps(String tenantId, String executionId) {
+    dsl.update(EXECUTION_STEP)
+        .set(EXECUTION_STEP.STATUS, "cancelled")
+        .set(EXECUTION_STEP.FINISHED_AT, DSL.currentOffsetDateTime())
+        .set(EXECUTION_STEP.ERROR_MESSAGE, "Execution was cancelled.")
+        .set(EXECUTION_STEP.UPDATED_AT, DSL.currentOffsetDateTime())
+        .where(EXECUTION_STEP.TENANT_ID.eq(tenantId))
+        .and(EXECUTION_STEP.EXECUTION_ID.eq(executionId))
+        .and(EXECUTION_STEP.STATUS.in("queued", "running"))
+        .execute();
+
+    return true;
+  }
+
+  @Override
   public Optional<ExecutionRunRecord> claimNextQueuedRun(String runnerId) {
     return dsl.transactionResult(
         config -> {

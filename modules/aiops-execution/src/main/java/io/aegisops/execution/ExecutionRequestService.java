@@ -135,6 +135,16 @@ public class ExecutionRequestService {
         "EXECUTION_CANCEL_FAILED",
         "Execution was not cancelled");
 
+    ensureUpdated(
+        repository.cancelExecutionSteps(tenantId, executionId),
+        "EXECUTION_STEP_CANCEL_FAILED",
+        "Execution steps were not cancelled");
+
+    ensureUpdated(
+        repository.updatePlanStatus(tenantId, run.planId(), "cancelled"),
+        "AUTOMATION_PLAN_UPDATE_FAILED",
+        "Automation plan status was not updated");
+
     repository.addTimeline(
         timeline(
             run.incidentId(),

@@ -56,6 +56,10 @@ public class RunnerExecutionService {
 
     if (steps.isEmpty()) {
       failRun(run, "Execution has no steps.");
+      ensureUpdated(
+          repository.updatePlanStatus(run.tenantId(), run.planId(), "failed"),
+          "AUTOMATION_PLAN_UPDATE_FAILED",
+          "Automation plan status was not updated");
       return;
     }
 
@@ -78,10 +82,16 @@ public class RunnerExecutionService {
 
     if (failed) {
       failRun(run, errorMessage);
-      repository.updatePlanStatus(run.tenantId(), run.planId(), "failed");
+      ensureUpdated(
+          repository.updatePlanStatus(run.tenantId(), run.planId(), "failed"),
+          "AUTOMATION_PLAN_UPDATE_FAILED",
+          "Automation plan status was not updated");
     } else {
       succeedRun(run);
-      repository.updatePlanStatus(run.tenantId(), run.planId(), "succeeded");
+      ensureUpdated(
+          repository.updatePlanStatus(run.tenantId(), run.planId(), "succeeded"),
+          "AUTOMATION_PLAN_UPDATE_FAILED",
+          "Automation plan status was not updated");
     }
   }
 
@@ -126,15 +136,18 @@ public class RunnerExecutionService {
       ExecutionRunRecord run, List<ExecutionStepRecord> steps, int failedSequenceNo) {
     for (ExecutionStepRecord step : steps) {
       if (step.sequenceNo() > failedSequenceNo && "queued".equals(step.status())) {
-        repository.updateStepStatus(
-            new ExecutionStepStatusUpdateCommand(
-                run.tenantId(),
-                step.id(),
-                "skipped",
-                null,
-                OffsetDateTime.now(),
-                null,
-                "Skipped because previous step failed."));
+        ensureUpdated(
+            repository.updateStepStatus(
+                new ExecutionStepStatusUpdateCommand(
+                    run.tenantId(),
+                    step.id(),
+                    "skipped",
+                    null,
+                    OffsetDateTime.now(),
+                    null,
+                    "Skipped because previous step failed.")),
+            "EXECUTION_STEP_UPDATE_FAILED",
+            "Execution step was not marked skipped");
       }
     }
   }

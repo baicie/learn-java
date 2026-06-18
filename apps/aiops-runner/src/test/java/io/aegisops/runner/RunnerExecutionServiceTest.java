@@ -1,9 +1,11 @@
 package io.aegisops.runner;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.aegisops.common.exception.AppException;
 import io.aegisops.execution.ExecutionJson;
 import io.aegisops.execution.ExecutionProperties;
 import io.aegisops.execution.dto.ExecutionRunRecord;
@@ -75,6 +77,49 @@ class RunnerExecutionServiceTest {
     assertTrue(repository.stepStatuses.contains("skipped"));
   }
 
+  @Test
+  void emptyStepsFailRunAndPlan() {
+    FakeRunnerRepository repository = new FakeRunnerRepository();
+    repository.claimed = run("exec_1", "dry_run");
+
+    ExecutionProperties executionProperties = new ExecutionProperties();
+    RunnerProperties runnerProperties = new RunnerProperties();
+    runnerProperties.setRunnerId("runner_1");
+
+    RunnerExecutionService service =
+        new RunnerExecutionService(
+            repository,
+            executionProperties,
+            runnerProperties,
+            List.of(new ManualStepExecutor(), new UnsupportedStepExecutor()));
+
+    service.processNext();
+
+    assertEquals("failed", repository.runStatus);
+    assertEquals("failed", repository.planStatus);
+  }
+
+  @Test
+  void processFailsWhenPlanStatusUpdateFails() {
+    FakeRunnerRepository repository = new FakeRunnerRepository();
+    repository.claimed = run("exec_1", "dry_run");
+    repository.failPlanStatusUpdate = true;
+    repository.steps.add(step("step_1", 1, "manual", "{}"));
+
+    ExecutionProperties executionProperties = new ExecutionProperties();
+    RunnerProperties runnerProperties = new RunnerProperties();
+    runnerProperties.setRunnerId("runner_1");
+
+    RunnerExecutionService service =
+        new RunnerExecutionService(
+            repository,
+            executionProperties,
+            runnerProperties,
+            List.of(new ManualStepExecutor(), new UnsupportedStepExecutor()));
+
+    assertThrows(AppException.class, service::processNext);
+  }
+
   private ExecutionRunRecord run(String id, String mode) {
     return new ExecutionRunRecord(
         id,
@@ -121,6 +166,7 @@ class RunnerExecutionServiceTest {
     final List<String> stepStatuses = new ArrayList<>();
     String runStatus;
     String planStatus;
+    boolean failPlanStatusUpdate;
 
     @Override
     public Optional<ExecutionRunRecord> claimNextQueuedRun(String runnerId) {
@@ -146,6 +192,9 @@ class RunnerExecutionServiceTest {
 
     @Override
     public boolean updatePlanStatus(String tenantId, String planId, String status) {
+      if (failPlanStatusUpdate) {
+        return false;
+      }
       planStatus = status;
       return true;
     }

@@ -31,6 +31,8 @@ public interface ExecutionRepository {
 
   boolean cancelRun(String tenantId, String executionId);
 
+  boolean cancelExecutionSteps(String tenantId, String executionId);
+
   Optional<ExecutionRunRecord> claimNextQueuedRun(String runnerId);
 
   boolean updateRunStatus(ExecutionRunStatusUpdateCommand command);

@@ -56,6 +56,11 @@ abstract class RunnerFakeExecutionRepositoryBase implements ExecutionRepository 
   }
 
   @Override
+  public boolean cancelExecutionSteps(String tenantId, String executionId) {
+    return true;
+  }
+
+  @Override
   public Optional<ExecutionRunRecord> claimNextQueuedRun(String runnerId) {
     return Optional.empty();
   }

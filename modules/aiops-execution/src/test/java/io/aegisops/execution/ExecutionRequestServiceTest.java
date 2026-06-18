@@ -2,6 +2,7 @@ package io.aegisops.execution;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.aegisops.common.exception.AppException;
@@ -87,6 +88,39 @@ class ExecutionRequestServiceTest {
                 "tenant_1", "plan_1", new ExecutionCreateRequest(false, "alice")));
   }
 
+  @Test
+  void cancelExecutionCancelsRunStepsAndPlan() {
+    FakeExecutionRepository repository = new FakeExecutionRepository();
+    repository.createdRun =
+        new ExecutionRunCreateCommand(
+            "exec_1", "tenant_1", "inc_1", "plan_1", "running", "dry_run", "alice");
+
+    repository.createdSteps.add(
+        new ExecutionStepCreateCommand(
+            "step_1",
+            "tenant_1",
+            "exec_1",
+            "planstep_1",
+            1,
+            "Check",
+            "manual",
+            "human",
+            "queued",
+            "{}",
+            ""));
+
+    ExecutionProperties properties = new ExecutionProperties();
+    ExecutionRequestService service =
+        new ExecutionRequestService(repository, properties, new ObjectMapper());
+
+    var response = service.cancel("tenant_1", "exec_1");
+
+    assertEquals("exec_1", repository.cancelledExecutionId);
+    assertTrue(repository.stepsCancelled);
+    assertEquals("cancelled", repository.planStatus);
+    assertEquals("execution_cancelled", repository.timelines.get(0).eventType());
+  }
+
   private PlanForExecutionRecord plan(String status) {
     return new PlanForExecutionRecord(
         "plan_1", "tenant_1", "inc_1", status, "medium", "title", "summary");
@@ -99,6 +133,8 @@ class ExecutionRequestServiceTest {
     final List<TimelineCreateCommand> timelines = new ArrayList<>();
     ExecutionRunCreateCommand createdRun;
     final List<ExecutionStepCreateCommand> createdSteps = new ArrayList<>();
+    String cancelledExecutionId;
+    boolean stepsCancelled;
 
     @Override
     public Optional<PlanForExecutionRecord> findPlan(String tenantId, String planId) {
@@ -178,6 +214,18 @@ class ExecutionRequestServiceTest {
     @Override
     public void addTimeline(TimelineCreateCommand command) {
       timelines.add(command);
+    }
+
+    @Override
+    public boolean cancelRun(String tenantId, String executionId) {
+      cancelledExecutionId = executionId;
+      return true;
+    }
+
+    @Override
+    public boolean cancelExecutionSteps(String tenantId, String executionId) {
+      stepsCancelled = true;
+      return true;
     }
   }
 }
