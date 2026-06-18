@@ -101,7 +101,8 @@ class AnsibleStepExecutorTest {
     properties.setCleanupWorkspace(true);
     properties.setBinary("ansible-playbook");
 
-    AnsibleWorkspaceManager workspaceManager = new AnsibleWorkspaceManager(properties);
+    AnsibleWorkspaceManager workspaceManager =
+        new AnsibleWorkspaceManager(properties, new AnsibleContentSafetyScanner());
 
     return new AnsibleStepExecutor(
         AnsibleStepExecutorDeps.create(

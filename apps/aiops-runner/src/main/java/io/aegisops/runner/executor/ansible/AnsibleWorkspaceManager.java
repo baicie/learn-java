@@ -12,9 +12,12 @@ import org.springframework.stereotype.Component;
 @Component
 public class AnsibleWorkspaceManager {
   private final AnsibleRunnerProperties properties;
+  private final AnsibleContentSafetyScanner contentSafetyScanner;
 
-  public AnsibleWorkspaceManager(AnsibleRunnerProperties properties) {
+  public AnsibleWorkspaceManager(
+      AnsibleRunnerProperties properties, AnsibleContentSafetyScanner contentSafetyScanner) {
     this.properties = properties;
+    this.contentSafetyScanner = contentSafetyScanner;
   }
 
   public AnsibleWorkspace create(AnsibleInventoryRecord inventory, AnsiblePlaybookRecord playbook) {
@@ -59,12 +62,12 @@ public class AnsibleWorkspaceManager {
   private void writeInventory(AnsibleInventoryRecord inventory, Path inventoryFile)
       throws Exception {
     if ("inline".equals(inventory.inventoryType())) {
-      writeText(inventoryFile, inventory.inlineInventory());
+      writeText(inventoryFile, inventory.inlineInventory(), true);
       return;
     }
 
     if ("file_ref".equals(inventory.inventoryType())) {
-      copyResourceFile(inventory.fileRef(), inventoryFile);
+      copyResourceFile(inventory.fileRef(), inventoryFile, true);
       return;
     }
 
@@ -73,12 +76,12 @@ public class AnsibleWorkspaceManager {
 
   private void writePlaybook(AnsiblePlaybookRecord playbook, Path playbookFile) throws Exception {
     if (playbook.playbookContent() != null && !playbook.playbookContent().isBlank()) {
-      writeText(playbookFile, playbook.playbookContent());
+      writeText(playbookFile, playbook.playbookContent(), false);
       return;
     }
 
     if (playbook.playbookRef() != null && !playbook.playbookRef().isBlank()) {
-      copyResourceFile(playbook.playbookRef(), playbookFile);
+      copyResourceFile(playbook.playbookRef(), playbookFile, false);
       return;
     }
 
@@ -86,17 +89,25 @@ public class AnsibleWorkspaceManager {
         "ANSIBLE_PLAYBOOK_SOURCE_REQUIRED", "Ansible playbook content or ref is required");
   }
 
-  private void writeText(Path target, String content) throws Exception {
+  private void writeText(Path target, String content, boolean inventory) throws Exception {
     String text = content == null ? "" : content;
+
     if (text.getBytes(StandardCharsets.UTF_8).length
         > properties.normalizedMaxMaterializedFileBytes()) {
       throw new AppException(
           "ANSIBLE_MATERIALIZED_FILE_TOO_LARGE", "Ansible materialized file is too large");
     }
+
+    if (inventory) {
+      contentSafetyScanner.scanInventory(text);
+    } else {
+      contentSafetyScanner.scanPlaybook(text);
+    }
+
     Files.writeString(target, text, StandardCharsets.UTF_8);
   }
 
-  private void copyResourceFile(String ref, Path target) throws Exception {
+  private void copyResourceFile(String ref, Path target, boolean inventory) throws Exception {
     if (ref == null || ref.isBlank()) {
       throw new AppException("ANSIBLE_RESOURCE_REF_REQUIRED", "Ansible resource ref is required");
     }
@@ -118,7 +129,14 @@ public class AnsibleWorkspaceManager {
           "ANSIBLE_MATERIALIZED_FILE_TOO_LARGE", "Ansible resource file is too large");
     }
 
-    Files.copy(source, target);
+    String text = Files.readString(source, StandardCharsets.UTF_8);
+    if (inventory) {
+      contentSafetyScanner.scanInventory(text);
+    } else {
+      contentSafetyScanner.scanPlaybook(text);
+    }
+
+    Files.writeString(target, text, StandardCharsets.UTF_8);
   }
 
   private void ensureInside(Path root, Path child) {

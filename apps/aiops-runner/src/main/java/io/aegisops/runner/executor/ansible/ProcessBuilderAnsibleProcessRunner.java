@@ -6,7 +6,9 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import org.springframework.stereotype.Component;
 
@@ -31,28 +33,31 @@ public class ProcessBuilderAnsibleProcessRunner implements AnsibleProcessRunner 
 
       Process process = builder.start();
       var executor = Executors.newFixedThreadPool(2);
+
       try {
-        var stdoutFuture = executor.submit(() -> readLimited(process.getInputStream()));
-        var stderrFuture = executor.submit(() -> readLimited(process.getErrorStream()));
+        Future<String> stdoutFuture = executor.submit(() -> readLimited(process.getInputStream()));
+        Future<String> stderrFuture = executor.submit(() -> readLimited(process.getErrorStream()));
 
         boolean finished = process.waitFor(timeout.toMillis(), TimeUnit.MILLISECONDS);
 
         if (!finished) {
           process.destroyForcibly();
+          process.waitFor(2, TimeUnit.SECONDS);
+
           return new AnsibleProcessResult(
               -1,
               true,
               System.currentTimeMillis() - started,
-              stdoutFuture.get(1, TimeUnit.SECONDS),
-              stderrFuture.get(1, TimeUnit.SECONDS));
+              readFutureBestEffort(stdoutFuture),
+              readFutureBestEffort(stderrFuture));
         }
 
         return new AnsibleProcessResult(
             process.exitValue(),
             false,
             System.currentTimeMillis() - started,
-            stdoutFuture.get(1, TimeUnit.SECONDS),
-            stderrFuture.get(1, TimeUnit.SECONDS));
+            readFutureBestEffort(stdoutFuture),
+            readFutureBestEffort(stderrFuture));
       } finally {
         executor.shutdownNow();
       }
@@ -72,16 +77,51 @@ public class ProcessBuilderAnsibleProcessRunner implements AnsibleProcessRunner 
       throw new AppException("ANSIBLE_ARGV_INVALID", "Ansible argv contains blank item");
     }
 
+    validateBinary(argv.get(0));
+
     if (!argv.contains("--check")) {
       throw new AppException(
           "ANSIBLE_CHECK_MODE_REQUIRED", "Ansible sandbox execution must use --check");
     }
 
-    if (argv.stream()
-        .anyMatch(
-            item -> "sh".equals(item) || "bash".equals(item) || "cmd".equalsIgnoreCase(item))) {
+    if (argv.stream().anyMatch(this::isShellBinary)) {
       throw new AppException("ANSIBLE_SHELL_BLOCKED", "Shell execution is not allowed");
     }
+  }
+
+  private void validateBinary(String binary) {
+    String baseName = baseName(binary);
+
+    if (!"ansible-playbook".equals(baseName) && !"ansible-playbook.exe".equals(baseName)) {
+      throw new AppException(
+          "ANSIBLE_BINARY_NOT_ALLOWED",
+          "Only ansible-playbook binary is allowed for sandbox check execution");
+    }
+  }
+
+  private boolean isShellBinary(String value) {
+    String baseName = baseName(value);
+
+    return List.of(
+            "sh",
+            "bash",
+            "zsh",
+            "dash",
+            "fish",
+            "cmd",
+            "cmd.exe",
+            "powershell",
+            "powershell.exe",
+            "pwsh",
+            "pwsh.exe")
+        .contains(baseName);
+  }
+
+  private String baseName(String value) {
+    String normalized = value.replace('\\', '/');
+    int index = normalized.lastIndexOf('/');
+    String name = index >= 0 ? normalized.substring(index + 1) : normalized;
+    return name.toLowerCase(Locale.ROOT);
   }
 
   private String readLimited(InputStream input) throws Exception {
@@ -89,5 +129,13 @@ public class ProcessBuilderAnsibleProcessRunner implements AnsibleProcessRunner 
     String text = new String(bytes, StandardCharsets.UTF_8);
     int max = properties.normalizedMaxOutputChars();
     return text.length() <= max ? text : text.substring(0, max);
+  }
+
+  private String readFutureBestEffort(Future<String> future) {
+    try {
+      return future.get(1, TimeUnit.SECONDS);
+    } catch (Exception ex) {
+      return "";
+    }
   }
 }

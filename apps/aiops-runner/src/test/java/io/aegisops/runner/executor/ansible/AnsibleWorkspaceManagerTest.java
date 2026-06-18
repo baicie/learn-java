@@ -22,7 +22,8 @@ class AnsibleWorkspaceManagerTest {
     properties.setResourceRoot(tempDir.resolve("resources"));
     properties.setCleanupWorkspace(false);
 
-    AnsibleWorkspaceManager manager = new AnsibleWorkspaceManager(properties);
+    AnsibleWorkspaceManager manager =
+        new AnsibleWorkspaceManager(properties, new AnsibleContentSafetyScanner());
 
     AnsibleWorkspace workspace = manager.create(inventoryInline(), playbookInline());
 
@@ -38,11 +39,74 @@ class AnsibleWorkspaceManagerTest {
     properties.setWorkspaceRoot(tempDir.resolve("workspaces"));
     properties.setResourceRoot(tempDir.resolve("resources"));
 
-    AnsibleWorkspaceManager manager = new AnsibleWorkspaceManager(properties);
+    AnsibleWorkspaceManager manager =
+        new AnsibleWorkspaceManager(properties, new AnsibleContentSafetyScanner());
 
     assertThrows(
         AppException.class,
         () -> manager.create(inventoryFileRef("../secret.ini"), playbookInline()));
+  }
+
+  @Test
+  void rejectInlineInventoryWithCredentialLikeContent() {
+    AnsibleRunnerProperties properties = new AnsibleRunnerProperties();
+    properties.setWorkspaceRoot(tempDir.resolve("workspaces"));
+    properties.setResourceRoot(tempDir.resolve("resources"));
+    properties.setCleanupWorkspace(false);
+
+    AnsibleWorkspaceManager manager =
+        new AnsibleWorkspaceManager(properties, new AnsibleContentSafetyScanner());
+
+    AnsibleInventoryRecord inventory =
+        new AnsibleInventoryRecord(
+            "inv_1",
+            "tenant_1",
+            "prod",
+            "desc",
+            "inline",
+            "[web]\n10.0.0.1 ansible_password=123456",
+            null,
+            true,
+            "alice",
+            OffsetDateTime.now(),
+            OffsetDateTime.now());
+
+    assertThrows(AppException.class, () -> manager.create(inventory, playbookInline()));
+  }
+
+  @Test
+  void rejectInlinePlaybookWithCredentialLikeContent() {
+    AnsibleRunnerProperties properties = new AnsibleRunnerProperties();
+    properties.setWorkspaceRoot(tempDir.resolve("workspaces"));
+    properties.setResourceRoot(tempDir.resolve("resources"));
+    properties.setCleanupWorkspace(false);
+
+    AnsibleWorkspaceManager manager =
+        new AnsibleWorkspaceManager(properties, new AnsibleContentSafetyScanner());
+
+    AnsiblePlaybookRecord playbook =
+        new AnsiblePlaybookRecord(
+            "pb_1",
+            "tenant_1",
+            "bad",
+            "desc",
+            null,
+            """
+            - hosts: all
+              vars:
+                ansible_ssh_private_key_file: /root/.ssh/id_rsa
+              tasks:
+                - debug:
+                    msg: bad
+            """,
+            "{}",
+            "[\"restart\"]",
+            true,
+            "alice",
+            OffsetDateTime.now(),
+            OffsetDateTime.now());
+
+    assertThrows(AppException.class, () -> manager.create(inventoryInline(), playbook));
   }
 
   private AnsibleInventoryRecord inventoryInline() {

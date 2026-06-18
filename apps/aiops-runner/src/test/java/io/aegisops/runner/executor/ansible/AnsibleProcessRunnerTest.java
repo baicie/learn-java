@@ -37,4 +37,46 @@ class AnsibleProcessRunnerTest {
             runner.run(
                 List.of("sh", "-c", "ansible-playbook --check"), tempDir, Duration.ofSeconds(1)));
   }
+
+  @Test
+  void rejectNonAnsibleBinaryEvenWithCheck() {
+    AnsibleRunnerProperties properties = new AnsibleRunnerProperties();
+    ProcessBuilderAnsibleProcessRunner runner = new ProcessBuilderAnsibleProcessRunner(properties);
+
+    assertThrows(
+        AppException.class,
+        () ->
+            runner.run(
+                List.of("python", "--check", "-i", "inventory.ini", "playbook.yml"),
+                tempDir,
+                Duration.ofSeconds(1)));
+  }
+
+  @Test
+  void rejectShellBinaryByPathEvenWithCheck() {
+    AnsibleRunnerProperties properties = new AnsibleRunnerProperties();
+    ProcessBuilderAnsibleProcessRunner runner = new ProcessBuilderAnsibleProcessRunner(properties);
+
+    assertThrows(
+        AppException.class,
+        () ->
+            runner.run(
+                List.of("/bin/sh", "--check", "-i", "inventory.ini", "playbook.yml"),
+                tempDir,
+                Duration.ofSeconds(1)));
+  }
+
+  @Test
+  void rejectPowerShellBinaryEvenWithCheck() {
+    AnsibleRunnerProperties properties = new AnsibleRunnerProperties();
+    ProcessBuilderAnsibleProcessRunner runner = new ProcessBuilderAnsibleProcessRunner(properties);
+
+    assertThrows(
+        AppException.class,
+        () ->
+            runner.run(
+                List.of("powershell.exe", "--check", "-i", "inventory.ini", "playbook.yml"),
+                tempDir,
+                Duration.ofSeconds(1)));
+  }
 }
