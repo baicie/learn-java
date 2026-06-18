@@ -2,8 +2,7 @@ package io.aegisops.runner.executor.ansible;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.aegisops.execution.AnsibleJson;
-import io.aegisops.execution.dto.AnsibleInventoryRecord;
-import io.aegisops.execution.dto.AnsiblePlaybookRecord;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import org.springframework.stereotype.Component;
@@ -16,46 +15,49 @@ public class AnsibleCommandPreviewBuilder {
     this.json = new AnsibleJson(objectMapper);
   }
 
-  public String build(
-      AnsibleInventoryRecord inventory,
-      AnsiblePlaybookRecord playbook,
+  public List<String> buildArgv(
+      String binary,
+      Path inventoryFile,
+      Path playbookFile,
       AnsibleActionPayload payload,
       boolean checkMode) {
-    List<String> parts = new ArrayList<>();
-    parts.add("ansible-playbook");
+    List<String> argv = new ArrayList<>();
+    argv.add(binary);
 
     if (checkMode) {
-      parts.add("--check");
+      argv.add("--check");
     }
 
-    parts.add("-i");
-    parts.add(displayInventory(inventory));
-    parts.add(displayPlaybook(playbook));
+    argv.add("-i");
+    argv.add(inventoryFile.toString());
+    argv.add(playbookFile.toString());
 
     if (payload.tags() != null && !payload.tags().isEmpty()) {
-      parts.add("--tags");
-      parts.add(String.join(",", payload.tags()));
+      argv.add("--tags");
+      argv.add(String.join(",", payload.tags()));
     }
 
     if (payload.extraVars() != null && !payload.extraVars().isEmpty()) {
-      parts.add("--extra-vars");
-      parts.add("'" + json.write(payload.extraVars()).replace("'", "'\\''") + "'");
+      argv.add("--extra-vars");
+      argv.add(json.write(payload.extraVars()));
     }
 
-    return String.join(" ", parts);
+    return argv;
   }
 
-  private String displayInventory(AnsibleInventoryRecord inventory) {
-    if ("file_ref".equals(inventory.inventoryType())) {
-      return inventory.fileRef();
-    }
-    return "<inline-inventory:" + inventory.name() + ">";
+  public String toDisplayCommand(List<String> argv) {
+    return argv.stream().map(this::quote).reduce((a, b) -> a + " " + b).orElse("");
   }
 
-  private String displayPlaybook(AnsiblePlaybookRecord playbook) {
-    if (playbook.playbookRef() != null && !playbook.playbookRef().isBlank()) {
-      return playbook.playbookRef();
+  private String quote(String arg) {
+    if (arg == null || arg.isBlank()) {
+      return "''";
     }
-    return "<inline-playbook:" + playbook.name() + ">";
+
+    if (arg.matches("[a-zA-Z0-9_./:=,@+-]+")) {
+      return arg;
+    }
+
+    return "'" + arg.replace("'", "'\\''") + "'";
   }
 }

@@ -113,6 +113,7 @@ class JooqAnsibleRepositoryGeneratedSqlTest {
             "pb_1",
             false,
             true,
+            true,
             "[\"inv_1\"]",
             "[\"service_name\"]",
             32768,
@@ -130,5 +131,8 @@ class JooqAnsibleRepositoryGeneratedSqlTest {
         lower.contains("ansible_execution_policy"),
         "expected ansible_execution_policy, got: " + sql);
     assertTrue(lower.contains("service_name"), "expected extra var in sql, got: " + sql);
+    assertTrue(
+        lower.contains("allow_check_execution"),
+        "expected allow_check_execution in sql, got: " + sql);
   }
 }

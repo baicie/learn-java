@@ -20,13 +20,29 @@ class AnsibleSafetyValidatorTest {
   private final AnsibleSafetyValidator validator = new AnsibleSafetyValidator(objectMapper);
 
   @Test
-  void allowValidDryRun() {
+  void allowValidDryRunPreview() {
     assertDoesNotThrow(
         () ->
-            validator.validateDryRun(
+            validator.validateDryRunPreview(
                 inventory(true),
                 playbook(true, List.of("restart")),
-                policy(true, List.of("inv_1"), List.of("service_name")),
+                policy(true, true, List.of("inv_1"), List.of("service_name")),
+                new AnsibleActionPayload(
+                    "inv_1",
+                    "pb_1",
+                    true,
+                    List.of("restart"),
+                    Map.of("service_name", "order-service"))));
+  }
+
+  @Test
+  void allowValidCheckExecution() {
+    assertDoesNotThrow(
+        () ->
+            validator.validateCheckExecution(
+                inventory(true),
+                playbook(true, List.of("restart")),
+                policy(true, true, List.of("inv_1"), List.of("service_name")),
                 new AnsibleActionPayload(
                     "inv_1",
                     "pb_1",
@@ -40,10 +56,10 @@ class AnsibleSafetyValidatorTest {
     assertThrows(
         AppException.class,
         () ->
-            validator.validateDryRun(
+            validator.validateCheckExecution(
                 inventory(false),
                 playbook(true, List.of("restart")),
-                policy(true, List.of("inv_1"), List.of("service_name")),
+                policy(true, true, List.of("inv_1"), List.of("service_name")),
                 new AnsibleActionPayload("inv_1", "pb_1", true, List.of(), Map.of())));
   }
 
@@ -52,10 +68,10 @@ class AnsibleSafetyValidatorTest {
     assertThrows(
         AppException.class,
         () ->
-            validator.validateDryRun(
+            validator.validateCheckExecution(
                 inventory(true),
                 playbook(true, List.of("restart")),
-                policy(true, List.of("other_inv"), List.of("service_name")),
+                policy(true, true, List.of("other_inv"), List.of("service_name")),
                 new AnsibleActionPayload("inv_1", "pb_1", true, List.of(), Map.of())));
   }
 
@@ -64,10 +80,10 @@ class AnsibleSafetyValidatorTest {
     assertThrows(
         AppException.class,
         () ->
-            validator.validateDryRun(
+            validator.validateCheckExecution(
                 inventory(true),
                 playbook(true, List.of("restart")),
-                policy(true, List.of("inv_1"), List.of("service_name")),
+                policy(true, true, List.of("inv_1"), List.of("service_name")),
                 new AnsibleActionPayload("inv_1", "pb_1", true, List.of("delete"), Map.of())));
   }
 
@@ -76,10 +92,10 @@ class AnsibleSafetyValidatorTest {
     assertThrows(
         AppException.class,
         () ->
-            validator.validateDryRun(
+            validator.validateCheckExecution(
                 inventory(true),
                 playbook(true, List.of("restart")),
-                policy(true, List.of("inv_1"), List.of("service_name", "password")),
+                policy(true, true, List.of("inv_1"), List.of("service_name", "password")),
                 new AnsibleActionPayload(
                     "inv_1", "pb_1", true, List.of(), Map.of("password", "123456"))));
   }
@@ -89,10 +105,10 @@ class AnsibleSafetyValidatorTest {
     assertThrows(
         AppException.class,
         () ->
-            validator.validateDryRun(
+            validator.validateCheckExecution(
                 inventory(true),
                 playbook(true, List.of("restart")),
-                policy(true, List.of("inv_1"), List.of("service_name", "db_password")),
+                policy(true, true, List.of("inv_1"), List.of("service_name", "db_password")),
                 new AnsibleActionPayload(
                     "inv_1", "pb_1", true, List.of(), Map.of("db_password", "123456"))));
   }
@@ -102,12 +118,41 @@ class AnsibleSafetyValidatorTest {
     assertThrows(
         AppException.class,
         () ->
-            validator.validateDryRun(
+            validator.validateCheckExecution(
                 inventory(true),
                 playbook(true, List.of("restart")),
-                policy(true, List.of("inv_1"), List.of("service_name", "api_token")),
+                policy(true, true, List.of("inv_1"), List.of("service_name", "api_token")),
                 new AnsibleActionPayload(
                     "inv_1", "pb_1", true, List.of(), Map.of("api_token", "secret-token"))));
+  }
+
+  @Test
+  void rejectCheckExecutionWhenPolicyDisabled() {
+    assertThrows(
+        AppException.class,
+        () ->
+            validator.validateCheckExecution(
+                inventory(true),
+                playbook(true, List.of("restart")),
+                policy(true, false, List.of("inv_1"), List.of("service_name")),
+                new AnsibleActionPayload(
+                    "inv_1",
+                    "pb_1",
+                    true,
+                    List.of("restart"),
+                    Map.of("service_name", "order-service"))));
+  }
+
+  @Test
+  void rejectLiveExecutionAsNotImplemented() {
+    assertThrows(
+        AppException.class,
+        () ->
+            validator.validateLive(
+                inventory(true),
+                playbook(true, List.of("restart")),
+                policy(true, true, List.of("inv_1"), List.of("service_name")),
+                new AnsibleActionPayload("inv_1", "pb_1", true, List.of(), Map.of())));
   }
 
   private AnsibleInventoryRecord inventory(boolean enabled) {
@@ -142,12 +187,16 @@ class AnsibleSafetyValidatorTest {
   }
 
   private AnsiblePolicyRecord policy(
-      boolean enabled, List<String> inventories, List<String> extraVars) {
+      boolean enabled,
+      boolean allowCheckExecution,
+      List<String> inventories,
+      List<String> extraVars) {
     return new AnsiblePolicyRecord(
         "apol_1",
         "tenant_1",
         "pb_1",
         false,
+        allowCheckExecution,
         true,
         json.write(inventories),
         json.write(extraVars),

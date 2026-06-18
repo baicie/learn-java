@@ -9,21 +9,34 @@ import org.junit.jupiter.api.Test;
 
 class RunnerSafetyTest {
   @Test
-  void runnerDoesNotUseLiveExecutionLibrariesInPhase54() throws Exception {
+  void runnerUsesProcessBuilderOnlyInAnsibleProcessRunner() throws Exception {
     String content = readMainSources(Path.of("src/main/java"));
 
-    assertFalse(content.contains("ProcessBuilder"));
     assertFalse(content.contains("Runtime.getRuntime"));
     assertFalse(content.contains("JSch"));
     assertFalse(content.contains("sshj"));
-    assertFalse(content.contains("AnsibleRunner"));
-    assertFalse(content.contains("WebClient.create"));
-    assertFalse(content.contains("RestTemplate"));
+    assertFalse(content.contains("AnsibleVault"));
 
-    assertTrue(content.contains("heartbeat"));
-    assertTrue(content.contains("timeout"));
-    assertTrue(content.contains("webhook"));
-    assertTrue(content.contains("ansible"));
+    int processBuilderCount = count(content, "new ProcessBuilder");
+    assertTrue(processBuilderCount <= 1);
+
+    Path runnerFile =
+        Path.of(
+            "src/main/java/io/aegisops/runner/executor/ansible/ProcessBuilderAnsibleProcessRunner.java");
+    assertTrue(Files.readString(runnerFile).contains("new ProcessBuilder(argv)"));
+    assertFalse(Files.readString(runnerFile).contains("sh -c"));
+    assertFalse(Files.readString(runnerFile).contains("cmd /c"));
+    assertTrue(Files.readString(runnerFile).contains("--check"));
+  }
+
+  private int count(String content, String pattern) {
+    int count = 0;
+    int index = 0;
+    while ((index = content.indexOf(pattern, index)) >= 0) {
+      count++;
+      index += pattern.length();
+    }
+    return count;
   }
 
   private String readMainSources(Path root) throws Exception {

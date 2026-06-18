@@ -124,6 +124,7 @@ public class JooqAnsibleRepository implements AnsibleRepository {
         .set(ANSIBLE_EXECUTION_POLICY.TENANT_ID, command.tenantId())
         .set(ANSIBLE_EXECUTION_POLICY.PLAYBOOK_ID, command.playbookId())
         .set(ANSIBLE_EXECUTION_POLICY.ALLOW_LIVE, command.allowLive())
+        .set(ANSIBLE_EXECUTION_POLICY.ALLOW_CHECK_EXECUTION, command.allowCheckExecution())
         .set(ANSIBLE_EXECUTION_POLICY.DEFAULT_CHECK_MODE, command.defaultCheckMode())
         .set(
             ANSIBLE_EXECUTION_POLICY.ALLOWED_INVENTORY_IDS,
@@ -192,6 +193,7 @@ public class JooqAnsibleRepository implements AnsibleRepository {
             ANSIBLE_EXECUTION_POLICY.TENANT_ID,
             ANSIBLE_EXECUTION_POLICY.PLAYBOOK_ID,
             ANSIBLE_EXECUTION_POLICY.ALLOW_LIVE,
+            ANSIBLE_EXECUTION_POLICY.ALLOW_CHECK_EXECUTION,
             ANSIBLE_EXECUTION_POLICY.DEFAULT_CHECK_MODE,
             ANSIBLE_EXECUTION_POLICY
                 .ALLOWED_INVENTORY_IDS
@@ -260,6 +262,7 @@ public class JooqAnsibleRepository implements AnsibleRepository {
         record.get(ANSIBLE_EXECUTION_POLICY.TENANT_ID),
         record.get(ANSIBLE_EXECUTION_POLICY.PLAYBOOK_ID),
         Boolean.TRUE.equals(record.get(ANSIBLE_EXECUTION_POLICY.ALLOW_LIVE)),
+        Boolean.TRUE.equals(record.get(ANSIBLE_EXECUTION_POLICY.ALLOW_CHECK_EXECUTION)),
         Boolean.TRUE.equals(record.get(ANSIBLE_EXECUTION_POLICY.DEFAULT_CHECK_MODE)),
         record.get("allowed_inventory_ids_json", String.class),
         record.get("allowed_extra_vars_json", String.class),

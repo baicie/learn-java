@@ -13,6 +13,7 @@ public record AnsiblePlaybookCreateRequest(
     List<String> allowedInventoryIds,
     List<String> allowedExtraVars,
     Boolean allowLive,
+    Boolean allowCheckExecution,
     Boolean defaultCheckMode,
     Integer maxExtraVarsBytes,
     Integer timeoutSeconds,

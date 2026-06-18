@@ -23,3 +23,11 @@ aiops:
     timeout-sweep-delay-ms: ${AIOPS_RUNNER_SWEEP_MS:10000}
     max-runs-per-tick: ${AIOPS_RUNNER_MAX_PER_TICK:1}
     timeout-sweep-limit: ${AIOPS_RUNNER_SWEEP_LIMIT:20}
+    ansible:
+      check-execution-enabled: ${AIOPS_RUNNER_ANSIBLE_CHECK_ENABLED:true}
+      binary: ${AIOPS_RUNNER_ANSIBLE_BINARY:ansible-playbook}
+      workspace-root: ${AIOPS_RUNNER_ANSIBLE_WORKSPACE_ROOT:.runtime/ansible/workspaces}
+      resource-root: ${AIOPS_RUNNER_ANSIBLE_RESOURCE_ROOT:.runtime/ansible/resources}
+      cleanup-workspace: ${AIOPS_RUNNER_ANSIBLE_CLEANUP_WORKSPACE:true}
+      max-output-chars: ${AIOPS_RUNNER_ANSIBLE_MAX_OUTPUT_CHARS:65536}
+      max-materialized-file-bytes: ${AIOPS_RUNNER_ANSIBLE_MAX_MATERIALIZED_FILE_BYTES:1048576}

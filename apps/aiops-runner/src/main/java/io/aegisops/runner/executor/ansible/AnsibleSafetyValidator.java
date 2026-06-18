@@ -36,7 +36,21 @@ public class AnsibleSafetyValidator {
     this.json = new AnsibleJson(objectMapper);
   }
 
-  public void validateDryRun(
+  public void validateCheckExecution(
+      AnsibleInventoryRecord inventory,
+      AnsiblePlaybookRecord playbook,
+      AnsiblePolicyRecord policy,
+      AnsibleActionPayload payload) {
+    validateCommon(inventory, playbook, policy, payload);
+
+    if (!policy.allowCheckExecution()) {
+      throw new AppException(
+          "ANSIBLE_CHECK_EXECUTION_NOT_ALLOWED",
+          "Ansible check execution is not allowed by policy");
+    }
+  }
+
+  public void validateDryRunPreview(
       AnsibleInventoryRecord inventory,
       AnsiblePlaybookRecord playbook,
       AnsiblePolicyRecord policy,
@@ -58,7 +72,7 @@ public class AnsibleSafetyValidator {
 
     throw new AppException(
         "ANSIBLE_LIVE_NOT_IMPLEMENTED",
-        "Ansible live execution is not implemented in Phase5.5. Use dry-run mode.");
+        "Ansible live execution is not implemented in Phase5.6. Use check mode.");
   }
 
   private void validateCommon(
@@ -131,6 +145,7 @@ public class AnsibleSafetyValidator {
 
     for (String key : extraVars.keySet()) {
       String normalized = key.toLowerCase(Locale.ROOT);
+
       if (isDeniedExtraVarKey(normalized)) {
         throw new AppException(
             "ANSIBLE_SECRET_VAR_BLOCKED", "Credential-like extraVar is blocked: " + key);

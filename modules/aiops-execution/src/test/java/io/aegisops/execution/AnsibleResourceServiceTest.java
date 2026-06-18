@@ -56,6 +56,7 @@ class AnsibleResourceServiceTest {
                 List.of("service_name"),
                 false,
                 true,
+                true,
                 32768,
                 1800,
                 "alice"));
@@ -86,6 +87,7 @@ class AnsibleResourceServiceTest {
                     List.of("service_name"),
                     false,
                     true,
+                    true,
                     32768,
                     1800,
                     "alice")));
@@ -114,6 +116,7 @@ class AnsibleResourceServiceTest {
                     List.of("inv_1"),
                     List.of("service_name"),
                     false,
+                    true,
                     true,
                     32768,
                     1800,
@@ -240,6 +243,7 @@ class AnsibleResourceServiceTest {
               policyCommand.tenantId(),
               policyCommand.playbookId(),
               policyCommand.allowLive(),
+              policyCommand.allowCheckExecution(),
               policyCommand.defaultCheckMode(),
               policyCommand.allowedInventoryIdsJson(),
               policyCommand.allowedExtraVarsJson(),

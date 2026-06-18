@@ -5,6 +5,7 @@ public record AnsiblePolicyCreateCommand(
     String tenantId,
     String playbookId,
     boolean allowLive,
+    boolean allowCheckExecution,
     boolean defaultCheckMode,
     String allowedInventoryIdsJson,
     String allowedExtraVarsJson,

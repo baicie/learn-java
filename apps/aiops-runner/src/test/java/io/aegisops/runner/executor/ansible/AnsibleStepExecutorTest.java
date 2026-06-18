@@ -16,45 +16,103 @@ import io.aegisops.execution.dto.AnsiblePolicyRecord;
 import io.aegisops.execution.dto.ExecutionRunRecord;
 import io.aegisops.execution.dto.ExecutionStepRecord;
 import io.aegisops.runner.executor.StepExecutionContext;
+import java.nio.file.Path;
+import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 class AnsibleStepExecutorTest {
+  @TempDir Path tempDir;
+
   private final ObjectMapper objectMapper = new ObjectMapper();
   private final AnsibleJson json = new AnsibleJson(objectMapper);
 
   @Test
-  void dryRunGeneratesPreviewArtifact() {
-    AnsibleStepExecutor executor = executor(new FakeAnsibleRepository());
+  void dryRunExecutesAnsibleCheckAndWritesArtifact() {
+    FakeAnsibleProcessRunner processRunner =
+        new FakeAnsibleProcessRunner(new AnsibleProcessResult(0, false, 12, "ok", ""));
+
+    AnsibleStepExecutor executor = executor(new FakeAnsibleRepository(), processRunner, true);
 
     var result = executor.execute(context("dry_run", false), step(payload()));
 
     assertTrue(result.success());
+    assertTrue(processRunner.called);
+    assertTrue(processRunner.argv.contains("--check"));
     assertEquals(1, result.artifacts().size());
+    assertEquals("ansible-check-result.json", result.artifacts().get(0).name());
+    assertTrue(result.artifacts().get(0).content().contains("\"executed\":true"));
+  }
+
+  @Test
+  void dryRunReturnsFailureWhenAnsibleCheckFails() {
+    FakeAnsibleProcessRunner processRunner =
+        new FakeAnsibleProcessRunner(new AnsibleProcessResult(2, false, 12, "", "bad playbook"));
+
+    AnsibleStepExecutor executor = executor(new FakeAnsibleRepository(), processRunner, true);
+
+    var result = executor.execute(context("dry_run", false), step(payload()));
+
+    assertFalse(result.success());
+    assertTrue(result.errorMessage().contains("exit code 2"));
+    assertEquals(1, result.artifacts().size());
+  }
+
+  @Test
+  void checkExecutionDisabledFallsBackToPreviewOnly() {
+    FakeAnsibleProcessRunner processRunner =
+        new FakeAnsibleProcessRunner(new AnsibleProcessResult(0, false, 12, "ok", ""));
+
+    AnsibleStepExecutor executor = executor(new FakeAnsibleRepository(), processRunner, false);
+
+    var result = executor.execute(context("dry_run", false), step(payload()));
+
+    assertTrue(result.success());
+    assertFalse(processRunner.called);
     assertEquals("ansible-dry-run-preview.json", result.artifacts().get(0).name());
-    assertTrue(result.artifacts().get(0).content().contains("ansible-playbook"));
-    assertTrue(result.artifacts().get(0).content().contains("--check"));
   }
 
   @Test
   void liveDisabledFailsWithoutExecution() {
-    AnsibleStepExecutor executor = executor(new FakeAnsibleRepository());
+    FakeAnsibleProcessRunner processRunner =
+        new FakeAnsibleProcessRunner(new AnsibleProcessResult(0, false, 12, "ok", ""));
+
+    AnsibleStepExecutor executor = executor(new FakeAnsibleRepository(), processRunner, true);
 
     var result = executor.execute(context("live", false), step(payload()));
 
     assertFalse(result.success());
+    assertFalse(processRunner.called);
     assertEquals("Live Ansible execution is disabled.", result.errorMessage());
   }
 
-  private AnsibleStepExecutor executor(FakeAnsibleRepository repository) {
+  private AnsibleStepExecutor executor(
+      FakeAnsibleRepository repository,
+      FakeAnsibleProcessRunner processRunner,
+      boolean checkExecutionEnabled) {
+    AnsibleRunnerProperties properties = new AnsibleRunnerProperties();
+    properties.setCheckExecutionEnabled(checkExecutionEnabled);
+    properties.setWorkspaceRoot(tempDir.resolve("workspaces"));
+    properties.setResourceRoot(tempDir.resolve("resources"));
+    properties.setCleanupWorkspace(true);
+    properties.setBinary("ansible-playbook");
+
+    AnsibleWorkspaceManager workspaceManager = new AnsibleWorkspaceManager(properties);
+
     return new AnsibleStepExecutor(
-        repository,
-        new AnsibleSafetyValidator(objectMapper),
-        new AnsibleCommandPreviewBuilder(objectMapper),
-        objectMapper);
+        AnsibleStepExecutorDeps.create(
+            new AnsibleSupport(
+                repository,
+                new AnsibleSafetyValidator(objectMapper),
+                new AnsibleCommandPreviewBuilder(objectMapper),
+                workspaceManager,
+                processRunner),
+            new AnsibleRuntime(objectMapper, new AnsibleJson(objectMapper)),
+            properties));
   }
 
   private StepExecutionContext context(String mode, boolean liveEnabled) {
@@ -131,9 +189,9 @@ class AnsibleStepExecutorTest {
               tenantId,
               "prod",
               "desc",
-              "file_ref",
+              "inline",
+              "[web]\n127.0.0.1 ansible_connection=local",
               null,
-              "inventories/prod.ini",
               true,
               "alice",
               OffsetDateTime.now(),
@@ -148,8 +206,14 @@ class AnsibleStepExecutorTest {
               tenantId,
               "restart",
               "desc",
-              "playbooks/restart.yml",
               null,
+              """
+              - hosts: all
+                gather_facts: false
+                tasks:
+                  - debug:
+                      msg: hello
+              """,
               "{}",
               json.write(List.of("restart")),
               true,
@@ -166,6 +230,7 @@ class AnsibleStepExecutorTest {
               tenantId,
               playbookId,
               false,
+              true,
               true,
               json.write(List.of("inv_1")),
               json.write(List.of("service_name")),
@@ -203,6 +268,23 @@ class AnsibleStepExecutorTest {
     @Override
     public boolean setPlaybookEnabled(String tenantId, String playbookId, boolean enabled) {
       return true;
+    }
+  }
+
+  private static class FakeAnsibleProcessRunner implements AnsibleProcessRunner {
+    final AnsibleProcessResult result;
+    boolean called;
+    List<String> argv;
+
+    FakeAnsibleProcessRunner(AnsibleProcessResult result) {
+      this.result = result;
+    }
+
+    @Override
+    public AnsibleProcessResult run(List<String> argv, Path workingDirectory, Duration timeout) {
+      this.called = true;
+      this.argv = argv;
+      return result;
     }
   }
 }

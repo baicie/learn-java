@@ -14,6 +14,7 @@ public record AnsiblePlaybookResponse(
     List<String> allowedTags,
     boolean enabled,
     boolean allowLive,
+    boolean allowCheckExecution,
     boolean defaultCheckMode,
     List<String> allowedInventoryIds,
     List<String> allowedExtraVars,
