@@ -76,7 +76,15 @@ class WebhookStepExecutorTest {
     return new WebhookStepExecutor(
         repository,
         httpClient,
-        new WebhookSecurityValidator(objectMapper),
+        new WebhookSecurityValidator(
+            objectMapper,
+            host -> {
+              try {
+                return List.of(java.net.InetAddress.getByName("93.184.216.34"));
+              } catch (Exception ex) {
+                throw new IllegalStateException(ex);
+              }
+            }),
         new WebhookHeaderMasker(objectMapper),
         objectMapper);
   }

@@ -69,6 +69,81 @@ class WebhookConnectorServiceTest {
                     "alice")));
   }
 
+  @Test
+  void createRejectsLocalhostBaseUrl() {
+    WebhookConnectorService service =
+        new WebhookConnectorService(new FakeWebhookRepository(), new ObjectMapper());
+
+    assertThrows(
+        AppException.class,
+        () ->
+            service.create(
+                "tenant_1",
+                new WebhookConnectorCreateRequest(
+                    "bad",
+                    "desc",
+                    "http://localhost:8080",
+                    "POST",
+                    Map.of(),
+                    List.of(),
+                    null,
+                    List.of("POST"),
+                    false,
+                    32768,
+                    5000,
+                    "alice")));
+  }
+
+  @Test
+  void createRejectsPrivateAllowedHost() {
+    WebhookConnectorService service =
+        new WebhookConnectorService(new FakeWebhookRepository(), new ObjectMapper());
+
+    assertThrows(
+        AppException.class,
+        () ->
+            service.create(
+                "tenant_1",
+                new WebhookConnectorCreateRequest(
+                    "bad",
+                    "desc",
+                    "https://ops.example.com",
+                    "POST",
+                    Map.of(),
+                    List.of(),
+                    List.of("10.0.0.1"),
+                    List.of("POST"),
+                    false,
+                    32768,
+                    5000,
+                    "alice")));
+  }
+
+  @Test
+  void createRejectsMetadataAllowedHost() {
+    WebhookConnectorService service =
+        new WebhookConnectorService(new FakeWebhookRepository(), new ObjectMapper());
+
+    assertThrows(
+        AppException.class,
+        () ->
+            service.create(
+                "tenant_1",
+                new WebhookConnectorCreateRequest(
+                    "bad",
+                    "desc",
+                    "https://ops.example.com",
+                    "POST",
+                    Map.of(),
+                    List.of(),
+                    List.of("169.254.169.254"),
+                    List.of("POST"),
+                    false,
+                    32768,
+                    5000,
+                    "alice")));
+  }
+
   private static class FakeWebhookRepository implements WebhookRepository {
     private final WebhookJson json = new WebhookJson(new ObjectMapper());
     WebhookConnectorCreateCommand connector;

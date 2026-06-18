@@ -14,9 +14,12 @@ import org.springframework.stereotype.Component;
 @Component
 public class WebhookSecurityValidator {
   private final WebhookJson json;
+  private final WebhookAddressResolver addressResolver;
 
-  public WebhookSecurityValidator(ObjectMapper objectMapper) {
+  public WebhookSecurityValidator(
+      ObjectMapper objectMapper, WebhookAddressResolver addressResolver) {
     this.json = new WebhookJson(objectMapper);
+    this.addressResolver = addressResolver;
   }
 
   public void validateLive(
@@ -72,6 +75,10 @@ public class WebhookSecurityValidator {
     if (uri.getHost() == null || uri.getHost().isBlank()) {
       throw new AppException("WEBHOOK_HOST_REQUIRED", "Webhook host is required");
     }
+
+    if (uri.getUserInfo() != null && !uri.getUserInfo().isBlank()) {
+      throw new AppException("WEBHOOK_USERINFO_BLOCKED", "Webhook URL userinfo is not allowed");
+    }
   }
 
   private void validateMethod(WebhookPolicyRecord policy, String method) {
@@ -108,12 +115,21 @@ public class WebhookSecurityValidator {
       throw new AppException("WEBHOOK_LOCALHOST_BLOCKED", "Webhook localhost target is blocked");
     }
 
-    if (policy.blockMetadataIp() && isMetadataIp(host)) {
+    List<InetAddress> addresses = addressResolver.resolveAll(host);
+    for (InetAddress address : addresses) {
+      validateAddress(policy, address);
+    }
+  }
+
+  private void validateAddress(WebhookPolicyRecord policy, InetAddress address) {
+    String hostAddress = address.getHostAddress();
+
+    if (policy.blockMetadataIp() && isMetadataIp(hostAddress)) {
       throw new AppException(
           "WEBHOOK_METADATA_IP_BLOCKED", "Webhook metadata IP target is blocked");
     }
 
-    if (policy.blockPrivateIp() && isPrivateOrLoopback(host)) {
+    if (policy.blockPrivateIp() && isPrivateOrLoopback(address)) {
       throw new AppException("WEBHOOK_PRIVATE_IP_BLOCKED", "Webhook private IP target is blocked");
     }
   }
@@ -122,19 +138,15 @@ public class WebhookSecurityValidator {
     return "localhost".equals(host) || host.endsWith(".localhost");
   }
 
-  private boolean isMetadataIp(String host) {
-    return "169.254.169.254".equals(host);
+  private boolean isMetadataIp(String hostAddress) {
+    return "169.254.169.254".equals(hostAddress)
+        || "0:0:0:0:0:ffff:a9fe:a9fe".equalsIgnoreCase(hostAddress);
   }
 
-  private boolean isPrivateOrLoopback(String host) {
-    try {
-      InetAddress address = InetAddress.getByName(host);
-      return address.isAnyLocalAddress()
-          || address.isLoopbackAddress()
-          || address.isSiteLocalAddress()
-          || address.isLinkLocalAddress();
-    } catch (Exception ex) {
-      return false;
-    }
+  private boolean isPrivateOrLoopback(InetAddress address) {
+    return address.isAnyLocalAddress()
+        || address.isLoopbackAddress()
+        || address.isSiteLocalAddress()
+        || address.isLinkLocalAddress();
   }
 }

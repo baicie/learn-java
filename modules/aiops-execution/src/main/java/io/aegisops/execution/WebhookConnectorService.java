@@ -61,6 +61,8 @@ public class WebhookConnectorService {
             ? List.of(host)
             : request.allowedHosts();
 
+    allowedHosts.forEach(this::rejectDangerousConfiguredHost);
+
     repository.createConnector(
         new WebhookConnectorCreateCommand(
             connectorId,
@@ -131,6 +133,8 @@ public class WebhookConnectorService {
       throw new AppException(
           "WEBHOOK_CONNECTOR_HOST_REQUIRED", "Webhook connector host is required");
     }
+
+    rejectDangerousConfiguredHost(uri.getHost());
   }
 
   private WebhookConnectorResponse toResponse(
@@ -161,6 +165,50 @@ public class WebhookConnectorService {
 
   private String hostOf(String url) {
     return URI.create(url.trim()).getHost().toLowerCase();
+  }
+
+  private void rejectDangerousConfiguredHost(String host) {
+    if (host == null || host.isBlank()) {
+      throw new AppException("WEBHOOK_HOST_REQUIRED", "Webhook host is required");
+    }
+
+    String normalized = host.trim().toLowerCase();
+
+    if ("localhost".equals(normalized) || normalized.endsWith(".localhost")) {
+      throw new AppException("WEBHOOK_LOCALHOST_BLOCKED", "Webhook localhost target is blocked");
+    }
+
+    if ("169.254.169.254".equals(normalized)) {
+      throw new AppException(
+          "WEBHOOK_METADATA_IP_BLOCKED", "Webhook metadata IP target is blocked");
+    }
+
+    if (normalized.startsWith("127.")
+        || normalized.startsWith("10.")
+        || normalized.startsWith("192.168.")
+        || isPrivate172(normalized)
+        || "::1".equals(normalized)
+        || "0:0:0:0:0:0:0:1".equals(normalized)) {
+      throw new AppException("WEBHOOK_PRIVATE_IP_BLOCKED", "Webhook private IP target is blocked");
+    }
+  }
+
+  private boolean isPrivate172(String host) {
+    if (!host.startsWith("172.")) {
+      return false;
+    }
+
+    String[] parts = host.split("\\.");
+    if (parts.length < 2) {
+      return false;
+    }
+
+    try {
+      int second = Integer.parseInt(parts[1]);
+      return second >= 16 && second <= 31;
+    } catch (NumberFormatException ex) {
+      return false;
+    }
   }
 
   private String normalizeMethod(String method, String fallback) {

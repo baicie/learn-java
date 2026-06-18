@@ -8,6 +8,7 @@ import io.aegisops.common.exception.AppException;
 import io.aegisops.execution.WebhookJson;
 import io.aegisops.execution.dto.WebhookConnectorRecord;
 import io.aegisops.execution.dto.WebhookPolicyRecord;
+import java.net.InetAddress;
 import java.net.URI;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -16,10 +17,12 @@ import org.junit.jupiter.api.Test;
 class WebhookSecurityValidatorTest {
   private final ObjectMapper objectMapper = new ObjectMapper();
   private final WebhookJson json = new WebhookJson(objectMapper);
-  private final WebhookSecurityValidator validator = new WebhookSecurityValidator(objectMapper);
 
   @Test
   void allowAllowedPublicHost() {
+    WebhookSecurityValidator validator =
+        new WebhookSecurityValidator(objectMapper, host -> List.of(address("93.184.216.34")));
+
     assertDoesNotThrow(
         () ->
             validator.validateLive(
@@ -32,6 +35,9 @@ class WebhookSecurityValidatorTest {
 
   @Test
   void blockNonAllowlistedHost() {
+    WebhookSecurityValidator validator =
+        new WebhookSecurityValidator(objectMapper, host -> List.of(address("93.184.216.34")));
+
     assertThrows(
         AppException.class,
         () ->
@@ -45,6 +51,9 @@ class WebhookSecurityValidatorTest {
 
   @Test
   void blockLocalhost() {
+    WebhookSecurityValidator validator =
+        new WebhookSecurityValidator(objectMapper, host -> List.of(address("127.0.0.1")));
+
     assertThrows(
         AppException.class,
         () ->
@@ -58,6 +67,9 @@ class WebhookSecurityValidatorTest {
 
   @Test
   void blockMetadataIp() {
+    WebhookSecurityValidator validator =
+        new WebhookSecurityValidator(objectMapper, host -> List.of(address("169.254.169.254")));
+
     assertThrows(
         AppException.class,
         () ->
@@ -71,6 +83,9 @@ class WebhookSecurityValidatorTest {
 
   @Test
   void blockUnsupportedMethod() {
+    WebhookSecurityValidator validator =
+        new WebhookSecurityValidator(objectMapper, host -> List.of(address("93.184.216.34")));
+
     assertThrows(
         AppException.class,
         () ->
@@ -80,6 +95,47 @@ class WebhookSecurityValidatorTest {
                 "DELETE",
                 URI.create("https://ops.example.com/internal/restart"),
                 "{}"));
+  }
+
+  @Test
+  void blockWhenAnyResolvedAddressIsPrivate() {
+    WebhookSecurityValidator validator =
+        new WebhookSecurityValidator(
+            objectMapper, host -> List.of(address("93.184.216.34"), address("10.0.0.8")));
+
+    assertThrows(
+        AppException.class,
+        () ->
+            validator.validateLive(
+                connector("https://ops.example.com"),
+                policy(true, List.of("ops.example.com"), List.of("POST")),
+                "POST",
+                URI.create("https://ops.example.com/internal/restart"),
+                "{}"));
+  }
+
+  @Test
+  void blockUrlUserInfo() {
+    WebhookSecurityValidator validator =
+        new WebhookSecurityValidator(objectMapper, host -> List.of(address("93.184.216.34")));
+
+    assertThrows(
+        AppException.class,
+        () ->
+            validator.validateLive(
+                connector("https://ops.example.com"),
+                policy(true, List.of("ops.example.com"), List.of("POST")),
+                "POST",
+                URI.create("https://user:pass@ops.example.com/internal/restart"),
+                "{}"));
+  }
+
+  private InetAddress address(String value) {
+    try {
+      return InetAddress.getByName(value);
+    } catch (Exception ex) {
+      throw new IllegalStateException(ex);
+    }
   }
 
   private WebhookConnectorRecord connector(String baseUrl) {
