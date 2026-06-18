@@ -84,6 +84,32 @@ class AnsibleSafetyValidatorTest {
                     "inv_1", "pb_1", true, List.of(), Map.of("password", "123456"))));
   }
 
+  @Test
+  void rejectSecretLikeExtraVarBySubstring() {
+    assertThrows(
+        AppException.class,
+        () ->
+            validator.validateDryRun(
+                inventory(true),
+                playbook(true, List.of("restart")),
+                policy(true, List.of("inv_1"), List.of("service_name", "db_password")),
+                new AnsibleActionPayload(
+                    "inv_1", "pb_1", true, List.of(), Map.of("db_password", "123456"))));
+  }
+
+  @Test
+  void rejectApiTokenExtraVarBySubstring() {
+    assertThrows(
+        AppException.class,
+        () ->
+            validator.validateDryRun(
+                inventory(true),
+                playbook(true, List.of("restart")),
+                policy(true, List.of("inv_1"), List.of("service_name", "api_token")),
+                new AnsibleActionPayload(
+                    "inv_1", "pb_1", true, List.of(), Map.of("api_token", "secret-token"))));
+  }
+
   private AnsibleInventoryRecord inventory(boolean enabled) {
     return new AnsibleInventoryRecord(
         "inv_1",

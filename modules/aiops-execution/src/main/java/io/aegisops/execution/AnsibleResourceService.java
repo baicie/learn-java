@@ -107,13 +107,19 @@ public class AnsibleResourceService {
     List<String> allowedInventoryIds =
         request.allowedInventoryIds() == null ? List.of() : request.allowedInventoryIds();
     for (String inventoryId : allowedInventoryIds) {
-      repository
-          .findInventory(tenantId, inventoryId)
-          .orElseThrow(
-              () ->
-                  new AppException(
-                      "ANSIBLE_INVENTORY_NOT_FOUND",
-                      "Allowed inventory not found: " + inventoryId));
+      AnsibleInventoryRecord inventory =
+          repository
+              .findInventory(tenantId, inventoryId)
+              .orElseThrow(
+                  () ->
+                      new AppException(
+                          "ANSIBLE_INVENTORY_NOT_FOUND",
+                          "Allowed inventory not found: " + inventoryId));
+
+      if (!inventory.enabled()) {
+        throw new AppException(
+            "ANSIBLE_INVENTORY_DISABLED", "Allowed inventory is disabled: " + inventoryId);
+      }
     }
 
     repository.createPlaybook(

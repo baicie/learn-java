@@ -15,17 +15,20 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class AnsibleSafetyValidator {
-  private static final Set<String> DENIED_EXTRA_VAR_KEYS =
+  private static final Set<String> DENIED_EXTRA_VAR_KEY_PARTS =
       Set.of(
-          "ansible_password",
-          "ansible_become_password",
-          "ansible_ssh_private_key_file",
-          "ansible_private_key_file",
-          "ssh_key",
-          "private_key",
           "password",
+          "passwd",
+          "pwd",
           "token",
-          "secret");
+          "secret",
+          "private_key",
+          "ssh_key",
+          "api_key",
+          "apikey",
+          "credential",
+          "credentials",
+          "vault");
 
   private final AnsibleJson json;
 
@@ -128,7 +131,7 @@ public class AnsibleSafetyValidator {
 
     for (String key : extraVars.keySet()) {
       String normalized = key.toLowerCase(Locale.ROOT);
-      if (DENIED_EXTRA_VAR_KEYS.contains(normalized)) {
+      if (isDeniedExtraVarKey(normalized)) {
         throw new AppException(
             "ANSIBLE_SECRET_VAR_BLOCKED", "Credential-like extraVar is blocked: " + key);
       }
@@ -144,5 +147,15 @@ public class AnsibleSafetyValidator {
       throw new AppException(
           "ANSIBLE_EXTRA_VARS_TOO_LARGE", "Ansible extraVars exceed policy limit");
     }
+  }
+
+  private boolean isDeniedExtraVarKey(String normalizedKey) {
+    String normalized = normalizedKey.replace("-", "_").toLowerCase(Locale.ROOT);
+    for (String part : DENIED_EXTRA_VAR_KEY_PARTS) {
+      if (normalized.contains(part)) {
+        return true;
+      }
+    }
+    return false;
   }
 }

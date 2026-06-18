@@ -91,6 +91,35 @@ class AnsibleResourceServiceTest {
                     "alice")));
   }
 
+  @Test
+  void createPlaybookRejectsDisabledAllowedInventory() {
+    FakeAnsibleRepository repository = new FakeAnsibleRepository();
+    repository.inventory = inventory("inv_1", "tenant_1", "prod");
+    repository.inventoryEnabled = false;
+
+    AnsibleResourceService service = new AnsibleResourceService(repository, new ObjectMapper());
+
+    assertThrows(
+        AppException.class,
+        () ->
+            service.createPlaybook(
+                "tenant_1",
+                new AnsiblePlaybookCreateRequest(
+                    "restart",
+                    "desc",
+                    "playbooks/restart.yml",
+                    null,
+                    Map.of(),
+                    List.of("restart"),
+                    List.of("inv_1"),
+                    List.of("service_name"),
+                    false,
+                    true,
+                    32768,
+                    1800,
+                    "alice")));
+  }
+
   private static AnsibleInventoryRecord inventory(String id, String tenantId, String name) {
     return new AnsibleInventoryRecord(
         id,
@@ -108,6 +137,7 @@ class AnsibleResourceServiceTest {
 
   private static class FakeAnsibleRepository implements AnsibleRepository {
     AnsibleInventoryRecord inventory;
+    boolean inventoryEnabled = true;
     AnsibleInventoryCreateCommand inventoryCommand;
     AnsiblePlaybookCreateCommand playbookCommand;
     AnsiblePolicyCreateCommand policyCommand;
@@ -137,9 +167,23 @@ class AnsibleResourceServiceTest {
 
     @Override
     public Optional<AnsibleInventoryRecord> findInventory(String tenantId, String inventoryId) {
-      return inventory != null && inventory.id().equals(inventoryId)
-          ? Optional.of(inventory)
-          : Optional.empty();
+      if (inventory != null && inventory.id().equals(inventoryId)) {
+        inventory =
+            new AnsibleInventoryRecord(
+                inventory.id(),
+                inventory.tenantId(),
+                inventory.name(),
+                inventory.description(),
+                inventory.inventoryType(),
+                inventory.inlineInventory(),
+                inventory.fileRef(),
+                inventoryEnabled,
+                inventory.createdBy(),
+                inventory.createdAt(),
+                inventory.updatedAt());
+        return Optional.of(inventory);
+      }
+      return Optional.empty();
     }
 
     @Override
