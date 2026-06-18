@@ -95,7 +95,29 @@ public class ExecutionRequestService {
       throw new AppException("EXECUTION_RETRY_EXHAUSTED", "Execution retry attempts exhausted");
     }
 
+    ExecutionRunRecord latest =
+        repository
+            .findLatestRunByPlan(tenantId, previous.planId())
+            .orElseThrow(() -> new AppException("EXECUTION_NOT_FOUND", "Execution not found"));
+
+    if (!latest.id().equals(previous.id())) {
+      if (List.of("queued", "running").contains(latest.status())) {
+        return toResponse(
+            latest,
+            repository.listExecutionSteps(tenantId, latest.id()),
+            repository.listArtifacts(tenantId, latest.id()));
+      }
+
+      throw new AppException(
+          "EXECUTION_RETRY_NOT_LATEST", "Only latest failed or timeout execution can be retried");
+    }
+
     PlanForExecutionRecord plan = loadPlan(tenantId, previous.planId());
+
+    if (!"failed".equals(plan.status())) {
+      throw new AppException(
+          "AUTOMATION_PLAN_RETRY_STATUS_INVALID", "Only failed automation plan can be retried");
+    }
 
     return createQueuedRun(
         tenantId,

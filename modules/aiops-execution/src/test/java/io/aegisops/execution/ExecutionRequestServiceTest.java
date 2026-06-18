@@ -50,6 +50,7 @@ class ExecutionRequestServiceTest {
     repository.plan = plan("failed");
     repository.planSteps.add(planStep());
     repository.existingRun = run("exec_old", "failed", 1, 3, null);
+    repository.latestRun = repository.existingRun;
 
     ExecutionProperties properties = new ExecutionProperties();
     properties.setMaxRetryAttempts(3);
@@ -70,6 +71,7 @@ class ExecutionRequestServiceTest {
     FakeExecutionRepository repository = new FakeExecutionRepository();
     repository.plan = plan("failed");
     repository.existingRun = run("exec_old", "failed", 3, 3, null);
+    repository.latestRun = repository.existingRun;
 
     ExecutionRequestService service =
         new ExecutionRequestService(repository, new ExecutionProperties(), new ObjectMapper());
@@ -77,6 +79,70 @@ class ExecutionRequestServiceTest {
     assertThrows(
         AppException.class,
         () -> service.retry("tenant_1", "exec_old", new ExecutionRetryRequest("bob")));
+  }
+
+  @Test
+  void retryRejectsNonLatestFailedExecution() {
+    FakeExecutionRepository repository = new FakeExecutionRepository();
+    repository.plan = plan("failed");
+    repository.planSteps.add(planStep());
+    repository.existingRun = run("exec_old", "failed", 1, 3, null);
+    repository.latestRun = run("exec_new", "succeeded", 2, 3, "exec_old");
+
+    ExecutionProperties properties = new ExecutionProperties();
+    properties.setMaxRetryAttempts(3);
+
+    ExecutionRequestService service =
+        new ExecutionRequestService(repository, properties, new ObjectMapper());
+
+    AppException ex =
+        assertThrows(
+            AppException.class,
+            () -> service.retry("tenant_1", "exec_old", new ExecutionRetryRequest("bob")));
+
+    assertTrue(ex.getMessage().contains("latest"));
+  }
+
+  @Test
+  void retryReturnsActiveLatestExecutionWhenRetryAlreadyQueued() {
+    FakeExecutionRepository repository = new FakeExecutionRepository();
+    repository.plan = plan("executing");
+    repository.planSteps.add(planStep());
+    repository.existingRun = run("exec_old", "failed", 1, 3, null);
+    repository.latestRun = run("exec_retry", "queued", 2, 3, "exec_old");
+
+    ExecutionProperties properties = new ExecutionProperties();
+    properties.setMaxRetryAttempts(3);
+
+    ExecutionRequestService service =
+        new ExecutionRequestService(repository, properties, new ObjectMapper());
+
+    var response = service.retry("tenant_1", "exec_old", new ExecutionRetryRequest("bob"));
+
+    assertEquals("exec_retry", response.id());
+    assertEquals("queued", response.status());
+  }
+
+  @Test
+  void retryRejectsWhenPlanIsNotFailed() {
+    FakeExecutionRepository repository = new FakeExecutionRepository();
+    repository.plan = plan("succeeded");
+    repository.planSteps.add(planStep());
+    repository.existingRun = run("exec_old", "failed", 1, 3, null);
+    repository.latestRun = repository.existingRun;
+
+    ExecutionProperties properties = new ExecutionProperties();
+    properties.setMaxRetryAttempts(3);
+
+    ExecutionRequestService service =
+        new ExecutionRequestService(repository, properties, new ObjectMapper());
+
+    AppException ex =
+        assertThrows(
+            AppException.class,
+            () -> service.retry("tenant_1", "exec_old", new ExecutionRetryRequest("bob")));
+
+    assertTrue(ex.getMessage().contains("failed automation plan"));
   }
 
   @Test
@@ -174,6 +240,7 @@ class ExecutionRequestServiceTest {
     PlanForExecutionRecord plan;
     String planStatus;
     ExecutionRunRecord existingRun;
+    ExecutionRunRecord latestRun;
     ExecutionRunCreateCommand createdRun;
     final List<PlanStepForExecutionRecord> planSteps = new ArrayList<>();
     final List<ExecutionStepCreateCommand> createdSteps = new ArrayList<>();
@@ -218,6 +285,11 @@ class ExecutionRequestServiceTest {
                 OffsetDateTime.now()));
       }
       return Optional.ofNullable(existingRun);
+    }
+
+    @Override
+    public Optional<ExecutionRunRecord> findLatestRunByPlan(String tenantId, String planId) {
+      return Optional.ofNullable(latestRun != null ? latestRun : existingRun);
     }
 
     @Override
