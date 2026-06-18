@@ -160,7 +160,10 @@ class ExecutionRequestServiceTest {
             1,
             1,
             null,
-            1800);
+            1800,
+            null,
+            null,
+            null);
 
     repository.createdSteps.add(
         new ExecutionStepCreateCommand(
@@ -232,6 +235,10 @@ class ExecutionRequestServiceTest {
         null,
         null,
         1800,
+        null,
+        null,
+        null,
+        null,
         OffsetDateTime.now(),
         OffsetDateTime.now());
   }
@@ -281,6 +288,10 @@ class ExecutionRequestServiceTest {
                 null,
                 null,
                 createdRun.timeoutSeconds(),
+                null,
+                null,
+                null,
+                null,
                 OffsetDateTime.now(),
                 OffsetDateTime.now()));
       }

@@ -21,5 +21,9 @@ public record ExecutionRunRecord(
     OffsetDateTime leaseUntil,
     OffsetDateTime heartbeatAt,
     int timeoutSeconds,
+    String approvalId,
+    String approvalSnapshotJson,
+    String planRiskLevel,
+    OffsetDateTime liveGuardPassedAt,
     OffsetDateTime createdAt,
     OffsetDateTime updatedAt) {}

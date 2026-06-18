@@ -1,5 +1,6 @@
 package io.aegisops.execution;
 
+import io.aegisops.execution.dto.ExecutionApprovalSnapshotRecord;
 import io.aegisops.execution.dto.ExecutionArtifactCreateCommand;
 import io.aegisops.execution.dto.ExecutionArtifactRecord;
 import io.aegisops.execution.dto.ExecutionRunCreateCommand;
@@ -118,4 +119,15 @@ abstract class FakeExecutionRepositoryBase implements ExecutionRepository {
 
   @Override
   public void addTimeline(TimelineCreateCommand command) {}
+
+  @Override
+  public Optional<ExecutionApprovalSnapshotRecord> findLatestApprovedApprovalSnapshot(
+      String tenantId, String planId) {
+    return Optional.empty();
+  }
+
+  @Override
+  public boolean markLiveGuardPassed(String tenantId, String executionId) {
+    return true;
+  }
 }

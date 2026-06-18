@@ -1,10 +1,13 @@
 package io.aegisops.execution;
 
 import static io.aegisops.persistence.AegisJooq.jsonbValue;
+import static io.aegisops.persistence.jooq.Tables.ANSIBLE_CREDENTIAL_REF;
 import static io.aegisops.persistence.jooq.Tables.ANSIBLE_EXECUTION_POLICY;
 import static io.aegisops.persistence.jooq.Tables.ANSIBLE_INVENTORY;
 import static io.aegisops.persistence.jooq.Tables.ANSIBLE_PLAYBOOK;
 
+import io.aegisops.execution.dto.AnsibleCredentialCreateCommand;
+import io.aegisops.execution.dto.AnsibleCredentialRecord;
 import io.aegisops.execution.dto.AnsibleInventoryCreateCommand;
 import io.aegisops.execution.dto.AnsibleInventoryRecord;
 import io.aegisops.execution.dto.AnsiblePlaybookCreateCommand;
@@ -125,14 +128,25 @@ public class JooqAnsibleRepository implements AnsibleRepository {
         .set(ANSIBLE_EXECUTION_POLICY.PLAYBOOK_ID, command.playbookId())
         .set(ANSIBLE_EXECUTION_POLICY.ALLOW_LIVE, command.allowLive())
         .set(ANSIBLE_EXECUTION_POLICY.ALLOW_CHECK_EXECUTION, command.allowCheckExecution())
+        .set(ANSIBLE_EXECUTION_POLICY.LIVE_REQUIRES_APPROVAL, command.liveRequiresApproval())
         .set(ANSIBLE_EXECUTION_POLICY.DEFAULT_CHECK_MODE, command.defaultCheckMode())
         .set(
             ANSIBLE_EXECUTION_POLICY.ALLOWED_INVENTORY_IDS,
             jsonbValue(command.allowedInventoryIdsJson()))
         .set(
             ANSIBLE_EXECUTION_POLICY.ALLOWED_EXTRA_VARS, jsonbValue(command.allowedExtraVarsJson()))
+        .set(
+            ANSIBLE_EXECUTION_POLICY.ALLOWED_LIVE_RISK_LEVELS,
+            jsonbValue(command.allowedLiveRiskLevelsJson()))
+        .set(
+            ANSIBLE_EXECUTION_POLICY.ALLOWED_CREDENTIAL_REF_IDS,
+            jsonbValue(command.allowedCredentialRefIdsJson()))
+        .set(
+            ANSIBLE_EXECUTION_POLICY.STDOUT_STDERR_MASKING_ENABLED,
+            command.stdoutStderrMaskingEnabled())
         .set(ANSIBLE_EXECUTION_POLICY.MAX_EXTRA_VARS_BYTES, command.maxExtraVarsBytes())
         .set(ANSIBLE_EXECUTION_POLICY.TIMEOUT_SECONDS, command.timeoutSeconds())
+        .set(ANSIBLE_EXECUTION_POLICY.LIVE_TIMEOUT_SECONDS, command.liveTimeoutSeconds())
         .set(ANSIBLE_EXECUTION_POLICY.ENABLED, command.enabled())
         .set(ANSIBLE_EXECUTION_POLICY.CREATED_AT, DSL.currentOffsetDateTime())
         .set(ANSIBLE_EXECUTION_POLICY.UPDATED_AT, DSL.currentOffsetDateTime())
@@ -194,6 +208,7 @@ public class JooqAnsibleRepository implements AnsibleRepository {
             ANSIBLE_EXECUTION_POLICY.PLAYBOOK_ID,
             ANSIBLE_EXECUTION_POLICY.ALLOW_LIVE,
             ANSIBLE_EXECUTION_POLICY.ALLOW_CHECK_EXECUTION,
+            ANSIBLE_EXECUTION_POLICY.LIVE_REQUIRES_APPROVAL,
             ANSIBLE_EXECUTION_POLICY.DEFAULT_CHECK_MODE,
             ANSIBLE_EXECUTION_POLICY
                 .ALLOWED_INVENTORY_IDS
@@ -203,8 +218,18 @@ public class JooqAnsibleRepository implements AnsibleRepository {
                 .ALLOWED_EXTRA_VARS
                 .cast(String.class)
                 .as("allowed_extra_vars_json"),
+            ANSIBLE_EXECUTION_POLICY
+                .ALLOWED_LIVE_RISK_LEVELS
+                .cast(String.class)
+                .as("allowed_live_risk_levels_json"),
+            ANSIBLE_EXECUTION_POLICY
+                .ALLOWED_CREDENTIAL_REF_IDS
+                .cast(String.class)
+                .as("allowed_credential_ref_ids_json"),
+            ANSIBLE_EXECUTION_POLICY.STDOUT_STDERR_MASKING_ENABLED,
             ANSIBLE_EXECUTION_POLICY.MAX_EXTRA_VARS_BYTES,
             ANSIBLE_EXECUTION_POLICY.TIMEOUT_SECONDS,
+            ANSIBLE_EXECUTION_POLICY.LIVE_TIMEOUT_SECONDS,
             ANSIBLE_EXECUTION_POLICY.ENABLED,
             ANSIBLE_EXECUTION_POLICY.CREATED_AT,
             ANSIBLE_EXECUTION_POLICY.UPDATED_AT)
@@ -263,14 +288,103 @@ public class JooqAnsibleRepository implements AnsibleRepository {
         record.get(ANSIBLE_EXECUTION_POLICY.PLAYBOOK_ID),
         Boolean.TRUE.equals(record.get(ANSIBLE_EXECUTION_POLICY.ALLOW_LIVE)),
         Boolean.TRUE.equals(record.get(ANSIBLE_EXECUTION_POLICY.ALLOW_CHECK_EXECUTION)),
+        Boolean.TRUE.equals(record.get(ANSIBLE_EXECUTION_POLICY.LIVE_REQUIRES_APPROVAL)),
         Boolean.TRUE.equals(record.get(ANSIBLE_EXECUTION_POLICY.DEFAULT_CHECK_MODE)),
         record.get("allowed_inventory_ids_json", String.class),
         record.get("allowed_extra_vars_json", String.class),
+        record.get("allowed_live_risk_levels_json", String.class),
+        record.get("allowed_credential_ref_ids_json", String.class),
+        Boolean.TRUE.equals(record.get(ANSIBLE_EXECUTION_POLICY.STDOUT_STDERR_MASKING_ENABLED)),
         value(record.get(ANSIBLE_EXECUTION_POLICY.MAX_EXTRA_VARS_BYTES)),
         value(record.get(ANSIBLE_EXECUTION_POLICY.TIMEOUT_SECONDS)),
+        value(record.get(ANSIBLE_EXECUTION_POLICY.LIVE_TIMEOUT_SECONDS)),
         Boolean.TRUE.equals(record.get(ANSIBLE_EXECUTION_POLICY.ENABLED)),
         record.get(ANSIBLE_EXECUTION_POLICY.CREATED_AT),
         record.get(ANSIBLE_EXECUTION_POLICY.UPDATED_AT));
+  }
+
+  @Override
+  public void createCredential(AnsibleCredentialCreateCommand command) {
+    dsl.insertInto(ANSIBLE_CREDENTIAL_REF)
+        .set(ANSIBLE_CREDENTIAL_REF.ID, command.id())
+        .set(ANSIBLE_CREDENTIAL_REF.TENANT_ID, command.tenantId())
+        .set(ANSIBLE_CREDENTIAL_REF.NAME, command.name())
+        .set(ANSIBLE_CREDENTIAL_REF.DESCRIPTION, command.description())
+        .set(ANSIBLE_CREDENTIAL_REF.CREDENTIAL_TYPE, command.credentialType())
+        .set(ANSIBLE_CREDENTIAL_REF.SECRET_REF, command.secretRef())
+        .set(ANSIBLE_CREDENTIAL_REF.ENABLED, command.enabled())
+        .set(ANSIBLE_CREDENTIAL_REF.CREATED_BY, command.createdBy())
+        .set(ANSIBLE_CREDENTIAL_REF.CREATED_AT, DSL.currentOffsetDateTime())
+        .set(ANSIBLE_CREDENTIAL_REF.UPDATED_AT, DSL.currentOffsetDateTime())
+        .execute();
+  }
+
+  @Override
+  public List<AnsibleCredentialRecord> listCredentials(String tenantId, boolean includeDisabled) {
+    Condition condition = ANSIBLE_CREDENTIAL_REF.TENANT_ID.eq(tenantId);
+    if (!includeDisabled) {
+      condition = condition.and(ANSIBLE_CREDENTIAL_REF.ENABLED.isTrue());
+    }
+
+    return dsl.select(
+            ANSIBLE_CREDENTIAL_REF.ID,
+            ANSIBLE_CREDENTIAL_REF.TENANT_ID,
+            ANSIBLE_CREDENTIAL_REF.NAME,
+            ANSIBLE_CREDENTIAL_REF.DESCRIPTION,
+            ANSIBLE_CREDENTIAL_REF.CREDENTIAL_TYPE,
+            ANSIBLE_CREDENTIAL_REF.SECRET_REF,
+            ANSIBLE_CREDENTIAL_REF.ENABLED,
+            ANSIBLE_CREDENTIAL_REF.CREATED_BY,
+            ANSIBLE_CREDENTIAL_REF.CREATED_AT,
+            ANSIBLE_CREDENTIAL_REF.UPDATED_AT)
+        .from(ANSIBLE_CREDENTIAL_REF)
+        .where(condition)
+        .orderBy(ANSIBLE_CREDENTIAL_REF.CREATED_AT.desc())
+        .fetch(this::toCredentialRecord);
+  }
+
+  @Override
+  public Optional<AnsibleCredentialRecord> findCredential(String tenantId, String credentialId) {
+    return dsl.select(
+            ANSIBLE_CREDENTIAL_REF.ID,
+            ANSIBLE_CREDENTIAL_REF.TENANT_ID,
+            ANSIBLE_CREDENTIAL_REF.NAME,
+            ANSIBLE_CREDENTIAL_REF.DESCRIPTION,
+            ANSIBLE_CREDENTIAL_REF.CREDENTIAL_TYPE,
+            ANSIBLE_CREDENTIAL_REF.SECRET_REF,
+            ANSIBLE_CREDENTIAL_REF.ENABLED,
+            ANSIBLE_CREDENTIAL_REF.CREATED_BY,
+            ANSIBLE_CREDENTIAL_REF.CREATED_AT,
+            ANSIBLE_CREDENTIAL_REF.UPDATED_AT)
+        .from(ANSIBLE_CREDENTIAL_REF)
+        .where(ANSIBLE_CREDENTIAL_REF.TENANT_ID.eq(tenantId))
+        .and(ANSIBLE_CREDENTIAL_REF.ID.eq(credentialId))
+        .fetchOptional(this::toCredentialRecord);
+  }
+
+  @Override
+  public boolean setCredentialEnabled(String tenantId, String credentialId, boolean enabled) {
+    return dsl.update(ANSIBLE_CREDENTIAL_REF)
+            .set(ANSIBLE_CREDENTIAL_REF.ENABLED, enabled)
+            .set(ANSIBLE_CREDENTIAL_REF.UPDATED_AT, DSL.currentOffsetDateTime())
+            .where(ANSIBLE_CREDENTIAL_REF.TENANT_ID.eq(tenantId))
+            .and(ANSIBLE_CREDENTIAL_REF.ID.eq(credentialId))
+            .execute()
+        > 0;
+  }
+
+  private AnsibleCredentialRecord toCredentialRecord(org.jooq.Record record) {
+    return new AnsibleCredentialRecord(
+        record.get(ANSIBLE_CREDENTIAL_REF.ID),
+        record.get(ANSIBLE_CREDENTIAL_REF.TENANT_ID),
+        record.get(ANSIBLE_CREDENTIAL_REF.NAME),
+        record.get(ANSIBLE_CREDENTIAL_REF.DESCRIPTION),
+        record.get(ANSIBLE_CREDENTIAL_REF.CREDENTIAL_TYPE),
+        record.get(ANSIBLE_CREDENTIAL_REF.SECRET_REF),
+        Boolean.TRUE.equals(record.get(ANSIBLE_CREDENTIAL_REF.ENABLED)),
+        record.get(ANSIBLE_CREDENTIAL_REF.CREATED_BY),
+        record.get(ANSIBLE_CREDENTIAL_REF.CREATED_AT),
+        record.get(ANSIBLE_CREDENTIAL_REF.UPDATED_AT));
   }
 
   private int value(Integer value) {

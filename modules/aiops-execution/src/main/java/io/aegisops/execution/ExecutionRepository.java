@@ -1,5 +1,6 @@
 package io.aegisops.execution;
 
+import io.aegisops.execution.dto.ExecutionApprovalSnapshotRecord;
 import io.aegisops.execution.dto.ExecutionArtifactCreateCommand;
 import io.aegisops.execution.dto.ExecutionArtifactRecord;
 import io.aegisops.execution.dto.ExecutionRunCreateCommand;
@@ -63,4 +64,9 @@ public interface ExecutionRepository {
   boolean updateStepStatus(ExecutionStepStatusUpdateCommand command);
 
   void addTimeline(TimelineCreateCommand command);
+
+  Optional<ExecutionApprovalSnapshotRecord> findLatestApprovedApprovalSnapshot(
+      String tenantId, String planId);
+
+  boolean markLiveGuardPassed(String tenantId, String executionId);
 }

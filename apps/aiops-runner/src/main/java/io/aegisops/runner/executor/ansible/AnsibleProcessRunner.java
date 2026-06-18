@@ -5,5 +5,6 @@ import java.time.Duration;
 import java.util.List;
 
 public interface AnsibleProcessRunner {
-  AnsibleProcessResult run(List<String> argv, Path workingDirectory, Duration timeout);
+  AnsibleProcessResult run(
+      List<String> argv, Path workingDirectory, Duration timeout, boolean requireCheckMode);
 }

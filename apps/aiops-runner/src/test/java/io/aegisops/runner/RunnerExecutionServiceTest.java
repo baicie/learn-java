@@ -174,6 +174,10 @@ class RunnerExecutionServiceTest {
         OffsetDateTime.now().plusSeconds(60),
         OffsetDateTime.now(),
         1800,
+        null,
+        null,
+        null,
+        null,
         OffsetDateTime.now(),
         OffsetDateTime.now());
   }
@@ -284,6 +288,11 @@ class RunnerExecutionServiceTest {
     @Override
     public boolean timeoutExecutionSteps(String tenantId, String executionId) {
       stepsTimedOut = true;
+      return true;
+    }
+
+    @Override
+    public boolean markLiveGuardPassed(String tenantId, String executionId) {
       return true;
     }
   }

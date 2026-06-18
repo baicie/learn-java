@@ -5,6 +5,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.aegisops.common.exception.AppException;
+import io.aegisops.execution.dto.AnsibleCredentialCreateCommand;
+import io.aegisops.execution.dto.AnsibleCredentialRecord;
 import io.aegisops.execution.dto.AnsibleInventoryCreateCommand;
 import io.aegisops.execution.dto.AnsibleInventoryCreateRequest;
 import io.aegisops.execution.dto.AnsibleInventoryRecord;
@@ -57,8 +59,13 @@ class AnsibleResourceServiceTest {
                 false,
                 true,
                 true,
+                true,
+                List.of("low", "medium"),
+                List.of(),
+                true,
                 32768,
                 1800,
+                3600,
                 "alice"));
 
     assertEquals("restart", response.name());
@@ -88,8 +95,13 @@ class AnsibleResourceServiceTest {
                     false,
                     true,
                     true,
+                    true,
+                    List.of("low", "medium"),
+                    List.of(),
+                    true,
                     32768,
                     1800,
+                    3600,
                     "alice")));
   }
 
@@ -118,8 +130,13 @@ class AnsibleResourceServiceTest {
                     false,
                     true,
                     true,
+                    true,
+                    List.of("low", "medium"),
+                    List.of(),
+                    true,
                     32768,
                     1800,
+                    3600,
                     "alice")));
   }
 
@@ -144,6 +161,7 @@ class AnsibleResourceServiceTest {
     AnsibleInventoryCreateCommand inventoryCommand;
     AnsiblePlaybookCreateCommand playbookCommand;
     AnsiblePolicyCreateCommand policyCommand;
+    AnsibleCredentialCreateCommand credentialCommand;
 
     @Override
     public void createInventory(AnsibleInventoryCreateCommand command) {
@@ -244,11 +262,16 @@ class AnsibleResourceServiceTest {
               policyCommand.playbookId(),
               policyCommand.allowLive(),
               policyCommand.allowCheckExecution(),
+              policyCommand.liveRequiresApproval(),
               policyCommand.defaultCheckMode(),
               policyCommand.allowedInventoryIdsJson(),
               policyCommand.allowedExtraVarsJson(),
+              policyCommand.allowedLiveRiskLevelsJson(),
+              policyCommand.allowedCredentialRefIdsJson(),
+              policyCommand.stdoutStderrMaskingEnabled(),
               policyCommand.maxExtraVarsBytes(),
               policyCommand.timeoutSeconds(),
+              policyCommand.liveTimeoutSeconds(),
               policyCommand.enabled(),
               OffsetDateTime.now(),
               OffsetDateTime.now()));
@@ -256,6 +279,26 @@ class AnsibleResourceServiceTest {
 
     @Override
     public boolean setPlaybookEnabled(String tenantId, String playbookId, boolean enabled) {
+      return true;
+    }
+
+    @Override
+    public void createCredential(AnsibleCredentialCreateCommand command) {
+      credentialCommand = command;
+    }
+
+    @Override
+    public List<AnsibleCredentialRecord> listCredentials(String tenantId, boolean includeDisabled) {
+      return List.of();
+    }
+
+    @Override
+    public Optional<AnsibleCredentialRecord> findCredential(String tenantId, String credentialId) {
+      return Optional.empty();
+    }
+
+    @Override
+    public boolean setCredentialEnabled(String tenantId, String credentialId, boolean enabled) {
       return true;
     }
   }

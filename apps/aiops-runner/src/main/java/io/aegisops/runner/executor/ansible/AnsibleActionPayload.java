@@ -9,6 +9,7 @@ import java.util.Map;
 public record AnsibleActionPayload(
     String inventoryId,
     String playbookId,
+    String credentialRefId,
     Boolean checkMode,
     List<String> tags,
     Map<String, Object> extraVars) {
@@ -22,6 +23,7 @@ public record AnsibleActionPayload(
 
       String inventoryId = stringValue(map.get("inventoryId"));
       String playbookId = stringValue(map.get("playbookId"));
+      String credentialRefId = stringValue(map.get("credentialRefId"));
 
       if (inventoryId.isBlank()) {
         throw new AppException("ANSIBLE_INVENTORY_ID_REQUIRED", "Ansible inventoryId is required");
@@ -53,7 +55,13 @@ public record AnsibleActionPayload(
       Object checkValue = map.get("checkMode");
       Boolean checkMode = checkValue instanceof Boolean bool ? bool : null;
 
-      return new AnsibleActionPayload(inventoryId, playbookId, checkMode, tags, vars);
+      return new AnsibleActionPayload(
+          inventoryId,
+          playbookId,
+          credentialRefId.isBlank() ? null : credentialRefId,
+          checkMode,
+          tags,
+          vars);
     } catch (AppException ex) {
       throw ex;
     } catch (Exception ex) {

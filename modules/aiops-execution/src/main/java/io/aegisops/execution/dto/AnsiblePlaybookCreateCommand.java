@@ -10,4 +10,16 @@ public record AnsiblePlaybookCreateCommand(
     String variablesSchemaJson,
     String allowedTagsJson,
     boolean enabled,
-    String createdBy) {}
+    String createdBy,
+    boolean allowLive,
+    boolean allowCheckExecution,
+    boolean liveRequiresApproval,
+    boolean defaultCheckMode,
+    String allowedInventoryIdsJson,
+    String allowedExtraVarsJson,
+    String allowedLiveRiskLevelsJson,
+    String allowedCredentialRefIdsJson,
+    boolean stdoutStderrMaskingEnabled,
+    int maxExtraVarsBytes,
+    int timeoutSeconds,
+    int liveTimeoutSeconds) {}

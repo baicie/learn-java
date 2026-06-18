@@ -3,6 +3,7 @@ package io.aegisops.runner.executor.ansible;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.aegisops.execution.AnsibleJson;
 import io.aegisops.execution.AnsibleRepository;
+import io.aegisops.execution.ExecutionRepository;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -27,7 +28,12 @@ public class AnsibleStepExecutorConfig {
 
   @Bean
   public AnsibleStepExecutorDeps ansibleStepExecutorDeps(
-      AnsibleSupport support, AnsibleRuntime runtime, AnsibleRunnerProperties properties) {
-    return new AnsibleStepExecutorDeps(support, runtime, properties);
+      AnsibleSupport support,
+      AnsibleRuntime runtime,
+      AnsibleRunnerProperties properties,
+      ExecutionRepository executionRepository,
+      AnsibleOutputMasker outputMasker) {
+    return new AnsibleStepExecutorDeps(
+        support, runtime, properties, executionRepository, outputMasker);
   }
 }

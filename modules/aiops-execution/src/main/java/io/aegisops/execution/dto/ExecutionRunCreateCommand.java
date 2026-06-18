@@ -11,4 +11,7 @@ public record ExecutionRunCreateCommand(
     int attempt,
     int maxAttempts,
     String retryOfExecutionId,
-    int timeoutSeconds) {}
+    int timeoutSeconds,
+    String approvalId,
+    String approvalSnapshotJson,
+    String planRiskLevel) {}

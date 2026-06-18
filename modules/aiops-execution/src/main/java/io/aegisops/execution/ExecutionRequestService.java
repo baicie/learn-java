@@ -2,6 +2,7 @@ package io.aegisops.execution;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.aegisops.common.exception.AppException;
+import io.aegisops.execution.dto.ExecutionApprovalSnapshotRecord;
 import io.aegisops.execution.dto.ExecutionArtifactRecord;
 import io.aegisops.execution.dto.ExecutionArtifactResponse;
 import io.aegisops.execution.dto.ExecutionCreateRequest;
@@ -61,6 +62,18 @@ public class ExecutionRequestService {
           repository.listArtifacts(tenantId, active.get().id()));
     }
 
+    ExecutionApprovalSnapshotRecord approvalSnapshot = null;
+    if (!normalized.dryRunEnabled()) {
+      approvalSnapshot =
+          repository
+              .findLatestApprovedApprovalSnapshot(tenantId, planId)
+              .orElseThrow(
+                  () ->
+                      new AppException(
+                          "EXECUTION_APPROVAL_REQUIRED",
+                          "Live execution requires an approved automation approval"));
+    }
+
     int maxAttempts =
         Math.min(normalized.normalizedMaxAttempts(), properties.normalizedMaxRetryAttempts());
 
@@ -73,6 +86,7 @@ public class ExecutionRequestService {
             1,
             maxAttempts,
             null,
+            approvalSnapshot,
             "execution_queued",
             "Execution queued",
             "Automation execution was queued for runner."));
@@ -119,6 +133,18 @@ public class ExecutionRequestService {
           "AUTOMATION_PLAN_RETRY_STATUS_INVALID", "Only failed automation plan can be retried");
     }
 
+    ExecutionApprovalSnapshotRecord approvalSnapshot = null;
+    if ("live".equals(previous.mode())) {
+      approvalSnapshot =
+          repository
+              .findLatestApprovedApprovalSnapshot(tenantId, previous.planId())
+              .orElseThrow(
+                  () ->
+                      new AppException(
+                          "EXECUTION_APPROVAL_REQUIRED",
+                          "Live execution retry requires an approved automation approval"));
+    }
+
     return createQueuedRun(
         tenantId,
         new QueuedRunContext(
@@ -128,6 +154,7 @@ public class ExecutionRequestService {
             previous.attempt() + 1,
             previous.maxAttempts(),
             previous.id(),
+            approvalSnapshot,
             "execution_retried",
             "Execution retried",
             "Automation execution retry was queued."));
@@ -216,7 +243,10 @@ public class ExecutionRequestService {
             context.attempt(),
             context.maxAttempts(),
             context.retryOfExecutionId(),
-            properties.normalizedRunTimeoutSeconds()));
+            properties.normalizedRunTimeoutSeconds(),
+            context.approvalSnapshot() == null ? null : context.approvalSnapshot().approvalId(),
+            context.approvalSnapshot() == null ? "{}" : json.write(context.approvalSnapshot()),
+            plan.riskLevel()));
 
     repository.createSteps(
         planSteps.stream()
@@ -260,6 +290,7 @@ public class ExecutionRequestService {
       int attempt,
       int maxAttempts,
       String retryOfExecutionId,
+      ExecutionApprovalSnapshotRecord approvalSnapshot,
       String eventType,
       String title,
       String description) {}
@@ -312,6 +343,10 @@ public class ExecutionRequestService {
         run.leaseUntil(),
         run.heartbeatAt(),
         run.timeoutSeconds(),
+        run.approvalId(),
+        run.approvalSnapshotJson(),
+        run.planRiskLevel(),
+        run.liveGuardPassedAt(),
         steps.stream().map(this::toStepResponse).toList(),
         artifacts.stream().map(this::toArtifactResponse).toList(),
         run.startedAt(),

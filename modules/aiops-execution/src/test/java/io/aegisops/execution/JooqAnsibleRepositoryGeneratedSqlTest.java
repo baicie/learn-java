@@ -76,7 +76,19 @@ class JooqAnsibleRepositoryGeneratedSqlTest {
             "{}",
             "[\"restart\"]",
             true,
-            "alice"));
+            "alice",
+            true,
+            true,
+            true,
+            true,
+            "[\"inv_1\"]",
+            "[\"service_name\"]",
+            "[\"low\",\"medium\"]",
+            "[]",
+            true,
+            32768,
+            1800,
+            3600));
 
     String sql = sqlRef.get();
     if (sql == null) {
@@ -111,13 +123,18 @@ class JooqAnsibleRepositoryGeneratedSqlTest {
             "apol_1",
             "tenant_1",
             "pb_1",
-            false,
+            true,
+            true,
             true,
             true,
             "[\"inv_1\"]",
             "[\"service_name\"]",
+            "[\"low\",\"medium\"]",
+            "[]",
+            true,
             32768,
             1800,
+            3600,
             true));
 
     String sql = sqlRef.get();

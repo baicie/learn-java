@@ -7,14 +7,27 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.aegisops.execution.AnsibleJson;
 import io.aegisops.execution.AnsibleRepository;
+import io.aegisops.execution.ExecutionRepository;
+import io.aegisops.execution.dto.AnsibleCredentialCreateCommand;
+import io.aegisops.execution.dto.AnsibleCredentialRecord;
 import io.aegisops.execution.dto.AnsibleInventoryCreateCommand;
 import io.aegisops.execution.dto.AnsibleInventoryRecord;
 import io.aegisops.execution.dto.AnsiblePlaybookCreateCommand;
 import io.aegisops.execution.dto.AnsiblePlaybookRecord;
 import io.aegisops.execution.dto.AnsiblePolicyCreateCommand;
 import io.aegisops.execution.dto.AnsiblePolicyRecord;
+import io.aegisops.execution.dto.ExecutionApprovalSnapshotRecord;
+import io.aegisops.execution.dto.ExecutionArtifactCreateCommand;
+import io.aegisops.execution.dto.ExecutionArtifactRecord;
+import io.aegisops.execution.dto.ExecutionRunCreateCommand;
 import io.aegisops.execution.dto.ExecutionRunRecord;
+import io.aegisops.execution.dto.ExecutionRunStatusUpdateCommand;
+import io.aegisops.execution.dto.ExecutionStepCreateCommand;
 import io.aegisops.execution.dto.ExecutionStepRecord;
+import io.aegisops.execution.dto.ExecutionStepStatusUpdateCommand;
+import io.aegisops.execution.dto.PlanForExecutionRecord;
+import io.aegisops.execution.dto.PlanStepForExecutionRecord;
+import io.aegisops.execution.dto.TimelineCreateCommand;
 import io.aegisops.runner.executor.StepExecutionContext;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -113,7 +126,9 @@ class AnsibleStepExecutorTest {
                 workspaceManager,
                 processRunner),
             new AnsibleRuntime(objectMapper, new AnsibleJson(objectMapper)),
-            properties));
+            properties,
+            repository,
+            new AnsibleOutputMasker()));
   }
 
   private StepExecutionContext context(String mode, boolean liveEnabled) {
@@ -137,6 +152,10 @@ class AnsibleStepExecutorTest {
             OffsetDateTime.now().plusSeconds(60),
             OffsetDateTime.now(),
             1800,
+            null,
+            null,
+            null,
+            null,
             OffsetDateTime.now(),
             OffsetDateTime.now()),
         liveEnabled);
@@ -181,7 +200,7 @@ class AnsibleStepExecutorTest {
             Map.of("service_name", "order-service")));
   }
 
-  private class FakeAnsibleRepository implements AnsibleRepository {
+  private class FakeAnsibleRepository implements AnsibleRepository, ExecutionRepository {
     @Override
     public Optional<AnsibleInventoryRecord> findInventory(String tenantId, String inventoryId) {
       return Optional.of(
@@ -233,10 +252,15 @@ class AnsibleStepExecutorTest {
               false,
               true,
               true,
+              true,
               json.write(List.of("inv_1")),
               json.write(List.of("service_name")),
+              "[]",
+              "[]",
+              false,
               32768,
               1800,
+              3600,
               true,
               OffsetDateTime.now(),
               OffsetDateTime.now()));
@@ -270,6 +294,140 @@ class AnsibleStepExecutorTest {
     public boolean setPlaybookEnabled(String tenantId, String playbookId, boolean enabled) {
       return true;
     }
+
+    @Override
+    public boolean setCredentialEnabled(String tenantId, String credentialId, boolean enabled) {
+      return true;
+    }
+
+    @Override
+    public Optional<AnsibleCredentialRecord> findCredential(String tenantId, String credentialId) {
+      return Optional.empty();
+    }
+
+    @Override
+    public List<AnsibleCredentialRecord> listCredentials(String tenantId, boolean includeDisabled) {
+      return List.of();
+    }
+
+    @Override
+    public void createCredential(AnsibleCredentialCreateCommand command) {}
+
+    // ExecutionRepository methods
+
+    @Override
+    public Optional<PlanForExecutionRecord> findPlan(String tenantId, String planId) {
+      return Optional.empty();
+    }
+
+    @Override
+    public List<PlanStepForExecutionRecord> listPlanSteps(String planId) {
+      return List.of();
+    }
+
+    @Override
+    public Optional<ExecutionRunRecord> findLatestRunByPlan(String tenantId, String planId) {
+      return Optional.empty();
+    }
+
+    @Override
+    public Optional<ExecutionRunRecord> findRun(String tenantId, String executionId) {
+      return Optional.empty();
+    }
+
+    @Override
+    public List<ExecutionStepRecord> listExecutionSteps(String tenantId, String executionId) {
+      return List.of();
+    }
+
+    @Override
+    public List<ExecutionArtifactRecord> listArtifacts(String tenantId, String executionId) {
+      return List.of();
+    }
+
+    @Override
+    public void createRun(ExecutionRunCreateCommand command) {}
+
+    @Override
+    public void createSteps(List<ExecutionStepCreateCommand> commands) {}
+
+    @Override
+    public void createArtifact(ExecutionArtifactCreateCommand command) {}
+
+    @Override
+    public boolean incrementStepArtifactCount(String tenantId, String stepId) {
+      return true;
+    }
+
+    @Override
+    public boolean updatePlanStatus(String tenantId, String planId, String status) {
+      return true;
+    }
+
+    @Override
+    public boolean cancelRun(String tenantId, String executionId) {
+      return true;
+    }
+
+    @Override
+    public boolean cancelExecutionSteps(String tenantId, String executionId) {
+      return true;
+    }
+
+    @Override
+    public Optional<ExecutionRunRecord> claimNextQueuedRun(
+        String runnerId, OffsetDateTime now, OffsetDateTime leaseUntil) {
+      return Optional.empty();
+    }
+
+    @Override
+    public boolean heartbeat(
+        String tenantId,
+        String executionId,
+        String runnerId,
+        OffsetDateTime heartbeatAt,
+        OffsetDateTime leaseUntil) {
+      return true;
+    }
+
+    @Override
+    public List<ExecutionRunRecord> findExpiredRunningRuns(OffsetDateTime now, int limit) {
+      return List.of();
+    }
+
+    @Override
+    public boolean timeoutRun(String tenantId, String executionId, String errorMessage) {
+      return true;
+    }
+
+    @Override
+    public boolean timeoutExecutionSteps(String tenantId, String executionId) {
+      return true;
+    }
+
+    @Override
+    public boolean updateRunStatus(ExecutionRunStatusUpdateCommand command) {
+      return true;
+    }
+
+    @Override
+    public boolean updateStepStatus(ExecutionStepStatusUpdateCommand command) {
+      return true;
+    }
+
+    @Override
+    public void addTimeline(TimelineCreateCommand command) {}
+
+    @Override
+    public Optional<ExecutionApprovalSnapshotRecord> findLatestApprovedApprovalSnapshot(
+        String tenantId, String planId) {
+      return Optional.empty();
+    }
+
+    @Override
+    public boolean markLiveGuardPassed(String tenantId, String executionId) {
+      return true;
+    }
   }
 
   private static class FakeAnsibleProcessRunner implements AnsibleProcessRunner {
@@ -282,7 +440,8 @@ class AnsibleStepExecutorTest {
     }
 
     @Override
-    public AnsibleProcessResult run(List<String> argv, Path workingDirectory, Duration timeout) {
+    public AnsibleProcessResult run(
+        List<String> argv, Path workingDirectory, Duration timeout, boolean requireCheckMode) {
       this.called = true;
       this.argv = argv;
       return result;

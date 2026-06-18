@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.aegisops.common.exception.AppException;
 import io.aegisops.execution.AnsibleJson;
 import io.aegisops.execution.AnsibleRepository;
+import io.aegisops.execution.ExecutionRepository;
+import io.aegisops.execution.dto.AnsibleCredentialRecord;
 import io.aegisops.execution.dto.AnsibleInventoryRecord;
 import io.aegisops.execution.dto.AnsiblePlaybookRecord;
 import io.aegisops.execution.dto.AnsiblePolicyRecord;
@@ -22,20 +24,24 @@ import org.springframework.stereotype.Component;
 @Component
 public class AnsibleStepExecutor implements StepExecutor {
   private final AnsibleRepository repository;
+  private final ExecutionRepository executionRepository;
   private final AnsibleSafetyValidator validator;
   private final AnsibleCommandPreviewBuilder commandBuilder;
   private final AnsibleWorkspaceManager workspaceManager;
   private final AnsibleProcessRunner processRunner;
+  private final AnsibleOutputMasker outputMasker;
   private final AnsibleRunnerProperties properties;
   private final ObjectMapper objectMapper;
   private final AnsibleJson json;
 
   public AnsibleStepExecutor(AnsibleStepExecutorDeps deps) {
     this.repository = deps.repository();
+    this.executionRepository = deps.executionRepository();
     this.validator = deps.validator();
     this.commandBuilder = deps.commandBuilder();
     this.workspaceManager = deps.workspaceManager();
     this.processRunner = deps.processRunner();
+    this.outputMasker = deps.outputMasker();
     this.properties = deps.properties();
     this.objectMapper = deps.objectMapper();
     this.json = deps.json();
@@ -72,31 +78,67 @@ public class AnsibleStepExecutor implements StepExecutor {
                     new AppException(
                         "ANSIBLE_POLICY_NOT_FOUND", "Ansible execution policy not found"));
 
-    if (!context.dryRun()) {
-      if (!context.liveEnabled()) {
-        return StepExecutionResult.failure(
-            "Live Ansible execution is disabled.",
-            List.of(
-                artifact(
-                    step,
-                    "ansible-live-disabled.json",
-                    writeArtifact(
-                        mapOf(
-                            "inventoryId", inventory.id(),
-                            "playbookId", playbook.id(),
-                            "live", false)))));
-      }
-
-      validator.validateLive(inventory, playbook, policy, payload);
+    if (context.dryRun()) {
+      return executeCheck(context, step, inventory, playbook, policy, payload);
     }
 
+    if (!context.liveEnabled()) {
+      return StepExecutionResult.failure(
+          "Live Ansible execution is disabled.",
+          List.of(
+              artifact(
+                  step,
+                  "ansible-live-disabled.json",
+                  writeArtifact(
+                      mapOf(
+                          "inventoryId", inventory.id(),
+                          "playbookId", playbook.id(),
+                          "live", false)))));
+    }
+
+    return executeLive(context, step, inventory, playbook, policy, payload);
+  }
+
+  private StepExecutionResult executeCheck(
+      StepExecutionContext context,
+      ExecutionStepRecord step,
+      AnsibleInventoryRecord inventory,
+      AnsiblePlaybookRecord playbook,
+      AnsiblePolicyRecord policy,
+      AnsibleActionPayload payload) {
     if (!properties.isCheckExecutionEnabled()) {
       validator.validateDryRunPreview(inventory, playbook, policy, payload);
       return previewOnly(step, inventory, playbook, payload);
     }
 
     validator.validateCheckExecution(inventory, playbook, policy, payload);
-    return executeCheck(step, inventory, playbook, policy, payload);
+    return executeProcess(step, inventory, playbook, policy, payload, true, false);
+  }
+
+  private StepExecutionResult executeLive(
+      StepExecutionContext context,
+      ExecutionStepRecord step,
+      AnsibleInventoryRecord inventory,
+      AnsiblePlaybookRecord playbook,
+      AnsiblePolicyRecord policy,
+      AnsibleActionPayload payload) {
+    AnsibleCredentialRecord credential = null;
+    if (payload.credentialRefId() != null && !payload.credentialRefId().isBlank()) {
+      credential =
+          repository.findCredential(step.tenantId(), payload.credentialRefId()).orElse(null);
+    }
+
+    validator.validateLive(
+        inventory, playbook, policy, payload, context.run(), credential);
+
+    boolean marked =
+        executionRepository.markLiveGuardPassed(context.run().tenantId(), context.run().id());
+    if (!marked) {
+      throw new AppException(
+          "ANSIBLE_LIVE_GUARD_UPDATE_FAILED", "Failed to mark Ansible live guard passed");
+    }
+
+    return executeProcess(step, inventory, playbook, policy, payload, false, true);
   }
 
   private StepExecutionResult previewOnly(
@@ -124,29 +166,25 @@ public class AnsibleStepExecutor implements StepExecutor {
                   "ansible-dry-run-preview.json",
                   writeArtifact(
                       mapOf(
-                          "commandPreview",
-                          displayCommand,
-                          "argv",
-                          argv,
-                          "inventoryId",
-                          inventory.id(),
-                          "playbookId",
-                          playbook.id(),
-                          "checkMode",
-                          true,
-                          "executed",
-                          false)))));
+                          "commandPreview", displayCommand,
+                          "argv", argv,
+                          "inventoryId", inventory.id(),
+                          "playbookId", playbook.id(),
+                          "checkMode", true,
+                          "executed", false)))));
     } finally {
       workspaceManager.cleanup(workspace);
     }
   }
 
-  private StepExecutionResult executeCheck(
+  private StepExecutionResult executeProcess(
       ExecutionStepRecord step,
       AnsibleInventoryRecord inventory,
       AnsiblePlaybookRecord playbook,
       AnsiblePolicyRecord policy,
-      AnsibleActionPayload payload) {
+      AnsibleActionPayload payload,
+      boolean checkMode,
+      boolean live) {
     AnsibleWorkspace workspace = workspaceManager.create(inventory, playbook);
     try {
       List<String> argv =
@@ -155,40 +193,59 @@ public class AnsibleStepExecutor implements StepExecutor {
               workspace.inventoryFile(),
               workspace.playbookFile(),
               payload,
-              true);
+              checkMode);
+
+      int timeoutSeconds = live ? policy.liveTimeoutSeconds() : policy.timeoutSeconds();
 
       AnsibleProcessResult result =
-          processRunner.run(argv, workspace.root(), Duration.ofSeconds(policy.timeoutSeconds()));
+          processRunner.run(
+              argv, workspace.root(), Duration.ofSeconds(timeoutSeconds), checkMode);
 
       String displayCommand = commandBuilder.toDisplayCommand(argv);
 
-      ExecutionArtifactCreateCommand artifact =
+      String stdout =
+          policy.stdoutStderrMaskingEnabled()
+              ? outputMasker.mask(result.stdout())
+              : result.stdout();
+      String stderr =
+          policy.stdoutStderrMaskingEnabled()
+              ? outputMasker.mask(result.stderr())
+              : result.stderr();
+
+      ExecutionArtifactCreateCommand artifactCmd =
           artifact(
               step,
-              "ansible-check-result.json",
+              live ? "ansible-live-result.json" : "ansible-check-result.json",
               writeArtifact(
                   mapOf(
                       "commandPreview", displayCommand,
                       "argv", argv,
                       "inventoryId", inventory.id(),
                       "playbookId", playbook.id(),
-                      "checkMode", true,
+                      "checkMode", checkMode,
+                      "live", live,
                       "executed", true,
                       "exitCode", result.exitCode(),
                       "timedOut", result.timedOut(),
                       "durationMillis", result.durationMillis(),
-                      "stdout", result.stdout(),
-                      "stderr", result.stderr())));
+                      "stdout", stdout,
+                      "stderr", stderr)));
 
       if (result.success()) {
-        return StepExecutionResult.success("Ansible check execution succeeded.", List.of(artifact));
+        return StepExecutionResult.success(
+            live ? "Ansible live execution succeeded." : "Ansible check execution succeeded.",
+            List.of(artifactCmd));
       }
 
       return StepExecutionResult.failure(
           result.timedOut()
-              ? "Ansible check execution timed out."
-              : "Ansible check execution failed with exit code " + result.exitCode(),
-          List.of(artifact));
+              ? (live
+                      ? "Ansible live execution timed out."
+                      : "Ansible check execution timed out.")
+              : (live
+                      ? "Ansible live execution failed with exit code " + result.exitCode()
+                      : "Ansible check execution failed with exit code " + result.exitCode()),
+          List.of(artifactCmd));
     } finally {
       workspaceManager.cleanup(workspace);
     }

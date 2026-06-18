@@ -23,7 +23,8 @@ class AnsibleProcessRunnerTest {
             runner.run(
                 List.of("ansible-playbook", "-i", "inventory.ini", "playbook.yml"),
                 tempDir,
-                Duration.ofSeconds(1)));
+                Duration.ofSeconds(1),
+                true));
   }
 
   @Test
@@ -35,7 +36,10 @@ class AnsibleProcessRunnerTest {
         AppException.class,
         () ->
             runner.run(
-                List.of("sh", "-c", "ansible-playbook --check"), tempDir, Duration.ofSeconds(1)));
+                List.of("sh", "-c", "ansible-playbook --check"),
+                tempDir,
+                Duration.ofSeconds(1),
+                true));
   }
 
   @Test
@@ -49,7 +53,8 @@ class AnsibleProcessRunnerTest {
             runner.run(
                 List.of("python", "--check", "-i", "inventory.ini", "playbook.yml"),
                 tempDir,
-                Duration.ofSeconds(1)));
+                Duration.ofSeconds(1),
+                true));
   }
 
   @Test
@@ -63,7 +68,8 @@ class AnsibleProcessRunnerTest {
             runner.run(
                 List.of("/bin/sh", "--check", "-i", "inventory.ini", "playbook.yml"),
                 tempDir,
-                Duration.ofSeconds(1)));
+                Duration.ofSeconds(1),
+                true));
   }
 
   @Test
@@ -77,6 +83,7 @@ class AnsibleProcessRunnerTest {
             runner.run(
                 List.of("powershell.exe", "--check", "-i", "inventory.ini", "playbook.yml"),
                 tempDir,
-                Duration.ofSeconds(1)));
+                Duration.ofSeconds(1),
+                true));
   }
 }

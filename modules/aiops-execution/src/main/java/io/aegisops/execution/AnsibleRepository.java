@@ -1,5 +1,7 @@
 package io.aegisops.execution;
 
+import io.aegisops.execution.dto.AnsibleCredentialCreateCommand;
+import io.aegisops.execution.dto.AnsibleCredentialRecord;
 import io.aegisops.execution.dto.AnsibleInventoryCreateCommand;
 import io.aegisops.execution.dto.AnsibleInventoryRecord;
 import io.aegisops.execution.dto.AnsiblePlaybookCreateCommand;
@@ -29,4 +31,12 @@ public interface AnsibleRepository {
   Optional<AnsiblePolicyRecord> findPolicy(String tenantId, String playbookId);
 
   boolean setPlaybookEnabled(String tenantId, String playbookId, boolean enabled);
+
+  void createCredential(AnsibleCredentialCreateCommand command);
+
+  List<AnsibleCredentialRecord> listCredentials(String tenantId, boolean includeDisabled);
+
+  Optional<AnsibleCredentialRecord> findCredential(String tenantId, String credentialId);
+
+  boolean setCredentialEnabled(String tenantId, String credentialId, boolean enabled);
 }

@@ -14,7 +14,12 @@ public record AnsiblePlaybookCreateRequest(
     List<String> allowedExtraVars,
     Boolean allowLive,
     Boolean allowCheckExecution,
+    Boolean liveRequiresApproval,
     Boolean defaultCheckMode,
+    List<String> allowedLiveRiskLevels,
+    List<String> allowedCredentialRefIds,
+    Boolean stdoutStderrMaskingEnabled,
     Integer maxExtraVarsBytes,
     Integer timeoutSeconds,
+    Integer liveTimeoutSeconds,
     String createdBy) {}

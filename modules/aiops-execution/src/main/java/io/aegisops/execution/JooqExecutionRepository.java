@@ -1,12 +1,14 @@
 package io.aegisops.execution;
 
 import static io.aegisops.persistence.AegisJooq.jsonbValue;
+import static io.aegisops.persistence.jooq.Tables.AUTOMATION_APPROVAL;
 import static io.aegisops.persistence.jooq.Tables.AUTOMATION_PLAN;
 import static io.aegisops.persistence.jooq.Tables.AUTOMATION_PLAN_STEP;
 import static io.aegisops.persistence.jooq.Tables.EXECUTION_RUN;
 import static io.aegisops.persistence.jooq.Tables.EXECUTION_STEP;
 import static io.aegisops.persistence.jooq.Tables.INCIDENT_TIMELINE;
 
+import io.aegisops.execution.dto.ExecutionApprovalSnapshotRecord;
 import io.aegisops.execution.dto.ExecutionArtifactCreateCommand;
 import io.aegisops.execution.dto.ExecutionArtifactRecord;
 import io.aegisops.execution.dto.ExecutionRunCreateCommand;
@@ -162,6 +164,9 @@ public class JooqExecutionRepository implements ExecutionRepository {
         .set(EXECUTION_RUN.MAX_ATTEMPTS, command.maxAttempts())
         .set(EXECUTION_RUN.RETRY_OF_EXECUTION_ID, command.retryOfExecutionId())
         .set(EXECUTION_RUN.TIMEOUT_SECONDS, command.timeoutSeconds())
+        .set(EXECUTION_RUN.APPROVAL_ID, command.approvalId())
+        .set(EXECUTION_RUN.APPROVAL_SNAPSHOT, jsonbValue(command.approvalSnapshotJson()))
+        .set(EXECUTION_RUN.PLAN_RISK_LEVEL, command.planRiskLevel())
         .set(EXECUTION_RUN.CREATED_AT, DSL.currentOffsetDateTime())
         .set(EXECUTION_RUN.UPDATED_AT, DSL.currentOffsetDateTime())
         .execute();
@@ -386,6 +391,47 @@ public class JooqExecutionRepository implements ExecutionRepository {
         .execute();
   }
 
+  @Override
+  public Optional<ExecutionApprovalSnapshotRecord> findLatestApprovedApprovalSnapshot(
+      String tenantId, String planId) {
+    return dsl.select(
+            AUTOMATION_APPROVAL.ID,
+            AUTOMATION_APPROVAL.PLAN_ID,
+            AUTOMATION_APPROVAL.STATUS,
+            AUTOMATION_APPROVAL.SUBMITTED_BY,
+            AUTOMATION_APPROVAL.REQUIRED_APPROVALS,
+            AUTOMATION_APPROVAL.APPROVED_COUNT,
+            AUTOMATION_APPROVAL.COMPLETED_AT)
+        .from(AUTOMATION_APPROVAL)
+        .where(AUTOMATION_APPROVAL.TENANT_ID.eq(tenantId))
+        .and(AUTOMATION_APPROVAL.PLAN_ID.eq(planId))
+        .and(AUTOMATION_APPROVAL.STATUS.eq("approved"))
+        .orderBy(AUTOMATION_APPROVAL.COMPLETED_AT.desc())
+        .limit(1)
+        .fetchOptional(
+            record ->
+                new ExecutionApprovalSnapshotRecord(
+                    record.get(AUTOMATION_APPROVAL.ID),
+                    record.get(AUTOMATION_APPROVAL.PLAN_ID),
+                    record.get(AUTOMATION_APPROVAL.STATUS),
+                    record.get(AUTOMATION_APPROVAL.SUBMITTED_BY),
+                    value(record.get(AUTOMATION_APPROVAL.REQUIRED_APPROVALS)),
+                    value(record.get(AUTOMATION_APPROVAL.APPROVED_COUNT)),
+                    record.get(AUTOMATION_APPROVAL.COMPLETED_AT)));
+  }
+
+  @Override
+  public boolean markLiveGuardPassed(String tenantId, String executionId) {
+    return dsl.update(EXECUTION_RUN)
+            .set(EXECUTION_RUN.LIVE_GUARD_PASSED_AT, DSL.currentOffsetDateTime())
+            .set(EXECUTION_RUN.UPDATED_AT, DSL.currentOffsetDateTime())
+            .where(EXECUTION_RUN.TENANT_ID.eq(tenantId))
+            .and(EXECUTION_RUN.ID.eq(executionId))
+            .and(EXECUTION_RUN.MODE.eq("live"))
+            .execute()
+        > 0;
+  }
+
   private org.jooq.SelectJoinStep<?> selectRun(DSLContext context) {
     return context
         .select(
@@ -407,57 +453,21 @@ public class JooqExecutionRepository implements ExecutionRepository {
             EXECUTION_RUN.LEASE_UNTIL,
             EXECUTION_RUN.HEARTBEAT_AT,
             EXECUTION_RUN.TIMEOUT_SECONDS,
+            EXECUTION_RUN.APPROVAL_ID,
+            EXECUTION_RUN.APPROVAL_SNAPSHOT.cast(String.class).as("approval_snapshot_json"),
+            EXECUTION_RUN.PLAN_RISK_LEVEL,
+            EXECUTION_RUN.LIVE_GUARD_PASSED_AT,
             EXECUTION_RUN.CREATED_AT,
             EXECUTION_RUN.UPDATED_AT)
         .from(EXECUTION_RUN);
   }
 
   private ExecutionRunRecord toRunRecord(org.jooq.Record record) {
-    return new ExecutionRunRecord(
-        record.get(EXECUTION_RUN.ID),
-        record.get(EXECUTION_RUN.TENANT_ID),
-        record.get(EXECUTION_RUN.INCIDENT_ID),
-        record.get(EXECUTION_RUN.PLAN_ID),
-        record.get(EXECUTION_RUN.STATUS),
-        record.get(EXECUTION_RUN.MODE),
-        record.get(EXECUTION_RUN.REQUESTED_BY),
-        record.get(EXECUTION_RUN.RUNNER_ID),
-        record.get(EXECUTION_RUN.STARTED_AT),
-        record.get(EXECUTION_RUN.FINISHED_AT),
-        record.get(EXECUTION_RUN.ERROR_MESSAGE),
-        record.get(EXECUTION_RUN.SUMMARY),
-        value(record.get(EXECUTION_RUN.ATTEMPT)),
-        value(record.get(EXECUTION_RUN.MAX_ATTEMPTS)),
-        record.get(EXECUTION_RUN.RETRY_OF_EXECUTION_ID),
-        record.get(EXECUTION_RUN.LEASE_UNTIL),
-        record.get(EXECUTION_RUN.HEARTBEAT_AT),
-        value(record.get(EXECUTION_RUN.TIMEOUT_SECONDS)),
-        record.get(EXECUTION_RUN.CREATED_AT),
-        record.get(EXECUTION_RUN.UPDATED_AT));
+    return ExecutionRunRecordMapper.toRunRecord(record, this::value);
   }
 
   private ExecutionStepRecord toStepRecord(org.jooq.Record record) {
-    return new ExecutionStepRecord(
-        record.get(EXECUTION_STEP.ID),
-        record.get(EXECUTION_STEP.TENANT_ID),
-        record.get(EXECUTION_STEP.EXECUTION_ID),
-        record.get(EXECUTION_STEP.PLAN_STEP_ID),
-        value(record.get(EXECUTION_STEP.SEQUENCE_NO)),
-        record.get(EXECUTION_STEP.NAME),
-        record.get(EXECUTION_STEP.ACTION_TYPE),
-        record.get(EXECUTION_STEP.TARGET_TYPE),
-        record.get(EXECUTION_STEP.STATUS),
-        record.get("action_payload_json", String.class),
-        record.get(EXECUTION_STEP.COMMAND_SNAPSHOT),
-        record.get(EXECUTION_STEP.OUTPUT),
-        record.get(EXECUTION_STEP.ERROR_MESSAGE),
-        record.get(EXECUTION_STEP.STARTED_AT),
-        record.get(EXECUTION_STEP.FINISHED_AT),
-        value(record.get(EXECUTION_STEP.ATTEMPT)),
-        value(record.get(EXECUTION_STEP.TIMEOUT_SECONDS)),
-        value(record.get(EXECUTION_STEP.ARTIFACT_COUNT)),
-        record.get(EXECUTION_STEP.CREATED_AT),
-        record.get(EXECUTION_STEP.UPDATED_AT));
+    return ExecutionStepAndArtifactMapper.toStepRecord(record);
   }
 
   private int value(Integer value) {

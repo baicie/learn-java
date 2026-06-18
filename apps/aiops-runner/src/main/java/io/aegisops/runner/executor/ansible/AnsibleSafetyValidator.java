@@ -3,9 +3,11 @@ package io.aegisops.runner.executor.ansible;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.aegisops.common.exception.AppException;
 import io.aegisops.execution.AnsibleJson;
+import io.aegisops.execution.dto.AnsibleCredentialRecord;
 import io.aegisops.execution.dto.AnsibleInventoryRecord;
 import io.aegisops.execution.dto.AnsiblePlaybookRecord;
 import io.aegisops.execution.dto.AnsiblePolicyRecord;
+import io.aegisops.execution.dto.ExecutionRunRecord;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Locale;
@@ -62,7 +64,9 @@ public class AnsibleSafetyValidator {
       AnsibleInventoryRecord inventory,
       AnsiblePlaybookRecord playbook,
       AnsiblePolicyRecord policy,
-      AnsibleActionPayload payload) {
+      AnsibleActionPayload payload,
+      ExecutionRunRecord run,
+      AnsibleCredentialRecord credential) {
     validateCommon(inventory, playbook, policy, payload);
 
     if (!policy.allowLive()) {
@@ -70,9 +74,24 @@ public class AnsibleSafetyValidator {
           "ANSIBLE_LIVE_NOT_ALLOWED", "Ansible live execution is not allowed by policy");
     }
 
-    throw new AppException(
-        "ANSIBLE_LIVE_NOT_IMPLEMENTED",
-        "Ansible live execution is not implemented in Phase5.6. Use check mode.");
+    if (policy.liveRequiresApproval()) {
+      if (run.approvalId() == null || run.approvalId().isBlank()) {
+        throw new AppException(
+            "ANSIBLE_LIVE_APPROVAL_REQUIRED",
+            "Ansible live execution requires approval snapshot");
+      }
+
+      if (run.approvalSnapshotJson() == null
+          || run.approvalSnapshotJson().isBlank()
+          || "{}".equals(run.approvalSnapshotJson())) {
+        throw new AppException(
+            "ANSIBLE_LIVE_APPROVAL_REQUIRED",
+            "Ansible live execution requires approval snapshot");
+      }
+    }
+
+    validateLiveRiskLevel(policy, run.planRiskLevel());
+    validateCredentialRef(policy, payload, credential);
   }
 
   private void validateCommon(
@@ -89,7 +108,8 @@ public class AnsibleSafetyValidator {
     }
 
     if (policy == null || !policy.enabled()) {
-      throw new AppException("ANSIBLE_POLICY_DISABLED", "Ansible execution policy is disabled");
+      throw new AppException(
+          "ANSIBLE_POLICY_DISABLED", "Ansible execution policy is disabled");
     }
 
     validateInventoryAllowed(policy, inventory.id());
@@ -161,6 +181,46 @@ public class AnsibleSafetyValidator {
     if (size > policy.maxExtraVarsBytes()) {
       throw new AppException(
           "ANSIBLE_EXTRA_VARS_TOO_LARGE", "Ansible extraVars exceed policy limit");
+    }
+  }
+
+  private void validateLiveRiskLevel(AnsiblePolicyRecord policy, String riskLevel) {
+    String normalizedRisk = riskLevel == null ? "" : riskLevel.toLowerCase(Locale.ROOT);
+    List<String> allowed =
+        json.readStringList(policy.allowedLiveRiskLevelsJson()).stream()
+            .map(item -> item.toLowerCase(Locale.ROOT))
+            .toList();
+
+    if (!allowed.contains(normalizedRisk)) {
+      throw new AppException(
+          "ANSIBLE_LIVE_RISK_NOT_ALLOWED",
+          "Ansible live execution is not allowed for risk level: " + riskLevel);
+    }
+  }
+
+  private void validateCredentialRef(
+      AnsiblePolicyRecord policy,
+      AnsibleActionPayload payload,
+      AnsibleCredentialRecord credential) {
+    if (payload.credentialRefId() == null || payload.credentialRefId().isBlank()) {
+      return;
+    }
+
+    if (credential == null) {
+      throw new AppException(
+          "ANSIBLE_CREDENTIAL_NOT_FOUND", "Ansible credential reference not found");
+    }
+
+    if (!credential.enabled()) {
+      throw new AppException(
+          "ANSIBLE_CREDENTIAL_DISABLED", "Ansible credential reference is disabled");
+    }
+
+    List<String> allowed = json.readStringList(policy.allowedCredentialRefIdsJson());
+    if (!allowed.contains(payload.credentialRefId())) {
+      throw new AppException(
+          "ANSIBLE_CREDENTIAL_NOT_ALLOWED",
+          "Ansible credential reference is not allowed by policy");
     }
   }
 

@@ -21,11 +21,12 @@ public class ProcessBuilderAnsibleProcessRunner implements AnsibleProcessRunner 
   }
 
   @Override
-  public AnsibleProcessResult run(List<String> argv, Path workingDirectory, Duration timeout) {
+  public AnsibleProcessResult run(
+      List<String> argv, Path workingDirectory, Duration timeout, boolean requireCheckMode) {
     long started = System.currentTimeMillis();
 
     try {
-      validateArgv(argv);
+      validateArgv(argv, requireCheckMode);
 
       ProcessBuilder builder = new ProcessBuilder(argv);
       builder.directory(workingDirectory.toFile());
@@ -35,8 +36,10 @@ public class ProcessBuilderAnsibleProcessRunner implements AnsibleProcessRunner 
       var executor = Executors.newFixedThreadPool(2);
 
       try {
-        Future<String> stdoutFuture = executor.submit(() -> readLimited(process.getInputStream()));
-        Future<String> stderrFuture = executor.submit(() -> readLimited(process.getErrorStream()));
+        Future<String> stdoutFuture =
+            executor.submit(() -> readLimited(process.getInputStream()));
+        Future<String> stderrFuture =
+            executor.submit(() -> readLimited(process.getErrorStream()));
 
         boolean finished = process.waitFor(timeout.toMillis(), TimeUnit.MILLISECONDS);
 
@@ -64,11 +67,11 @@ public class ProcessBuilderAnsibleProcessRunner implements AnsibleProcessRunner 
     } catch (AppException ex) {
       throw ex;
     } catch (Exception ex) {
-      throw new AppException("ANSIBLE_PROCESS_FAILED", "Failed to execute ansible-playbook check");
+      throw new AppException("ANSIBLE_PROCESS_FAILED", "Failed to execute ansible-playbook");
     }
   }
 
-  private void validateArgv(List<String> argv) {
+  private void validateArgv(List<String> argv, boolean requireCheckMode) {
     if (argv == null || argv.isEmpty()) {
       throw new AppException("ANSIBLE_ARGV_EMPTY", "Ansible argv is empty");
     }
@@ -79,9 +82,10 @@ public class ProcessBuilderAnsibleProcessRunner implements AnsibleProcessRunner 
 
     validateBinary(argv.get(0));
 
-    if (!argv.contains("--check")) {
+    if (requireCheckMode && !argv.contains("--check")) {
       throw new AppException(
-          "ANSIBLE_CHECK_MODE_REQUIRED", "Ansible sandbox execution must use --check");
+          "ANSIBLE_CHECK_MODE_REQUIRED",
+          "Ansible sandbox execution must use --check");
     }
 
     if (argv.stream().anyMatch(this::isShellBinary)) {
@@ -95,7 +99,7 @@ public class ProcessBuilderAnsibleProcessRunner implements AnsibleProcessRunner 
     if (!"ansible-playbook".equals(baseName) && !"ansible-playbook.exe".equals(baseName)) {
       throw new AppException(
           "ANSIBLE_BINARY_NOT_ALLOWED",
-          "Only ansible-playbook binary is allowed for sandbox check execution");
+          "Only ansible-playbook binary is allowed for Ansible execution");
     }
   }
 

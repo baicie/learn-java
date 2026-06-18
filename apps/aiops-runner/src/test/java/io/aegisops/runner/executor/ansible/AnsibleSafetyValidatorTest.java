@@ -6,9 +6,11 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.aegisops.common.exception.AppException;
 import io.aegisops.execution.AnsibleJson;
+import io.aegisops.execution.dto.AnsibleCredentialRecord;
 import io.aegisops.execution.dto.AnsibleInventoryRecord;
 import io.aegisops.execution.dto.AnsiblePlaybookRecord;
 import io.aegisops.execution.dto.AnsiblePolicyRecord;
+import io.aegisops.execution.dto.ExecutionRunRecord;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
@@ -30,7 +32,8 @@ class AnsibleSafetyValidatorTest {
                 new AnsibleActionPayload(
                     "inv_1",
                     "pb_1",
-                    true,
+                    null,
+                    null,
                     List.of("restart"),
                     Map.of("service_name", "order-service"))));
   }
@@ -46,7 +49,8 @@ class AnsibleSafetyValidatorTest {
                 new AnsibleActionPayload(
                     "inv_1",
                     "pb_1",
-                    true,
+                    null,
+                    null,
                     List.of("restart"),
                     Map.of("service_name", "order-service"))));
   }
@@ -60,7 +64,7 @@ class AnsibleSafetyValidatorTest {
                 inventory(false),
                 playbook(true, List.of("restart")),
                 policy(true, true, List.of("inv_1"), List.of("service_name")),
-                new AnsibleActionPayload("inv_1", "pb_1", true, List.of(), Map.of())));
+                new AnsibleActionPayload("inv_1", "pb_1", null, null, List.of(), Map.of())));
   }
 
   @Test
@@ -72,7 +76,7 @@ class AnsibleSafetyValidatorTest {
                 inventory(true),
                 playbook(true, List.of("restart")),
                 policy(true, true, List.of("other_inv"), List.of("service_name")),
-                new AnsibleActionPayload("inv_1", "pb_1", true, List.of(), Map.of())));
+                new AnsibleActionPayload("inv_1", "pb_1", null, null, List.of(), Map.of())));
   }
 
   @Test
@@ -84,7 +88,7 @@ class AnsibleSafetyValidatorTest {
                 inventory(true),
                 playbook(true, List.of("restart")),
                 policy(true, true, List.of("inv_1"), List.of("service_name")),
-                new AnsibleActionPayload("inv_1", "pb_1", true, List.of("delete"), Map.of())));
+                new AnsibleActionPayload("inv_1", "pb_1", null, null, List.of("delete"), Map.of())));
   }
 
   @Test
@@ -97,7 +101,7 @@ class AnsibleSafetyValidatorTest {
                 playbook(true, List.of("restart")),
                 policy(true, true, List.of("inv_1"), List.of("service_name", "password")),
                 new AnsibleActionPayload(
-                    "inv_1", "pb_1", true, List.of(), Map.of("password", "123456"))));
+                    "inv_1", "pb_1", null, null, List.of(), Map.of("password", "123456"))));
   }
 
   @Test
@@ -110,7 +114,7 @@ class AnsibleSafetyValidatorTest {
                 playbook(true, List.of("restart")),
                 policy(true, true, List.of("inv_1"), List.of("service_name", "db_password")),
                 new AnsibleActionPayload(
-                    "inv_1", "pb_1", true, List.of(), Map.of("db_password", "123456"))));
+                    "inv_1", "pb_1", null, null, List.of(), Map.of("db_password", "123456"))));
   }
 
   @Test
@@ -123,7 +127,7 @@ class AnsibleSafetyValidatorTest {
                 playbook(true, List.of("restart")),
                 policy(true, true, List.of("inv_1"), List.of("service_name", "api_token")),
                 new AnsibleActionPayload(
-                    "inv_1", "pb_1", true, List.of(), Map.of("api_token", "secret-token"))));
+                    "inv_1", "pb_1", null, null, List.of(), Map.of("api_token", "secret-token"))));
   }
 
   @Test
@@ -138,21 +142,130 @@ class AnsibleSafetyValidatorTest {
                 new AnsibleActionPayload(
                     "inv_1",
                     "pb_1",
-                    true,
+                    null,
+                    null,
                     List.of("restart"),
                     Map.of("service_name", "order-service"))));
   }
 
   @Test
-  void rejectLiveExecutionAsNotImplemented() {
+  void rejectLiveExecutionWhenNotAllowed() {
+    ExecutionRunRecord run = runRecord(null, null, null);
     assertThrows(
         AppException.class,
         () ->
             validator.validateLive(
                 inventory(true),
                 playbook(true, List.of("restart")),
-                policy(true, true, List.of("inv_1"), List.of("service_name")),
-                new AnsibleActionPayload("inv_1", "pb_1", true, List.of(), Map.of())));
+                policyLive(false, false, List.of("low")),
+                new AnsibleActionPayload("inv_1", "pb_1", null, null, List.of(), Map.of()),
+                run,
+                null));
+  }
+
+  @Test
+  void rejectLiveExecutionWithoutApprovalSnapshot() {
+    ExecutionRunRecord run = runRecord(null, null, "medium");
+    assertThrows(
+        AppException.class,
+        () ->
+            validator.validateLive(
+                inventory(true),
+                playbook(true, List.of("restart")),
+                policyLive(true, true, List.of("low", "medium")),
+                new AnsibleActionPayload("inv_1", "pb_1", null, null, List.of(), Map.of()),
+                run,
+                null));
+  }
+
+  @Test
+  void rejectLiveExecutionWithWrongRiskLevel() {
+    ExecutionRunRecord run =
+        runRecord("appr_1", "{\"status\":\"approved\"}", "critical");
+    assertThrows(
+        AppException.class,
+        () ->
+            validator.validateLive(
+                inventory(true),
+                playbook(true, List.of("restart")),
+                policyLive(true, true, List.of("low")),
+                new AnsibleActionPayload("inv_1", "pb_1", null, null, List.of(), Map.of()),
+                run,
+                null));
+  }
+
+  @Test
+  void allowLiveExecutionWithApprovalAndCorrectRisk() {
+    ExecutionRunRecord run =
+        runRecord("appr_1", "{\"status\":\"approved\"}", "medium");
+    assertDoesNotThrow(
+        () ->
+            validator.validateLive(
+                inventory(true),
+                playbook(true, List.of("restart")),
+                policyLive(true, true, List.of("low", "medium")),
+                new AnsibleActionPayload("inv_1", "pb_1", null, null, List.of(), Map.of()),
+                run,
+                null));
+  }
+
+  @Test
+  void rejectLiveExecutionWithDisabledCredential() {
+    ExecutionRunRecord run =
+        runRecord("appr_1", "{\"status\":\"approved\"}", "low");
+    AnsibleCredentialRecord cred = credentialRecord(false);
+    assertThrows(
+        AppException.class,
+        () ->
+            validator.validateLive(
+                inventory(true),
+                playbook(true, List.of("restart")),
+                policyLiveWithCredential(true, true, List.of("low"), "cred_1"),
+                new AnsibleActionPayload("inv_1", "pb_1", "cred_1", null, List.of(), Map.of()),
+                run,
+                cred));
+  }
+
+  private ExecutionRunRecord runRecord(String approvalId, String snapshot, String riskLevel) {
+    return new ExecutionRunRecord(
+        "run_1",
+        "tenant_1",
+        "inc_1",
+        "plan_1",
+        "running",
+        "live",
+        "alice",
+        "runner_1",
+        OffsetDateTime.now(),
+        null,
+        null,
+        null,
+        1,
+        1,
+        null,
+        OffsetDateTime.now().plusSeconds(60),
+        OffsetDateTime.now(),
+        1800,
+        approvalId,
+        snapshot,
+        riskLevel,
+        null,
+        OffsetDateTime.now(),
+        OffsetDateTime.now());
+  }
+
+  private AnsibleCredentialRecord credentialRecord(boolean enabled) {
+    return new AnsibleCredentialRecord(
+        "cred_1",
+        "tenant_1",
+        "test",
+        "desc",
+        "vault",
+        "vault://secret/test",
+        enabled,
+        "alice",
+        OffsetDateTime.now(),
+        OffsetDateTime.now());
   }
 
   private AnsibleInventoryRecord inventory(boolean enabled) {
@@ -197,11 +310,67 @@ class AnsibleSafetyValidatorTest {
         "pb_1",
         false,
         allowCheckExecution,
+        false,
         true,
         json.write(inventories),
         json.write(extraVars),
+        "[]",
+        "[]",
+        false,
         32768,
         1800,
+        3600,
+        enabled,
+        OffsetDateTime.now(),
+        OffsetDateTime.now());
+  }
+
+  private AnsiblePolicyRecord policyLive(
+      boolean enabled,
+      boolean liveRequiresApproval,
+      List<String> allowedRiskLevels) {
+    return new AnsiblePolicyRecord(
+        "apol_1",
+        "tenant_1",
+        "pb_1",
+        enabled,
+        true,
+        liveRequiresApproval,
+        true,
+        json.write(List.of("inv_1")),
+        json.write(List.of("service_name")),
+        json.write(allowedRiskLevels),
+        "[]",
+        false,
+        32768,
+        1800,
+        3600,
+        enabled,
+        OffsetDateTime.now(),
+        OffsetDateTime.now());
+  }
+
+  private AnsiblePolicyRecord policyLiveWithCredential(
+      boolean enabled,
+      boolean liveRequiresApproval,
+      List<String> allowedRiskLevels,
+      String credentialId) {
+    return new AnsiblePolicyRecord(
+        "apol_1",
+        "tenant_1",
+        "pb_1",
+        enabled,
+        true,
+        liveRequiresApproval,
+        true,
+        json.write(List.of("inv_1")),
+        json.write(List.of("service_name")),
+        json.write(allowedRiskLevels),
+        json.write(List.of(credentialId)),
+        false,
+        32768,
+        1800,
+        3600,
         enabled,
         OffsetDateTime.now(),
         OffsetDateTime.now());
