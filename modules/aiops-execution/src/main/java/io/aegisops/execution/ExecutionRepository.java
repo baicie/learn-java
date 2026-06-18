@@ -1,5 +1,7 @@
 package io.aegisops.execution;
 
+import io.aegisops.execution.dto.ExecutionArtifactCreateCommand;
+import io.aegisops.execution.dto.ExecutionArtifactRecord;
 import io.aegisops.execution.dto.ExecutionRunCreateCommand;
 import io.aegisops.execution.dto.ExecutionRunRecord;
 import io.aegisops.execution.dto.ExecutionRunStatusUpdateCommand;
@@ -9,6 +11,7 @@ import io.aegisops.execution.dto.ExecutionStepStatusUpdateCommand;
 import io.aegisops.execution.dto.PlanForExecutionRecord;
 import io.aegisops.execution.dto.PlanStepForExecutionRecord;
 import io.aegisops.execution.dto.TimelineCreateCommand;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -23,9 +26,15 @@ public interface ExecutionRepository {
 
   List<ExecutionStepRecord> listExecutionSteps(String tenantId, String executionId);
 
+  List<ExecutionArtifactRecord> listArtifacts(String tenantId, String executionId);
+
   void createRun(ExecutionRunCreateCommand command);
 
   void createSteps(List<ExecutionStepCreateCommand> commands);
+
+  void createArtifact(ExecutionArtifactCreateCommand command);
+
+  boolean incrementStepArtifactCount(String tenantId, String stepId);
 
   boolean updatePlanStatus(String tenantId, String planId, String status);
 
@@ -33,7 +42,21 @@ public interface ExecutionRepository {
 
   boolean cancelExecutionSteps(String tenantId, String executionId);
 
-  Optional<ExecutionRunRecord> claimNextQueuedRun(String runnerId);
+  Optional<ExecutionRunRecord> claimNextQueuedRun(
+      String runnerId, OffsetDateTime now, OffsetDateTime leaseUntil);
+
+  boolean heartbeat(
+      String tenantId,
+      String executionId,
+      String runnerId,
+      OffsetDateTime heartbeatAt,
+      OffsetDateTime leaseUntil);
+
+  List<ExecutionRunRecord> findExpiredRunningRuns(OffsetDateTime now, int limit);
+
+  boolean timeoutRun(String tenantId, String executionId, String errorMessage);
+
+  boolean timeoutExecutionSteps(String tenantId, String executionId);
 
   boolean updateRunStatus(ExecutionRunStatusUpdateCommand command);
 

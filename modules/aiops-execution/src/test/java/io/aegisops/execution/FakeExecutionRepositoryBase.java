@@ -1,5 +1,7 @@
 package io.aegisops.execution;
 
+import io.aegisops.execution.dto.ExecutionArtifactCreateCommand;
+import io.aegisops.execution.dto.ExecutionArtifactRecord;
 import io.aegisops.execution.dto.ExecutionRunCreateCommand;
 import io.aegisops.execution.dto.ExecutionRunRecord;
 import io.aegisops.execution.dto.ExecutionRunStatusUpdateCommand;
@@ -9,6 +11,7 @@ import io.aegisops.execution.dto.ExecutionStepStatusUpdateCommand;
 import io.aegisops.execution.dto.PlanForExecutionRecord;
 import io.aegisops.execution.dto.PlanStepForExecutionRecord;
 import io.aegisops.execution.dto.TimelineCreateCommand;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -39,10 +42,23 @@ abstract class FakeExecutionRepositoryBase implements ExecutionRepository {
   }
 
   @Override
+  public List<ExecutionArtifactRecord> listArtifacts(String tenantId, String executionId) {
+    return List.of();
+  }
+
+  @Override
   public void createRun(ExecutionRunCreateCommand command) {}
 
   @Override
   public void createSteps(List<ExecutionStepCreateCommand> commands) {}
+
+  @Override
+  public void createArtifact(ExecutionArtifactCreateCommand command) {}
+
+  @Override
+  public boolean incrementStepArtifactCount(String tenantId, String stepId) {
+    return true;
+  }
 
   @Override
   public boolean updatePlanStatus(String tenantId, String planId, String status) {
@@ -60,8 +76,34 @@ abstract class FakeExecutionRepositoryBase implements ExecutionRepository {
   }
 
   @Override
-  public Optional<ExecutionRunRecord> claimNextQueuedRun(String runnerId) {
+  public Optional<ExecutionRunRecord> claimNextQueuedRun(
+      String runnerId, OffsetDateTime now, OffsetDateTime leaseUntil) {
     return Optional.empty();
+  }
+
+  @Override
+  public boolean heartbeat(
+      String tenantId,
+      String executionId,
+      String runnerId,
+      OffsetDateTime heartbeatAt,
+      OffsetDateTime leaseUntil) {
+    return true;
+  }
+
+  @Override
+  public List<ExecutionRunRecord> findExpiredRunningRuns(OffsetDateTime now, int limit) {
+    return List.of();
+  }
+
+  @Override
+  public boolean timeoutRun(String tenantId, String executionId, String errorMessage) {
+    return true;
+  }
+
+  @Override
+  public boolean timeoutExecutionSteps(String tenantId, String executionId) {
+    return true;
   }
 
   @Override

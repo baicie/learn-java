@@ -18,5 +18,8 @@ public record ExecutionStepRecord(
     String errorMessage,
     OffsetDateTime startedAt,
     OffsetDateTime finishedAt,
+    int attempt,
+    int timeoutSeconds,
+    int artifactCount,
     OffsetDateTime createdAt,
     OffsetDateTime updatedAt) {}

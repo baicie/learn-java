@@ -1,6 +1,7 @@
 package io.aegisops.execution;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -18,6 +19,9 @@ class ExecutionSafetyTest {
     assertFalse(content.contains("Ansible"));
     assertFalse(content.contains("RestTemplate"));
     assertFalse(content.contains("WebClient.create"));
+
+    assertTrue(content.contains("lease"));
+    assertTrue(content.contains("artifact"));
   }
 
   private String readMainSources(Path root) throws Exception {

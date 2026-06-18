@@ -1,6 +1,7 @@
 package io.aegisops.runner;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -8,7 +9,7 @@ import org.junit.jupiter.api.Test;
 
 class RunnerSafetyTest {
   @Test
-  void runnerDoesNotUseShellExecutionLibrariesInPhase52() throws Exception {
+  void runnerDoesNotUseLiveExecutionLibrariesInPhase53() throws Exception {
     String content = readMainSources(Path.of("src/main/java"));
 
     assertFalse(content.contains("ProcessBuilder"));
@@ -18,6 +19,9 @@ class RunnerSafetyTest {
     assertFalse(content.contains("Ansible"));
     assertFalse(content.contains("WebClient.create"));
     assertFalse(content.contains("RestTemplate"));
+
+    assertTrue(content.contains("heartbeat"));
+    assertTrue(content.contains("timeout"));
   }
 
   private String readMainSources(Path root) throws Exception {

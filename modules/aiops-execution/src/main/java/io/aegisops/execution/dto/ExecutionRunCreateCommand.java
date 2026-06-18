@@ -7,4 +7,8 @@ public record ExecutionRunCreateCommand(
     String planId,
     String status,
     String mode,
-    String requestedBy) {}
+    String requestedBy,
+    int attempt,
+    int maxAttempts,
+    String retryOfExecutionId,
+    int timeoutSeconds) {}

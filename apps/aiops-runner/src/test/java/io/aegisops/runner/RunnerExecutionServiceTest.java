@@ -6,8 +6,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.aegisops.common.exception.AppException;
-import io.aegisops.execution.ExecutionJson;
 import io.aegisops.execution.ExecutionProperties;
+import io.aegisops.execution.dto.ExecutionArtifactCreateCommand;
 import io.aegisops.execution.dto.ExecutionRunRecord;
 import io.aegisops.execution.dto.ExecutionRunStatusUpdateCommand;
 import io.aegisops.execution.dto.ExecutionStepRecord;
@@ -23,13 +23,14 @@ import org.junit.jupiter.api.Test;
 
 class RunnerExecutionServiceTest {
   @Test
-  void processManualAndShellDryRunStepsSuccessfully() {
+  void processRunWritesHeartbeatAndArtifacts() {
     FakeRunnerRepository repository = new FakeRunnerRepository();
-    repository.claimed = run("exec_1", "dry_run");
+    repository.claimed = run("exec_1", "running", "dry_run");
     repository.steps.add(step("step_1", 1, "manual", "{}"));
-    repository.steps.add(step("step_2", 2, "shell", "{\"command\":\"systemctl status app\"}"));
 
     ExecutionProperties executionProperties = new ExecutionProperties();
+    executionProperties.setLeaseSeconds(60);
+
     RunnerProperties runnerProperties = new RunnerProperties();
     runnerProperties.setRunnerId("runner_1");
 
@@ -39,22 +40,49 @@ class RunnerExecutionServiceTest {
             executionProperties,
             runnerProperties,
             List.of(
-                new ManualStepExecutor(),
+                new ManualStepExecutor(new ObjectMapper()),
                 new ShellDryRunStepExecutor(new ObjectMapper()),
-                new UnsupportedStepExecutor()));
+                new UnsupportedStepExecutor(new ObjectMapper())));
 
     boolean processed = service.processNext();
 
     assertTrue(processed);
+    assertTrue(repository.heartbeatCount >= 2);
     assertEquals("succeeded", repository.runStatus);
     assertEquals("succeeded", repository.planStatus);
-    assertEquals(List.of("running", "succeeded", "running", "succeeded"), repository.stepStatuses);
+    assertEquals(1, repository.artifacts.size());
+    assertEquals(1, repository.artifactIncrementCount);
+  }
+
+  @Test
+  void timeoutSweepMarksRunStepsAndPlan() {
+    FakeRunnerRepository repository = new FakeRunnerRepository();
+    repository.expiredRuns.add(run("exec_1", "running", "dry_run"));
+
+    ExecutionProperties executionProperties = new ExecutionProperties();
+
+    RunnerProperties runnerProperties = new RunnerProperties();
+    runnerProperties.setRunnerId("runner_1");
+
+    RunnerExecutionService service =
+        new RunnerExecutionService(
+            repository,
+            executionProperties,
+            runnerProperties,
+            List.of(new ManualStepExecutor(new ObjectMapper())));
+
+    int count = service.sweepTimeouts();
+
+    assertEquals(1, count);
+    assertEquals("timeout", repository.timeoutRunStatus);
+    assertEquals("failed", repository.planStatus);
+    assertTrue(repository.stepsTimedOut);
   }
 
   @Test
   void unsupportedStepFailsRunAndSkipsRemaining() {
     FakeRunnerRepository repository = new FakeRunnerRepository();
-    repository.claimed = run("exec_1", "dry_run");
+    repository.claimed = run("exec_1", "running", "dry_run");
     repository.steps.add(step("step_1", 1, "http", "{}"));
     repository.steps.add(step("step_2", 2, "manual", "{}"));
 
@@ -67,7 +95,9 @@ class RunnerExecutionServiceTest {
             repository,
             executionProperties,
             runnerProperties,
-            List.of(new ManualStepExecutor(), new UnsupportedStepExecutor()));
+            List.of(
+                new ManualStepExecutor(new ObjectMapper()),
+                new UnsupportedStepExecutor(new ObjectMapper())));
 
     service.processNext();
 
@@ -80,7 +110,7 @@ class RunnerExecutionServiceTest {
   @Test
   void emptyStepsFailRunAndPlan() {
     FakeRunnerRepository repository = new FakeRunnerRepository();
-    repository.claimed = run("exec_1", "dry_run");
+    repository.claimed = run("exec_1", "running", "dry_run");
 
     ExecutionProperties executionProperties = new ExecutionProperties();
     RunnerProperties runnerProperties = new RunnerProperties();
@@ -91,7 +121,9 @@ class RunnerExecutionServiceTest {
             repository,
             executionProperties,
             runnerProperties,
-            List.of(new ManualStepExecutor(), new UnsupportedStepExecutor()));
+            List.of(
+                new ManualStepExecutor(new ObjectMapper()),
+                new UnsupportedStepExecutor(new ObjectMapper())));
 
     service.processNext();
 
@@ -102,7 +134,7 @@ class RunnerExecutionServiceTest {
   @Test
   void processFailsWhenPlanStatusUpdateFails() {
     FakeRunnerRepository repository = new FakeRunnerRepository();
-    repository.claimed = run("exec_1", "dry_run");
+    repository.claimed = run("exec_1", "running", "dry_run");
     repository.failPlanStatusUpdate = true;
     repository.steps.add(step("step_1", 1, "manual", "{}"));
 
@@ -115,18 +147,20 @@ class RunnerExecutionServiceTest {
             repository,
             executionProperties,
             runnerProperties,
-            List.of(new ManualStepExecutor(), new UnsupportedStepExecutor()));
+            List.of(
+                new ManualStepExecutor(new ObjectMapper()),
+                new UnsupportedStepExecutor(new ObjectMapper())));
 
     assertThrows(AppException.class, service::processNext);
   }
 
-  private ExecutionRunRecord run(String id, String mode) {
+  private ExecutionRunRecord run(String id, String status, String mode) {
     return new ExecutionRunRecord(
         id,
         "tenant_1",
         "inc_1",
         "plan_1",
-        "running",
+        status,
         mode,
         "alice",
         "runner_1",
@@ -134,12 +168,17 @@ class RunnerExecutionServiceTest {
         null,
         null,
         null,
+        1,
+        3,
+        null,
+        OffsetDateTime.now().plusSeconds(60),
+        OffsetDateTime.now(),
+        1800,
         OffsetDateTime.now(),
         OffsetDateTime.now());
   }
 
   private ExecutionStepRecord step(String id, int sequence, String actionType, String payload) {
-    ExecutionJson json = new ExecutionJson(new ObjectMapper());
     return new ExecutionStepRecord(
         id,
         "tenant_1",
@@ -150,12 +189,15 @@ class RunnerExecutionServiceTest {
         actionType,
         "human",
         "queued",
-        payload == null ? json.write(java.util.Map.of()) : payload,
+        payload,
         "",
         null,
         null,
         null,
         null,
+        1,
+        300,
+        0,
         OffsetDateTime.now(),
         OffsetDateTime.now());
   }
@@ -163,19 +205,48 @@ class RunnerExecutionServiceTest {
   private static class FakeRunnerRepository extends RunnerFakeExecutionRepositoryBase {
     ExecutionRunRecord claimed;
     final List<ExecutionStepRecord> steps = new ArrayList<>();
-    final List<String> stepStatuses = new ArrayList<>();
+    final List<ExecutionRunRecord> expiredRuns = new ArrayList<>();
+    final List<ExecutionArtifactCreateCommand> artifacts = new ArrayList<>();
+    int heartbeatCount;
+    int artifactIncrementCount;
     String runStatus;
     String planStatus;
+    String timeoutRunStatus;
+    boolean stepsTimedOut;
     boolean failPlanStatusUpdate;
+    final List<String> stepStatuses = new ArrayList<>();
 
     @Override
-    public Optional<ExecutionRunRecord> claimNextQueuedRun(String runnerId) {
+    public Optional<ExecutionRunRecord> claimNextQueuedRun(
+        String runnerId, OffsetDateTime now, OffsetDateTime leaseUntil) {
       return Optional.ofNullable(claimed);
     }
 
     @Override
     public List<ExecutionStepRecord> listExecutionSteps(String tenantId, String executionId) {
       return steps;
+    }
+
+    @Override
+    public boolean heartbeat(
+        String tenantId,
+        String executionId,
+        String runnerId,
+        OffsetDateTime heartbeatAt,
+        OffsetDateTime leaseUntil) {
+      heartbeatCount++;
+      return true;
+    }
+
+    @Override
+    public void createArtifact(ExecutionArtifactCreateCommand command) {
+      artifacts.add(command);
+    }
+
+    @Override
+    public boolean incrementStepArtifactCount(String tenantId, String stepId) {
+      artifactIncrementCount++;
+      return true;
     }
 
     @Override
@@ -196,6 +267,23 @@ class RunnerExecutionServiceTest {
         return false;
       }
       planStatus = status;
+      return true;
+    }
+
+    @Override
+    public List<ExecutionRunRecord> findExpiredRunningRuns(OffsetDateTime now, int limit) {
+      return expiredRuns;
+    }
+
+    @Override
+    public boolean timeoutRun(String tenantId, String executionId, String errorMessage) {
+      timeoutRunStatus = "timeout";
+      return true;
+    }
+
+    @Override
+    public boolean timeoutExecutionSteps(String tenantId, String executionId) {
+      stepsTimedOut = true;
       return true;
     }
   }

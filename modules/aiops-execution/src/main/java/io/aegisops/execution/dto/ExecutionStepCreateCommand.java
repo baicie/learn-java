@@ -11,4 +11,6 @@ public record ExecutionStepCreateCommand(
     String targetType,
     String status,
     String actionPayloadJson,
-    String commandSnapshot) {}
+    String commandSnapshot,
+    int attempt,
+    int timeoutSeconds) {}

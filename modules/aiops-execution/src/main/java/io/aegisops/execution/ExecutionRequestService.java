@@ -2,7 +2,10 @@ package io.aegisops.execution;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.aegisops.common.exception.AppException;
+import io.aegisops.execution.dto.ExecutionArtifactRecord;
+import io.aegisops.execution.dto.ExecutionArtifactResponse;
 import io.aegisops.execution.dto.ExecutionCreateRequest;
+import io.aegisops.execution.dto.ExecutionRetryRequest;
 import io.aegisops.execution.dto.ExecutionRunCreateCommand;
 import io.aegisops.execution.dto.ExecutionRunRecord;
 import io.aegisops.execution.dto.ExecutionRunResponse;
@@ -36,13 +39,9 @@ public class ExecutionRequestService {
   public ExecutionRunResponse createExecution(
       String tenantId, String planId, ExecutionCreateRequest request) {
     ExecutionCreateRequest normalized =
-        request == null ? new ExecutionCreateRequest(true, "system") : request;
+        request == null ? new ExecutionCreateRequest(true, "system", 1) : request;
 
-    PlanForExecutionRecord plan =
-        repository
-            .findPlan(tenantId, planId)
-            .orElseThrow(
-                () -> new AppException("AUTOMATION_PLAN_NOT_FOUND", "Automation plan not found"));
+    PlanForExecutionRecord plan = loadPlan(tenantId, planId);
 
     if (!"approved".equals(plan.status())) {
       throw new AppException(
@@ -56,48 +55,60 @@ public class ExecutionRequestService {
 
     var active = repository.findLatestRunByPlan(tenantId, planId);
     if (active.isPresent() && List.of("queued", "running").contains(active.get().status())) {
-      return toResponse(active.get(), repository.listExecutionSteps(tenantId, active.get().id()));
+      return toResponse(
+          active.get(),
+          repository.listExecutionSteps(tenantId, active.get().id()),
+          repository.listArtifacts(tenantId, active.get().id()));
     }
 
-    List<PlanStepForExecutionRecord> planSteps = repository.listPlanSteps(planId);
-    if (planSteps.isEmpty()) {
-      throw new AppException("AUTOMATION_PLAN_STEP_EMPTY", "Automation plan has no steps");
-    }
+    int maxAttempts =
+        Math.min(normalized.normalizedMaxAttempts(), properties.normalizedMaxRetryAttempts());
 
-    String executionId = newId("exec");
-    String mode = normalized.dryRunEnabled() ? "dry_run" : "live";
-    String requestedBy = blankToDefault(normalized.requestedBy(), "system");
-
-    repository.createRun(
-        new ExecutionRunCreateCommand(
-            executionId, tenantId, plan.incidentId(), plan.id(), "queued", mode, requestedBy));
-
-    repository.createSteps(
-        planSteps.stream().map(step -> toExecutionStep(tenantId, executionId, step)).toList());
-
-    ensureUpdated(
-        repository.updatePlanStatus(tenantId, planId, "executing"),
-        "AUTOMATION_PLAN_UPDATE_FAILED",
-        "Automation plan status was not updated");
-
-    repository.addTimeline(
-        timeline(
-            plan.incidentId(),
+    return createQueuedRun(
+        tenantId,
+        new QueuedRunContext(
+            plan,
+            normalized.dryRunEnabled() ? "dry_run" : "live",
+            blankToDefault(normalized.requestedBy(), "system"),
+            1,
+            maxAttempts,
+            null,
             "execution_queued",
             "Execution queued",
-            "Automation execution was queued for runner.",
-            Map.of(
-                "executionId", executionId,
-                "planId", planId,
-                "mode", mode,
-                "requestedBy", requestedBy)));
+            "Automation execution was queued for runner."));
+  }
 
-    ExecutionRunRecord saved =
+  @Transactional
+  public ExecutionRunResponse retry(
+      String tenantId, String executionId, ExecutionRetryRequest request) {
+    ExecutionRunRecord previous =
         repository
             .findRun(tenantId, executionId)
             .orElseThrow(() -> new AppException("EXECUTION_NOT_FOUND", "Execution not found"));
 
-    return toResponse(saved, repository.listExecutionSteps(tenantId, executionId));
+    if (!List.of("failed", "timeout").contains(previous.status())) {
+      throw new AppException(
+          "EXECUTION_RETRY_STATUS_INVALID", "Only failed or timeout execution can be retried");
+    }
+
+    if (previous.attempt() >= previous.maxAttempts()) {
+      throw new AppException("EXECUTION_RETRY_EXHAUSTED", "Execution retry attempts exhausted");
+    }
+
+    PlanForExecutionRecord plan = loadPlan(tenantId, previous.planId());
+
+    return createQueuedRun(
+        tenantId,
+        new QueuedRunContext(
+            plan,
+            previous.mode(),
+            blankToDefault(request == null ? null : request.requestedBy(), previous.requestedBy()),
+            previous.attempt() + 1,
+            previous.maxAttempts(),
+            previous.id(),
+            "execution_retried",
+            "Execution retried",
+            "Automation execution retry was queued."));
   }
 
   public ExecutionRunResponse getExecution(String tenantId, String executionId) {
@@ -106,7 +117,10 @@ public class ExecutionRequestService {
             .findRun(tenantId, executionId)
             .orElseThrow(() -> new AppException("EXECUTION_NOT_FOUND", "Execution not found"));
 
-    return toResponse(run, repository.listExecutionSteps(tenantId, executionId));
+    return toResponse(
+        run,
+        repository.listExecutionSteps(tenantId, executionId),
+        repository.listArtifacts(tenantId, executionId));
   }
 
   public ExecutionRunResponse latestByPlan(String tenantId, String planId) {
@@ -115,7 +129,10 @@ public class ExecutionRequestService {
             .findLatestRunByPlan(tenantId, planId)
             .orElseThrow(() -> new AppException("EXECUTION_NOT_FOUND", "Execution not found"));
 
-    return toResponse(run, repository.listExecutionSteps(tenantId, run.id()));
+    return toResponse(
+        run,
+        repository.listExecutionSteps(tenantId, run.id()),
+        repository.listArtifacts(tenantId, run.id()));
   }
 
   @Transactional
@@ -156,8 +173,77 @@ public class ExecutionRequestService {
     return getExecution(tenantId, executionId);
   }
 
+  private ExecutionRunResponse createQueuedRun(String tenantId, QueuedRunContext context) {
+    PlanForExecutionRecord plan = context.plan();
+    List<PlanStepForExecutionRecord> planSteps = repository.listPlanSteps(plan.id());
+    if (planSteps.isEmpty()) {
+      throw new AppException("AUTOMATION_PLAN_STEP_EMPTY", "Automation plan has no steps");
+    }
+
+    String executionId = newId("exec");
+
+    repository.createRun(
+        new ExecutionRunCreateCommand(
+            executionId,
+            tenantId,
+            plan.incidentId(),
+            plan.id(),
+            "queued",
+            context.mode(),
+            context.requestedBy(),
+            context.attempt(),
+            context.maxAttempts(),
+            context.retryOfExecutionId(),
+            properties.normalizedRunTimeoutSeconds()));
+
+    repository.createSteps(
+        planSteps.stream()
+            .map(step -> toExecutionStep(tenantId, executionId, step, context.attempt()))
+            .toList());
+
+    ensureUpdated(
+        repository.updatePlanStatus(tenantId, plan.id(), "executing"),
+        "AUTOMATION_PLAN_UPDATE_FAILED",
+        "Automation plan status was not updated");
+
+    repository.addTimeline(
+        timeline(
+            plan.incidentId(),
+            context.eventType(),
+            context.title(),
+            context.description(),
+            Map.of(
+                "executionId", executionId,
+                "planId", plan.id(),
+                "mode", context.mode(),
+                "requestedBy", context.requestedBy(),
+                "attempt", context.attempt(),
+                "maxAttempts", context.maxAttempts())));
+
+    ExecutionRunRecord saved =
+        repository
+            .findRun(tenantId, executionId)
+            .orElseThrow(() -> new AppException("EXECUTION_NOT_FOUND", "Execution not found"));
+
+    return toResponse(
+        saved,
+        repository.listExecutionSteps(tenantId, executionId),
+        repository.listArtifacts(tenantId, executionId));
+  }
+
+  private record QueuedRunContext(
+      PlanForExecutionRecord plan,
+      String mode,
+      String requestedBy,
+      int attempt,
+      int maxAttempts,
+      String retryOfExecutionId,
+      String eventType,
+      String title,
+      String description) {}
+
   private ExecutionStepCreateCommand toExecutionStep(
-      String tenantId, String executionId, PlanStepForExecutionRecord step) {
+      String tenantId, String executionId, PlanStepForExecutionRecord step, int attempt) {
     String command = json.textValue(step.actionPayloadJson(), "command");
 
     return new ExecutionStepCreateCommand(
@@ -171,10 +257,22 @@ public class ExecutionRequestService {
         step.targetType(),
         "queued",
         step.actionPayloadJson(),
-        command);
+        command,
+        attempt,
+        properties.normalizedStepTimeoutSeconds());
   }
 
-  private ExecutionRunResponse toResponse(ExecutionRunRecord run, List<ExecutionStepRecord> steps) {
+  private PlanForExecutionRecord loadPlan(String tenantId, String planId) {
+    return repository
+        .findPlan(tenantId, planId)
+        .orElseThrow(
+            () -> new AppException("AUTOMATION_PLAN_NOT_FOUND", "Automation plan not found"));
+  }
+
+  private ExecutionRunResponse toResponse(
+      ExecutionRunRecord run,
+      List<ExecutionStepRecord> steps,
+      List<ExecutionArtifactRecord> artifacts) {
     return new ExecutionRunResponse(
         run.id(),
         run.tenantId(),
@@ -186,7 +284,14 @@ public class ExecutionRequestService {
         run.runnerId(),
         run.errorMessage(),
         run.summary(),
+        run.attempt(),
+        run.maxAttempts(),
+        run.retryOfExecutionId(),
+        run.leaseUntil(),
+        run.heartbeatAt(),
+        run.timeoutSeconds(),
         steps.stream().map(this::toStepResponse).toList(),
+        artifacts.stream().map(this::toArtifactResponse).toList(),
         run.startedAt(),
         run.finishedAt(),
         run.createdAt(),
@@ -205,10 +310,25 @@ public class ExecutionRequestService {
         step.status(),
         step.output(),
         step.errorMessage(),
+        step.attempt(),
+        step.timeoutSeconds(),
+        step.artifactCount(),
         step.startedAt(),
         step.finishedAt(),
         step.createdAt(),
         step.updatedAt());
+  }
+
+  private ExecutionArtifactResponse toArtifactResponse(ExecutionArtifactRecord artifact) {
+    return new ExecutionArtifactResponse(
+        artifact.id(),
+        artifact.executionId(),
+        artifact.stepId(),
+        artifact.artifactType(),
+        artifact.name(),
+        artifact.content(),
+        artifact.metadataJson(),
+        artifact.createdAt());
   }
 
   private TimelineCreateCommand timeline(

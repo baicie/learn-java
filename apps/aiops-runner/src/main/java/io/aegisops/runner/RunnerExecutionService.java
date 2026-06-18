@@ -3,6 +3,7 @@ package io.aegisops.runner;
 import io.aegisops.common.exception.AppException;
 import io.aegisops.execution.ExecutionProperties;
 import io.aegisops.execution.ExecutionRepository;
+import io.aegisops.execution.dto.ExecutionArtifactCreateCommand;
 import io.aegisops.execution.dto.ExecutionRunRecord;
 import io.aegisops.execution.dto.ExecutionRunStatusUpdateCommand;
 import io.aegisops.execution.dto.ExecutionStepRecord;
@@ -40,8 +41,11 @@ public class RunnerExecutionService {
 
   @Transactional
   public boolean processNext() {
+    OffsetDateTime now = OffsetDateTime.now();
+    OffsetDateTime leaseUntil = now.plusSeconds(executionProperties.normalizedLeaseSeconds());
+
     Optional<ExecutionRunRecord> claimed =
-        repository.claimNextQueuedRun(runnerProperties.getRunnerId());
+        repository.claimNextQueuedRun(runnerProperties.getRunnerId(), now, leaseUntil);
 
     if (claimed.isEmpty()) {
       return false;
@@ -51,15 +55,24 @@ public class RunnerExecutionService {
     return true;
   }
 
+  public int sweepTimeouts() {
+    List<ExecutionRunRecord> expired =
+        repository.findExpiredRunningRuns(
+            OffsetDateTime.now(), Math.max(1, runnerProperties.getTimeoutSweepLimit()));
+
+    int count = 0;
+    for (ExecutionRunRecord run : expired) {
+      timeout(run);
+      count++;
+    }
+    return count;
+  }
+
   public void process(ExecutionRunRecord run) {
     List<ExecutionStepRecord> steps = repository.listExecutionSteps(run.tenantId(), run.id());
 
     if (steps.isEmpty()) {
-      failRun(run, "Execution has no steps.");
-      ensureUpdated(
-          repository.updatePlanStatus(run.tenantId(), run.planId(), "failed"),
-          "AUTOMATION_PLAN_UPDATE_FAILED",
-          "Automation plan status was not updated");
+      failRunAndPlan(run, "Execution has no steps.");
       return;
     }
 
@@ -71,7 +84,13 @@ public class RunnerExecutionService {
         continue;
       }
 
+      heartbeat(run);
+
       StepExecutionResult result = executeStep(run, step);
+      persistArtifacts(result.artifacts());
+
+      heartbeat(run);
+
       if (!result.success()) {
         failed = true;
         errorMessage = result.errorMessage();
@@ -81,17 +100,9 @@ public class RunnerExecutionService {
     }
 
     if (failed) {
-      failRun(run, errorMessage);
-      ensureUpdated(
-          repository.updatePlanStatus(run.tenantId(), run.planId(), "failed"),
-          "AUTOMATION_PLAN_UPDATE_FAILED",
-          "Automation plan status was not updated");
+      failRunAndPlan(run, errorMessage);
     } else {
-      succeedRun(run);
-      ensureUpdated(
-          repository.updatePlanStatus(run.tenantId(), run.planId(), "succeeded"),
-          "AUTOMATION_PLAN_UPDATE_FAILED",
-          "Automation plan status was not updated");
+      succeedRunAndPlan(run);
     }
   }
 
@@ -132,6 +143,18 @@ public class RunnerExecutionService {
     return result;
   }
 
+  private void persistArtifacts(List<ExecutionArtifactCreateCommand> artifacts) {
+    for (ExecutionArtifactCreateCommand artifact : artifacts) {
+      repository.createArtifact(artifact);
+      if (artifact.stepId() != null && !artifact.stepId().isBlank()) {
+        ensureUpdated(
+            repository.incrementStepArtifactCount(artifact.tenantId(), artifact.stepId()),
+            "EXECUTION_ARTIFACT_COUNT_UPDATE_FAILED",
+            "Execution step artifact count was not updated");
+      }
+    }
+  }
+
   private void skipRemainingQueuedSteps(
       ExecutionRunRecord run, List<ExecutionStepRecord> steps, int failedSequenceNo) {
     for (ExecutionStepRecord step : steps) {
@@ -152,7 +175,35 @@ public class RunnerExecutionService {
     }
   }
 
-  private void succeedRun(ExecutionRunRecord run) {
+  private void heartbeat(ExecutionRunRecord run) {
+    OffsetDateTime now = OffsetDateTime.now();
+    OffsetDateTime leaseUntil = now.plusSeconds(executionProperties.normalizedLeaseSeconds());
+
+    ensureUpdated(
+        repository.heartbeat(
+            run.tenantId(), run.id(), runnerProperties.getRunnerId(), now, leaseUntil),
+        "EXECUTION_HEARTBEAT_FAILED",
+        "Execution heartbeat failed");
+  }
+
+  private void timeout(ExecutionRunRecord run) {
+    ensureUpdated(
+        repository.timeoutRun(run.tenantId(), run.id(), "Execution lease timed out."),
+        "EXECUTION_TIMEOUT_FAILED",
+        "Execution run was not marked timeout");
+
+    ensureUpdated(
+        repository.timeoutExecutionSteps(run.tenantId(), run.id()),
+        "EXECUTION_STEP_TIMEOUT_FAILED",
+        "Execution steps were not marked timeout");
+
+    ensureUpdated(
+        repository.updatePlanStatus(run.tenantId(), run.planId(), "failed"),
+        "AUTOMATION_PLAN_UPDATE_FAILED",
+        "Automation plan status was not updated");
+  }
+
+  private void succeedRunAndPlan(ExecutionRunRecord run) {
     ensureUpdated(
         repository.updateRunStatus(
             new ExecutionRunStatusUpdateCommand(
@@ -166,9 +217,14 @@ public class RunnerExecutionService {
                 "Execution completed successfully.")),
         "EXECUTION_RUN_UPDATE_FAILED",
         "Execution run was not marked succeeded");
+
+    ensureUpdated(
+        repository.updatePlanStatus(run.tenantId(), run.planId(), "succeeded"),
+        "AUTOMATION_PLAN_UPDATE_FAILED",
+        "Automation plan status was not updated");
   }
 
-  private void failRun(ExecutionRunRecord run, String errorMessage) {
+  private void failRunAndPlan(ExecutionRunRecord run, String errorMessage) {
     ensureUpdated(
         repository.updateRunStatus(
             new ExecutionRunStatusUpdateCommand(
@@ -182,6 +238,11 @@ public class RunnerExecutionService {
                 "Execution failed.")),
         "EXECUTION_RUN_UPDATE_FAILED",
         "Execution run was not marked failed");
+
+    ensureUpdated(
+        repository.updatePlanStatus(run.tenantId(), run.planId(), "failed"),
+        "AUTOMATION_PLAN_UPDATE_FAILED",
+        "Automation plan status was not updated");
   }
 
   private void ensureUpdated(boolean updated, String code, String message) {

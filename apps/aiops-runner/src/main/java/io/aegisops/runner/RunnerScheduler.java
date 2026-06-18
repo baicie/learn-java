@@ -29,4 +29,9 @@ public class RunnerScheduler {
       }
     }
   }
+
+  @Scheduled(fixedDelayString = "${aiops.runner.timeout-sweep-delay-ms:10000}")
+  public void sweepTimeouts() {
+    service.sweepTimeouts();
+  }
 }

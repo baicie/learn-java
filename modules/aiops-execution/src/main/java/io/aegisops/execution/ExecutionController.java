@@ -3,6 +3,7 @@ package io.aegisops.execution;
 import io.aegisops.common.api.ApiResponse;
 import io.aegisops.common.tenant.TenantContext;
 import io.aegisops.execution.dto.ExecutionCreateRequest;
+import io.aegisops.execution.dto.ExecutionRetryRequest;
 import io.aegisops.execution.dto.ExecutionRunResponse;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -31,6 +32,13 @@ public class ExecutionController {
       @PathVariable String planId, @RequestBody(required = false) ExecutionCreateRequest request) {
     return ApiResponse.ok(
         service.createExecution(TenantContext.requireTenantId(), planId, request));
+  }
+
+  @PostMapping("/api/executions/{executionId}/retry")
+  public ApiResponse<ExecutionRunResponse> retry(
+      @PathVariable String executionId,
+      @RequestBody(required = false) ExecutionRetryRequest request) {
+    return ApiResponse.ok(service.retry(TenantContext.requireTenantId(), executionId, request));
   }
 
   @GetMapping("/api/executions/{executionId}")

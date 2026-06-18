@@ -15,5 +15,11 @@ public record ExecutionRunRecord(
     OffsetDateTime finishedAt,
     String errorMessage,
     String summary,
+    int attempt,
+    int maxAttempts,
+    String retryOfExecutionId,
+    OffsetDateTime leaseUntil,
+    OffsetDateTime heartbeatAt,
+    int timeoutSeconds,
     OffsetDateTime createdAt,
     OffsetDateTime updatedAt) {}

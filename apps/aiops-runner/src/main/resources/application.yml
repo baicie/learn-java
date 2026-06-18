@@ -12,8 +12,14 @@ aiops:
   execution:
     api-enabled: false
     live-enabled: false
+    lease-seconds: ${AIOPS_EXECUTION_LEASE_SECONDS:60}
+    run-timeout-seconds: ${AIOPS_EXECUTION_RUN_TIMEOUT_SECONDS:1800}
+    step-timeout-seconds: ${AIOPS_EXECUTION_STEP_TIMEOUT_SECONDS:300}
+    max-retry-attempts: ${AIOPS_EXECUTION_MAX_RETRY_ATTEMPTS:3}
   runner:
     enabled: true
     runner-id: ${AIOPS_RUNNER_ID:local-runner}
     poll-delay-ms: ${AIOPS_RUNNER_POLL_MS:5000}
+    timeout-sweep-delay-ms: ${AIOPS_RUNNER_SWEEP_MS:10000}
     max-runs-per-tick: ${AIOPS_RUNNER_MAX_PER_TICK:1}
+    timeout-sweep-limit: ${AIOPS_RUNNER_SWEEP_LIMIT:20}

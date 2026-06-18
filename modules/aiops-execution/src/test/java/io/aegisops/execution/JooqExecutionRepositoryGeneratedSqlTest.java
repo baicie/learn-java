@@ -2,6 +2,7 @@ package io.aegisops.execution;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import io.aegisops.execution.dto.ExecutionArtifactCreateCommand;
 import io.aegisops.execution.dto.ExecutionRunCreateCommand;
 import java.util.concurrent.atomic.AtomicReference;
 import org.jooq.SQLDialect;
@@ -27,7 +28,17 @@ class JooqExecutionRepositoryGeneratedSqlTest {
 
     repository.createRun(
         new ExecutionRunCreateCommand(
-            "exec_1", "tenant_1", "inc_1", "plan_1", "queued", "dry_run", "alice"));
+            "exec_1",
+            "tenant_1",
+            "inc_1",
+            "plan_1",
+            "queued",
+            "dry_run",
+            "alice",
+            1,
+            1,
+            null,
+            1800));
 
     String sql = sqlRef.get();
     if (sql == null) {
@@ -39,6 +50,37 @@ class JooqExecutionRepositoryGeneratedSqlTest {
     assertTrue(sql.contains("execution_run"), "expected execution_run, got: " + sql);
     assertTrue(sql.contains("status"), "expected status column, got: " + sql);
     assertTrue(sql.contains("mode"), "expected mode column, got: " + sql);
+  }
+
+  @Test
+  void createArtifactUsesExecutionArtifactTable() {
+    AtomicReference<String> sqlRef = new AtomicReference<>();
+
+    MockDataProvider provider =
+        context -> {
+          sqlRef.set(context.sql());
+          return new MockResult[] {new MockResult(1, DSL.using(SQLDialect.POSTGRES).newResult())};
+        };
+
+    JooqExecutionRepository repository =
+        new JooqExecutionRepository(DSL.using(new MockConnection(provider), SQLDialect.POSTGRES));
+
+    repository.createArtifact(
+        new ExecutionArtifactCreateCommand(
+            "artifact_1",
+            "tenant_1",
+            "exec_1",
+            "step_1",
+            "text",
+            "dry-run-command.txt",
+            "systemctl status app",
+            "{}"));
+
+    String sql = sqlRef.get().toLowerCase();
+
+    assertTrue(sql.contains("insert into"));
+    assertTrue(sql.contains("execution_artifact"));
+    assertTrue(sql.contains("name"));
   }
 
   @Test
