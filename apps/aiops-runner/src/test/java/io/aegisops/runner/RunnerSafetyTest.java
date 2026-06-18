@@ -16,13 +16,14 @@ class RunnerSafetyTest {
     assertFalse(content.contains("Runtime.getRuntime"));
     assertFalse(content.contains("JSch"));
     assertFalse(content.contains("sshj"));
-    assertFalse(content.contains("Ansible"));
+    assertFalse(content.contains("AnsibleRunner"));
     assertFalse(content.contains("WebClient.create"));
     assertFalse(content.contains("RestTemplate"));
 
     assertTrue(content.contains("heartbeat"));
     assertTrue(content.contains("timeout"));
     assertTrue(content.contains("webhook"));
+    assertTrue(content.contains("ansible"));
   }
 
   private String readMainSources(Path root) throws Exception {

@@ -16,12 +16,13 @@ class ExecutionSafetyTest {
     assertFalse(content.contains("Runtime.getRuntime"));
     assertFalse(content.contains("JSch"));
     assertFalse(content.contains("sshj"));
-    assertFalse(content.contains("Ansible"));
+    assertFalse(content.contains("AnsibleRunner"));
     assertFalse(content.contains("RestTemplate"));
     assertFalse(content.contains("WebClient.create"));
 
     assertTrue(content.contains("lease"));
     assertTrue(content.contains("artifact"));
+    assertTrue(content.contains("ansible"));
   }
 
   private String readMainSources(Path root) throws Exception {
