@@ -88,7 +88,8 @@ class AnsibleSafetyValidatorTest {
                 inventory(true),
                 playbook(true, List.of("restart")),
                 policy(true, true, List.of("inv_1"), List.of("service_name")),
-                new AnsibleActionPayload("inv_1", "pb_1", null, null, List.of("delete"), Map.of())));
+                new AnsibleActionPayload(
+                    "inv_1", "pb_1", null, null, List.of("delete"), Map.of())));
   }
 
   @Test
@@ -181,7 +182,10 @@ class AnsibleSafetyValidatorTest {
   @Test
   void rejectLiveExecutionWithWrongRiskLevel() {
     ExecutionRunRecord run =
-        runRecord("appr_1", "{\"status\":\"approved\"}", "critical");
+        runRecord(
+            "appr_1",
+            "{\"approvalId\":\"appr_1\",\"planId\":\"plan_1\",\"status\":\"approved\",\"requiredApprovals\":1,\"approvedCount\":1}",
+            "critical");
     assertThrows(
         AppException.class,
         () ->
@@ -197,7 +201,10 @@ class AnsibleSafetyValidatorTest {
   @Test
   void allowLiveExecutionWithApprovalAndCorrectRisk() {
     ExecutionRunRecord run =
-        runRecord("appr_1", "{\"status\":\"approved\"}", "medium");
+        runRecord(
+            "appr_1",
+            "{\"approvalId\":\"appr_1\",\"planId\":\"plan_1\",\"status\":\"approved\",\"requiredApprovals\":1,\"approvedCount\":1}",
+            "medium");
     assertDoesNotThrow(
         () ->
             validator.validateLive(
@@ -212,7 +219,10 @@ class AnsibleSafetyValidatorTest {
   @Test
   void rejectLiveExecutionWithDisabledCredential() {
     ExecutionRunRecord run =
-        runRecord("appr_1", "{\"status\":\"approved\"}", "low");
+        runRecord(
+            "appr_1",
+            "{\"approvalId\":\"appr_1\",\"planId\":\"plan_1\",\"status\":\"approved\",\"requiredApprovals\":1,\"approvedCount\":1}",
+            "low");
     AnsibleCredentialRecord cred = credentialRecord(false);
     assertThrows(
         AppException.class,
@@ -224,6 +234,100 @@ class AnsibleSafetyValidatorTest {
                 new AnsibleActionPayload("inv_1", "pb_1", "cred_1", null, List.of(), Map.of()),
                 run,
                 cred));
+  }
+
+  @Test
+  void rejectLiveApprovalSnapshotWithNonApprovedStatus() {
+    ExecutionRunRecord run =
+        runRecord(
+            "appr_1",
+            "{\"approvalId\":\"appr_1\",\"planId\":\"plan_1\",\"status\":\"pending\",\"requiredApprovals\":1,\"approvedCount\":1}",
+            "medium");
+    assertThrows(
+        AppException.class,
+        () ->
+            validator.validateLive(
+                inventory(true),
+                playbook(true, List.of("restart")),
+                policyLive(true, true, List.of("medium")),
+                new AnsibleActionPayload("inv_1", "pb_1", null, null, List.of(), Map.of()),
+                run,
+                null));
+  }
+
+  @Test
+  void rejectLiveApprovalSnapshotWithMismatchedApprovalId() {
+    ExecutionRunRecord run =
+        runRecord(
+            "appr_1",
+            "{\"approvalId\":\"appr_2\",\"planId\":\"plan_1\",\"status\":\"approved\",\"requiredApprovals\":1,\"approvedCount\":1}",
+            "medium");
+    assertThrows(
+        AppException.class,
+        () ->
+            validator.validateLive(
+                inventory(true),
+                playbook(true, List.of("restart")),
+                policyLive(true, true, List.of("medium")),
+                new AnsibleActionPayload("inv_1", "pb_1", null, null, List.of(), Map.of()),
+                run,
+                null));
+  }
+
+  @Test
+  void rejectLiveApprovalSnapshotWithMismatchedPlanId() {
+    ExecutionRunRecord run =
+        runRecord(
+            "appr_1",
+            "{\"approvalId\":\"appr_1\",\"planId\":\"plan_2\",\"status\":\"approved\",\"requiredApprovals\":1,\"approvedCount\":1}",
+            "medium");
+    assertThrows(
+        AppException.class,
+        () ->
+            validator.validateLive(
+                inventory(true),
+                playbook(true, List.of("restart")),
+                policyLive(true, true, List.of("medium")),
+                new AnsibleActionPayload("inv_1", "pb_1", null, null, List.of(), Map.of()),
+                run,
+                null));
+  }
+
+  @Test
+  void rejectLiveApprovalSnapshotWithInsufficientApprovals() {
+    ExecutionRunRecord run =
+        runRecord(
+            "appr_1",
+            "{\"approvalId\":\"appr_1\",\"planId\":\"plan_1\",\"status\":\"approved\",\"requiredApprovals\":2,\"approvedCount\":1}",
+            "medium");
+    assertThrows(
+        AppException.class,
+        () ->
+            validator.validateLive(
+                inventory(true),
+                playbook(true, List.of("restart")),
+                policyLive(true, true, List.of("medium")),
+                new AnsibleActionPayload("inv_1", "pb_1", null, null, List.of(), Map.of()),
+                run,
+                null));
+  }
+
+  @Test
+  void allowLiveWithValidApprovalSnapshot() {
+    ExecutionRunRecord run =
+        runRecord(
+            "appr_1",
+            "{\"approvalId\":\"appr_1\",\"planId\":\"plan_1\",\"status\":\"approved\",\"requiredApprovals\":1,\"approvedCount\":1}",
+            "medium");
+    assertDoesNotThrow(
+        () ->
+            validator.validateLive(
+                inventory(true),
+                playbook(true, List.of("restart")),
+                policyLive(true, true, List.of("medium")),
+                new AnsibleActionPayload("inv_1", "pb_1", null, null, List.of(), Map.of()),
+                run,
+                null));
   }
 
   private ExecutionRunRecord runRecord(String approvalId, String snapshot, String riskLevel) {
@@ -326,9 +430,7 @@ class AnsibleSafetyValidatorTest {
   }
 
   private AnsiblePolicyRecord policyLive(
-      boolean enabled,
-      boolean liveRequiresApproval,
-      List<String> allowedRiskLevels) {
+      boolean enabled, boolean liveRequiresApproval, List<String> allowedRiskLevels) {
     return new AnsiblePolicyRecord(
         "apol_1",
         "tenant_1",

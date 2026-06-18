@@ -12,6 +12,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import org.springframework.stereotype.Component;
 
@@ -75,23 +76,57 @@ public class AnsibleSafetyValidator {
     }
 
     if (policy.liveRequiresApproval()) {
-      if (run.approvalId() == null || run.approvalId().isBlank()) {
-        throw new AppException(
-            "ANSIBLE_LIVE_APPROVAL_REQUIRED",
-            "Ansible live execution requires approval snapshot");
-      }
-
-      if (run.approvalSnapshotJson() == null
-          || run.approvalSnapshotJson().isBlank()
-          || "{}".equals(run.approvalSnapshotJson())) {
-        throw new AppException(
-            "ANSIBLE_LIVE_APPROVAL_REQUIRED",
-            "Ansible live execution requires approval snapshot");
-      }
+      validateApprovalSnapshot(run);
     }
 
     validateLiveRiskLevel(policy, run.planRiskLevel());
     validateCredentialRef(policy, payload, credential);
+  }
+
+  private void validateApprovalSnapshot(ExecutionRunRecord run) {
+    if (run.approvalId() == null || run.approvalId().isBlank()) {
+      throw new AppException(
+          "ANSIBLE_LIVE_APPROVAL_REQUIRED", "Ansible live execution requires approval snapshot");
+    }
+
+    if (run.approvalSnapshotJson() == null
+        || run.approvalSnapshotJson().isBlank()
+        || "{}".equals(run.approvalSnapshotJson())) {
+      throw new AppException(
+          "ANSIBLE_LIVE_APPROVAL_REQUIRED", "Ansible live execution requires approval snapshot");
+    }
+
+    Map<String, Object> snapshot = json.readObjectMap(run.approvalSnapshotJson());
+
+    String snapshotApprovalId = stringValue(snapshot.get("approvalId"));
+    String snapshotPlanId = stringValue(snapshot.get("planId"));
+    String snapshotStatus = stringValue(snapshot.get("status"));
+
+    if (!Objects.equals(run.approvalId(), snapshotApprovalId)) {
+      throw new AppException(
+          "ANSIBLE_LIVE_APPROVAL_INVALID",
+          "Ansible live approval snapshot does not match execution approval id");
+    }
+
+    if (!Objects.equals(run.planId(), snapshotPlanId)) {
+      throw new AppException(
+          "ANSIBLE_LIVE_APPROVAL_INVALID",
+          "Ansible live approval snapshot does not match execution plan id");
+    }
+
+    if (!"approved".equalsIgnoreCase(snapshotStatus)) {
+      throw new AppException(
+          "ANSIBLE_LIVE_APPROVAL_INVALID", "Ansible live approval snapshot is not approved");
+    }
+
+    int requiredApprovals = intValue(snapshot.get("requiredApprovals"));
+    int approvedCount = intValue(snapshot.get("approvedCount"));
+
+    if (requiredApprovals > 0 && approvedCount < requiredApprovals) {
+      throw new AppException(
+          "ANSIBLE_LIVE_APPROVAL_INVALID",
+          "Ansible live approval snapshot has insufficient approvals");
+    }
   }
 
   private void validateCommon(
@@ -108,8 +143,7 @@ public class AnsibleSafetyValidator {
     }
 
     if (policy == null || !policy.enabled()) {
-      throw new AppException(
-          "ANSIBLE_POLICY_DISABLED", "Ansible execution policy is disabled");
+      throw new AppException("ANSIBLE_POLICY_DISABLED", "Ansible execution policy is disabled");
     }
 
     validateInventoryAllowed(policy, inventory.id());
@@ -232,5 +266,23 @@ public class AnsibleSafetyValidator {
       }
     }
     return false;
+  }
+
+  private static String stringValue(Object value) {
+    return value == null ? "" : String.valueOf(value).trim();
+  }
+
+  private static int intValue(Object value) {
+    if (value instanceof Number number) {
+      return number.intValue();
+    }
+    if (value == null) {
+      return 0;
+    }
+    try {
+      return Integer.parseInt(String.valueOf(value));
+    } catch (NumberFormatException ex) {
+      return 0;
+    }
   }
 }

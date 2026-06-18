@@ -36,10 +36,8 @@ public class ProcessBuilderAnsibleProcessRunner implements AnsibleProcessRunner 
       var executor = Executors.newFixedThreadPool(2);
 
       try {
-        Future<String> stdoutFuture =
-            executor.submit(() -> readLimited(process.getInputStream()));
-        Future<String> stderrFuture =
-            executor.submit(() -> readLimited(process.getErrorStream()));
+        Future<String> stdoutFuture = executor.submit(() -> readLimited(process.getInputStream()));
+        Future<String> stderrFuture = executor.submit(() -> readLimited(process.getErrorStream()));
 
         boolean finished = process.waitFor(timeout.toMillis(), TimeUnit.MILLISECONDS);
 
@@ -84,8 +82,7 @@ public class ProcessBuilderAnsibleProcessRunner implements AnsibleProcessRunner 
 
     if (requireCheckMode && !argv.contains("--check")) {
       throw new AppException(
-          "ANSIBLE_CHECK_MODE_REQUIRED",
-          "Ansible sandbox execution must use --check");
+          "ANSIBLE_CHECK_MODE_REQUIRED", "Ansible sandbox execution must use --check");
     }
 
     if (argv.stream().anyMatch(this::isShellBinary)) {

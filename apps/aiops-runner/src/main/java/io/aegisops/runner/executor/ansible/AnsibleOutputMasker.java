@@ -6,14 +6,18 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class AnsibleOutputMasker {
-  private static final List<Pattern> PATTERNS =
+  private static final List<PatternReplacement> PATTERNS =
       List.of(
-          Pattern.compile("(?i)(password\\s*[=:]\\s*)[^\\s,}]+"),
-          Pattern.compile("(?i)(passwd\\s*[=:]\\s*)[^\\s,}]+"),
-          Pattern.compile("(?i)(token\\s*[=:]\\s*)[^\\s,}]+"),
-          Pattern.compile("(?i)(secret\\s*[=:]\\s*)[^\\s,}]+"),
-          Pattern.compile("(?i)(private_key\\s*[=:]\\s*)[^\\s,}]+"),
-          Pattern.compile("(?i)(api_key\\s*[=:]\\s*)[^\\s,}]+"));
+          new PatternReplacement(
+              Pattern.compile(
+                  "(?i)([\"']?(?:password|passwd|pwd|token|secret|private[_-]?key|api[_-]?key|credential|credentials|vault)[\"']?\\s*[:=]\\s*[\"']?)([^\"'\\s,}]+)([\"']?)"),
+              "$1***$3"),
+          new PatternReplacement(
+              Pattern.compile("(?i)(bearer\\s+)[a-z0-9._~+/=-]+", Pattern.CASE_INSENSITIVE),
+              "$1***"),
+          new PatternReplacement(
+              Pattern.compile("(?i)(basic\\s+)[a-z0-9._~+/=-]+", Pattern.CASE_INSENSITIVE),
+              "$1***"));
 
   public String mask(String value) {
     if (value == null || value.isBlank()) {
@@ -21,9 +25,11 @@ public class AnsibleOutputMasker {
     }
 
     String result = value;
-    for (Pattern pattern : PATTERNS) {
-      result = pattern.matcher(result).replaceAll("$1***");
+    for (PatternReplacement pr : PATTERNS) {
+      result = pr.pattern.matcher(result).replaceAll(pr.replacement);
     }
     return result;
   }
+
+  private record PatternReplacement(Pattern pattern, String replacement) {}
 }

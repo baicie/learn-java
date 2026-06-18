@@ -428,6 +428,7 @@ public class JooqExecutionRepository implements ExecutionRepository {
             .where(EXECUTION_RUN.TENANT_ID.eq(tenantId))
             .and(EXECUTION_RUN.ID.eq(executionId))
             .and(EXECUTION_RUN.MODE.eq("live"))
+            .and(EXECUTION_RUN.STATUS.eq("running"))
             .execute()
         > 0;
   }

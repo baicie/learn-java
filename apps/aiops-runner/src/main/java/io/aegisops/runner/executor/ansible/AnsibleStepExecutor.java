@@ -128,8 +128,7 @@ public class AnsibleStepExecutor implements StepExecutor {
           repository.findCredential(step.tenantId(), payload.credentialRefId()).orElse(null);
     }
 
-    validator.validateLive(
-        inventory, playbook, policy, payload, context.run(), credential);
+    validator.validateLive(inventory, playbook, policy, payload, context.run(), credential);
 
     boolean marked =
         executionRepository.markLiveGuardPassed(context.run().tenantId(), context.run().id());
@@ -166,12 +165,18 @@ public class AnsibleStepExecutor implements StepExecutor {
                   "ansible-dry-run-preview.json",
                   writeArtifact(
                       mapOf(
-                          "commandPreview", displayCommand,
-                          "argv", argv,
-                          "inventoryId", inventory.id(),
-                          "playbookId", playbook.id(),
-                          "checkMode", true,
-                          "executed", false)))));
+                          "commandPreview",
+                          displayCommand,
+                          "argv",
+                          argv,
+                          "inventoryId",
+                          inventory.id(),
+                          "playbookId",
+                          playbook.id(),
+                          "checkMode",
+                          true,
+                          "executed",
+                          false)))));
     } finally {
       workspaceManager.cleanup(workspace);
     }
@@ -198,8 +203,7 @@ public class AnsibleStepExecutor implements StepExecutor {
       int timeoutSeconds = live ? policy.liveTimeoutSeconds() : policy.timeoutSeconds();
 
       AnsibleProcessResult result =
-          processRunner.run(
-              argv, workspace.root(), Duration.ofSeconds(timeoutSeconds), checkMode);
+          processRunner.run(argv, workspace.root(), Duration.ofSeconds(timeoutSeconds), checkMode);
 
       String displayCommand = commandBuilder.toDisplayCommand(argv);
 
@@ -218,18 +222,30 @@ public class AnsibleStepExecutor implements StepExecutor {
               live ? "ansible-live-result.json" : "ansible-check-result.json",
               writeArtifact(
                   mapOf(
-                      "commandPreview", displayCommand,
-                      "argv", argv,
-                      "inventoryId", inventory.id(),
-                      "playbookId", playbook.id(),
-                      "checkMode", checkMode,
-                      "live", live,
-                      "executed", true,
-                      "exitCode", result.exitCode(),
-                      "timedOut", result.timedOut(),
-                      "durationMillis", result.durationMillis(),
-                      "stdout", stdout,
-                      "stderr", stderr)));
+                      "commandPreview",
+                      displayCommand,
+                      "argv",
+                      argv,
+                      "inventoryId",
+                      inventory.id(),
+                      "playbookId",
+                      playbook.id(),
+                      "checkMode",
+                      checkMode,
+                      "live",
+                      live,
+                      "executed",
+                      true,
+                      "exitCode",
+                      result.exitCode(),
+                      "timedOut",
+                      result.timedOut(),
+                      "durationMillis",
+                      result.durationMillis(),
+                      "stdout",
+                      stdout,
+                      "stderr",
+                      stderr)));
 
       if (result.success()) {
         return StepExecutionResult.success(
@@ -239,12 +255,10 @@ public class AnsibleStepExecutor implements StepExecutor {
 
       return StepExecutionResult.failure(
           result.timedOut()
-              ? (live
-                      ? "Ansible live execution timed out."
-                      : "Ansible check execution timed out.")
+              ? (live ? "Ansible live execution timed out." : "Ansible check execution timed out.")
               : (live
-                      ? "Ansible live execution failed with exit code " + result.exitCode()
-                      : "Ansible check execution failed with exit code " + result.exitCode()),
+                  ? "Ansible live execution failed with exit code " + result.exitCode()
+                  : "Ansible check execution failed with exit code " + result.exitCode()),
           List.of(artifactCmd));
     } finally {
       workspaceManager.cleanup(workspace);
