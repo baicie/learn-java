@@ -9,7 +9,7 @@ import org.junit.jupiter.api.Test;
 
 class RunnerSafetyTest {
   @Test
-  void runnerDoesNotUseLiveExecutionLibrariesInPhase53() throws Exception {
+  void runnerDoesNotUseLiveExecutionLibrariesInPhase54() throws Exception {
     String content = readMainSources(Path.of("src/main/java"));
 
     assertFalse(content.contains("ProcessBuilder"));
@@ -22,6 +22,7 @@ class RunnerSafetyTest {
 
     assertTrue(content.contains("heartbeat"));
     assertTrue(content.contains("timeout"));
+    assertTrue(content.contains("webhook"));
   }
 
   private String readMainSources(Path root) throws Exception {
