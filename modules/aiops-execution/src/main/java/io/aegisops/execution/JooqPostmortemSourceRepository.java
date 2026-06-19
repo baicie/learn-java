@@ -164,6 +164,9 @@ public class JooqPostmortemSourceRepository implements PostmortemSourceRepositor
             INCIDENT_TIMELINE.DESCRIPTION,
             INCIDENT_TIMELINE.EVENT_TIME)
         .from(INCIDENT_TIMELINE)
+        .join(INCIDENT)
+        .on(INCIDENT.ID.eq(INCIDENT_TIMELINE.INCIDENT_ID))
+        .and(INCIDENT.TENANT_ID.eq(tenantId))
         .where(INCIDENT_TIMELINE.INCIDENT_ID.eq(incidentId))
         .orderBy(INCIDENT_TIMELINE.EVENT_TIME.asc())
         .fetch(
