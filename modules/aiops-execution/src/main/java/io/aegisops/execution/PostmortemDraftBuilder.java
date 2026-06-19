@@ -24,9 +24,12 @@ public class PostmortemDraftBuilder {
 
     String impact =
         switch (safe(source.incident().severity())) {
-          case "critical" -> "Critical impact. Service availability or core business flow may have been affected.";
-          case "high" -> "High impact. Users or important business functions may have been affected.";
-          case "medium" -> "Medium impact. Partial degradation or limited scope impact was observed.";
+          case "critical" ->
+              "Critical impact. Service availability or core business flow may have been affected.";
+          case "high" ->
+              "High impact. Users or important business functions may have been affected.";
+          case "medium" ->
+              "Medium impact. Partial degradation or limited scope impact was observed.";
           case "low" -> "Low impact. The incident appears to have limited customer-facing impact.";
           default -> "Impact requires manual confirmation.";
         };
@@ -40,7 +43,8 @@ public class PostmortemDraftBuilder {
     String prevention =
         "Review monitoring coverage, runbook accuracy, rollback readiness, and ownership of follow-up action items.";
 
-    List<String> actionItems = generateActionItems ? buildActionItems(source, rootCause) : List.of();
+    List<String> actionItems =
+        generateActionItems ? buildActionItems(source, rootCause) : List.of();
 
     return new PostmortemDraft(
         title, summary, impact, rootCause, detection, resolution, prevention, actionItems);
@@ -66,7 +70,8 @@ public class PostmortemDraftBuilder {
 
     boolean hasRollback =
         source.rollbackPlans().stream()
-            .anyMatch(item -> List.of("succeeded", "approved", "executing").contains(item.status()));
+            .anyMatch(
+                item -> List.of("succeeded", "approved", "executing").contains(item.status()));
 
     if (hasRollback) {
       return "Rollback plan was created or executed as part of mitigation.";

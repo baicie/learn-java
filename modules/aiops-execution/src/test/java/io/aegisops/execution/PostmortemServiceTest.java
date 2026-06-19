@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.aegisops.common.exception.AppException;
 import io.aegisops.execution.dto.PostmortemActionItemCreateCommand;
 import io.aegisops.execution.dto.PostmortemActionItemCreateRequest;
@@ -70,8 +69,7 @@ class PostmortemServiceTest {
   @Test
   void createManualActionItem() {
     FakePostmortemRepository repository = new FakePostmortemRepository();
-    repository.report =
-        report("pmr_1", "tenant_1", "inc_1", "generated");
+    repository.report = report("pmr_1", "tenant_1", "inc_1", "generated");
 
     PostmortemService service =
         new PostmortemService(
@@ -133,9 +131,7 @@ class PostmortemServiceTest {
 
     var response =
         service.updateActionItemStatus(
-            "tenant_1",
-            "pmai_1",
-            new PostmortemActionItemStatusRequest("done", "bob"));
+            "tenant_1", "pmai_1", new PostmortemActionItemStatusRequest("done", "bob"));
 
     assertEquals("done", response.status());
   }
@@ -193,11 +189,7 @@ class PostmortemServiceTest {
                       "rca_1", "rca summary", "db timeout", "0.8", OffsetDateTime.now())),
               List.of(
                   new PostmortemSourceBundle.AiDiagnosisSnapshot(
-                      "ai_1",
-                      "ai summary",
-                      "db timeout",
-                      "restart service",
-                      OffsetDateTime.now())),
+                      "ai_1", "ai summary", "db timeout", "restart service", OffsetDateTime.now())),
               List.of(
                   new PostmortemSourceBundle.ExecutionSnapshot(
                       "exec_1",
@@ -271,7 +263,8 @@ class PostmortemServiceTest {
     }
 
     @Override
-    public Optional<PostmortemReportRecord> findLatestByIncident(String tenantId, String incidentId) {
+    public Optional<PostmortemReportRecord> findLatestByIncident(
+        String tenantId, String incidentId) {
       return Optional.ofNullable(report);
     }
 
@@ -306,7 +299,8 @@ class PostmortemServiceTest {
     }
 
     @Override
-    public Optional<PostmortemActionItemRecord> findActionItem(String tenantId, String actionItemId) {
+    public Optional<PostmortemActionItemRecord> findActionItem(
+        String tenantId, String actionItemId) {
       return actionItems.stream().filter(item -> item.id().equals(actionItemId)).findFirst();
     }
 

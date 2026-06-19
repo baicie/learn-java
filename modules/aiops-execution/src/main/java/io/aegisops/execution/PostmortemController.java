@@ -46,9 +46,9 @@ public class PostmortemController {
 
   @PostMapping("/api/postmortems/{postmortemId}/action-items")
   public ApiResponse<PostmortemActionItemResponse> createActionItem(
-      @PathVariable String postmortemId,
-      @RequestBody PostmortemActionItemCreateRequest request) {
-    return ApiResponse.ok(service.createActionItem(TenantContext.requireTenantId(), postmortemId, request));
+      @PathVariable String postmortemId, @RequestBody PostmortemActionItemCreateRequest request) {
+    return ApiResponse.ok(
+        service.createActionItem(TenantContext.requireTenantId(), postmortemId, request));
   }
 
   @GetMapping("/api/postmortems/{postmortemId}/action-items")
@@ -59,8 +59,8 @@ public class PostmortemController {
 
   @PostMapping("/api/postmortem-action-items/{actionItemId}/status")
   public ApiResponse<PostmortemActionItemResponse> updateActionItemStatus(
-      @PathVariable String actionItemId,
-      @RequestBody PostmortemActionItemStatusRequest request) {
-    return ApiResponse.ok(service.updateActionItemStatus(TenantContext.requireTenantId(), actionItemId, request));
+      @PathVariable String actionItemId, @RequestBody PostmortemActionItemStatusRequest request) {
+    return ApiResponse.ok(
+        service.updateActionItemStatus(TenantContext.requireTenantId(), actionItemId, request));
   }
 }

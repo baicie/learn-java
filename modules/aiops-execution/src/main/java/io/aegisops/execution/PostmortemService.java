@@ -51,7 +51,8 @@ public class PostmortemService {
 
     PostmortemSourceBundle filtered = filterSource(source, request);
     PostmortemDraft draft =
-        draftBuilder.build(filtered, include(request == null ? null : request.generateActionItems()));
+        draftBuilder.build(
+            filtered, include(request == null ? null : request.generateActionItems()));
 
     String markdown =
         markdownBuilder.build(
@@ -86,13 +87,25 @@ public class PostmortemService {
             actor));
 
     int order = 1;
-    createSection(tenantId, postmortemId, order++, "summary", "Incident Summary", draft.summary(), Map.of());
+    createSection(
+        tenantId, postmortemId, order++, "summary", "Incident Summary", draft.summary(), Map.of());
     createSection(tenantId, postmortemId, order++, "impact", "Impact", draft.impact(), Map.of());
-    createSection(tenantId, postmortemId, order++, "timeline", "Timeline", buildTimelineSection(filtered), Map.of("count", filtered.timeline().size()));
-    createSection(tenantId, postmortemId, order++, "root_cause", "Root Cause", draft.rootCause(), Map.of());
-    createSection(tenantId, postmortemId, order++, "detection", "Detection", draft.detection(), Map.of());
-    createSection(tenantId, postmortemId, order++, "resolution", "Resolution", draft.resolution(), Map.of());
-    createSection(tenantId, postmortemId, order++, "prevention", "Prevention", draft.prevention(), Map.of());
+    createSection(
+        tenantId,
+        postmortemId,
+        order++,
+        "timeline",
+        "Timeline",
+        buildTimelineSection(filtered),
+        Map.of("count", filtered.timeline().size()));
+    createSection(
+        tenantId, postmortemId, order++, "root_cause", "Root Cause", draft.rootCause(), Map.of());
+    createSection(
+        tenantId, postmortemId, order++, "detection", "Detection", draft.detection(), Map.of());
+    createSection(
+        tenantId, postmortemId, order++, "resolution", "Resolution", draft.resolution(), Map.of());
+    createSection(
+        tenantId, postmortemId, order++, "prevention", "Prevention", draft.prevention(), Map.of());
 
     if (include(request == null ? null : request.generateActionItems())) {
       for (String item : draft.actionItems()) {
@@ -120,7 +133,8 @@ public class PostmortemService {
     PostmortemReportRecord report =
         repository
             .findReport(tenantId, postmortemId)
-            .orElseThrow(() -> new AppException("POSTMORTEM_NOT_FOUND", "Postmortem report not found"));
+            .orElseThrow(
+                () -> new AppException("POSTMORTEM_NOT_FOUND", "Postmortem report not found"));
 
     return toResponse(
         report,
@@ -132,7 +146,8 @@ public class PostmortemService {
     PostmortemReportRecord report =
         repository
             .findLatestByIncident(tenantId, incidentId)
-            .orElseThrow(() -> new AppException("POSTMORTEM_NOT_FOUND", "Postmortem report not found"));
+            .orElseThrow(
+                () -> new AppException("POSTMORTEM_NOT_FOUND", "Postmortem report not found"));
 
     return get(tenantId, report.id());
   }
@@ -170,7 +185,8 @@ public class PostmortemService {
     return repository
         .findActionItem(tenantId, id)
         .map(this::toActionItemResponse)
-        .orElseThrow(() -> new AppException("POSTMORTEM_ACTION_ITEM_NOT_FOUND", "Action item not found"));
+        .orElseThrow(
+            () -> new AppException("POSTMORTEM_ACTION_ITEM_NOT_FOUND", "Action item not found"));
   }
 
   public List<PostmortemActionItemResponse> listActionItems(String tenantId, String postmortemId) {
@@ -196,7 +212,8 @@ public class PostmortemService {
     return repository
         .findActionItem(tenantId, actionItemId)
         .map(this::toActionItemResponse)
-        .orElseThrow(() -> new AppException("POSTMORTEM_ACTION_ITEM_NOT_FOUND", "Action item not found"));
+        .orElseThrow(
+            () -> new AppException("POSTMORTEM_ACTION_ITEM_NOT_FOUND", "Action item not found"));
   }
 
   private PostmortemSourceBundle filterSource(
@@ -257,11 +274,13 @@ public class PostmortemService {
 
   private void validateActionItemRequest(PostmortemActionItemCreateRequest request) {
     if (request == null) {
-      throw new AppException("POSTMORTEM_ACTION_ITEM_REQUEST_REQUIRED", "Action item request is required");
+      throw new AppException(
+          "POSTMORTEM_ACTION_ITEM_REQUEST_REQUIRED", "Action item request is required");
     }
 
     if (request.title() == null || request.title().isBlank()) {
-      throw new AppException("POSTMORTEM_ACTION_ITEM_TITLE_REQUIRED", "Action item title is required");
+      throw new AppException(
+          "POSTMORTEM_ACTION_ITEM_TITLE_REQUIRED", "Action item title is required");
     }
 
     normalizePriority(request.priority());
@@ -281,17 +300,21 @@ public class PostmortemService {
   }
 
   private String normalizePriority(String priority) {
-    String value = priority == null || priority.isBlank() ? "medium" : priority.trim().toLowerCase();
+    String value =
+        priority == null || priority.isBlank() ? "medium" : priority.trim().toLowerCase();
     if (!List.of("low", "medium", "high", "critical").contains(value)) {
-      throw new AppException("POSTMORTEM_ACTION_ITEM_PRIORITY_INVALID", "Invalid action item priority");
+      throw new AppException(
+          "POSTMORTEM_ACTION_ITEM_PRIORITY_INVALID", "Invalid action item priority");
     }
     return value;
   }
 
   private String normalizeSourceType(String sourceType) {
-    String value = sourceType == null || sourceType.isBlank() ? "manual" : sourceType.trim().toLowerCase();
+    String value =
+        sourceType == null || sourceType.isBlank() ? "manual" : sourceType.trim().toLowerCase();
     if (!List.of("manual", "rca", "ai_diagnosis", "execution", "rollback").contains(value)) {
-      throw new AppException("POSTMORTEM_ACTION_ITEM_SOURCE_TYPE_INVALID", "Invalid action item source type");
+      throw new AppException(
+          "POSTMORTEM_ACTION_ITEM_SOURCE_TYPE_INVALID", "Invalid action item source type");
     }
     return value;
   }

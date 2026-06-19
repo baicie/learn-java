@@ -33,7 +33,10 @@ class PostmortemDraftBuilderTest {
             true);
 
     assertEquals("ai root cause", draft.rootCause());
-    assertTrue(draft.actionItems().contains("Review and update the related runbook based on this incident."));
+    assertTrue(
+        draft
+            .actionItems()
+            .contains("Review and update the related runbook based on this incident."));
   }
 
   @Test
@@ -41,12 +44,7 @@ class PostmortemDraftBuilderTest {
     PostmortemDraft draft =
         builder.build(
             new PostmortemSourceBundle(
-                incident("medium"),
-                List.of(),
-                List.of(),
-                List.of(),
-                List.of(),
-                List.of()),
+                incident("medium"), List.of(), List.of(), List.of(), List.of(), List.of()),
             true);
 
     assertTrue(draft.actionItems().contains("Prepare rollback plan for this failure mode."));

@@ -21,9 +21,7 @@ class JooqPostmortemSourceRepositoryGeneratedSqlTest {
     MockDataProvider provider =
         context -> {
           allSqlRef.updateAndGet(prev -> prev + "\n" + context.sql());
-          return new MockResult[] {
-            new MockResult(1, DSL.using(SQLDialect.POSTGRES).newResult())
-          };
+          return new MockResult[] {new MockResult(1, DSL.using(SQLDialect.POSTGRES).newResult())};
         };
 
     var dsl =
@@ -46,15 +44,10 @@ class JooqPostmortemSourceRepositoryGeneratedSqlTest {
 
     String allSql = allSqlRef.get().toLowerCase();
 
+    assertTrue(allSql.contains("join"), "expected join in captured SQL, got: " + allSql);
     assertTrue(
-        allSql.contains("join"),
-        "expected join in captured SQL, got: " + allSql);
-    assertTrue(
-        allSql.contains("incident"),
-        "expected incident join in captured SQL, got: " + allSql);
-    assertTrue(
-        allSql.contains("tenant_id"),
-        "expected tenant_id in captured SQL, got: " + allSql);
+        allSql.contains("incident"), "expected incident join in captured SQL, got: " + allSql);
+    assertTrue(allSql.contains("tenant_id"), "expected tenant_id in captured SQL, got: " + allSql);
     assertTrue(
         allSql.contains("incident_timeline"),
         "expected incident_timeline in captured SQL, got: " + allSql);

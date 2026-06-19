@@ -19,18 +19,10 @@ public record PostmortemSourceBundle(
       OffsetDateTime updatedAt) {}
 
   public record RcaSnapshot(
-      String id,
-      String summary,
-      String rootCause,
-      String confidence,
-      OffsetDateTime createdAt) {}
+      String id, String summary, String rootCause, String confidence, OffsetDateTime createdAt) {}
 
   public record AiDiagnosisSnapshot(
-      String id,
-      String summary,
-      String rootCause,
-      String nextSteps,
-      OffsetDateTime createdAt) {}
+      String id, String summary, String rootCause, String nextSteps, OffsetDateTime createdAt) {}
 
   public record ExecutionSnapshot(
       String id,
@@ -49,9 +41,5 @@ public record PostmortemSourceBundle(
       OffsetDateTime updatedAt) {}
 
   public record TimelineSnapshot(
-      String id,
-      String eventType,
-      String title,
-      String content,
-      OffsetDateTime eventTime) {}
+      String id, String eventType, String title, String content, OffsetDateTime eventTime) {}
 }

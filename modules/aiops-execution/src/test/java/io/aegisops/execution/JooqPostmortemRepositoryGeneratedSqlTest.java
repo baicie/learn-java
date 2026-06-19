@@ -26,8 +26,7 @@ class JooqPostmortemRepositoryGeneratedSqlTest {
         };
 
     JooqPostmortemRepository repository =
-        new JooqPostmortemRepository(
-            DSL.using(new MockConnection(provider), SQLDialect.POSTGRES));
+        new JooqPostmortemRepository(DSL.using(new MockConnection(provider), SQLDialect.POSTGRES));
 
     repository.createReport(
         new PostmortemReportCreateCommand(
@@ -69,19 +68,11 @@ class JooqPostmortemRepositoryGeneratedSqlTest {
         };
 
     JooqPostmortemRepository repository =
-        new JooqPostmortemRepository(
-            DSL.using(new MockConnection(provider), SQLDialect.POSTGRES));
+        new JooqPostmortemRepository(DSL.using(new MockConnection(provider), SQLDialect.POSTGRES));
 
     repository.createSection(
         new PostmortemSectionCreateCommand(
-            "pms_1",
-            "tenant_1",
-            "pmr_1",
-            1,
-            "summary",
-            "Summary",
-            "content",
-            "{}"));
+            "pms_1", "tenant_1", "pmr_1", 1, "summary", "Summary", "content", "{}"));
 
     String sql = sqlRef.get();
     if (sql == null) {
@@ -105,8 +96,7 @@ class JooqPostmortemRepositoryGeneratedSqlTest {
         };
 
     JooqPostmortemRepository repository =
-        new JooqPostmortemRepository(
-            DSL.using(new MockConnection(provider), SQLDialect.POSTGRES));
+        new JooqPostmortemRepository(DSL.using(new MockConnection(provider), SQLDialect.POSTGRES));
 
     repository.createActionItem(
         new PostmortemActionItemCreateCommand(
