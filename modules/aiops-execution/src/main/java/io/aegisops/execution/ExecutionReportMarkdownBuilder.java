@@ -57,17 +57,21 @@ public class ExecutionReportMarkdownBuilder {
     }
 
     md.append("\n## Artifact Summary\n\n");
-    md.append("| Step ID | Artifact | Type |\n");
-    md.append("|---|---|---|\n");
+    if (execution.artifacts().isEmpty()) {
+      md.append("No artifacts.\n");
+    } else {
+      md.append("| Step ID | Artifact | Type |\n");
+      md.append("|---|---|---|\n");
 
-    for (ExecutionArtifactResponse artifact : execution.artifacts()) {
-      md.append("| ")
-          .append(escape(artifact.stepId()))
-          .append(" | ")
-          .append(escape(artifact.name()))
-          .append(" | ")
-          .append(escape(artifact.artifactType()))
-          .append(" |\n");
+      for (ExecutionArtifactResponse artifact : execution.artifacts()) {
+        md.append("| ")
+            .append(escape(artifact.stepId()))
+            .append(" | ")
+            .append(escape(artifact.name()))
+            .append(" | ")
+            .append(escape(artifact.artifactType()))
+            .append(" |\n");
+      }
     }
 
     md.append("\n## Verification\n\n");

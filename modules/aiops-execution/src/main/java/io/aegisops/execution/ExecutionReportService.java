@@ -1,6 +1,7 @@
 package io.aegisops.execution;
 
 import io.aegisops.common.exception.AppException;
+import io.aegisops.execution.dto.ExecutionArtifactResponse;
 import io.aegisops.execution.dto.ExecutionAuditEventCreateCommand;
 import io.aegisops.execution.dto.ExecutionAuditEventRecord;
 import io.aegisops.execution.dto.ExecutionAuditEventResponse;
@@ -47,6 +48,23 @@ public class ExecutionReportService {
 
     validateTerminal(execution);
 
+    String reportId = newId("exr");
+    String actor = blankToDefault(request == null ? null : request.generatedBy(), "system");
+
+    appendAuditEvent(
+        tenantId,
+        executionId,
+        null,
+        "report_generated",
+        actor,
+        "Execution report generated",
+        Map.of("reportId", reportId));
+
+    ExecutionRunResponse reportExecution =
+        include(request == null ? null : request.includeArtifacts())
+            ? execution
+            : withoutArtifacts(execution);
+
     List<ExecutionVerificationRecord> verifications =
         include(request == null ? null : request.includeVerifications())
             ? repository.listVerifications(tenantId, executionId)
@@ -57,9 +75,8 @@ public class ExecutionReportService {
             ? repository.listAuditEvents(tenantId, executionId)
             : List.of();
 
-    String markdown = markdownBuilder.build(execution, verifications, auditEvents);
+    String markdown = markdownBuilder.build(reportExecution, verifications, auditEvents);
 
-    String reportId = newId("exr");
     String reportType =
         normalizeReportType(request == null ? null : request.reportType(), execution);
     String title = "Execution Report - " + execution.id();
@@ -75,7 +92,7 @@ public class ExecutionReportService {
             title,
             summary,
             markdown,
-            blankToDefault(request == null ? null : request.generatedBy(), "system")));
+            actor));
 
     int order = 1;
     createSection(tenantId, reportId, order++, "summary", "Summary", summary, Map.of());
@@ -85,16 +102,16 @@ public class ExecutionReportService {
         order++,
         "steps",
         "Step Summary",
-        buildStepSummary(execution),
-        Map.of());
+        buildStepSummary(reportExecution),
+        Map.of("stepCount", reportExecution.steps().size()));
     createSection(
         tenantId,
         reportId,
         order++,
         "artifacts",
         "Artifact Summary",
-        buildArtifactSummary(execution),
-        Map.of("artifactCount", execution.artifacts().size()));
+        buildArtifactSummary(reportExecution),
+        Map.of("artifactCount", reportExecution.artifacts().size()));
     createSection(
         tenantId,
         reportId,
@@ -111,15 +128,6 @@ public class ExecutionReportService {
         "Audit Events",
         buildAuditSummary(auditEvents),
         Map.of("auditEventCount", auditEvents.size()));
-
-    appendAuditEvent(
-        tenantId,
-        executionId,
-        null,
-        "report_generated",
-        blankToDefault(request == null ? null : request.generatedBy(), "system"),
-        "Execution report generated",
-        Map.of("reportId", reportId));
 
     return get(tenantId, reportId);
   }
@@ -151,31 +159,33 @@ public class ExecutionReportService {
   @Transactional
   public ExecutionVerificationResponse createVerification(
       String tenantId, String executionId, ExecutionVerificationCreateRequest request) {
-    executionRequestService.getExecution(tenantId, executionId);
+    ExecutionRunResponse execution = executionRequestService.getExecution(tenantId, executionId);
     validateVerificationRequest(request);
+    validateVerificationStep(execution, request.stepId());
 
     String id = newId("exv");
+    String actor = blankToDefault(request.createdBy(), "system");
 
     repository.createVerification(
         new ExecutionVerificationCreateCommand(
             id,
             tenantId,
             executionId,
-            request.stepId(),
+            blankToNull(request.stepId()),
             normalizeVerificationType(request.verificationType()),
             request.targetType().trim(),
             request.targetId(),
             normalizeVerificationStatus(request.status()),
             request.summary().trim(),
             json.write(request.details()),
-            blankToDefault(request.createdBy(), "system")));
+            actor));
 
     appendAuditEvent(
         tenantId,
         executionId,
-        request.stepId(),
+        blankToNull(request.stepId()),
         "verification_created",
-        blankToDefault(request.createdBy(), "system"),
+        actor,
         "Execution verification created",
         Map.of("verificationId", id, "status", normalizeVerificationStatus(request.status())));
 
@@ -216,7 +226,7 @@ public class ExecutionReportService {
             newId("xae"),
             tenantId,
             executionId,
-            stepId,
+            blankToNull(stepId),
             eventType,
             blankToDefault(actor, "system"),
             summary,
@@ -250,6 +260,20 @@ public class ExecutionReportService {
     normalizeVerificationStatus(request.status());
   }
 
+  private void validateVerificationStep(ExecutionRunResponse execution, String stepId) {
+    if (stepId == null || stepId.isBlank()) {
+      return;
+    }
+
+    boolean exists = execution.steps().stream().anyMatch(step -> step.id().equals(stepId.trim()));
+
+    if (!exists) {
+      throw new AppException(
+          "EXECUTION_VERIFICATION_STEP_INVALID",
+          "Verification stepId does not belong to execution");
+    }
+  }
+
   private String normalizeReportType(String value, ExecutionRunResponse execution) {
     if (value != null && !value.isBlank()) {
       String reportType = value.trim().toLowerCase();
@@ -281,6 +305,39 @@ public class ExecutionReportService {
 
   private boolean include(Boolean value) {
     return value == null || value;
+  }
+
+  private ExecutionRunResponse withoutArtifacts(ExecutionRunResponse execution) {
+    return new ExecutionRunResponse(
+        execution.id(),
+        execution.tenantId(),
+        execution.incidentId(),
+        execution.planId(),
+        execution.status(),
+        execution.mode(),
+        execution.requestedBy(),
+        execution.runnerId(),
+        execution.errorMessage(),
+        execution.summary(),
+        execution.attempt(),
+        execution.maxAttempts(),
+        execution.retryOfExecutionId(),
+        execution.leaseUntil(),
+        execution.heartbeatAt(),
+        execution.timeoutSeconds(),
+        execution.approvalId(),
+        execution.approvalSnapshotJson(),
+        execution.planRiskLevel(),
+        execution.liveGuardPassedAt(),
+        execution.executionKind(),
+        execution.rollbackPlanId(),
+        execution.rollbackOfExecutionId(),
+        execution.steps(),
+        List.<ExecutionArtifactResponse>of(),
+        execution.startedAt(),
+        execution.finishedAt(),
+        execution.createdAt(),
+        execution.updatedAt());
   }
 
   private void createSection(
@@ -328,7 +385,7 @@ public class ExecutionReportService {
           .append(step.status())
           .append("\n");
     }
-    return builder.toString();
+    return builder.isEmpty() ? "No steps." : builder.toString();
   }
 
   private String buildArtifactSummary(ExecutionRunResponse execution) {
@@ -449,6 +506,10 @@ public class ExecutionReportService {
 
   private String blankToDefault(String value, String fallback) {
     return value == null || value.isBlank() ? fallback : value.trim();
+  }
+
+  private String blankToNull(String value) {
+    return value == null || value.isBlank() ? null : value.trim();
   }
 
   private String newId(String prefix) {

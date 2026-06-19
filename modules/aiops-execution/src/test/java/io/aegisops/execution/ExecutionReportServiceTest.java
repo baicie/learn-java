@@ -99,6 +99,88 @@ class ExecutionReportServiceTest {
             .anyMatch(item -> "verification_created".equals(item.eventType())));
   }
 
+  @Test
+  void generateReportCanExcludeArtifacts() {
+    FakeExecutionReportRepository repository = new FakeExecutionReportRepository();
+
+    ExecutionReportService service =
+        new ExecutionReportService(
+            new FakeExecutionRequestService("succeeded"),
+            repository,
+            new ExecutionReportMarkdownBuilder(),
+            new ObjectMapper());
+
+    var response =
+        service.generate(
+            "tenant_1",
+            "exec_1",
+            new ExecutionReportGenerateRequest("standard", "alice", false, true, true));
+
+    assertTrue(response.markdown().contains("No artifacts."));
+    assertTrue(
+        response.sections().stream()
+            .filter(section -> "artifacts".equals(section.sectionType()))
+            .findFirst()
+            .orElseThrow()
+            .content()
+            .contains("No artifacts."));
+  }
+
+  @Test
+  void generatedReportContainsReportGeneratedAuditEvent() {
+    FakeExecutionReportRepository repository = new FakeExecutionReportRepository();
+
+    ExecutionReportService service =
+        new ExecutionReportService(
+            new FakeExecutionRequestService("succeeded"),
+            repository,
+            new ExecutionReportMarkdownBuilder(),
+            new ObjectMapper());
+
+    var response =
+        service.generate(
+            "tenant_1",
+            "exec_1",
+            new ExecutionReportGenerateRequest("standard", "alice", true, true, true));
+
+    assertTrue(response.markdown().contains("report_generated"));
+    assertTrue(
+        response.sections().stream()
+            .filter(section -> "audit".equals(section.sectionType()))
+            .findFirst()
+            .orElseThrow()
+            .content()
+            .contains("report_generated"));
+  }
+
+  @Test
+  void rejectVerificationStepIdOutsideExecution() {
+    FakeExecutionReportRepository repository = new FakeExecutionReportRepository();
+
+    ExecutionReportService service =
+        new ExecutionReportService(
+            new FakeExecutionRequestService("succeeded"),
+            repository,
+            new ExecutionReportMarkdownBuilder(),
+            new ObjectMapper());
+
+    assertThrows(
+        AppException.class,
+        () ->
+            service.createVerification(
+                "tenant_1",
+                "exec_1",
+                new io.aegisops.execution.dto.ExecutionVerificationCreateRequest(
+                    "step_other",
+                    "after",
+                    "service",
+                    "order-service",
+                    "passed",
+                    "service recovered",
+                    Map.of("httpStatus", 200),
+                    "alice")));
+  }
+
   private static class FakeExecutionRequestService extends ExecutionRequestService {
     private final String status;
 
