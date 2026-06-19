@@ -63,20 +63,24 @@ public class RollbackApprovalService {
         new RollbackDecisionCreateCommand(
             newId("rbd"), tenantId, rollbackPlanId, reviewer, "approve", request.comment()));
 
-    int nextApprovedCount = plan.approvedCount() + 1;
+    int approvedCount = rollbackRepository.countDecisions(tenantId, rollbackPlanId, "approve");
 
-    if (nextApprovedCount >= plan.requiredApprovals()) {
+    if (approvedCount >= plan.requiredApprovals()) {
       boolean updated =
           rollbackRepository.markApproved(
               tenantId,
               rollbackPlanId,
+              approvedCount,
               json.write(
-                  Map.of(
-                      "rollbackPlanId", rollbackPlanId,
-                      "status", "approved",
-                      "requiredApprovals", plan.requiredApprovals(),
-                      "approvedCount", nextApprovedCount,
-                      "reviewer", reviewer)));
+                  Map.ofEntries(
+                      Map.entry("approvalId", plan.id()),
+                      Map.entry("rollbackPlanId", rollbackPlanId),
+                      Map.entry("planId", plan.sourcePlanId()),
+                      Map.entry("sourceExecutionId", plan.sourceExecutionId()),
+                      Map.entry("status", "approved"),
+                      Map.entry("requiredApprovals", plan.requiredApprovals()),
+                      Map.entry("approvedCount", approvedCount),
+                      Map.entry("reviewer", reviewer))));
 
       if (!updated) {
         throw new AppException("ROLLBACK_APPROVAL_FAILED", "Rollback plan was not approved");
@@ -100,20 +104,22 @@ public class RollbackApprovalService {
         new RollbackDecisionCreateCommand(
             newId("rbd"), tenantId, rollbackPlanId, reviewer, "reject", request.comment()));
 
+    int rejectedCount = rollbackRepository.countDecisions(tenantId, rollbackPlanId, "reject");
+
     boolean updated =
         rollbackRepository.markRejected(
             tenantId,
             rollbackPlanId,
+            rejectedCount,
             json.write(
-                Map.of(
-                    "rollbackPlanId",
-                    rollbackPlanId,
-                    "status",
-                    "rejected",
-                    "reviewer",
-                    reviewer,
-                    "reason",
-                    request.comment() == null ? "" : request.comment())));
+                Map.ofEntries(
+                    Map.entry("approvalId", plan.id()),
+                    Map.entry("rollbackPlanId", rollbackPlanId),
+                    Map.entry("planId", plan.sourcePlanId()),
+                    Map.entry("sourceExecutionId", plan.sourceExecutionId()),
+                    Map.entry("status", "rejected"),
+                    Map.entry("reviewer", reviewer),
+                    Map.entry("reason", request.comment() == null ? "" : request.comment()))));
 
     if (!updated) {
       throw new AppException("ROLLBACK_REJECT_FAILED", "Rollback plan was not rejected");

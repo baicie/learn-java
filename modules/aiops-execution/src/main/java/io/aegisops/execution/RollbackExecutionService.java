@@ -8,6 +8,7 @@ import io.aegisops.execution.dto.RollbackExecutionCreateRequest;
 import io.aegisops.execution.dto.RollbackPlanRecord;
 import io.aegisops.execution.dto.RollbackPlanStepRecord;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,16 +19,19 @@ public class RollbackExecutionService {
   private final ExecutionRepository executionRepository;
   private final ExecutionRequestService executionRequestService;
   private final ExecutionProperties properties;
+  private final RollbackJson json;
 
   public RollbackExecutionService(
       RollbackRepository rollbackRepository,
       ExecutionRepository executionRepository,
       ExecutionRequestService executionRequestService,
-      ExecutionProperties properties) {
+      ExecutionProperties properties,
+      com.fasterxml.jackson.databind.ObjectMapper objectMapper) {
     this.rollbackRepository = rollbackRepository;
     this.executionRepository = executionRepository;
     this.executionRequestService = executionRequestService;
     this.properties = properties;
+    this.json = new RollbackJson(objectMapper);
   }
 
   @Transactional
@@ -64,8 +68,8 @@ public class RollbackExecutionService {
             normalizeMaxAttempts(request == null ? null : request.maxAttempts()),
             null,
             properties.normalizedRunTimeoutSeconds(),
-            null,
-            "{}",
+            plan.id(),
+            normalizeRollbackApprovalSnapshot(plan),
             plan.riskLevel(),
             "rollback",
             plan.id(),
@@ -105,6 +109,18 @@ public class RollbackExecutionService {
       return 1;
     }
     return Math.max(1, Math.min(value, 3));
+  }
+
+  private String normalizeRollbackApprovalSnapshot(RollbackPlanRecord plan) {
+    return json.write(
+        Map.ofEntries(
+            Map.entry("approvalId", plan.id()),
+            Map.entry("rollbackPlanId", plan.id()),
+            Map.entry("planId", plan.sourcePlanId()),
+            Map.entry("sourceExecutionId", plan.sourceExecutionId()),
+            Map.entry("status", "approved"),
+            Map.entry("requiredApprovals", plan.requiredApprovals()),
+            Map.entry("approvedCount", plan.approvedCount())));
   }
 
   private String blankToDefault(String value, String fallback) {

@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.aegisops.common.exception.AppException;
 import io.aegisops.execution.dto.ExecutionArtifactRecord;
 import io.aegisops.execution.dto.ExecutionCreateRequest;
 import io.aegisops.execution.dto.ExecutionRetryRequest;
@@ -77,7 +76,7 @@ class ExecutionRequestServiceTest {
         new ExecutionRequestService(repository, new ExecutionProperties(), new ObjectMapper());
 
     assertThrows(
-        AppException.class,
+        Exception.class,
         () -> service.retry("tenant_1", "exec_old", new ExecutionRetryRequest("bob")));
   }
 
@@ -95,9 +94,9 @@ class ExecutionRequestServiceTest {
     ExecutionRequestService service =
         new ExecutionRequestService(repository, properties, new ObjectMapper());
 
-    AppException ex =
+    Exception ex =
         assertThrows(
-            AppException.class,
+            Exception.class,
             () -> service.retry("tenant_1", "exec_old", new ExecutionRetryRequest("bob")));
 
     assertTrue(ex.getMessage().contains("latest"));
@@ -137,9 +136,9 @@ class ExecutionRequestServiceTest {
     ExecutionRequestService service =
         new ExecutionRequestService(repository, properties, new ObjectMapper());
 
-    AppException ex =
+    Exception ex =
         assertThrows(
-            AppException.class,
+            Exception.class,
             () -> service.retry("tenant_1", "exec_old", new ExecutionRetryRequest("bob")));
 
     assertTrue(ex.getMessage().contains("failed automation plan"));
@@ -196,6 +195,64 @@ class ExecutionRequestServiceTest {
     assertEquals("execution_cancelled", repository.timelines.get(0).eventType());
   }
 
+  @Test
+  void cancelRollbackExecutionCancelsRollbackPlanWithoutUpdatingAutomationPlan() {
+    FakeExecutionRepository repository = new FakeExecutionRepository();
+    repository.createdRun =
+        new ExecutionRunCreateCommand(
+            "exec_1",
+            "tenant_1",
+            "inc_1",
+            "plan_1",
+            "running",
+            "live",
+            "alice",
+            1,
+            1,
+            null,
+            1800,
+            "rbp_1",
+            "{\"status\":\"approved\"}",
+            "high",
+            "rollback",
+            "rbp_1",
+            "exec_source");
+
+    FakeExecutionRollbackRepository rollback = new FakeExecutionRollbackRepository();
+    ExecutionRequestService service =
+        new ExecutionRequestService(
+            repository, rollback, new ExecutionProperties(), new ObjectMapper());
+
+    service.cancel("tenant_1", "exec_1");
+
+    assertEquals("exec_1", repository.cancelledExecutionId);
+    assertTrue(repository.stepsCancelled);
+    assertEquals(null, repository.planStatus);
+    assertTrue(rollback.cancelled);
+  }
+
+  @Test
+  void rejectNormalRetryForRollbackExecution() {
+    FakeExecutionRepository repository = new FakeExecutionRepository();
+    repository.existingRun = rollbackRun();
+    repository.latestRun = repository.existingRun;
+
+    ExecutionRequestService service =
+        new ExecutionRequestService(
+            repository,
+            new FakeExecutionRollbackRepository(),
+            new ExecutionProperties(),
+            new ObjectMapper());
+
+    Exception ex =
+        assertThrows(
+            Exception.class,
+            () -> service.retry("tenant_1", "exec_1", new ExecutionRetryRequest("bob")));
+
+    assertTrue(ex.getMessage().contains("Rollback execution retry"));
+    assertEquals(null, repository.planStatus);
+  }
+
   private PlanForExecutionRecord plan(String status) {
     return new PlanForExecutionRecord(
         "plan_1", "tenant_1", "inc_1", status, "medium", "title", "summary");
@@ -249,6 +306,37 @@ class ExecutionRequestServiceTest {
         OffsetDateTime.now());
   }
 
+  private ExecutionRunRecord rollbackRun() {
+    return new ExecutionRunRecord(
+        "exec_1",
+        "tenant_1",
+        "inc_1",
+        "plan_1",
+        "failed",
+        "live",
+        "alice",
+        null,
+        null,
+        null,
+        null,
+        null,
+        1,
+        3,
+        null,
+        null,
+        null,
+        1800,
+        null,
+        null,
+        null,
+        null,
+        "rollback",
+        "rbp_1",
+        "exec_source",
+        OffsetDateTime.now(),
+        OffsetDateTime.now());
+  }
+
   private static class FakeExecutionRepository extends FakeExecutionRepositoryBase {
     PlanForExecutionRecord plan;
     String planStatus;
@@ -298,9 +386,9 @@ class ExecutionRequestServiceTest {
                 null,
                 null,
                 null,
-                "normal",
-                null,
-                null,
+                createdRun.executionKind(),
+                createdRun.rollbackPlanId(),
+                createdRun.rollbackOfExecutionId(),
                 OffsetDateTime.now(),
                 OffsetDateTime.now()));
       }

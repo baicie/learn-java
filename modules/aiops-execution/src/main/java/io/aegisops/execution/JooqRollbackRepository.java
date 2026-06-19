@@ -173,10 +173,20 @@ public class JooqRollbackRepository implements RollbackRepository {
   }
 
   @Override
-  public boolean markApproved(String tenantId, String rollbackPlanId, String approvalSnapshotJson) {
+  public int countDecisions(String tenantId, String rollbackPlanId, String decision) {
+    return dsl.fetchCount(
+        dsl.selectFrom(ROLLBACK_DECISION)
+            .where(ROLLBACK_DECISION.TENANT_ID.eq(tenantId))
+            .and(ROLLBACK_DECISION.ROLLBACK_PLAN_ID.eq(rollbackPlanId))
+            .and(ROLLBACK_DECISION.DECISION.eq(decision)));
+  }
+
+  @Override
+  public boolean markApproved(
+      String tenantId, String rollbackPlanId, int approvedCount, String approvalSnapshotJson) {
     return dsl.update(ROLLBACK_PLAN)
             .set(ROLLBACK_PLAN.STATUS, "approved")
-            .set(ROLLBACK_PLAN.APPROVED_COUNT, ROLLBACK_PLAN.APPROVED_COUNT.plus(1))
+            .set(ROLLBACK_PLAN.APPROVED_COUNT, approvedCount)
             .set(ROLLBACK_PLAN.APPROVAL_SNAPSHOT, jsonbValue(approvalSnapshotJson))
             .set(ROLLBACK_PLAN.DECIDED_AT, DSL.currentOffsetDateTime())
             .set(ROLLBACK_PLAN.UPDATED_AT, DSL.currentOffsetDateTime())
@@ -188,16 +198,41 @@ public class JooqRollbackRepository implements RollbackRepository {
   }
 
   @Override
-  public boolean markRejected(String tenantId, String rollbackPlanId, String approvalSnapshotJson) {
+  public boolean markRejected(
+      String tenantId, String rollbackPlanId, int rejectedCount, String approvalSnapshotJson) {
     return dsl.update(ROLLBACK_PLAN)
             .set(ROLLBACK_PLAN.STATUS, "rejected")
-            .set(ROLLBACK_PLAN.REJECTED_COUNT, ROLLBACK_PLAN.REJECTED_COUNT.plus(1))
+            .set(ROLLBACK_PLAN.REJECTED_COUNT, rejectedCount)
             .set(ROLLBACK_PLAN.APPROVAL_SNAPSHOT, jsonbValue(approvalSnapshotJson))
             .set(ROLLBACK_PLAN.DECIDED_AT, DSL.currentOffsetDateTime())
             .set(ROLLBACK_PLAN.UPDATED_AT, DSL.currentOffsetDateTime())
             .where(ROLLBACK_PLAN.TENANT_ID.eq(tenantId))
             .and(ROLLBACK_PLAN.ID.eq(rollbackPlanId))
             .and(ROLLBACK_PLAN.STATUS.eq("pending_approval"))
+            .execute()
+        > 0;
+  }
+
+  @Override
+  public boolean updatePlanStatusToCancelled(String tenantId, String rollbackPlanId) {
+    return dsl.update(ROLLBACK_PLAN)
+            .set(ROLLBACK_PLAN.STATUS, "cancelled")
+            .set(ROLLBACK_PLAN.DECIDED_AT, DSL.currentOffsetDateTime())
+            .set(ROLLBACK_PLAN.UPDATED_AT, DSL.currentOffsetDateTime())
+            .where(ROLLBACK_PLAN.TENANT_ID.eq(tenantId))
+            .and(ROLLBACK_PLAN.ID.eq(rollbackPlanId))
+            .and(ROLLBACK_PLAN.STATUS.eq("pending_approval"))
+            .execute()
+        > 0;
+  }
+
+  @Override
+  public boolean markCancelled(String tenantId, String rollbackPlanId) {
+    return dsl.update(ROLLBACK_PLAN)
+            .set(ROLLBACK_PLAN.STATUS, "cancelled")
+            .set(ROLLBACK_PLAN.UPDATED_AT, DSL.currentOffsetDateTime())
+            .where(ROLLBACK_PLAN.TENANT_ID.eq(tenantId))
+            .and(ROLLBACK_PLAN.ID.eq(rollbackPlanId))
             .execute()
         > 0;
   }

@@ -20,18 +20,30 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class ExecutionRequestService {
   private final ExecutionRepository repository;
+  private final RollbackRepository rollbackRepository;
   private final ExecutionProperties properties;
   private final ExecutionJson json;
 
   public ExecutionRequestService(
       ExecutionRepository repository, ExecutionProperties properties, ObjectMapper objectMapper) {
+    this(repository, null, properties, objectMapper);
+  }
+
+  @Autowired
+  public ExecutionRequestService(
+      ExecutionRepository repository,
+      RollbackRepository rollbackRepository,
+      ExecutionProperties properties,
+      ObjectMapper objectMapper) {
     this.repository = repository;
+    this.rollbackRepository = rollbackRepository;
     this.properties = properties;
     this.json = new ExecutionJson(objectMapper);
   }
@@ -99,6 +111,12 @@ public class ExecutionRequestService {
         repository
             .findRun(tenantId, executionId)
             .orElseThrow(() -> new AppException("EXECUTION_NOT_FOUND", "Execution not found"));
+
+    if ("rollback".equals(previous.executionKind())) {
+      throw new AppException(
+          "ROLLBACK_EXECUTION_RETRY_UNSUPPORTED",
+          "Rollback execution retry is not supported by normal execution retry API");
+    }
 
     if (!List.of("failed", "timeout").contains(previous.status())) {
       throw new AppException(
@@ -206,10 +224,19 @@ public class ExecutionRequestService {
         "EXECUTION_STEP_CANCEL_FAILED",
         "Execution steps were not cancelled");
 
-    ensureUpdated(
-        repository.updatePlanStatus(tenantId, run.planId(), "cancelled"),
-        "AUTOMATION_PLAN_UPDATE_FAILED",
-        "Automation plan status was not updated");
+    if ("rollback".equals(run.executionKind())
+        && run.rollbackPlanId() != null
+        && rollbackRepository != null) {
+      ensureUpdated(
+          rollbackRepository.markCancelled(tenantId, run.rollbackPlanId()),
+          "ROLLBACK_PLAN_UPDATE_FAILED",
+          "Rollback plan status was not updated");
+    } else {
+      ensureUpdated(
+          repository.updatePlanStatus(tenantId, run.planId(), "cancelled"),
+          "AUTOMATION_PLAN_UPDATE_FAILED",
+          "Automation plan status was not updated");
+    }
 
     repository.addTimeline(
         timeline(

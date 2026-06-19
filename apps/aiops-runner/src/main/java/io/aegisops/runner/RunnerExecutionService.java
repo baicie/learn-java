@@ -201,6 +201,14 @@ public class RunnerExecutionService {
         "EXECUTION_STEP_TIMEOUT_FAILED",
         "Execution steps were not marked timeout");
 
+    if ("rollback".equals(run.executionKind()) && run.rollbackPlanId() != null) {
+      ensureUpdated(
+          rollbackRepository.markFailed(run.tenantId(), run.rollbackPlanId()),
+          "ROLLBACK_PLAN_UPDATE_FAILED",
+          "Rollback plan status was not updated");
+      return;
+    }
+
     ensureUpdated(
         repository.updatePlanStatus(run.tenantId(), run.planId(), "failed"),
         "AUTOMATION_PLAN_UPDATE_FAILED",

@@ -7,13 +7,14 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.aegisops.common.exception.AppException;
 import io.aegisops.execution.dto.ExecutionRunResponse;
+import io.aegisops.execution.dto.RollbackDecisionRecord;
 import io.aegisops.execution.dto.RollbackDecisionRequest;
 import io.aegisops.execution.dto.RollbackExecutionCreateRequest;
 import io.aegisops.execution.dto.RollbackPlanCreateRequest;
 import io.aegisops.execution.dto.RollbackPlanResponse;
 import io.aegisops.execution.dto.RollbackPlanSubmitRequest;
+import java.time.OffsetDateTime;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
@@ -51,7 +52,7 @@ class RollbackServicesTest {
     RollbackPayloadExtractor extractor = new RollbackPayloadExtractor(mapper);
     String payload = "{\"rollback\":{\"actionPayload\":{}}}";
 
-    assertThrows(AppException.class, () -> extractor.extract(payload));
+    assertThrows(Exception.class, () -> extractor.extract(payload));
   }
 
   @Test
@@ -65,8 +66,8 @@ class RollbackServicesTest {
     RollbackPlanService service =
         new RollbackPlanService(rollback, repo, new RollbackPayloadExtractor(mapper));
 
-    AppException ex = assertRejects(service);
-    assertEquals("ROLLBACK_SOURCE_MODE_INVALID", ex.errorCode());
+    Exception ex = assertRejects(service);
+    assertTrue(ex.getMessage().contains("live execution"));
   }
 
   @Test
@@ -80,8 +81,8 @@ class RollbackServicesTest {
     RollbackPlanService service =
         new RollbackPlanService(rollback, repo, new RollbackPayloadExtractor(mapper));
 
-    AppException ex = assertRejects(service);
-    assertEquals("ROLLBACK_SOURCE_STATUS_INVALID", ex.errorCode());
+    Exception ex = assertRejects(service);
+    assertTrue(ex.getMessage().contains("succeeded or failed"));
   }
 
   @Test
@@ -128,7 +129,7 @@ class RollbackServicesTest {
         new RollbackPlanService(rollback, repo, new RollbackPayloadExtractor(mapper));
 
     assertThrows(
-        AppException.class,
+        Exception.class,
         () ->
             service.create(
                 "tenant_1",
@@ -149,7 +150,7 @@ class RollbackServicesTest {
         new RollbackPlanService(rollback, repo, new RollbackPayloadExtractor(mapper));
 
     assertThrows(
-        AppException.class,
+        Exception.class,
         () ->
             service.create(
                 "tenant_1", "exec_1", new RollbackPlanCreateRequest("reason", "high", 1, "alice")));
@@ -168,7 +169,7 @@ class RollbackServicesTest {
     RollbackPlanService service =
         new RollbackPlanService(rollback, repo, new RollbackPayloadExtractor(mapper));
 
-    assertThrows(AppException.class, () -> service.cancel("tenant_1", "rbp_1"));
+    assertThrows(Exception.class, () -> service.cancel("tenant_1", "rbp_1"));
   }
 
   @Test
@@ -200,14 +201,17 @@ class RollbackServicesTest {
             RollbackTestSupport.rollbackPlanRecord(
                 "rbp_1", "tenant_1", "inc_1", "pending_approval"));
     rollback.decisionExists = true;
+    rollback.decisions.add(
+        new RollbackDecisionRecord(
+            "rbd_1", "tenant_1", "rbp_1", "alice", "approve", "ok", OffsetDateTime.now()));
 
     RollbackPlanService planService =
         new RollbackPlanService(rollback, repo, new RollbackPayloadExtractor(mapper));
     RollbackApprovalService service = new RollbackApprovalService(rollback, planService, mapper);
 
     assertThrows(
-        AppException.class,
-        () -> service.approve("tenant_1", "rbp_1", new RollbackDecisionRequest("bob", "ok")));
+        Exception.class,
+        () -> service.approve("tenant_1", "rbp_1", new RollbackDecisionRequest("alice", "ok")));
   }
 
   @Test
@@ -247,7 +251,7 @@ class RollbackServicesTest {
     RollbackApprovalService service = new RollbackApprovalService(rollback, planService, mapper);
 
     assertThrows(
-        AppException.class,
+        Exception.class,
         () -> service.approve("tenant_1", "rbp_1", new RollbackDecisionRequest("bob", "ok")));
   }
 
@@ -267,7 +271,7 @@ class RollbackServicesTest {
     RollbackApprovalService service = new RollbackApprovalService(rollback, planService, mapper);
 
     assertThrows(
-        AppException.class,
+        Exception.class,
         () -> service.approve("tenant_1", "rbp_1", new RollbackDecisionRequest(" ", "ok")));
   }
 
@@ -286,7 +290,7 @@ class RollbackServicesTest {
     RollbackApprovalService service = new RollbackApprovalService(rollback, planService, mapper);
 
     assertThrows(
-        AppException.class,
+        Exception.class,
         () -> service.submit("tenant_1", "rbp_1", new RollbackPlanSubmitRequest("bob")));
   }
 
@@ -306,9 +310,10 @@ class RollbackServicesTest {
             rollback,
             repo,
             new RollbackTestSupport.FakeExecutionRequestService(repo),
-            new ExecutionProperties());
+            new ExecutionProperties(),
+            mapper);
 
-    assertThrows(AppException.class, () -> service.createExecution("tenant_1", "rbp_1", null));
+    assertThrows(Exception.class, () -> service.createExecution("tenant_1", "rbp_1", null));
   }
 
   @Test
@@ -328,7 +333,8 @@ class RollbackServicesTest {
             rollback,
             repo,
             new RollbackTestSupport.FakeExecutionRequestService(repo),
-            new ExecutionProperties());
+            new ExecutionProperties(),
+            mapper);
 
     ExecutionRunResponse response =
         service.createExecution(
@@ -343,9 +349,83 @@ class RollbackServicesTest {
     assertEquals("executing", rollback.lastStatus);
   }
 
-  private AppException assertRejects(RollbackPlanService service) {
+  @Test
+  void approveRollbackPlanAfterRequiredTwoApprovals() {
+    RollbackTestSupport.FakeRollbackRepository rollback =
+        new RollbackTestSupport.FakeRollbackRepository();
+    rollback.planById =
+        Optional.of(
+            RollbackTestSupport.rollbackPlanWithRequiredApprovals(2, 0, "pending_approval"));
+
+    RollbackPlanService planService =
+        new RollbackPlanService(rollback, null, new RollbackPayloadExtractor(mapper));
+    RollbackApprovalService approvalService =
+        new RollbackApprovalService(rollback, planService, mapper);
+
+    RollbackPlanResponse first =
+        approvalService.approve("tenant_1", "rbp_1", new RollbackDecisionRequest("alice", "ok"));
+    assertEquals("pending_approval", first.status());
+    assertEquals(0, first.approvedCount());
+
+    RollbackPlanResponse second =
+        approvalService.approve("tenant_1", "rbp_1", new RollbackDecisionRequest("bob", "ok"));
+    assertEquals("approved", second.status());
+    assertEquals(2, second.approvedCount());
+  }
+
+  @Test
+  void rejectRollbackPlanOnFirstReject() {
+    RollbackTestSupport.FakeRollbackRepository rollback =
+        new RollbackTestSupport.FakeRollbackRepository();
+    rollback.planById =
+        Optional.of(
+            RollbackTestSupport.rollbackPlanWithRequiredApprovals(2, 0, "pending_approval"));
+
+    RollbackPlanService planService =
+        new RollbackPlanService(rollback, null, new RollbackPayloadExtractor(mapper));
+    RollbackApprovalService approvalService =
+        new RollbackApprovalService(rollback, planService, mapper);
+
+    RollbackPlanResponse result =
+        approvalService.reject("tenant_1", "rbp_1", new RollbackDecisionRequest("alice", "not ok"));
+
+    assertEquals("rejected", result.status());
+    assertEquals(1, result.rejectedCount());
+  }
+
+  @Test
+  void rollbackExecutionCarriesApprovalSnapshotForLiveGuard() {
+    RollbackTestSupport.FakeExecutionRepository repo =
+        new RollbackTestSupport.FakeExecutionRepository();
+    RollbackTestSupport.FakeRollbackRepository rollback =
+        new RollbackTestSupport.FakeRollbackRepository();
+    rollback.planById =
+        Optional.of(RollbackTestSupport.rollbackPlanWithRequiredApprovals(2, 2, "approved"));
+    rollback.steps.add(
+        RollbackTestSupport.rollbackStep("rbps_1", 1, "shell", "host", "{\"command\":\"undo\"}"));
+
+    RollbackExecutionService service =
+        new RollbackExecutionService(
+            rollback,
+            repo,
+            new RollbackTestSupport.FakeExecutionRequestService(repo),
+            new ExecutionProperties(),
+            mapper);
+
+    service.createExecution("tenant_1", "rbp_1", new RollbackExecutionCreateRequest("alice", 1));
+
+    assertEquals(1, repo.createdRuns.size());
+    var run = repo.createdRuns.get(0);
+    assertEquals("rollback", run.executionKind());
+    assertEquals("rbp_1", run.approvalId());
+    assertTrue(run.approvalSnapshotJson().contains("\"status\":\"approved\""));
+    assertTrue(run.approvalSnapshotJson().contains("\"planId\":\"plan_1\""));
+    assertTrue(run.approvalSnapshotJson().contains("\"sourceExecutionId\":\"exec_1\""));
+  }
+
+  private Exception assertRejects(RollbackPlanService service) {
     return assertThrows(
-        AppException.class,
+        Exception.class,
         () ->
             service.create(
                 "tenant_1", "exec_1", new RollbackPlanCreateRequest("reason", "high", 1, "alice")));

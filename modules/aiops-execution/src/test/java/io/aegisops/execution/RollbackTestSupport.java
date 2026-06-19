@@ -98,6 +98,12 @@ final class RollbackTestSupport {
     return rollbackPlanRecord(new RollbackKey(id, tenantId, incidentId, status, 0, 1));
   }
 
+  static RollbackPlanRecord rollbackPlanWithRequiredApprovals(
+      int requiredApprovals, int approvedCount, String status) {
+    return rollbackPlanRecord(
+        new RollbackKey("rbp_1", "tenant_1", "inc_1", status, approvedCount, requiredApprovals));
+  }
+
   static RollbackPlanRecord rollbackPlanRecord(RollbackKey key) {
     return new RollbackPlanRecord(
         key.id(),
@@ -210,9 +216,11 @@ final class RollbackTestSupport {
     final List<RollbackPlanCreateCommand> createdPlan = new ArrayList<>();
     final List<RollbackPlanStepCreateCommand> createdSteps = new ArrayList<>();
     final List<RollbackPlanStepRecord> steps = new ArrayList<>();
+    final List<RollbackDecisionRecord> decisions = new ArrayList<>();
     String lastStatus;
     String lastSnapshot;
     boolean decisionExists;
+    boolean cancelled;
 
     @Override
     public void createPlan(RollbackPlanCreateCommand command) {
@@ -285,28 +293,31 @@ final class RollbackTestSupport {
         String tenantId, String rollbackPlanId, String fromStatus, String toStatus) {
       lastStatus = toStatus;
       planById =
-          planById.map(
-              p ->
-                  new RollbackPlanRecord(
-                      p.id(),
-                      p.tenantId(),
-                      p.incidentId(),
-                      p.sourcePlanId(),
-                      p.sourceExecutionId(),
-                      toStatus,
-                      p.riskLevel(),
-                      p.reason(),
-                      p.requiredApprovals(),
-                      p.approvedCount(),
-                      p.rejectedCount(),
-                      p.createdBy(),
-                      p.submittedBy(),
-                      p.submittedAt(),
-                      p.decidedAt(),
-                      p.approvalSnapshotJson(),
-                      p.createdAt(),
-                      p.updatedAt()));
+          planById.map(p -> updatePlanFields(p, toStatus, p.approvedCount(), p.rejectedCount()));
       return true;
+    }
+
+    private RollbackPlanRecord updatePlanFields(
+        RollbackPlanRecord p, String status, int approvedCount, int rejectedCount) {
+      return new RollbackPlanRecord(
+          p.id(),
+          p.tenantId(),
+          p.incidentId(),
+          p.sourcePlanId(),
+          p.sourceExecutionId(),
+          status,
+          p.riskLevel(),
+          p.reason(),
+          p.requiredApprovals(),
+          approvedCount,
+          rejectedCount,
+          p.createdBy(),
+          p.submittedBy(),
+          p.submittedAt(),
+          p.decidedAt(),
+          p.approvalSnapshotJson(),
+          p.createdAt(),
+          p.updatedAt());
     }
 
     @Override
@@ -316,26 +327,61 @@ final class RollbackTestSupport {
     }
 
     @Override
-    public void createDecision(RollbackDecisionCreateCommand command) {}
+    public void createDecision(RollbackDecisionCreateCommand command) {
+      decisions.add(
+          new RollbackDecisionRecord(
+              command.id(),
+              command.tenantId(),
+              command.rollbackPlanId(),
+              command.reviewer(),
+              command.decision(),
+              command.comment(),
+              OffsetDateTime.now()));
+    }
 
     @Override
     public boolean decisionExists(String tenantId, String rollbackPlanId, String reviewer) {
-      return decisionExists;
+      return decisions.stream()
+          .anyMatch(
+              d -> d.rollbackPlanId().equals(rollbackPlanId) && d.reviewer().equals(reviewer));
+    }
+
+    @Override
+    public int countDecisions(String tenantId, String rollbackPlanId, String decision) {
+      return decisions.stream().filter(d -> d.decision().equals(decision)).toList().size();
     }
 
     @Override
     public boolean markApproved(
-        String tenantId, String rollbackPlanId, String approvalSnapshotJson) {
+        String tenantId, String rollbackPlanId, int approvedCount, String approvalSnapshotJson) {
       lastStatus = "approved";
       lastSnapshot = approvalSnapshotJson;
+      planById =
+          planById.map(p -> updatePlanFields(p, "approved", approvedCount, p.rejectedCount()));
       return true;
     }
 
     @Override
     public boolean markRejected(
-        String tenantId, String rollbackPlanId, String approvalSnapshotJson) {
+        String tenantId, String rollbackPlanId, int rejectedCount, String approvalSnapshotJson) {
       lastStatus = "rejected";
       lastSnapshot = approvalSnapshotJson;
+      planById =
+          planById.map(p -> updatePlanFields(p, "rejected", p.approvedCount(), rejectedCount));
+      return true;
+    }
+
+    @Override
+    public boolean markCancelled(String tenantId, String rollbackPlanId) {
+      cancelled = true;
+      lastStatus = "cancelled";
+      return true;
+    }
+
+    @Override
+    public boolean updatePlanStatusToCancelled(String tenantId, String rollbackPlanId) {
+      cancelled = true;
+      lastStatus = "cancelled";
       return true;
     }
 
@@ -363,6 +409,12 @@ final class RollbackTestSupport {
 
     FakeExecutionRequestService(FakeExecutionRepository repository) {
       super(repository, new ExecutionProperties(), new ObjectMapper());
+      this.repository = repository;
+    }
+
+    FakeExecutionRequestService(
+        FakeExecutionRepository repository, RollbackRepository rollbackRepository) {
+      super(repository, rollbackRepository, new ExecutionProperties(), new ObjectMapper());
       this.repository = repository;
     }
 

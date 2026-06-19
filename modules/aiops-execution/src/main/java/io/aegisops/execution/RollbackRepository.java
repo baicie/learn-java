@@ -26,15 +26,23 @@ public interface RollbackRepository {
   boolean updatePlanStatus(
       String tenantId, String rollbackPlanId, String fromStatus, String toStatus);
 
+  boolean updatePlanStatusToCancelled(String tenantId, String rollbackPlanId);
+
+  boolean markCancelled(String tenantId, String rollbackPlanId);
+
   boolean submitPlan(String tenantId, String rollbackPlanId, String submittedBy);
 
   void createDecision(RollbackDecisionCreateCommand command);
 
   boolean decisionExists(String tenantId, String rollbackPlanId, String reviewer);
 
-  boolean markApproved(String tenantId, String rollbackPlanId, String approvalSnapshotJson);
+  int countDecisions(String tenantId, String rollbackPlanId, String decision);
 
-  boolean markRejected(String tenantId, String rollbackPlanId, String approvalSnapshotJson);
+  boolean markApproved(
+      String tenantId, String rollbackPlanId, int approvedCount, String approvalSnapshotJson);
+
+  boolean markRejected(
+      String tenantId, String rollbackPlanId, int rejectedCount, String approvalSnapshotJson);
 
   boolean markExecuting(String tenantId, String rollbackPlanId);
 
