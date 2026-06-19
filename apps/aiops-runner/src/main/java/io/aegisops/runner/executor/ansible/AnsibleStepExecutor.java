@@ -23,6 +23,7 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class AnsibleStepExecutor implements StepExecutor {
+
   private final AnsibleRepository repository;
   private final ExecutionRepository executionRepository;
   private final AnsibleSafetyValidator validator;
@@ -78,8 +79,10 @@ public class AnsibleStepExecutor implements StepExecutor {
                     new AppException(
                         "ANSIBLE_POLICY_NOT_FOUND", "Ansible execution policy not found"));
 
+    AnsibleInputs inputs = new AnsibleInputs(inventory, playbook, policy, payload);
+
     if (context.dryRun()) {
-      return executeCheck(context, step, inventory, playbook, policy, payload);
+      return executeCheck(context, step, inputs);
     }
 
     if (!context.liveEnabled()) {
@@ -96,39 +99,32 @@ public class AnsibleStepExecutor implements StepExecutor {
                           "live", false)))));
     }
 
-    return executeLive(context, step, inventory, playbook, policy, payload);
+    return executeLive(context, step, inputs);
   }
 
   private StepExecutionResult executeCheck(
-      StepExecutionContext context,
-      ExecutionStepRecord step,
-      AnsibleInventoryRecord inventory,
-      AnsiblePlaybookRecord playbook,
-      AnsiblePolicyRecord policy,
-      AnsibleActionPayload payload) {
+      StepExecutionContext context, ExecutionStepRecord step, AnsibleInputs inputs) {
     if (!properties.isCheckExecutionEnabled()) {
-      validator.validateDryRunPreview(inventory, playbook, policy, payload);
-      return previewOnly(step, inventory, playbook, payload);
+      validator.validateDryRunPreview(
+          inputs.inventory(), inputs.playbook(), inputs.policy(), inputs.payload());
+      return previewOnly(step, inputs);
     }
 
-    validator.validateCheckExecution(inventory, playbook, policy, payload);
-    return executeProcess(step, inventory, playbook, policy, payload, true, false);
+    validator.validateCheckExecution(
+        inputs.inventory(), inputs.playbook(), inputs.policy(), inputs.payload());
+    return executeProcess(step, inputs, true, false);
   }
 
   private StepExecutionResult executeLive(
-      StepExecutionContext context,
-      ExecutionStepRecord step,
-      AnsibleInventoryRecord inventory,
-      AnsiblePlaybookRecord playbook,
-      AnsiblePolicyRecord policy,
-      AnsibleActionPayload payload) {
+      StepExecutionContext context, ExecutionStepRecord step, AnsibleInputs inputs) {
+    AnsibleActionPayload payload = inputs.payload();
     AnsibleCredentialRecord credential = null;
     if (payload.credentialRefId() != null && !payload.credentialRefId().isBlank()) {
       credential =
           repository.findCredential(step.tenantId(), payload.credentialRefId()).orElse(null);
     }
 
-    validator.validateLive(inventory, playbook, policy, payload, context.run(), credential);
+    validator.validateLive(inputs, context.run(), credential);
 
     boolean marked =
         executionRepository.markLiveGuardPassed(context.run().tenantId(), context.run().id());
@@ -137,14 +133,13 @@ public class AnsibleStepExecutor implements StepExecutor {
           "ANSIBLE_LIVE_GUARD_UPDATE_FAILED", "Failed to mark Ansible live guard passed");
     }
 
-    return executeProcess(step, inventory, playbook, policy, payload, false, true);
+    return executeProcess(step, inputs, false, true);
   }
 
-  private StepExecutionResult previewOnly(
-      ExecutionStepRecord step,
-      AnsibleInventoryRecord inventory,
-      AnsiblePlaybookRecord playbook,
-      AnsibleActionPayload payload) {
+  private StepExecutionResult previewOnly(ExecutionStepRecord step, AnsibleInputs inputs) {
+    AnsibleInventoryRecord inventory = inputs.inventory();
+    AnsiblePlaybookRecord playbook = inputs.playbook();
+    AnsibleActionPayload payload = inputs.payload();
     AnsibleWorkspace workspace = workspaceManager.create(inventory, playbook);
     try {
       List<String> argv =
@@ -183,13 +178,11 @@ public class AnsibleStepExecutor implements StepExecutor {
   }
 
   private StepExecutionResult executeProcess(
-      ExecutionStepRecord step,
-      AnsibleInventoryRecord inventory,
-      AnsiblePlaybookRecord playbook,
-      AnsiblePolicyRecord policy,
-      AnsibleActionPayload payload,
-      boolean checkMode,
-      boolean live) {
+      ExecutionStepRecord step, AnsibleInputs inputs, boolean checkMode, boolean live) {
+    AnsibleInventoryRecord inventory = inputs.inventory();
+    AnsiblePlaybookRecord playbook = inputs.playbook();
+    AnsiblePolicyRecord policy = inputs.policy();
+    AnsibleActionPayload payload = inputs.payload();
     AnsibleWorkspace workspace = workspaceManager.create(inventory, playbook);
     try {
       List<String> argv =

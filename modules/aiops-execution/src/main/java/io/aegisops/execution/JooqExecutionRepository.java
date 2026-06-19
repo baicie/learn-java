@@ -167,6 +167,9 @@ public class JooqExecutionRepository implements ExecutionRepository {
         .set(EXECUTION_RUN.APPROVAL_ID, command.approvalId())
         .set(EXECUTION_RUN.APPROVAL_SNAPSHOT, jsonbValue(command.approvalSnapshotJson()))
         .set(EXECUTION_RUN.PLAN_RISK_LEVEL, command.planRiskLevel())
+        .set(EXECUTION_RUN.EXECUTION_KIND, command.executionKind())
+        .set(EXECUTION_RUN.ROLLBACK_PLAN_ID, command.rollbackPlanId())
+        .set(EXECUTION_RUN.ROLLBACK_OF_EXECUTION_ID, command.rollbackOfExecutionId())
         .set(EXECUTION_RUN.CREATED_AT, DSL.currentOffsetDateTime())
         .set(EXECUTION_RUN.UPDATED_AT, DSL.currentOffsetDateTime())
         .execute();
@@ -458,6 +461,9 @@ public class JooqExecutionRepository implements ExecutionRepository {
             EXECUTION_RUN.APPROVAL_SNAPSHOT.cast(String.class).as("approval_snapshot_json"),
             EXECUTION_RUN.PLAN_RISK_LEVEL,
             EXECUTION_RUN.LIVE_GUARD_PASSED_AT,
+            EXECUTION_RUN.EXECUTION_KIND,
+            EXECUTION_RUN.ROLLBACK_PLAN_ID,
+            EXECUTION_RUN.ROLLBACK_OF_EXECUTION_ID,
             EXECUTION_RUN.CREATED_AT,
             EXECUTION_RUN.UPDATED_AT)
         .from(EXECUTION_RUN);

@@ -14,4 +14,7 @@ public record ExecutionRunCreateCommand(
     int timeoutSeconds,
     String approvalId,
     String approvalSnapshotJson,
-    String planRiskLevel) {}
+    String planRiskLevel,
+    String executionKind,
+    String rollbackPlanId,
+    String rollbackOfExecutionId) {}

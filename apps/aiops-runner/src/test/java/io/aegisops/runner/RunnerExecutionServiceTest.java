@@ -7,11 +7,18 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.aegisops.common.exception.AppException;
 import io.aegisops.execution.ExecutionProperties;
+import io.aegisops.execution.RollbackRepository;
 import io.aegisops.execution.dto.ExecutionArtifactCreateCommand;
 import io.aegisops.execution.dto.ExecutionRunRecord;
 import io.aegisops.execution.dto.ExecutionRunStatusUpdateCommand;
 import io.aegisops.execution.dto.ExecutionStepRecord;
 import io.aegisops.execution.dto.ExecutionStepStatusUpdateCommand;
+import io.aegisops.execution.dto.RollbackDecisionCreateCommand;
+import io.aegisops.execution.dto.RollbackDecisionRecord;
+import io.aegisops.execution.dto.RollbackPlanCreateCommand;
+import io.aegisops.execution.dto.RollbackPlanRecord;
+import io.aegisops.execution.dto.RollbackPlanStepCreateCommand;
+import io.aegisops.execution.dto.RollbackPlanStepRecord;
 import io.aegisops.runner.executor.ManualStepExecutor;
 import io.aegisops.runner.executor.ShellDryRunStepExecutor;
 import io.aegisops.runner.executor.UnsupportedStepExecutor;
@@ -25,7 +32,8 @@ class RunnerExecutionServiceTest {
   @Test
   void processRunWritesHeartbeatAndArtifacts() {
     FakeRunnerRepository repository = new FakeRunnerRepository();
-    repository.claimed = run("exec_1", "running", "dry_run");
+    repository.claimed =
+        run("exec_1", new RunState("dry_run", "running"), "normal", new RollbackRef(null, null));
     repository.steps.add(step("step_1", 1, "manual", "{}"));
 
     ExecutionProperties executionProperties = new ExecutionProperties();
@@ -36,6 +44,7 @@ class RunnerExecutionServiceTest {
 
     RunnerExecutionService service =
         new RunnerExecutionService(
+            repository,
             repository,
             executionProperties,
             runnerProperties,
@@ -57,7 +66,8 @@ class RunnerExecutionServiceTest {
   @Test
   void timeoutSweepMarksRunStepsAndPlan() {
     FakeRunnerRepository repository = new FakeRunnerRepository();
-    repository.expiredRuns.add(run("exec_1", "running", "dry_run"));
+    repository.expiredRuns.add(
+        run("exec_1", new RunState("dry_run", "running"), "normal", new RollbackRef(null, null)));
 
     ExecutionProperties executionProperties = new ExecutionProperties();
 
@@ -66,6 +76,7 @@ class RunnerExecutionServiceTest {
 
     RunnerExecutionService service =
         new RunnerExecutionService(
+            repository,
             repository,
             executionProperties,
             runnerProperties,
@@ -82,7 +93,8 @@ class RunnerExecutionServiceTest {
   @Test
   void unsupportedStepFailsRunAndSkipsRemaining() {
     FakeRunnerRepository repository = new FakeRunnerRepository();
-    repository.claimed = run("exec_1", "running", "dry_run");
+    repository.claimed =
+        run("exec_1", new RunState("dry_run", "running"), "normal", new RollbackRef(null, null));
     repository.steps.add(step("step_1", 1, "http", "{}"));
     repository.steps.add(step("step_2", 2, "manual", "{}"));
 
@@ -92,6 +104,7 @@ class RunnerExecutionServiceTest {
 
     RunnerExecutionService service =
         new RunnerExecutionService(
+            repository,
             repository,
             executionProperties,
             runnerProperties,
@@ -110,7 +123,8 @@ class RunnerExecutionServiceTest {
   @Test
   void emptyStepsFailRunAndPlan() {
     FakeRunnerRepository repository = new FakeRunnerRepository();
-    repository.claimed = run("exec_1", "running", "dry_run");
+    repository.claimed =
+        run("exec_1", new RunState("dry_run", "running"), "normal", new RollbackRef(null, null));
 
     ExecutionProperties executionProperties = new ExecutionProperties();
     RunnerProperties runnerProperties = new RunnerProperties();
@@ -118,6 +132,7 @@ class RunnerExecutionServiceTest {
 
     RunnerExecutionService service =
         new RunnerExecutionService(
+            repository,
             repository,
             executionProperties,
             runnerProperties,
@@ -134,7 +149,8 @@ class RunnerExecutionServiceTest {
   @Test
   void processFailsWhenPlanStatusUpdateFails() {
     FakeRunnerRepository repository = new FakeRunnerRepository();
-    repository.claimed = run("exec_1", "running", "dry_run");
+    repository.claimed =
+        run("exec_1", new RunState("dry_run", "running"), "normal", new RollbackRef(null, null));
     repository.failPlanStatusUpdate = true;
     repository.steps.add(step("step_1", 1, "manual", "{}"));
 
@@ -145,6 +161,7 @@ class RunnerExecutionServiceTest {
     RunnerExecutionService service =
         new RunnerExecutionService(
             repository,
+            repository,
             executionProperties,
             runnerProperties,
             List.of(
@@ -154,14 +171,77 @@ class RunnerExecutionServiceTest {
     assertThrows(AppException.class, service::processNext);
   }
 
-  private ExecutionRunRecord run(String id, String status, String mode) {
+  @Test
+  void markRollbackPlanSucceededWhenRollbackRunSucceeded() {
+    FakeRunnerRepository repository = new FakeRunnerRepository();
+    repository.claimed =
+        run(
+            "exec_1",
+            new RunState("running", "live"),
+            "rollback",
+            new RollbackRef("rbp_1", "exec_src"));
+    repository.steps.add(step("step_1", 1, "manual", "{}"));
+
+    ExecutionProperties executionProperties = new ExecutionProperties();
+    RunnerProperties runnerProperties = new RunnerProperties();
+    runnerProperties.setRunnerId("runner_1");
+
+    RunnerExecutionService service =
+        new RunnerExecutionService(
+            repository,
+            repository,
+            executionProperties,
+            runnerProperties,
+            List.of(new ManualStepExecutor(new ObjectMapper())));
+
+    service.processNext();
+
+    assertEquals("succeeded", repository.runStatus);
+    assertTrue(repository.rollbackSucceeded);
+    assertEquals(null, repository.planStatus);
+  }
+
+  @Test
+  void markRollbackPlanFailedWhenRollbackRunFailed() {
+    FakeRunnerRepository repository = new FakeRunnerRepository();
+    repository.claimed =
+        run(
+            "exec_1",
+            new RunState("running", "live"),
+            "rollback",
+            new RollbackRef("rbp_1", "exec_src"));
+    repository.steps.add(step("step_1", 1, "http", "{}"));
+
+    ExecutionProperties executionProperties = new ExecutionProperties();
+    RunnerProperties runnerProperties = new RunnerProperties();
+    runnerProperties.setRunnerId("runner_1");
+
+    RunnerExecutionService service =
+        new RunnerExecutionService(
+            repository,
+            repository,
+            executionProperties,
+            runnerProperties,
+            List.of(
+                new ManualStepExecutor(new ObjectMapper()),
+                new UnsupportedStepExecutor(new ObjectMapper())));
+
+    service.processNext();
+
+    assertEquals("failed", repository.runStatus);
+    assertTrue(repository.rollbackFailed);
+    assertEquals(null, repository.planStatus);
+  }
+
+  private ExecutionRunRecord run(
+      String id, RunState state, String executionKind, RollbackRef rollback) {
     return new ExecutionRunRecord(
         id,
         "tenant_1",
         "inc_1",
         "plan_1",
-        status,
-        mode,
+        state.status(),
+        state.mode(),
         "alice",
         "runner_1",
         OffsetDateTime.now(),
@@ -178,9 +258,16 @@ class RunnerExecutionServiceTest {
         null,
         null,
         null,
+        executionKind,
+        rollback.rollbackPlanId(),
+        rollback.rollbackOfExecutionId(),
         OffsetDateTime.now(),
         OffsetDateTime.now());
   }
+
+  record RunState(String mode, String status) {}
+
+  record RollbackRef(String rollbackPlanId, String rollbackOfExecutionId) {}
 
   private ExecutionStepRecord step(String id, int sequence, String actionType, String payload) {
     return new ExecutionStepRecord(
@@ -206,7 +293,8 @@ class RunnerExecutionServiceTest {
         OffsetDateTime.now());
   }
 
-  private static class FakeRunnerRepository extends RunnerFakeExecutionRepositoryBase {
+  private static class FakeRunnerRepository extends RunnerFakeExecutionRepositoryBase
+      implements RollbackRepository {
     ExecutionRunRecord claimed;
     final List<ExecutionStepRecord> steps = new ArrayList<>();
     final List<ExecutionRunRecord> expiredRuns = new ArrayList<>();
@@ -219,6 +307,8 @@ class RunnerExecutionServiceTest {
     boolean stepsTimedOut;
     boolean failPlanStatusUpdate;
     final List<String> stepStatuses = new ArrayList<>();
+    boolean rollbackSucceeded;
+    boolean rollbackFailed;
 
     @Override
     public Optional<ExecutionRunRecord> claimNextQueuedRun(
@@ -293,6 +383,81 @@ class RunnerExecutionServiceTest {
 
     @Override
     public boolean markLiveGuardPassed(String tenantId, String executionId) {
+      return true;
+    }
+
+    @Override
+    public boolean markSucceeded(String tenantId, String rollbackPlanId) {
+      rollbackSucceeded = true;
+      return true;
+    }
+
+    @Override
+    public boolean markFailed(String tenantId, String rollbackPlanId) {
+      rollbackFailed = true;
+      return true;
+    }
+
+    @Override
+    public void createPlan(RollbackPlanCreateCommand command) {}
+
+    @Override
+    public void createStep(RollbackPlanStepCreateCommand command) {}
+
+    @Override
+    public Optional<RollbackPlanRecord> findRollbackPlan(String tenantId, String rollbackPlanId) {
+      return Optional.empty();
+    }
+
+    @Override
+    public Optional<RollbackPlanRecord> findLatestRollbackPlanBySourceExecution(
+        String tenantId, String sourceExecutionId) {
+      return Optional.empty();
+    }
+
+    @Override
+    public List<RollbackPlanStepRecord> listSteps(String tenantId, String rollbackPlanId) {
+      return List.of();
+    }
+
+    @Override
+    public List<RollbackDecisionRecord> listDecisions(String tenantId, String rollbackPlanId) {
+      return List.of();
+    }
+
+    @Override
+    public boolean updatePlanStatus(
+        String tenantId, String rollbackPlanId, String fromStatus, String toStatus) {
+      return true;
+    }
+
+    @Override
+    public boolean submitPlan(String tenantId, String rollbackPlanId, String submittedBy) {
+      return true;
+    }
+
+    @Override
+    public void createDecision(RollbackDecisionCreateCommand command) {}
+
+    @Override
+    public boolean decisionExists(String tenantId, String rollbackPlanId, String reviewer) {
+      return false;
+    }
+
+    @Override
+    public boolean markApproved(
+        String tenantId, String rollbackPlanId, String approvalSnapshotJson) {
+      return true;
+    }
+
+    @Override
+    public boolean markRejected(
+        String tenantId, String rollbackPlanId, String approvalSnapshotJson) {
+      return true;
+    }
+
+    @Override
+    public boolean markExecuting(String tenantId, String rollbackPlanId) {
       return true;
     }
   }

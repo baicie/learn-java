@@ -246,7 +246,10 @@ public class ExecutionRequestService {
             properties.normalizedRunTimeoutSeconds(),
             context.approvalSnapshot() == null ? null : context.approvalSnapshot().approvalId(),
             context.approvalSnapshot() == null ? "{}" : json.write(context.approvalSnapshot()),
-            plan.riskLevel()));
+            plan.riskLevel(),
+            "normal",
+            null,
+            null));
 
     repository.createSteps(
         planSteps.stream()
@@ -347,6 +350,9 @@ public class ExecutionRequestService {
         run.approvalSnapshotJson(),
         run.planRiskLevel(),
         run.liveGuardPassedAt(),
+        run.executionKind(),
+        run.rollbackPlanId(),
+        run.rollbackOfExecutionId(),
         steps.stream().map(this::toStepResponse).toList(),
         artifacts.stream().map(this::toArtifactResponse).toList(),
         run.startedAt(),

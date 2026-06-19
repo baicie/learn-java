@@ -154,14 +154,7 @@ class AnsibleSafetyValidatorTest {
     ExecutionRunRecord run = runRecord(null, null, null);
     assertThrows(
         AppException.class,
-        () ->
-            validator.validateLive(
-                inventory(true),
-                playbook(true, List.of("restart")),
-                policyLive(false, false, List.of("low")),
-                new AnsibleActionPayload("inv_1", "pb_1", null, null, List.of(), Map.of()),
-                run,
-                null));
+        () -> validator.validateLive(liveInputs(false, false, List.of("low"), null), run, null));
   }
 
   @Test
@@ -171,12 +164,7 @@ class AnsibleSafetyValidatorTest {
         AppException.class,
         () ->
             validator.validateLive(
-                inventory(true),
-                playbook(true, List.of("restart")),
-                policyLive(true, true, List.of("low", "medium")),
-                new AnsibleActionPayload("inv_1", "pb_1", null, null, List.of(), Map.of()),
-                run,
-                null));
+                liveInputs(true, true, List.of("low", "medium"), null), run, null));
   }
 
   @Test
@@ -188,14 +176,7 @@ class AnsibleSafetyValidatorTest {
             "critical");
     assertThrows(
         AppException.class,
-        () ->
-            validator.validateLive(
-                inventory(true),
-                playbook(true, List.of("restart")),
-                policyLive(true, true, List.of("low")),
-                new AnsibleActionPayload("inv_1", "pb_1", null, null, List.of(), Map.of()),
-                run,
-                null));
+        () -> validator.validateLive(liveInputs(true, true, List.of("low"), null), run, null));
   }
 
   @Test
@@ -208,12 +189,7 @@ class AnsibleSafetyValidatorTest {
     assertDoesNotThrow(
         () ->
             validator.validateLive(
-                inventory(true),
-                playbook(true, List.of("restart")),
-                policyLive(true, true, List.of("low", "medium")),
-                new AnsibleActionPayload("inv_1", "pb_1", null, null, List.of(), Map.of()),
-                run,
-                null));
+                liveInputs(true, true, List.of("low", "medium"), null), run, null));
   }
 
   @Test
@@ -228,12 +204,7 @@ class AnsibleSafetyValidatorTest {
         AppException.class,
         () ->
             validator.validateLive(
-                inventory(true),
-                playbook(true, List.of("restart")),
-                policyLiveWithCredential(true, true, List.of("low"), "cred_1"),
-                new AnsibleActionPayload("inv_1", "pb_1", "cred_1", null, List.of(), Map.of()),
-                run,
-                cred));
+                liveInputsWithCred(true, true, List.of("low"), "cred_1", "cred_1"), run, cred));
   }
 
   @Test
@@ -245,14 +216,7 @@ class AnsibleSafetyValidatorTest {
             "medium");
     assertThrows(
         AppException.class,
-        () ->
-            validator.validateLive(
-                inventory(true),
-                playbook(true, List.of("restart")),
-                policyLive(true, true, List.of("medium")),
-                new AnsibleActionPayload("inv_1", "pb_1", null, null, List.of(), Map.of()),
-                run,
-                null));
+        () -> validator.validateLive(liveInputs(true, true, List.of("medium"), null), run, null));
   }
 
   @Test
@@ -264,14 +228,7 @@ class AnsibleSafetyValidatorTest {
             "medium");
     assertThrows(
         AppException.class,
-        () ->
-            validator.validateLive(
-                inventory(true),
-                playbook(true, List.of("restart")),
-                policyLive(true, true, List.of("medium")),
-                new AnsibleActionPayload("inv_1", "pb_1", null, null, List.of(), Map.of()),
-                run,
-                null));
+        () -> validator.validateLive(liveInputs(true, true, List.of("medium"), null), run, null));
   }
 
   @Test
@@ -283,14 +240,7 @@ class AnsibleSafetyValidatorTest {
             "medium");
     assertThrows(
         AppException.class,
-        () ->
-            validator.validateLive(
-                inventory(true),
-                playbook(true, List.of("restart")),
-                policyLive(true, true, List.of("medium")),
-                new AnsibleActionPayload("inv_1", "pb_1", null, null, List.of(), Map.of()),
-                run,
-                null));
+        () -> validator.validateLive(liveInputs(true, true, List.of("medium"), null), run, null));
   }
 
   @Test
@@ -302,14 +252,7 @@ class AnsibleSafetyValidatorTest {
             "medium");
     assertThrows(
         AppException.class,
-        () ->
-            validator.validateLive(
-                inventory(true),
-                playbook(true, List.of("restart")),
-                policyLive(true, true, List.of("medium")),
-                new AnsibleActionPayload("inv_1", "pb_1", null, null, List.of(), Map.of()),
-                run,
-                null));
+        () -> validator.validateLive(liveInputs(true, true, List.of("medium"), null), run, null));
   }
 
   @Test
@@ -320,14 +263,7 @@ class AnsibleSafetyValidatorTest {
             "{\"approvalId\":\"appr_1\",\"planId\":\"plan_1\",\"status\":\"approved\",\"requiredApprovals\":1,\"approvedCount\":1}",
             "medium");
     assertDoesNotThrow(
-        () ->
-            validator.validateLive(
-                inventory(true),
-                playbook(true, List.of("restart")),
-                policyLive(true, true, List.of("medium")),
-                new AnsibleActionPayload("inv_1", "pb_1", null, null, List.of(), Map.of()),
-                run,
-                null));
+        () -> validator.validateLive(liveInputs(true, true, List.of("medium"), null), run, null));
   }
 
   private ExecutionRunRecord runRecord(String approvalId, String snapshot, String riskLevel) {
@@ -353,6 +289,9 @@ class AnsibleSafetyValidatorTest {
         approvalId,
         snapshot,
         riskLevel,
+        null,
+        "normal",
+        null,
         null,
         OffsetDateTime.now(),
         OffsetDateTime.now());
@@ -427,6 +366,38 @@ class AnsibleSafetyValidatorTest {
         enabled,
         OffsetDateTime.now(),
         OffsetDateTime.now());
+  }
+
+  private AnsibleInputs liveInputs(
+      boolean enabled,
+      boolean liveRequiresApproval,
+      List<String> allowedRiskLevels,
+      String credentialId) {
+    AnsiblePolicyRecord policy;
+    if (credentialId == null) {
+      policy = policyLive(enabled, liveRequiresApproval, allowedRiskLevels);
+    } else {
+      policy =
+          policyLiveWithCredential(enabled, liveRequiresApproval, allowedRiskLevels, credentialId);
+    }
+    AnsibleActionPayload payload =
+        credentialId == null
+            ? new AnsibleActionPayload("inv_1", "pb_1", null, null, List.of(), Map.of())
+            : new AnsibleActionPayload("inv_1", "pb_1", credentialId, null, List.of(), Map.of());
+    return new AnsibleInputs(inventory(true), playbook(true, List.of("restart")), policy, payload);
+  }
+
+  private AnsibleInputs liveInputsWithCred(
+      boolean enabled,
+      boolean liveRequiresApproval,
+      List<String> allowedRiskLevels,
+      String credentialId,
+      String payloadCredentialId) {
+    AnsiblePolicyRecord policy =
+        policyLiveWithCredential(enabled, liveRequiresApproval, allowedRiskLevels, credentialId);
+    AnsibleActionPayload payload =
+        new AnsibleActionPayload("inv_1", "pb_1", payloadCredentialId, null, List.of(), Map.of());
+    return new AnsibleInputs(inventory(true), playbook(true, List.of("restart")), policy, payload);
   }
 
   private AnsiblePolicyRecord policyLive(

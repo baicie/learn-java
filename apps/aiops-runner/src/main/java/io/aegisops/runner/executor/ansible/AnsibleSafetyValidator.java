@@ -62,13 +62,10 @@ public class AnsibleSafetyValidator {
   }
 
   public void validateLive(
-      AnsibleInventoryRecord inventory,
-      AnsiblePlaybookRecord playbook,
-      AnsiblePolicyRecord policy,
-      AnsibleActionPayload payload,
-      ExecutionRunRecord run,
-      AnsibleCredentialRecord credential) {
-    validateCommon(inventory, playbook, policy, payload);
+      AnsibleInputs inputs, ExecutionRunRecord run, AnsibleCredentialRecord credential) {
+    AnsiblePolicyRecord policy = inputs.policy();
+    AnsibleActionPayload payload = inputs.payload();
+    validateCommon(inputs.inventory(), inputs.playbook(), policy, payload);
 
     if (!policy.allowLive()) {
       throw new AppException(

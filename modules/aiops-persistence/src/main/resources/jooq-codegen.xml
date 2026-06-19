@@ -51,7 +51,8 @@
         approval_policy | automation_approval | approval_decision |
         execution_run | execution_step | execution_artifact |
         webhook_connector | webhook_execution_policy |
-        ansible_inventory | ansible_playbook | ansible_execution_policy | ansible_credential_ref
+        ansible_inventory | ansible_playbook | ansible_execution_policy | ansible_credential_ref |
+        rollback_plan | rollback_plan_step | rollback_decision
       </includes>
 
       <excludes>flyway_schema_history</excludes>

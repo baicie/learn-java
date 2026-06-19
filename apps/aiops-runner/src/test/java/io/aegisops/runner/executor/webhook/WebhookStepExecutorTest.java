@@ -114,6 +114,9 @@ class WebhookStepExecutorTest {
             null,
             null,
             null,
+            "normal",
+            null,
+            null,
             OffsetDateTime.now(),
             OffsetDateTime.now()),
         liveEnabled);

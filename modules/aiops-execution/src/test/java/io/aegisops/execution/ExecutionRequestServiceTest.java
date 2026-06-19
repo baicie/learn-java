@@ -163,6 +163,9 @@ class ExecutionRequestServiceTest {
             1800,
             null,
             null,
+            null,
+            "normal",
+            null,
             null);
 
     repository.createdSteps.add(
@@ -239,6 +242,9 @@ class ExecutionRequestServiceTest {
         null,
         null,
         null,
+        "normal",
+        null,
+        null,
         OffsetDateTime.now(),
         OffsetDateTime.now());
   }
@@ -290,6 +296,9 @@ class ExecutionRequestServiceTest {
                 createdRun.timeoutSeconds(),
                 null,
                 null,
+                null,
+                null,
+                "normal",
                 null,
                 null,
                 OffsetDateTime.now(),

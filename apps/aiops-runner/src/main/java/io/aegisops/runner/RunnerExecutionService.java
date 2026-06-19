@@ -3,6 +3,7 @@ package io.aegisops.runner;
 import io.aegisops.common.exception.AppException;
 import io.aegisops.execution.ExecutionProperties;
 import io.aegisops.execution.ExecutionRepository;
+import io.aegisops.execution.RollbackRepository;
 import io.aegisops.execution.dto.ExecutionArtifactCreateCommand;
 import io.aegisops.execution.dto.ExecutionRunRecord;
 import io.aegisops.execution.dto.ExecutionRunStatusUpdateCommand;
@@ -21,16 +22,19 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class RunnerExecutionService {
   private final ExecutionRepository repository;
+  private final RollbackRepository rollbackRepository;
   private final ExecutionProperties executionProperties;
   private final RunnerProperties runnerProperties;
   private final List<StepExecutor> executors;
 
   public RunnerExecutionService(
       ExecutionRepository repository,
+      RollbackRepository rollbackRepository,
       ExecutionProperties executionProperties,
       RunnerProperties runnerProperties,
       List<StepExecutor> executors) {
     this.repository = repository;
+    this.rollbackRepository = rollbackRepository;
     this.executionProperties = executionProperties;
     this.runnerProperties = runnerProperties;
     this.executors =
@@ -218,6 +222,11 @@ public class RunnerExecutionService {
         "EXECUTION_RUN_UPDATE_FAILED",
         "Execution run was not marked succeeded");
 
+    if ("rollback".equals(run.executionKind()) && run.rollbackPlanId() != null) {
+      rollbackRepository.markSucceeded(run.tenantId(), run.rollbackPlanId());
+      return;
+    }
+
     ensureUpdated(
         repository.updatePlanStatus(run.tenantId(), run.planId(), "succeeded"),
         "AUTOMATION_PLAN_UPDATE_FAILED",
@@ -238,6 +247,11 @@ public class RunnerExecutionService {
                 "Execution failed.")),
         "EXECUTION_RUN_UPDATE_FAILED",
         "Execution run was not marked failed");
+
+    if ("rollback".equals(run.executionKind()) && run.rollbackPlanId() != null) {
+      rollbackRepository.markFailed(run.tenantId(), run.rollbackPlanId());
+      return;
+    }
 
     ensureUpdated(
         repository.updatePlanStatus(run.tenantId(), run.planId(), "failed"),

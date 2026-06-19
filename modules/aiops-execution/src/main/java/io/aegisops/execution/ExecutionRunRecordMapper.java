@@ -34,6 +34,9 @@ final class ExecutionRunRecordMapper {
         record.get("approval_snapshot_json", String.class),
         record.get(EXECUTION_RUN.PLAN_RISK_LEVEL),
         record.get(EXECUTION_RUN.LIVE_GUARD_PASSED_AT),
+        record.get(EXECUTION_RUN.EXECUTION_KIND),
+        record.get(EXECUTION_RUN.ROLLBACK_PLAN_ID),
+        record.get(EXECUTION_RUN.ROLLBACK_OF_EXECUTION_ID),
         record.get(EXECUTION_RUN.CREATED_AT),
         record.get(EXECUTION_RUN.UPDATED_AT));
   }

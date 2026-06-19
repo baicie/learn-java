@@ -25,5 +25,8 @@ public record ExecutionRunRecord(
     String approvalSnapshotJson,
     String planRiskLevel,
     OffsetDateTime liveGuardPassedAt,
+    String executionKind,
+    String rollbackPlanId,
+    String rollbackOfExecutionId,
     OffsetDateTime createdAt,
     OffsetDateTime updatedAt) {}

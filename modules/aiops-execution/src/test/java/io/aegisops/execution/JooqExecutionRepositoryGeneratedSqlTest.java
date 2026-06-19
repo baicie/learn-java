@@ -41,6 +41,9 @@ class JooqExecutionRepositoryGeneratedSqlTest {
             1800,
             null,
             null,
+            null,
+            "normal",
+            null,
             null));
 
     String sql = sqlRef.get();
