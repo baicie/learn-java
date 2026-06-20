@@ -48,7 +48,61 @@ class KnowledgeBaseSearchServiceTest {
 
     assertEquals(1, response.results().size());
     assertEquals("kbc_1", response.results().get(0).chunkId());
+    assertEquals(List.of("incident_case"), repository.capturedSourceTypes);
     assertTrue(repository.logged);
+  }
+
+  @Test
+  void defaultSourceTypeIsIncidentCase() {
+    FakeKnowledgeBaseRepository repository = new FakeKnowledgeBaseRepository(List.of());
+
+    KnowledgeBaseSearchService service =
+        new KnowledgeBaseSearchService(
+            repository,
+            new HashingEmbeddingProvider(),
+            new KnowledgeBaseScorer(),
+            new ObjectMapper());
+
+    service.search(
+        "tenant_1", new KnowledgeBaseSearchRequest("redis timeout", null, List.of(), 5, "alice"));
+
+    assertEquals(List.of("incident_case"), repository.capturedSourceTypes);
+  }
+
+  @Test
+  void blankSourceTypesFallbackToIncidentCase() {
+    FakeKnowledgeBaseRepository repository = new FakeKnowledgeBaseRepository(List.of());
+
+    KnowledgeBaseSearchService service =
+        new KnowledgeBaseSearchService(
+            repository,
+            new HashingEmbeddingProvider(),
+            new KnowledgeBaseScorer(),
+            new ObjectMapper());
+
+    service.search(
+        "tenant_1",
+        new KnowledgeBaseSearchRequest("redis timeout", List.of(" ", ""), List.of(), 5, "alice"));
+
+    assertEquals(List.of("incident_case"), repository.capturedSourceTypes);
+  }
+
+  @Test
+  void rejectInvalidSourceType() {
+    KnowledgeBaseSearchService service =
+        new KnowledgeBaseSearchService(
+            new FakeKnowledgeBaseRepository(List.of()),
+            new HashingEmbeddingProvider(),
+            new KnowledgeBaseScorer(),
+            new ObjectMapper());
+
+    assertThrows(
+        AppException.class,
+        () ->
+            service.search(
+                "tenant_1",
+                new KnowledgeBaseSearchRequest(
+                    "redis timeout", List.of("invalid"), List.of(), 5, "alice")));
   }
 
   @Test
@@ -91,6 +145,9 @@ class KnowledgeBaseSearchServiceTest {
   private static class FakeKnowledgeBaseRepository implements KnowledgeBaseRepository {
     private final List<KnowledgeBaseChunkRecord> chunks;
     boolean logged;
+    List<String> capturedSourceTypes;
+    List<String> capturedTags;
+    int capturedCandidateLimit;
 
     FakeKnowledgeBaseRepository(List<KnowledgeBaseChunkRecord> chunks) {
       this.chunks = chunks;
@@ -99,6 +156,9 @@ class KnowledgeBaseSearchServiceTest {
     @Override
     public List<KnowledgeBaseChunkRecord> listCandidateChunks(
         String tenantId, List<String> sourceTypes, List<String> tags, int candidateLimit) {
+      this.capturedSourceTypes = sourceTypes;
+      this.capturedTags = tags;
+      this.capturedCandidateLimit = candidateLimit;
       return chunks;
     }
 

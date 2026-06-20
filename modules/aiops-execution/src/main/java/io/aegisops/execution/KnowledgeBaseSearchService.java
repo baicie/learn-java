@@ -13,6 +13,9 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class KnowledgeBaseSearchService {
+  private static final List<String> ALLOWED_SOURCE_TYPES =
+      List.of("incident_case", "postmortem", "manual");
+
   private final KnowledgeBaseRepository repository;
   private final EmbeddingProvider embeddingProvider;
   private final KnowledgeBaseScorer scorer;
@@ -33,15 +36,13 @@ public class KnowledgeBaseSearchService {
     validateRequest(request);
 
     int topK = normalizeTopK(request.topK());
+    List<String> sourceTypes = normalizeSourceTypes(request.sourceTypes());
+    List<String> tags = normalizeTags(request.tags());
     List<Double> queryEmbedding = embeddingProvider.embed(request.query());
 
     List<KnowledgeBaseSearchResult> results =
         repository
-            .listCandidateChunks(
-                tenantId,
-                normalizeSourceTypes(request.sourceTypes()),
-                normalizeTags(request.tags()),
-                Math.max(topK * 20, 100))
+            .listCandidateChunks(tenantId, sourceTypes, tags, Math.max(topK * 20, 100))
             .stream()
             .map(
                 chunk -> {
@@ -72,8 +73,8 @@ public class KnowledgeBaseSearchService {
             newId("kbs"),
             tenantId,
             request.query(),
-            json.write(normalizeSourceTypes(request.sourceTypes())),
-            json.write(normalizeTags(request.tags())),
+            json.write(sourceTypes),
+            json.write(tags),
             topK,
             results.size(),
             blankToDefault(request.createdBy(), "system")));
@@ -99,12 +100,25 @@ public class KnowledgeBaseSearchService {
       return List.of("incident_case");
     }
 
-    return sourceTypes.stream()
-        .filter(value -> value != null && !value.isBlank())
-        .map(value -> value.trim().toLowerCase())
-        .filter(value -> List.of("incident_case", "postmortem", "manual").contains(value))
-        .distinct()
-        .toList();
+    List<String> normalized =
+        sourceTypes.stream()
+            .filter(value -> value != null && !value.isBlank())
+            .map(value -> value.trim().toLowerCase())
+            .distinct()
+            .toList();
+
+    if (normalized.isEmpty()) {
+      return List.of("incident_case");
+    }
+
+    for (String sourceType : normalized) {
+      if (!ALLOWED_SOURCE_TYPES.contains(sourceType)) {
+        throw new AppException(
+            "KB_SEARCH_SOURCE_TYPE_INVALID", "Invalid knowledge base source type: " + sourceType);
+      }
+    }
+
+    return normalized;
   }
 
   private List<String> normalizeTags(List<String> tags) {
