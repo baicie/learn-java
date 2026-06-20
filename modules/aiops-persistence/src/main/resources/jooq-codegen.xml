@@ -55,7 +55,8 @@
         rollback_plan | rollback_plan_step | rollback_decision |
         execution_report | execution_report_section | execution_verification | execution_audit_event |
         postmortem_report | postmortem_section | postmortem_action_item |
-        incident_case | incident_case_symptom | incident_case_resolution_step | incident_case_tag
+        incident_case | incident_case_symptom | incident_case_resolution_step | incident_case_tag |
+        kb_document | kb_chunk | kb_search_log
       </includes>
 
       <excludes>flyway_schema_history</excludes>
