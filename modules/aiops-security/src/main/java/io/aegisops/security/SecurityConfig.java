@@ -22,7 +22,16 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 public class SecurityConfig {
   @Bean
   public SecurityFilterChain securityFilterChain(
-      HttpSecurity http, JwtTokenService tokenService, UserService userService) throws Exception {
+      HttpSecurity http,
+      JwtTokenService tokenService,
+      UserService userService,
+      InternalAgentAuthFilter internalAgentAuthFilter,
+      TenantRequiredFilter tenantRequiredFilter,
+      TenantRateLimitFilter tenantRateLimitFilter)
+      throws Exception {
+    JwtAuthenticationFilter jwtAuthenticationFilter =
+        new JwtAuthenticationFilter(tokenService, userService);
+
     return http.csrf(AbstractHttpConfigurer::disable)
         .cors(cors -> {})
         .sessionManagement(
@@ -32,7 +41,7 @@ public class SecurityConfig {
                 auth.requestMatchers(HttpMethod.OPTIONS, "/**")
                     .permitAll()
                     .requestMatchers(
-                        "/api/auth/",
+                        "/api/auth/**",
                         "/actuator/**",
                         "/v3/api-docs/**",
                         "/swagger-ui/**",
@@ -41,9 +50,10 @@ public class SecurityConfig {
                     .permitAll()
                     .anyRequest()
                     .authenticated())
-        .addFilterBefore(
-            new JwtAuthenticationFilter(tokenService, userService),
-            UsernamePasswordAuthenticationFilter.class)
+        .addFilterBefore(internalAgentAuthFilter, UsernamePasswordAuthenticationFilter.class)
+        .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+        .addFilterAfter(tenantRequiredFilter, JwtAuthenticationFilter.class)
+        .addFilterAfter(tenantRateLimitFilter, TenantRequiredFilter.class)
         .build();
   }
 

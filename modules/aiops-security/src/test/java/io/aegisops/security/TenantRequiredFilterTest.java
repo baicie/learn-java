@@ -1,13 +1,15 @@
 package io.aegisops.security;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
+import io.aegisops.common.tenant.TenantContext;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.FilterChain;
+import java.util.Set;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 class TenantRequiredFilterTest {
   @Test
@@ -19,17 +21,16 @@ class TenantRequiredFilterTest {
         new TenantRequiredFilter(
             props,
             new SecurityErrorResponseWriter(new ObjectMapper()),
-            new TenantSecurityAuditService(
-                command -> {},
-                new ObjectMapper()));
+            fakeAuditService());
 
     var request = new MockHttpServletRequest("GET", "/api/incidents/inc_1");
     var response = new MockHttpServletResponse();
 
     filter.doFilter(request, response, (req, res) -> {});
 
-    assertEquals(400, response.getStatus());
-    assertTrue(response.getContentAsString().contains("TENANT_REQUIRED"));
+    org.junit.jupiter.api.Assertions.assertEquals(400, response.getStatus());
+    org.junit.jupiter.api.Assertions.assertTrue(
+        response.getContentAsString().contains("TENANT_REQUIRED"));
   }
 
   @Test
@@ -41,9 +42,7 @@ class TenantRequiredFilterTest {
         new TenantRequiredFilter(
             props,
             new SecurityErrorResponseWriter(new ObjectMapper()),
-            new TenantSecurityAuditService(
-                command -> {},
-                new ObjectMapper()));
+            fakeAuditService());
 
     var request = new MockHttpServletRequest("GET", "/api/incidents/inc_1");
     request.addHeader(SecurityConstants.HEADER_TENANT_ID, "tenant_1");
@@ -52,8 +51,55 @@ class TenantRequiredFilterTest {
 
     filter.doFilter(request, response, chain);
 
-    assertEquals(200, response.getStatus());
-    assertTrue(chain.called);
+    org.junit.jupiter.api.Assertions.assertEquals(200, response.getStatus());
+    org.junit.jupiter.api.Assertions.assertTrue(chain.called);
+  }
+
+  @AfterEach
+  void cleanup() {
+    SecurityContextHolder.clearContext();
+    TenantContext.clear();
+  }
+
+  @Test
+  void allowsApiRequestWithAuthenticatedPrincipalTenant() throws Exception {
+    var props = new AiopsSecurityProperties();
+    props.setTenantRequired(true);
+
+    var filter =
+        new TenantRequiredFilter(
+            props,
+            new SecurityErrorResponseWriter(new ObjectMapper()),
+            fakeAuditService());
+
+    var request = new MockHttpServletRequest("GET", "/api/incidents/inc_1");
+    var response = new MockHttpServletResponse();
+    RecordingChain chain = new RecordingChain();
+
+    UserPrincipal principal =
+        new UserPrincipal("user_1", "tenant_1", "alice", "Alice", Set.of("admin"));
+
+    SecurityContextHolder.getContext().setAuthentication(
+        new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities()));
+
+    try {
+      filter.doFilter(request, response, chain);
+    } finally {
+      SecurityContextHolder.clearContext();
+      TenantContext.clear();
+    }
+
+    org.junit.jupiter.api.Assertions.assertEquals(200, response.getStatus());
+    org.junit.jupiter.api.Assertions.assertTrue(chain.called);
+  }
+
+  private static TenantSecurityAuditService fakeAuditService() {
+    return new TenantSecurityAuditService(
+        new TenantSecurityEventRepository() {
+          @Override
+          public void create(TenantSecurityEventCreateCommand command) {}
+        },
+        new ObjectMapper());
   }
 
   private static class RecordingChain implements FilterChain {

@@ -6,12 +6,11 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import org.springframework.core.Ordered;
-import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-@Order(Ordered.HIGHEST_PRECEDENCE + 20)
 public class TenantRequiredFilter extends OncePerRequestFilter {
   private final AiopsSecurityProperties properties;
   private final SecurityErrorResponseWriter responseWriter;
@@ -31,6 +30,7 @@ public class TenantRequiredFilter extends OncePerRequestFilter {
     if (!properties.isTenantRequired()) {
       return true;
     }
+
     String path = request.getRequestURI();
     return path.equals("/health")
         || path.startsWith("/actuator")
@@ -48,6 +48,12 @@ public class TenantRequiredFilter extends OncePerRequestFilter {
     String path = request.getRequestURI();
 
     if (!path.startsWith("/api/") && !path.startsWith("/internal/agent/")) {
+      filterChain.doFilter(request, response);
+      return;
+    }
+
+    String existingTenant = TenantContext.getTenantId();
+    if (existingTenant != null && !existingTenant.isBlank()) {
       filterChain.doFilter(request, response);
       return;
     }
@@ -88,6 +94,14 @@ public class TenantRequiredFilter extends OncePerRequestFilter {
       return parameter;
     }
 
-    return TenantContext.getTenantId();
+    Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+    if (authentication != null
+        && authentication.getPrincipal() instanceof UserPrincipal principal
+        && principal.tenantId() != null
+        && !principal.tenantId().isBlank()) {
+      return principal.tenantId();
+    }
+
+    return null;
   }
 }

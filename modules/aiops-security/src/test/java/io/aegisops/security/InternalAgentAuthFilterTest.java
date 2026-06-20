@@ -84,7 +84,10 @@ class InternalAgentAuthFilterTest {
 
     FakeAuditService() {
       super(
-          command -> {},
+          new TenantSecurityEventRepository() {
+            @Override
+            public void create(TenantSecurityEventCreateCommand command) {}
+          },
           new ObjectMapper());
     }
 
