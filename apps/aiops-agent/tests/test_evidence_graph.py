@@ -7,7 +7,7 @@ import pytest
 from app.agent.contracts import EvidenceItem
 from app.agent.graph.context import GraphContext
 from app.agent.graph.evidence_graph import fetch_evidence_node
-from tests.fakes import FakeEvidenceClient, FakeKnowledgeClient, FailingEvidenceClient
+from tests.fakes import FakeCheckpointClient, FakeEvidenceClient, FakeKnowledgeClient, FailingEvidenceClient
 
 
 @pytest.mark.asyncio
@@ -24,6 +24,7 @@ async def test_fetch_evidence_node_sets_evidence():
     context = GraphContext(
         evidence_client=FakeEvidenceClient(evidence),
         knowledge_client=FakeKnowledgeClient(),
+        checkpoint_client=FakeCheckpointClient(),
     )
 
     state = {
@@ -43,6 +44,7 @@ async def test_fetch_evidence_node_converts_unexpected_error_to_tool_error_evide
     context = GraphContext(
         evidence_client=FailingEvidenceClient(),
         knowledge_client=FakeKnowledgeClient(),
+        checkpoint_client=FakeCheckpointClient(),
     )
 
     state = {

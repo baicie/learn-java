@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, TypedDict
 
-from app.agent.contracts import EvidenceItem, RunbookCandidate, SimilarCase
+from app.agent.contracts import AgentMessage, EvidenceItem, RunbookCandidate, SimilarCase
 
 
 class DiagnosisGraphState(TypedDict, total=False):
@@ -17,6 +17,8 @@ class DiagnosisGraphState(TypedDict, total=False):
     tags: list[str]
     enable_case_retrieval: bool
     enable_runbook_recommendation: bool
+    enable_human_checkpoint: bool
+    enable_multi_agent_collaboration: bool
 
     evidence: list[EvidenceItem]
     similar_cases: list[SimilarCase]
@@ -27,4 +29,9 @@ class DiagnosisGraphState(TypedDict, total=False):
     next_steps: list[str]
     risk_level: str
     final_summary: str
+    checkpoint_required: bool
+    checkpoint: str | None
+    checkpoint_status: str | None
+    resume_token: str | None
+    agent_messages: list[AgentMessage]
     metadata: dict[str, Any]

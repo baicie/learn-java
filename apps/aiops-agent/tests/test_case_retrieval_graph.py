@@ -7,7 +7,7 @@ import pytest
 from app.agent.contracts import SimilarCase
 from app.agent.graph.case_retrieval_graph import retrieve_cases_node
 from app.agent.graph.context import GraphContext
-from tests.fakes import FakeEvidenceClient, FakeKnowledgeClient, FailingKnowledgeClient
+from tests.fakes import FakeCheckpointClient, FakeEvidenceClient, FakeKnowledgeClient, FailingKnowledgeClient
 
 
 @pytest.mark.asyncio
@@ -26,6 +26,7 @@ async def test_retrieve_cases_node_calls_knowledge_client():
     context = GraphContext(
         evidence_client=FakeEvidenceClient(),
         knowledge_client=knowledge,
+        checkpoint_client=FakeCheckpointClient(),
     )
 
     state = {
@@ -49,6 +50,7 @@ async def test_retrieve_cases_node_can_be_disabled():
     context = GraphContext(
         evidence_client=FakeEvidenceClient(),
         knowledge_client=knowledge,
+        checkpoint_client=FakeCheckpointClient(),
     )
 
     state = {
@@ -70,6 +72,7 @@ async def test_retrieve_cases_node_handles_unexpected_client_error():
     context = GraphContext(
         evidence_client=FakeEvidenceClient(),
         knowledge_client=FailingKnowledgeClient(),
+        checkpoint_client=FakeCheckpointClient(),
     )
 
     state = {

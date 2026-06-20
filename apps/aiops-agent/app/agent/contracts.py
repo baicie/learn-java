@@ -9,6 +9,13 @@ from pydantic import BaseModel, Field
 
 Severity = Literal["info", "low", "medium", "high", "critical"]
 RiskLevel = Literal["low", "medium", "high", "critical"]
+AgentRole = Literal[
+    "evidence_agent",
+    "rca_agent",
+    "runbook_agent",
+    "safety_agent",
+    "reviewer_agent",
+]
 
 
 class EvidenceItem(BaseModel):
@@ -40,6 +47,23 @@ class RunbookCandidate(BaseModel):
     parameters: dict[str, Any] = Field(default_factory=dict)
 
 
+class AgentMessage(BaseModel):
+    message_id: str
+    role: AgentRole
+    title: str
+    content: str
+    confidence: float = 0.0
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class AgentCheckpoint(BaseModel):
+    checkpoint_id: str
+    status: str
+    resume_token: str | None = None
+    state_snapshot: dict[str, Any] = Field(default_factory=dict)
+    decision_comment: str | None = None
+
+
 class DiagnosisRequest(BaseModel):
     tenant_id: str
     incident_id: str
@@ -50,6 +74,14 @@ class DiagnosisRequest(BaseModel):
     tags: list[str] = Field(default_factory=list)
     enable_case_retrieval: bool = True
     enable_runbook_recommendation: bool = True
+    enable_human_checkpoint: bool = False
+    enable_multi_agent_collaboration: bool = False
+
+
+class DiagnosisResumeRequest(BaseModel):
+    tenant_id: str
+    checkpoint_id: str | None = None
+    resume_token: str | None = None
 
 
 class DiagnosisResponse(BaseModel):
@@ -66,6 +98,10 @@ class DiagnosisResponse(BaseModel):
     runbook_candidates: list[RunbookCandidate] = Field(default_factory=list)
     safety_notes: list[str] = Field(default_factory=list)
     next_steps: list[str] = Field(default_factory=list)
+    checkpoint_required: bool = False
+    checkpoint_id: str | None = None
+    checkpoint_status: str | None = None
+    agent_messages: list[AgentMessage] = Field(default_factory=list)
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -77,4 +113,4 @@ class DiagnosisContractResponse(BaseModel):
     contract_version: str = "agent-diagnosis.v1"
     input_model: str = "DiagnosisRequest"
     output_model: str = "DiagnosisResponse"
-    graph_version: str = "phase7.0-modular-graph"
+    graph_version: str = "phase7.2-multi-agent-collaboration"
