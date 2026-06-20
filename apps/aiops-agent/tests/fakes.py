@@ -120,3 +120,16 @@ class RejectedCheckpointClient(FakeCheckpointClient):
             state_snapshot=checkpoint.state_snapshot,
             decision_comment="root cause is wrong",
         )
+
+
+class FailingCheckpointClient:
+    async def create_checkpoint(self, **kwargs) -> AgentCheckpoint:
+        raise RuntimeError("checkpoint client unavailable")
+
+    async def get_checkpoint(
+        self,
+        tenant_id: str,
+        checkpoint_id: str | None = None,
+        resume_token: str | None = None,
+    ) -> AgentCheckpoint:
+        raise RuntimeError("checkpoint client unavailable")
