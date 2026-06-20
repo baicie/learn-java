@@ -31,9 +31,20 @@ public class AgentEvalJson {
       if (json == null || json.isBlank()) {
         return List.of();
       }
-      return objectMapper.readValue(json, STRING_LIST);
+
+      List<String> values = objectMapper.readValue(json, STRING_LIST);
+      if (values == null) {
+        return List.of();
+      }
+
+      return values.stream()
+          .filter(value -> value != null && !value.isBlank())
+          .map(String::trim)
+          .distinct()
+          .toList();
     } catch (Exception ex) {
-      return List.of();
+      throw new AppException(
+          "AGENT_EVAL_JSON_READ_FAILED", "Failed to parse agent eval string list json");
     }
   }
 }

@@ -87,6 +87,22 @@ class AgentEvalServiceTest {
   }
 
   @Test
+  void rejectNullDatasetCreateRequest() {
+    FakeAgentEvalRepository repository = new FakeAgentEvalRepository();
+    AgentEvalService service = service(repository);
+
+    assertThrows(AppException.class, () -> service.createDataset("tenant_1", null));
+  }
+
+  @Test
+  void rejectNullRunCreateRequest() {
+    FakeAgentEvalRepository repository = new FakeAgentEvalRepository();
+    AgentEvalService service = service(repository);
+
+    assertThrows(AppException.class, () -> service.runEval("tenant_1", null));
+  }
+
+  @Test
   void createCaseFromPublishedIncidentCase() {
     FakeAgentEvalRepository repository = new FakeAgentEvalRepository();
     AgentEvalService service = service(repository);

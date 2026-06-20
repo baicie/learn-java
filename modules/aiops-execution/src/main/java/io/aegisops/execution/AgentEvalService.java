@@ -51,6 +51,7 @@ public class AgentEvalService {
   @Transactional
   public AgentEvalDatasetResponse createDataset(
       String tenantId, AgentEvalDatasetCreateRequest request) {
+    support.requireDatasetCreateRequest(request);
     support.requireDatasetName(request.name());
 
     String id = support.newId("aeds");
@@ -217,6 +218,7 @@ public class AgentEvalService {
 
   @Transactional
   public AgentEvalRunResponse runEval(String tenantId, AgentEvalRunCreateRequest request) {
+    support.requireRunCreateRequest(request);
     support.requireDatasetId(request.datasetId());
 
     AgentEvalDatasetRecord dataset = loadDataset(tenantId, request.datasetId());

@@ -6,8 +6,10 @@ import io.aegisops.execution.dto.AgentEvalCaseRecord;
 import io.aegisops.execution.dto.AgentEvalCaseResponse;
 import io.aegisops.execution.dto.AgentEvalCaseResultRecord;
 import io.aegisops.execution.dto.AgentEvalCaseResultResponse;
+import io.aegisops.execution.dto.AgentEvalDatasetCreateRequest;
 import io.aegisops.execution.dto.AgentEvalDatasetRecord;
 import io.aegisops.execution.dto.AgentEvalDatasetResponse;
+import io.aegisops.execution.dto.AgentEvalRunCreateRequest;
 import io.aegisops.execution.dto.AgentEvalRunRecord;
 import io.aegisops.execution.dto.AgentEvalRunResponse;
 import io.aegisops.execution.dto.AgentPromptProfileCreateRequest;
@@ -35,9 +37,22 @@ class AgentEvalSupport {
     }
   }
 
+  void requireDatasetCreateRequest(AgentEvalDatasetCreateRequest request) {
+    if (request == null) {
+      throw new AppException(
+          "AGENT_EVAL_DATASET_REQUEST_REQUIRED", "Dataset create request is required");
+    }
+  }
+
   void requireDatasetId(String datasetId) {
     if (datasetId == null || datasetId.isBlank()) {
       throw new AppException("AGENT_EVAL_RUN_DATASET_REQUIRED", "Dataset id is required");
+    }
+  }
+
+  void requireRunCreateRequest(AgentEvalRunCreateRequest request) {
+    if (request == null) {
+      throw new AppException("AGENT_EVAL_RUN_REQUEST_REQUIRED", "Eval run request is required");
     }
   }
 
