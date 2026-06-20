@@ -6,7 +6,7 @@ import pytest
 import respx
 from httpx import Response
 
-from app.agent.tools.checkpoint_client import CheckpointClient
+from aiops_agent.workflow.tools.checkpoint_client import CheckpointClient
 
 
 @pytest.mark.asyncio
@@ -20,7 +20,7 @@ async def test_create_checkpoint_parses_api_response_data_id():
                     "id": "agcp_1",
                     "status": "pending",
                     "resumeToken": "agrt_1",
-                    "stateSnapshotJson": "{\"incident_id\":\"inc_1\"}",
+                    "stateSnapshotJson": '{"incident_id":"inc_1"}',
                 }
             },
         )
@@ -63,7 +63,7 @@ async def test_get_checkpoint_uses_tenant_checkpoint_route():
                     "id": "agcp_1",
                     "status": "approved",
                     "resumeToken": "agrt_1",
-                    "stateSnapshotJson": "{\"incident_id\":\"inc_1\"}",
+                    "stateSnapshotJson": '{"incident_id":"inc_1"}',
                 }
             },
         )
@@ -118,7 +118,7 @@ async def test_checkpoint_client_rejects_missing_id():
 
     client = CheckpointClient(base_url="http://java")
 
-    from app.agent.errors import ToolError
+    from aiops_agent.workflow.errors import ToolError
 
     with pytest.raises(ToolError) as exc_info:
         await client.create_checkpoint(
@@ -146,7 +146,7 @@ async def test_create_checkpoint_reads_state_snapshot_json_from_string():
                 "data": {
                     "id": "agcp_2",
                     "status": "pending",
-                    "stateSnapshotJson": "{\"root_cause\":\"timeout\"}",
+                    "stateSnapshotJson": '{"root_cause":"timeout"}',
                 }
             },
         )

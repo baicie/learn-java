@@ -85,11 +85,13 @@ def test_http_evidence_client_posts_internal_request(monkeypatch):
         captured["headers"] = headers
         captured["json"] = json
         captured["timeout"] = timeout
-        return FakeHttpxResponse({
-            "metrics": {"available": True, "series": []},
-            "logs": {"available": True, "patterns": []},
-            "changes": {"available": True, "events": []},
-        })
+        return FakeHttpxResponse(
+            {
+                "metrics": {"available": True, "series": []},
+                "logs": {"available": True, "patterns": []},
+                "changes": {"available": True, "events": []},
+            }
+        )
 
     monkeypatch.setattr("aiops_agent.evidence.httpx.post", fake_post)
 

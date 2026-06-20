@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from app.agent.graph.runbook_graph import recommend_runbook_node
+from aiops_agent.workflow.graph.runbook_graph import recommend_runbook_node
 
 
 def test_recommend_runbook_for_timeout_root_cause():

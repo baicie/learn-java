@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from app.agent.contracts import EvidenceItem, SimilarCase
-from app.agent.graph.rca_graph import analyze_rca_node
+from aiops_agent.workflow.contracts import EvidenceItem, SimilarCase
+from aiops_agent.workflow.graph.rca_graph import analyze_rca_node
 
 
 def test_rca_prefers_similar_case_root_cause():

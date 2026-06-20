@@ -5,7 +5,6 @@ from typing import Any
 
 from aiops_agent.schemas import AlertContext, DiagnoseRequest
 
-
 SEVERITY_WEIGHT = {
     "info": 10,
     "low": 20,
@@ -56,8 +55,12 @@ def inspect_alerts(alerts: list[AlertContext]) -> dict[str, Any]:
         "count": len(alerts),
         "topSeverity": top.severity or "info",
         "topAlertTitle": top.title or "",
-        "dominantFingerprint": fingerprint_counts.most_common(1)[0][0] if fingerprint_counts else "",
-        "dominantFingerprintCount": fingerprint_counts.most_common(1)[0][1] if fingerprint_counts else 0,
+        "dominantFingerprint": fingerprint_counts.most_common(1)[0][0]
+        if fingerprint_counts
+        else "",
+        "dominantFingerprintCount": fingerprint_counts.most_common(1)[0][1]
+        if fingerprint_counts
+        else 0,
         "dominantAssetId": asset_counts.most_common(1)[0][0] if asset_counts else "",
         "dominantAssetCount": asset_counts.most_common(1)[0][1] if asset_counts else 0,
     }
@@ -108,7 +111,9 @@ def query_logs_stub(request: DiagnoseRequest) -> dict[str, Any]:
     }
 
 
-def search_runbooks_stub(request: DiagnoseRequest, alert_analysis: dict[str, Any], rca_analysis: dict[str, Any]) -> list[str]:
+def search_runbooks_stub(
+    request: DiagnoseRequest, alert_analysis: dict[str, Any], rca_analysis: dict[str, Any]
+) -> list[str]:
     root_cause = str(rca_analysis.get("rootCause") or "").lower()
     top_title = str(alert_analysis.get("topAlertTitle") or "").lower()
 

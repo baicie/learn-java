@@ -15,8 +15,12 @@ from aiops_agent.schemas import (
 )
 from aiops_agent.service import DiagnosisService
 from aiops_agent.settings import settings
+from aiops_agent.workflow.contracts import (
+    DiagnosisResponse as WorkflowDiagnosisResponse,
+)
+from aiops_agent.workflow.contracts import DiagnosisResumeRequest
 
-app = FastAPI(title="AegisOps LangGraph Agent Runtime", version="0.1.0")
+app = FastAPI(title="AegisOps LangGraph Agent Runtime", version="0.7.3")
 
 
 def verify_internal_token(x_aegisops_internal_token: str | None = Header(default=None)) -> None:
@@ -68,11 +72,23 @@ def diagnosis_contract() -> ContractResponse:
     response_model=DiagnoseResponse,
     dependencies=[Depends(verify_internal_token), Depends(verify_contract_version)],
 )
-def diagnose(
+async def diagnose(
     request: DiagnoseRequest,
     service: DiagnosisService = Depends(diagnosis_service),
 ) -> DiagnoseResponse:
     validate_request_contract(request, settings)
-    response = service.diagnose(request)
+    response = await service.diagnose(request)
     validate_response_contract(response, settings)
     return response
+
+
+@app.post(
+    "/v1/diagnose/resume",
+    response_model=WorkflowDiagnosisResponse,
+    dependencies=[Depends(verify_internal_token), Depends(verify_contract_version)],
+)
+async def diagnose_resume(
+    request: DiagnosisResumeRequest,
+    service: DiagnosisService = Depends(diagnosis_service),
+) -> WorkflowDiagnosisResponse:
+    return await service.resume(request)

@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-from app.agent.collaboration.evidence_agent import EvidenceAgent
-from app.agent.collaboration.rca_agent import RCAAgent
-from app.agent.collaboration.reviewer_agent import ReviewerAgent
-from app.agent.collaboration.runbook_agent import RunbookAgent
-from app.agent.collaboration.safety_agent import SafetyAgent
-from app.agent.contracts import EvidenceItem, RunbookCandidate, SimilarCase
+from aiops_agent.workflow.collaboration.evidence_agent import EvidenceAgent
+from aiops_agent.workflow.collaboration.rca_agent import RCAAgent
+from aiops_agent.workflow.collaboration.reviewer_agent import ReviewerAgent
+from aiops_agent.workflow.collaboration.runbook_agent import RunbookAgent
+from aiops_agent.workflow.collaboration.safety_agent import SafetyAgent
+from aiops_agent.workflow.contracts import EvidenceItem, RunbookCandidate, SimilarCase
 
 
 def test_evidence_agent_reviews_evidence_and_cases():

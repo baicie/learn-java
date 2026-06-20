@@ -4,10 +4,15 @@ from __future__ import annotations
 
 import pytest
 
-from app.agent.contracts import SimilarCase
-from app.agent.graph.case_retrieval_graph import retrieve_cases_node
-from app.agent.graph.context import GraphContext
-from tests.fakes import FakeCheckpointClient, FakeEvidenceClient, FakeKnowledgeClient, FailingKnowledgeClient
+from aiops_agent.workflow.contracts import SimilarCase
+from aiops_agent.workflow.graph.case_retrieval_graph import retrieve_cases_node
+from aiops_agent.workflow.graph.context import GraphContext
+from tests.fakes import (
+    FailingKnowledgeClient,
+    FakeCheckpointClient,
+    FakeEvidenceClient,
+    FakeKnowledgeClient,
+)
 
 
 @pytest.mark.asyncio

@@ -56,6 +56,23 @@ class Settings(BaseSettings):
     trace_enabled: bool = True
     eval_enabled: bool = True
 
+    # Phase 7 modular workflow. The Java-facing v1 contract stays stable while
+    # these flags control optional internal graph capabilities.
+    workflow_api_base_url: str = "http://localhost:8080"
+    workflow_graph_version: str = "phase7.3-agent-memory"
+    workflow_request_timeout_seconds: float = 5.0
+    workflow_max_evidence_items: int = 8
+    workflow_max_similar_cases: int = 5
+    workflow_max_memories: int = 5
+    workflow_checkpoint_ttl_seconds: int = 86400
+    workflow_max_agent_messages: int = 20
+    workflow_evidence_enabled: bool = False
+    workflow_case_retrieval_enabled: bool = False
+    workflow_human_checkpoint_enabled: bool = False
+    workflow_multi_agent_enabled: bool = False
+    workflow_memory_enabled: bool = False
+    workflow_memory_write_enabled: bool = False
+
     def normalized_generation_mode(self) -> str:
         value = (self.generation_mode or "deterministic").strip().lower()
         if value not in {"deterministic", "openai-compatible"}:

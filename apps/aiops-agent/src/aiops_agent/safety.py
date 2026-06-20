@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from aiops_agent.schemas import DiagnoseResponse
 
-
 FORBIDDEN_AUTO_EXECUTION_KEYWORDS = [
     "rm -rf",
     "drop database",
@@ -31,14 +30,16 @@ BLOCKED_INLINE_TEXT = "[blocked unsafe remediation wording]"
 
 
 def find_forbidden_keywords(response: DiagnoseResponse) -> list[str]:
-    text = "\n".join([
-        response.summary,
-        response.rootCause,
-        response.impact,
-        *response.nextSteps,
-        *response.runbookSuggestions,
-        *response.risks,
-    ]).lower()
+    text = "\n".join(
+        [
+            response.summary,
+            response.rootCause,
+            response.impact,
+            *response.nextSteps,
+            *response.runbookSuggestions,
+            *response.risks,
+        ]
+    ).lower()
 
     return [keyword for keyword in FORBIDDEN_AUTO_EXECUTION_KEYWORDS if keyword in text]
 
@@ -59,7 +60,9 @@ def apply_safety_boundary(response: DiagnoseResponse) -> DiagnoseResponse:
             risks.append(risk)
 
     if blocked:
-        warning = "Potentially unsafe remediation wording was detected and removed from the response."
+        warning = (
+            "Potentially unsafe remediation wording was detected and removed from the response."
+        )
         if warning not in risks:
             risks.append(warning)
 
@@ -70,15 +73,17 @@ def apply_safety_boundary(response: DiagnoseResponse) -> DiagnoseResponse:
         "sanitized": bool(blocked),
     }
 
-    return response.model_copy(update={
-        "summary": summary,
-        "rootCause": root_cause,
-        "impact": impact,
-        "nextSteps": next_steps,
-        "runbookSuggestions": runbook_suggestions,
-        "risks": risks,
-        "raw": raw,
-    })
+    return response.model_copy(
+        update={
+            "summary": summary,
+            "rootCause": root_cause,
+            "impact": impact,
+            "nextSteps": next_steps,
+            "runbookSuggestions": runbook_suggestions,
+            "risks": risks,
+            "raw": raw,
+        }
+    )
 
 
 def assert_safe_response(response: DiagnoseResponse) -> None:

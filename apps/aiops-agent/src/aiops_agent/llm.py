@@ -20,8 +20,7 @@ class DiagnosisDraft(BaseModel):
 
 
 class LlmClient(Protocol):
-    def complete_json(self, messages: list[dict[str, str]]) -> str:
-        ...
+    def complete_json(self, messages: list[dict[str, str]]) -> str: ...
 
 
 class OpenAiCompatibleLlmClient:
@@ -31,7 +30,9 @@ class OpenAiCompatibleLlmClient:
     def complete_json(self, messages: list[dict[str, str]]) -> str:
         base_url = self.settings.normalized_openai_base_url()
         if not base_url:
-            raise RuntimeError("AIOPS_AGENT_OPENAI_BASE_URL is required for openai-compatible generation mode")
+            raise RuntimeError(
+                "AIOPS_AGENT_OPENAI_BASE_URL is required for openai-compatible generation mode"
+            )
 
         headers: dict[str, str] = {"Content-Type": "application/json"}
         if self.settings.openai_api_key:
@@ -56,11 +57,7 @@ class OpenAiCompatibleLlmClient:
         response.raise_for_status()
 
         data = response.json()
-        content = (
-            data.get("choices", [{}])[0]
-            .get("message", {})
-            .get("content", "")
-        )
+        content = data.get("choices", [{}])[0].get("message", {}).get("content", "")
 
         if not content:
             raise RuntimeError("LLM returned empty content")
@@ -117,7 +114,7 @@ def _extract_json(content: str) -> str:
     end = value.rfind("}")
 
     if start >= 0 and end > start:
-        return value[start:end + 1]
+        return value[start : end + 1]
 
     return value
 

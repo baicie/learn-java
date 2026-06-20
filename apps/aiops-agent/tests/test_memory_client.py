@@ -6,7 +6,7 @@ import pytest
 import respx
 from httpx import Response
 
-from app.agent.tools.memory_client import MemoryClient
+from aiops_agent.workflow.tools.memory_client import MemoryClient
 
 
 @pytest.mark.asyncio

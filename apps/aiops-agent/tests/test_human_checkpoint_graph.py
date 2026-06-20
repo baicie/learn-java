@@ -4,13 +4,13 @@ from __future__ import annotations
 
 import pytest
 
-from app.agent.graph.context import GraphContext
-from app.agent.graph.human_checkpoint_graph import human_checkpoint_node
+from aiops_agent.workflow.graph.context import GraphContext
+from aiops_agent.workflow.graph.human_checkpoint_graph import human_checkpoint_node
 from tests.fakes import (
+    FailingCheckpointClient,
     FakeCheckpointClient,
     FakeEvidenceClient,
     FakeKnowledgeClient,
-    FailingCheckpointClient,
 )
 
 
@@ -63,7 +63,4 @@ async def test_human_checkpoint_handles_checkpoint_client_failure():
     assert result["checkpoint_required"] is True
     assert result["checkpoint_status"] == "failed"
     assert result["checkpoint"] is None
-    assert any(
-        "Checkpoint creation failed" in note
-        for note in result["safety_notes"]
-    )
+    assert any("Checkpoint creation failed" in note for note in result["safety_notes"])

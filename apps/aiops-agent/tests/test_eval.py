@@ -14,7 +14,8 @@ def response(raw=None, next_steps=None):
         nextSteps=next_steps or ["check metrics"],
         runbookSuggestions=[],
         risks=[],
-        raw=raw or {
+        raw=raw
+        or {
             "metrics": {"available": False},
             "logs": {"available": False},
             "changes": {"available": False},
@@ -50,11 +51,15 @@ def test_eval_detects_missing_required_fields():
     )
 
     assert result["passed"] is False
-    assert any(check["name"] == "required_fields" and not check["passed"] for check in result["checks"])
+    assert any(
+        check["name"] == "required_fields" and not check["passed"] for check in result["checks"]
+    )
 
 
 def test_eval_detects_unsafe_visible_words():
     result = evaluate_diagnosis(response(next_steps=["run rm -rf /"]))
 
     assert result["passed"] is False
-    assert any(check["name"] == "unsafe_action_words" and not check["passed"] for check in result["checks"])
+    assert any(
+        check["name"] == "unsafe_action_words" and not check["passed"] for check in result["checks"]
+    )

@@ -3,7 +3,6 @@ from fastapi.testclient import TestClient
 from aiops_agent.main import app
 from aiops_agent.settings import settings
 
-
 client = TestClient(app)
 
 
@@ -37,7 +36,7 @@ def test_diagnose_rejects_missing_token():
             "incident": {"id": "inc_1"},
             "alerts": [],
             "locale": "zh-CN",
-            "traceId": "trace_1"
+            "traceId": "trace_1",
         },
     )
 
@@ -49,7 +48,7 @@ def test_diagnose_rejects_wrong_contract_header():
         "/v1/diagnose",
         headers={
             "X-AegisOps-Internal-Token": settings.internal_token,
-            "X-AegisOps-Contract-Version": "bad"
+            "X-AegisOps-Contract-Version": "bad",
         },
         json={
             "contractVersion": "agent-diagnosis.v1",
@@ -58,7 +57,7 @@ def test_diagnose_rejects_wrong_contract_header():
             "incident": {"id": "inc_1"},
             "alerts": [],
             "locale": "zh-CN",
-            "traceId": "trace_1"
+            "traceId": "trace_1",
         },
     )
 
@@ -70,7 +69,7 @@ def test_diagnose_returns_contract_response():
         "/v1/diagnose",
         headers={
             "X-AegisOps-Internal-Token": settings.internal_token,
-            "X-AegisOps-Contract-Version": settings.contract_version
+            "X-AegisOps-Contract-Version": settings.contract_version,
         },
         json={
             "contractVersion": "agent-diagnosis.v1",
@@ -82,7 +81,7 @@ def test_diagnose_returns_contract_response():
                 "severity": "critical",
                 "status": "open",
                 "primaryAssetId": "asset_1",
-                "alertCount": 1
+                "alertCount": 1,
             },
             "alerts": [
                 {
@@ -90,17 +89,17 @@ def test_diagnose_returns_contract_response():
                     "title": "CPU high",
                     "severity": "critical",
                     "assetId": "asset_1",
-                    "fingerprint": "fp_cpu"
+                    "fingerprint": "fp_cpu",
                 }
             ],
             "rca": {
                 "id": "rca_1",
                 "suspectedRootCause": "CPU saturation",
                 "confidence": 0.8,
-                "summary": "RCA summary"
+                "summary": "RCA summary",
             },
             "locale": "zh-CN",
-            "traceId": "trace_1"
+            "traceId": "trace_1",
         },
     )
 
@@ -110,3 +109,16 @@ def test_diagnose_returns_contract_response():
     assert body["agentName"] == "aegisops_diagnosis_graph"
     assert body["raw"]["traceId"] == "trace_1"
     assert body["raw"]["safety"]["autoExecutionAllowed"] is False
+    assert body["raw"]["workflow"]["graphVersion"] == "phase7.3-agent-memory"
+
+
+def test_diagnose_resume_rejects_missing_token():
+    response = client.post(
+        "/v1/diagnose/resume",
+        json={
+            "tenant_id": "tenant_1",
+            "checkpoint_id": "agcp_1",
+        },
+    )
+
+    assert response.status_code == 401

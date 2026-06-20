@@ -6,8 +6,8 @@ import pytest
 import respx
 from httpx import Response
 
-from app.agent.errors import ToolError
-from app.agent.tools.knowledge_client import KnowledgeClient
+from aiops_agent.workflow.errors import ToolError
+from aiops_agent.workflow.tools.knowledge_client import KnowledgeClient
 
 
 @pytest.mark.asyncio

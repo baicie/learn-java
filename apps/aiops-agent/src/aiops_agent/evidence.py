@@ -16,8 +16,7 @@ class EvidenceBundle(BaseModel):
 
 
 class EvidenceClient(Protocol):
-    def query(self, request: DiagnoseRequest) -> EvidenceBundle:
-        ...
+    def query(self, request: DiagnoseRequest) -> EvidenceBundle: ...
 
 
 def _unavailable_metrics(reason: str) -> dict[str, Any]:
@@ -89,7 +88,9 @@ def build_evidence_query_payload(request: DiagnoseRequest) -> dict[str, Any]:
         "traceId": request.traceId,
         "primaryAssetId": request.incident.primaryAssetId,
         "startedAt": request.incident.startedAt.isoformat() if request.incident.startedAt else None,
-        "lastSeenAt": request.incident.lastSeenAt.isoformat() if request.incident.lastSeenAt else None,
+        "lastSeenAt": request.incident.lastSeenAt.isoformat()
+        if request.incident.lastSeenAt
+        else None,
         "alertFingerprints": [alert.fingerprint for alert in request.alerts if alert.fingerprint],
         "alertTitles": [alert.title for alert in request.alerts if alert.title],
         "serviceNames": [

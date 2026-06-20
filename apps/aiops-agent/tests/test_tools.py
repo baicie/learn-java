@@ -4,9 +4,15 @@ from aiops_agent.tools import inspect_alerts, inspect_rca_evidence, search_runbo
 
 def test_inspect_alerts_returns_dominant_fingerprint_and_asset():
     alerts = [
-        AlertContext(id="a1", severity="critical", title="CPU high", assetId="asset_1", fingerprint="fp_cpu"),
-        AlertContext(id="a2", severity="warning", title="CPU high", assetId="asset_1", fingerprint="fp_cpu"),
-        AlertContext(id="a3", severity="info", title="Other", assetId="asset_2", fingerprint="fp_other"),
+        AlertContext(
+            id="a1", severity="critical", title="CPU high", assetId="asset_1", fingerprint="fp_cpu"
+        ),
+        AlertContext(
+            id="a2", severity="warning", title="CPU high", assetId="asset_1", fingerprint="fp_cpu"
+        ),
+        AlertContext(
+            id="a3", severity="info", title="Other", assetId="asset_2", fingerprint="fp_other"
+        ),
     ]
 
     result = inspect_alerts(alerts)

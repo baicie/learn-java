@@ -22,7 +22,8 @@ def build_diagnosis_prompt(
         "You diagnose AIOps incidents from structured evidence. "
         "You must not execute commands. "
         "You must not modify systems. "
-        "You must not restart services, rollback deployments, delete resources, or close incidents. "
+        "You must not restart services, rollback deployments, delete resources, "
+        "or close incidents. "
         "All remediation is suggestion-only in Phase4.3. "
         "Return strict JSON only. Do not wrap JSON in markdown."
     )

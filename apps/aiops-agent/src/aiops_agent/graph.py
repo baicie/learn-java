@@ -67,9 +67,7 @@ def query_evidence(settings: Settings, evidence_client: EvidenceClient | None = 
         try:
             bundle = client.query(state["request"])
         except Exception as exc:
-            bundle = unavailable_bundle(
-                f"Evidence client failed: {type(exc).__name__}: {exc}"
-            )
+            bundle = unavailable_bundle(f"Evidence client failed: {type(exc).__name__}: {exc}")
 
         return {
             "metrics": bundle.metrics,
@@ -116,19 +114,18 @@ def deterministic_diagnosis(
         _root_cause_from_change_evidence(changes)
         or rca.get("rootCause")
         or incident.get("suspectedRootCause")
-        or "No strong root cause has been confirmed. Start from the dominant alert and primary asset."
+        or (
+            "No strong root cause has been confirmed. "
+            "Start from the dominant alert and primary asset."
+        )
     )
 
     dominant_asset = (
-        alerts.get("dominantAssetId")
-        or incident.get("primaryAssetId")
-        or "unknown asset"
+        alerts.get("dominantAssetId") or incident.get("primaryAssetId") or "unknown asset"
     )
 
     dominant_fingerprint = (
-        alerts.get("dominantFingerprint")
-        or incident.get("aggregationKey")
-        or "unknown fingerprint"
+        alerts.get("dominantFingerprint") or incident.get("aggregationKey") or "unknown fingerprint"
     )
 
     metric_hint = _metric_hint(metrics)
@@ -259,10 +256,19 @@ def build_diagnosis_graph(
     graph.add_node("load_context", node("load_context", "node", load_context))
     graph.add_node("analyze_alerts", node("analyze_alerts", "node", analyze_alerts))
     graph.add_node("analyze_rca", node("analyze_rca", "node", analyze_rca))
-    graph.add_node("query_evidence", node("query_evidence", "tool", query_evidence(settings, evidence_client)))
+    graph.add_node(
+        "query_evidence", node("query_evidence", "tool", query_evidence(settings, evidence_client))
+    )
     graph.add_node("search_runbooks", node("search_runbooks", "tool", search_runbooks))
     graph.add_node("safety_check", node("safety_check", "safety", safety_check))
-    graph.add_node("generate_diagnosis", node("generate_diagnosis", "llm" if settings.normalized_generation_mode() == "openai-compatible" else "node", generate_diagnosis(settings, llm_client)))
+    graph.add_node(
+        "generate_diagnosis",
+        node(
+            "generate_diagnosis",
+            "llm" if settings.normalized_generation_mode() == "openai-compatible" else "node",
+            generate_diagnosis(settings, llm_client),
+        ),
+    )
 
     graph.add_edge(START, "load_context")
     graph.add_edge("load_context", "analyze_alerts")

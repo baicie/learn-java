@@ -4,9 +4,15 @@ from __future__ import annotations
 
 import pytest
 
-from app.agent.contracts import AgentMemory, DiagnosisRequest, DiagnosisResumeRequest, EvidenceItem, SimilarCase
-from app.agent.graph.context import GraphContext
-from app.agent.graph.orchestrator import resume_diagnosis_graph, run_diagnosis_graph
+from aiops_agent.workflow.contracts import (
+    AgentMemory,
+    DiagnosisRequest,
+    DiagnosisResumeRequest,
+    EvidenceItem,
+    SimilarCase,
+)
+from aiops_agent.workflow.graph.context import GraphContext
+from aiops_agent.workflow.graph.orchestrator import resume_diagnosis_graph, run_diagnosis_graph
 from tests.fakes import (
     ApprovedCheckpointClient,
     FakeCheckpointClient,

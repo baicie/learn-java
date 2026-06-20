@@ -23,14 +23,18 @@ class FakeHttpxResponse:
 
 
 def test_parse_diagnosis_json_strict_json():
-    draft = parse_diagnosis_json(json.dumps({
-        "summary": "summary",
-        "rootCause": "root",
-        "impact": "impact",
-        "nextSteps": ["step"],
-        "runbookSuggestions": ["runbook"],
-        "risks": ["risk"],
-    }))
+    draft = parse_diagnosis_json(
+        json.dumps(
+            {
+                "summary": "summary",
+                "rootCause": "root",
+                "impact": "impact",
+                "nextSteps": ["step"],
+                "runbookSuggestions": ["runbook"],
+                "risks": ["risk"],
+            }
+        )
+    )
 
     assert draft.summary == "summary"
     assert draft.rootCause == "root"
@@ -100,11 +104,9 @@ def test_openai_compatible_client_sends_response_format_by_default(monkeypatch):
         captured["headers"] = headers
         captured["json"] = json
         captured["timeout"] = timeout
-        return FakeHttpxResponse({
-            "choices": [
-                {"message": {"content": '{"summary":"s","rootCause":"r","impact":"i"}'}}
-            ]
-        })
+        return FakeHttpxResponse(
+            {"choices": [{"message": {"content": '{"summary":"s","rootCause":"r","impact":"i"}'}}]}
+        )
 
     monkeypatch.setattr("aiops_agent.llm.httpx.post", fake_post)
 
@@ -115,9 +117,9 @@ def test_openai_compatible_client_sends_response_format_by_default(monkeypatch):
         model="test-model",
     )
 
-    content = OpenAiCompatibleLlmClient(settings).complete_json([
-        {"role": "user", "content": "hello"}
-    ])
+    content = OpenAiCompatibleLlmClient(settings).complete_json(
+        [{"role": "user", "content": "hello"}]
+    )
 
     assert captured["url"] == "https://example.com/v1/chat/completions"
     assert captured["headers"]["Authorization"] == "Bearer test-key"
@@ -131,11 +133,9 @@ def test_openai_compatible_client_can_disable_response_format(monkeypatch):
 
     def fake_post(url, headers, json, timeout):
         captured["json"] = json
-        return FakeHttpxResponse({
-            "choices": [
-                {"message": {"content": '{"summary":"s","rootCause":"r","impact":"i"}'}}
-            ]
-        })
+        return FakeHttpxResponse(
+            {"choices": [{"message": {"content": '{"summary":"s","rootCause":"r","impact":"i"}'}}]}
+        )
 
     monkeypatch.setattr("aiops_agent.llm.httpx.post", fake_post)
 
@@ -146,9 +146,7 @@ def test_openai_compatible_client_can_disable_response_format(monkeypatch):
         openai_response_format_enabled=False,
     )
 
-    OpenAiCompatibleLlmClient(settings).complete_json([
-        {"role": "user", "content": "hello"}
-    ])
+    OpenAiCompatibleLlmClient(settings).complete_json([{"role": "user", "content": "hello"}])
 
     assert "response_format" not in captured["json"]
 
@@ -161,6 +159,4 @@ def test_openai_compatible_client_requires_base_url():
     )
 
     with pytest.raises(RuntimeError):
-        OpenAiCompatibleLlmClient(settings).complete_json([
-            {"role": "user", "content": "hello"}
-        ])
+        OpenAiCompatibleLlmClient(settings).complete_json([{"role": "user", "content": "hello"}])

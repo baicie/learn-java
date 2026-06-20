@@ -151,6 +151,14 @@ services:
       # Phase4.4 observability. When enabled, response.raw carries agentRun + agentEval.
       AIOPS_AGENT_TRACE_ENABLED: "true"
       AIOPS_AGENT_EVAL_ENABLED: "true"
+      # Phase7 canonical workflow. It only queries Java internal APIs and never calls runner.
+      AIOPS_AGENT_WORKFLOW_API_BASE_URL: http://aiops-server:8080
+      AIOPS_AGENT_WORKFLOW_EVIDENCE_ENABLED: "true"
+      AIOPS_AGENT_WORKFLOW_CASE_RETRIEVAL_ENABLED: "true"
+      AIOPS_AGENT_WORKFLOW_HUMAN_CHECKPOINT_ENABLED: "false"
+      AIOPS_AGENT_WORKFLOW_MULTI_AGENT_ENABLED: "false"
+      AIOPS_AGENT_WORKFLOW_MEMORY_ENABLED: "true"
+      AIOPS_AGENT_WORKFLOW_MEMORY_WRITE_ENABLED: "false"
     ports:
       - "9008:9008"
     restart: unless-stopped

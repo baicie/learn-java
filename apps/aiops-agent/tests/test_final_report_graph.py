@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from app.agent.graph.final_report_graph import final_report_node
+from aiops_agent.workflow.graph.final_report_graph import final_report_node
 
 
 def test_final_report_node_sets_summary_next_steps_and_metadata():

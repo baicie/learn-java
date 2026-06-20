@@ -2,6 +2,15 @@
 
 AegisOps Python LangGraph diagnosis agent runtime.
 
+The installable runtime uses a single `src` layout:
+
+```text
+src/aiops_agent/
+  main.py        # authenticated FastAPI entry point
+  service.py     # canonical diagnosis service
+  workflow/      # Phase 7 modular graph, tools and collaboration agents
+```
+
 ## Local dev
 
 ```bash
@@ -93,3 +102,22 @@ Evidence sections:
 ```
 
 If evidence query fails, diagnosis still succeeds with evidence unavailable markers.
+
+## Phase 7 workflow
+
+Deterministic diagnosis runs through the Phase 7 modular workflow while keeping the
+Java-facing `agent-diagnosis.v1` request and response contract stable. Optional internal
+capabilities are configured with:
+
+```bash
+AIOPS_AGENT_WORKFLOW_API_BASE_URL=http://localhost:8080
+AIOPS_AGENT_WORKFLOW_EVIDENCE_ENABLED=false
+AIOPS_AGENT_WORKFLOW_CASE_RETRIEVAL_ENABLED=false
+AIOPS_AGENT_WORKFLOW_HUMAN_CHECKPOINT_ENABLED=false
+AIOPS_AGENT_WORKFLOW_MULTI_AGENT_ENABLED=false
+AIOPS_AGENT_WORKFLOW_MEMORY_ENABLED=false
+AIOPS_AGENT_WORKFLOW_MEMORY_WRITE_ENABLED=false
+```
+
+Checkpoint continuation uses `POST /v1/diagnose/resume` and requires the same internal
+token and optional contract-version headers as `POST /v1/diagnose`.

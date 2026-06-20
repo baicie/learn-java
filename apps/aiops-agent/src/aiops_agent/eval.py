@@ -103,14 +103,16 @@ def _check_evidence_presence(response: DiagnoseResponse) -> EvalCheck:
 
 
 def _check_action_boundary(response: DiagnoseResponse) -> EvalCheck:
-    text = "\n".join([
-        response.summary,
-        response.rootCause,
-        response.impact,
-        *response.nextSteps,
-        *response.runbookSuggestions,
-        *response.risks,
-    ]).lower()
+    text = "\n".join(
+        [
+            response.summary,
+            response.rootCause,
+            response.impact,
+            *response.nextSteps,
+            *response.runbookSuggestions,
+            *response.risks,
+        ]
+    ).lower()
 
     forbidden = [
         "rm -rf",

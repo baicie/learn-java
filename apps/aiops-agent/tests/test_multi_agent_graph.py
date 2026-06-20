@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from app.agent.contracts import AgentMemory, EvidenceItem, SimilarCase
-from app.agent.graph.multi_agent_graph import (
+from aiops_agent.workflow.contracts import AgentMemory, EvidenceItem, SimilarCase
+from aiops_agent.workflow.graph.multi_agent_graph import (
     multi_agent_rca_node,
     multi_agent_recommendation_node,
 )

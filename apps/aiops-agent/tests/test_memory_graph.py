@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from app.agent.contracts import AgentMemory, RunbookCandidate
-from app.agent.graph.memory_graph import retrieve_memory_node, write_memory_node
+from aiops_agent.workflow.contracts import AgentMemory, RunbookCandidate
+from aiops_agent.workflow.graph.memory_graph import retrieve_memory_node, write_memory_node
 from tests.fakes import FakeMemoryClient
 
 

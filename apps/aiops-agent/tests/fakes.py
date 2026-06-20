@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from app.agent.contracts import AgentCheckpoint, AgentMemory, EvidenceItem, SimilarCase
+from aiops_agent.workflow.contracts import AgentCheckpoint, AgentMemory, EvidenceItem, SimilarCase
 
 
 class FakeEvidenceClient:
