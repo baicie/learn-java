@@ -25,8 +25,7 @@ class AgentKnowledgeToolControllerTest {
     AgentKnowledgeToolController controller = new AgentKnowledgeToolController(searchService);
 
     controller.searchCases(
-        new AgentSearchCasesRequest(
-            "tenant_fake", "redis timeout", List.of("order-service"), 3));
+        new AgentSearchCasesRequest("tenant_fake", "redis timeout", List.of("order-service"), 3));
 
     assertEquals("tenant_real", searchService.capturedTenantId);
     assertEquals("redis timeout", searchService.capturedRequest.query());
