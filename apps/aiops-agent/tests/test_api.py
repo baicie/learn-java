@@ -47,7 +47,7 @@ def test_diagnose_rejects_wrong_contract_header():
     response = client.post(
         "/v1/diagnose",
         headers={
-            "X-AegisOps-Internal-Token": settings.internal_token,
+            "X-AegisOps-Internal-Token": settings.internal_agent_token,
             "X-AegisOps-Contract-Version": "bad",
         },
         json={
@@ -68,7 +68,7 @@ def test_diagnose_returns_contract_response():
     response = client.post(
         "/v1/diagnose",
         headers={
-            "X-AegisOps-Internal-Token": settings.internal_token,
+            "X-AegisOps-Internal-Token": settings.internal_agent_token,
             "X-AegisOps-Contract-Version": settings.contract_version,
         },
         json={
@@ -109,7 +109,7 @@ def test_diagnose_returns_contract_response():
     assert body["agentName"] == "aegisops_diagnosis_graph"
     assert body["raw"]["traceId"] == "trace_1"
     assert body["raw"]["safety"]["autoExecutionAllowed"] is False
-    assert body["raw"]["workflow"]["graphVersion"] == "phase7.3-agent-memory"
+    assert body["raw"]["workflow"]["graphVersion"] == "phase8.0-saas-tenant-hardening"
 
 
 def test_diagnose_resume_rejects_missing_token():

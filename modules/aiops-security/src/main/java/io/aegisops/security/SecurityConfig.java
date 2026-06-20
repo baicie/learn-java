@@ -32,11 +32,12 @@ public class SecurityConfig {
                 auth.requestMatchers(HttpMethod.OPTIONS, "/**")
                     .permitAll()
                     .requestMatchers(
-                        "/api/auth/login",
+                        "/api/auth/",
                         "/actuator/**",
                         "/v3/api-docs/**",
                         "/swagger-ui/**",
-                        "/swagger-ui.html")
+                        "/swagger-ui.html",
+                        "/internal/agent/**")
                     .permitAll()
                     .anyRequest()
                     .authenticated())

@@ -12,6 +12,7 @@ from pydantic import ValidationError
 from aiops_agent.settings import settings
 from aiops_agent.workflow.contracts import SimilarCase
 from aiops_agent.workflow.errors import ToolError
+from aiops_agent.workflow.tools.internal_auth import internal_tool_headers
 
 
 class KnowledgeClient:
@@ -35,7 +36,8 @@ class KnowledgeClient:
 
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
-                response = await client.post(url, json=body, headers={"X-Tenant-Id": tenant_id})
+                headers = internal_tool_headers(tenant_id)
+                response = await client.post(url, json=body, headers=headers)
                 if response.status_code == 404:
                     return []
                 response.raise_for_status()

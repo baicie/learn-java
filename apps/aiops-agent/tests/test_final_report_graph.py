@@ -19,7 +19,7 @@ def test_final_report_node_sets_summary_next_steps_and_metadata():
 
     assert "redis timeout" in result["final_summary"]
     assert "Require human approval" in " ".join(result["next_steps"])
-    assert result["metadata"]["graph_version"] == "phase7.3-agent-memory"
+    assert result["metadata"]["graph_version"] == "phase8.0-saas-tenant-hardening"
     assert "evidence_graph" in result["metadata"]["graph_modules"]
     assert "multi_agent_graph" in result["metadata"]["graph_modules"]
     assert result["metadata"]["collaboration_mode"] == "single_agent"

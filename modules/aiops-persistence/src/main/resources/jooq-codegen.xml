@@ -58,7 +58,7 @@
         incident_case | incident_case_symptom | incident_case_resolution_step | incident_case_tag |
         kb_document | kb_chunk | kb_search_log |
         agent_eval_dataset | agent_eval_case | agent_prompt_profile | agent_eval_run | agent_eval_case_result |
-        agent_memory | agent_memory_event
+        agent_memory | agent_memory_event | tenant_quota_policy | tenant_security_event
       </includes>
 
       <excludes>flyway_schema_history</excludes>

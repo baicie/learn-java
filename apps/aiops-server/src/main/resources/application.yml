@@ -26,6 +26,14 @@ aiops:
   jwt:
     secret: ${AIOPS_JWT_SECRET:dev-secret-change-me-change-me-change-me}
     ttl-seconds: ${AIOPS_JWT_TTL_SECONDS:86400}
+  security:
+    internal-agent-token: ${AIOPS_INTERNAL_AGENT_TOKEN:dev-internal-agent-token}
+    internal-agent-token-required: true
+    tenant-required: true
+  quota:
+    public-api-requests-per-minute: ${AIOPS_PUBLIC_API_RPM:600}
+    internal-agent-requests-per-minute: ${AIOPS_INTERNAL_AGENT_RPM:1200}
+    rate-limit-enabled: true
   agent:
     base-url: ${AIOPS_AGENT_BASE_URL:http://localhost:9008}
     internal-token: ${AIOPS_AGENT_INTERNAL_TOKEN:dev-internal-token}

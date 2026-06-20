@@ -70,7 +70,7 @@ async def test_orchestrator_runs_all_graph_modules():
     assert response.risk_level == "high"
     assert len(response.evidence) == 1
     assert len(response.similar_cases) == 1
-    assert response.metadata["graph_version"] == "phase7.3-agent-memory"
+    assert response.metadata["graph_version"] == "phase8.0-saas-tenant-hardening"
 
 
 @pytest.mark.asyncio
@@ -245,7 +245,7 @@ async def test_orchestrator_retrieves_and_writes_memory():
     assert memory_client.search_called is True
     assert memory_client.create_called is True
     assert response.memory_write_status == "created"
-    assert response.metadata["graph_version"] == "phase7.3-agent-memory"
+    assert response.metadata["graph_version"] == "phase8.0-saas-tenant-hardening"
 
 
 @pytest.mark.asyncio

@@ -24,7 +24,7 @@ app = FastAPI(title="AegisOps LangGraph Agent Runtime", version="0.7.3")
 
 
 def verify_internal_token(x_aegisops_internal_token: str | None = Header(default=None)) -> None:
-    if x_aegisops_internal_token != settings.internal_token:
+    if x_aegisops_internal_token != settings.internal_agent_token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="invalid internal token",

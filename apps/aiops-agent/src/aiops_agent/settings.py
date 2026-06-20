@@ -10,7 +10,8 @@ class Settings(BaseSettings):
         populate_by_name=True,
     )
 
-    internal_token: str = "dev-internal-token"
+    # Phase 8.0 SaaS multi-tenant hardening.
+    internal_agent_token: str = "dev-internal-agent-token"
 
     provider: str = "aiops-agent"
     model: str = "langgraph-deterministic"
@@ -59,7 +60,7 @@ class Settings(BaseSettings):
     # Phase 7 modular workflow. The Java-facing v1 contract stays stable while
     # these flags control optional internal graph capabilities.
     workflow_api_base_url: str = "http://localhost:8080"
-    workflow_graph_version: str = "phase7.3-agent-memory"
+    workflow_graph_version: str = "phase8.0-saas-tenant-hardening"
     workflow_request_timeout_seconds: float = 5.0
     workflow_max_evidence_items: int = 8
     workflow_max_similar_cases: int = 5

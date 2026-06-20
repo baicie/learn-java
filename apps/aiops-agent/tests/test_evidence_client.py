@@ -8,6 +8,7 @@ from httpx import Response
 
 from aiops_agent.workflow.errors import ToolError
 from aiops_agent.workflow.tools.evidence_client import EvidenceClient
+from aiops_agent.workflow.tools.internal_auth import HEADER_INTERNAL_AGENT_TOKEN
 
 
 @pytest.mark.asyncio
@@ -28,14 +29,14 @@ async def test_evidence_client_queries_java_contract_with_internal_token():
         )
     )
 
-    client = EvidenceClient(base_url="http://java", internal_token="token")
+    client = EvidenceClient(base_url="http://java")
 
     evidence = await client.fetch_evidence("tenant_1", "inc_1")
 
     assert len(evidence) == 1
     assert evidence[0].evidence_type == "metric"
     request = route.calls[0].request
-    assert request.headers["X-AegisOps-Internal-Token"] == "token"
+    assert request.headers[HEADER_INTERNAL_AGENT_TOKEN] == "dev-internal-agent-token"
     assert b'"tenantId":"tenant_1"' in request.content
 
 

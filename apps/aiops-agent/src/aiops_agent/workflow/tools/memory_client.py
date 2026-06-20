@@ -9,6 +9,7 @@ import httpx
 from aiops_agent.settings import settings
 from aiops_agent.workflow.contracts import AgentMemory
 from aiops_agent.workflow.errors import ToolError
+from aiops_agent.workflow.tools.internal_auth import internal_tool_headers
 
 
 class MemoryClient:
@@ -40,7 +41,8 @@ class MemoryClient:
 
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
-                response = await client.post(url, json=body, headers={"X-Tenant-Id": tenant_id})
+                headers = internal_tool_headers(tenant_id)
+                response = await client.post(url, json=body, headers=headers)
                 response.raise_for_status()
                 payload = response.json()
         except (httpx.HTTPError, ValueError, TypeError) as exc:
@@ -83,7 +85,8 @@ class MemoryClient:
 
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
-                response = await client.post(url, json=body, headers={"X-Tenant-Id": tenant_id})
+                headers = internal_tool_headers(tenant_id)
+                response = await client.post(url, json=body, headers=headers)
                 response.raise_for_status()
                 payload = response.json()
         except (httpx.HTTPError, ValueError, TypeError) as exc:

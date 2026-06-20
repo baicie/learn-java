@@ -10,6 +10,7 @@ import httpx
 from aiops_agent.settings import settings
 from aiops_agent.workflow.contracts import EvidenceItem
 from aiops_agent.workflow.errors import ToolError
+from aiops_agent.workflow.tools.internal_auth import internal_tool_headers
 
 
 class EvidenceClient:
@@ -17,11 +18,9 @@ class EvidenceClient:
         self,
         base_url: str | None = None,
         timeout: float | None = None,
-        internal_token: str | None = None,
     ):
         self.base_url = (base_url or settings.workflow_api_base_url).rstrip("/")
         self.timeout = timeout or settings.workflow_request_timeout_seconds
-        self.internal_token = internal_token or settings.evidence_internal_token
 
     async def fetch_evidence(self, tenant_id: str, incident_id: str) -> list[EvidenceItem]:
         url = f"{self.base_url}/internal/agent/evidence/query"
@@ -44,7 +43,7 @@ class EvidenceClient:
                     url,
                     headers={
                         "Content-Type": "application/json",
-                        "X-AegisOps-Internal-Token": self.internal_token,
+                        **internal_tool_headers(tenant_id, settings),
                     },
                     json=body,
                 )
