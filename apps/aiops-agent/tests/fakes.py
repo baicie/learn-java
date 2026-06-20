@@ -36,3 +36,14 @@ class FakeKnowledgeClient:
         self.called = True
         self.last_query = query
         return self.cases
+
+
+class FailingKnowledgeClient:
+    async def search_cases(
+        self,
+        tenant_id: str,
+        query: str,
+        tags: list[str],
+        top_k: int,
+    ) -> list[SimilarCase]:
+        raise RuntimeError("boom")

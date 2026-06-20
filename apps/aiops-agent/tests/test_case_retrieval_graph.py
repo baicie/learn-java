@@ -7,7 +7,7 @@ import pytest
 from app.agent.contracts import SimilarCase
 from app.agent.graph.case_retrieval_graph import retrieve_cases_node
 from app.agent.graph.context import GraphContext
-from tests.fakes import FakeEvidenceClient, FakeKnowledgeClient
+from tests.fakes import FakeEvidenceClient, FakeKnowledgeClient, FailingKnowledgeClient
 
 
 @pytest.mark.asyncio
@@ -62,4 +62,24 @@ async def test_retrieve_cases_node_can_be_disabled():
     result = await retrieve_cases_node(state, context)
 
     assert knowledge.called is False
+    assert result["similar_cases"] == []
+
+
+@pytest.mark.asyncio
+async def test_retrieve_cases_node_handles_unexpected_client_error():
+    context = GraphContext(
+        evidence_client=FakeEvidenceClient(),
+        knowledge_client=FailingKnowledgeClient(),
+    )
+
+    state = {
+        "tenant_id": "tenant_1",
+        "incident_id": "inc_1",
+        "title": "Order service redis timeout",
+        "tags": [],
+        "enable_case_retrieval": True,
+    }
+
+    result = await retrieve_cases_node(state, context)
+
     assert result["similar_cases"] == []

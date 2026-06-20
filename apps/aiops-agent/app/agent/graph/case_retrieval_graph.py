@@ -28,6 +28,8 @@ async def retrieve_cases_node(
         )
     except ToolError:
         cases = []
+    except Exception:
+        cases = []
 
     state["similar_cases"] = cases[: settings.max_similar_cases]
     return state

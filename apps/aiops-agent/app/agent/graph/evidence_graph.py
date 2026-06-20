@@ -29,6 +29,17 @@ async def fetch_evidence_node(
                 metadata={"code": exc.code},
             )
         ]
+    except Exception as exc:
+        evidence = [
+            EvidenceItem(
+                evidence_id="evidence_tool_unexpected_error",
+                evidence_type="tool_error",
+                title="Evidence fetch failed",
+                summary=str(exc),
+                source="agent",
+                metadata={"code": "EVIDENCE_TOOL_UNEXPECTED_ERROR"},
+            )
+        ]
 
     state["evidence"] = evidence[: settings.max_evidence_items]
     return state

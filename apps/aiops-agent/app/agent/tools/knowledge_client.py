@@ -2,7 +2,12 @@
 
 from __future__ import annotations
 
+import json
+import re
+from typing import Any
+
 import httpx
+from pydantic import ValidationError
 
 from app.agent.contracts import SimilarCase
 from app.agent.errors import ToolError
@@ -35,20 +40,111 @@ class KnowledgeClient:
                     return []
                 response.raise_for_status()
                 payload = response.json()
-        except httpx.HTTPError as exc:
-            raise ToolError("KNOWLEDGE_TOOL_FAILED", f"Failed to search cases: {exc}") from exc
+
+            results = self._extract_results(payload)
+            return [self._to_similar_case(item) for item in results]
+
+        except ToolError:
+            raise
+        except (httpx.HTTPError, ValueError, TypeError, ValidationError) as exc:
+            raise ToolError(
+                "KNOWLEDGE_TOOL_FAILED",
+                f"Failed to search cases: {exc}",
+            ) from exc
+
+    def _extract_results(self, payload: Any) -> list[dict[str, Any]]:
+        if not isinstance(payload, dict):
+            raise ToolError(
+                "KNOWLEDGE_TOOL_RESPONSE_INVALID",
+                "Knowledge response must be an object",
+            )
 
         data = payload.get("data", payload)
-        results = data.get("results", [])
-        return [
-            SimilarCase(
-                case_id=item.get("sourceId", item.get("caseId", "")),
-                title=item.get("title", ""),
-                summary=item.get("content", ""),
-                root_cause=item.get("rootCause"),
-                resolution=item.get("resolution"),
-                score=float(item.get("score", 0.0)),
-                tags=item.get("tags", []),
+        if not isinstance(data, dict):
+            raise ToolError(
+                "KNOWLEDGE_TOOL_RESPONSE_INVALID",
+                "Knowledge response data must be an object",
             )
-            for item in results
-        ]
+
+        results = data.get("results", [])
+        if not isinstance(results, list):
+            raise ToolError(
+                "KNOWLEDGE_TOOL_RESPONSE_INVALID",
+                "Knowledge response results must be an array",
+            )
+
+        normalized: list[dict[str, Any]] = []
+        for item in results:
+            if not isinstance(item, dict):
+                raise ToolError(
+                    "KNOWLEDGE_TOOL_RESPONSE_INVALID",
+                    "Knowledge result item must be an object",
+                )
+            normalized.append(item)
+
+        return normalized
+
+    def _to_similar_case(self, item: dict[str, Any]) -> SimilarCase:
+        content = str(item.get("content") or "")
+        metadata = self._read_metadata(item.get("metadataJson"))
+
+        root_cause = (
+            item.get("rootCause")
+            or metadata.get("rootCause")
+            or self._extract_labeled_value(content, "Root Cause")
+        )
+
+        resolution = (
+            item.get("resolution")
+            or metadata.get("resolution")
+            or self._extract_labeled_value(content, "Resolution")
+        )
+
+        tags = item.get("tags") or metadata.get("tags") or []
+        if not isinstance(tags, list):
+            tags = []
+
+        return SimilarCase(
+            case_id=str(item.get("sourceId") or item.get("caseId") or ""),
+            title=str(item.get("title") or ""),
+            summary=content,
+            root_cause=root_cause,
+            resolution=resolution,
+            score=self._safe_float(item.get("score")),
+            tags=[str(tag) for tag in tags],
+        )
+
+    def _read_metadata(self, value: Any) -> dict[str, Any]:
+        if value is None:
+            return {}
+
+        if isinstance(value, dict):
+            return value
+
+        if isinstance(value, str) and value.strip():
+            try:
+                data = json.loads(value)
+                return data if isinstance(data, dict) else {}
+            except json.JSONDecodeError:
+                return {}
+
+        return {}
+
+    def _extract_labeled_value(self, content: str, label: str) -> str | None:
+        # Supports Phase6.2 chunk text such as:
+        # Root Cause: redis timeout
+        # Resolution: restart service
+        pattern = re.compile(
+            rf"(?im)^\s*{re.escape(label)}\s*:\s*(.+?)\s*$"
+        )
+        match = pattern.search(content)
+        if not match:
+            return None
+
+        value = match.group(1).strip()
+        return value or None
+
+    def _safe_float(self, value: Any) -> float:
+        if value is None:
+            return 0.0
+        return float(value)
