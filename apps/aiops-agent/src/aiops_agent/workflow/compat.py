@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from aiops_agent.schemas import DiagnoseRequest, DiagnoseResponse
+from aiops_agent.schemas import AlertContext, DiagnoseRequest, DiagnoseResponse
 from aiops_agent.settings import Settings
 from aiops_agent.workflow.contracts import (
     DiagnosisRequest as WorkflowDiagnosisRequest,
@@ -32,6 +32,7 @@ def to_workflow_request(
         severity=_normalize_severity(incident.severity),
         description="\n".join(part for part in description_parts if part) or None,
         alert_summary="; ".join(alert_titles) or None,
+        tags=_derive_tags(request),
         enable_case_retrieval=settings.workflow_case_retrieval_enabled,
         enable_runbook_recommendation=True,
         enable_human_checkpoint=settings.workflow_human_checkpoint_enabled,
@@ -73,6 +74,82 @@ def to_contract_response(
             "changes": _evidence_section(result, "change"),
         },
     )
+
+
+def _derive_tags(request: DiagnoseRequest) -> list[str]:
+    incident = request.incident
+    tags: list[str] = []
+
+    tags.extend(
+        [
+            incident.source,
+            incident.primaryAssetId,
+            incident.aggregationKey,
+            incident.severity,
+            incident.status,
+        ]
+    )
+
+    for alert in request.alerts:
+        tags.extend(_alert_tags(alert))
+
+    if request.rca is not None:
+        tags.extend(
+            [
+                request.rca.modelVersion,
+                "has-rca",
+            ]
+        )
+
+    return _normalize_tags(tags)
+
+
+def _alert_tags(alert: AlertContext) -> list[str | None]:
+    return [
+        alert.source,
+        alert.severity,
+        alert.assetId,
+        alert.entityType,
+        alert.entityName,
+        alert.fingerprint,
+    ]
+
+
+def _normalize_tags(values: list[str | None]) -> list[str]:
+    normalized: list[str] = []
+    seen: set[str] = set()
+
+    for value in values:
+        tag = _normalize_tag(value)
+        if not tag or tag in seen:
+            continue
+        seen.add(tag)
+        normalized.append(tag)
+
+    return normalized[:20]
+
+
+def _normalize_tag(value: str | None) -> str:
+    if value is None:
+        return ""
+
+    tag = value.strip().lower()
+    if not tag:
+        return ""
+
+    chars: list[str] = []
+    prev_dash = False
+
+    for char in tag:
+        if char.isalnum() or "\u4e00" <= char <= "\u9fff":
+            chars.append(char)
+            prev_dash = False
+        else:
+            if not prev_dash:
+                chars.append("-")
+                prev_dash = True
+
+    return "".join(chars).strip("-")
 
 
 def _normalize_severity(value: str | None) -> str:
