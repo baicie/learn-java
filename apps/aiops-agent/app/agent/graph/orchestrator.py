@@ -14,6 +14,7 @@ from app.agent.graph.context import GraphContext
 from app.agent.graph.evidence_graph import fetch_evidence_node
 from app.agent.graph.final_report_graph import final_report_node
 from app.agent.graph.human_checkpoint_graph import human_checkpoint_node
+from app.agent.graph.memory_graph import retrieve_memory_node, write_memory_node
 from app.agent.graph.multi_agent_graph import (
     multi_agent_rca_node,
     multi_agent_recommendation_node,
@@ -27,6 +28,12 @@ from app.agent.graph.state import DiagnosisGraphState
 def build_diagnosis_graph(context: GraphContext):
     graph = StateGraph(DiagnosisGraphState)
 
+    async def memory_retrieval_node(state: DiagnosisGraphState) -> DiagnosisGraphState:
+        return await retrieve_memory_node(state, context.memory_client)
+
+    async def memory_write_node(state: DiagnosisGraphState) -> DiagnosisGraphState:
+        return await write_memory_node(state, context.memory_client)
+
     async def evidence_node(state: DiagnosisGraphState) -> DiagnosisGraphState:
         return await fetch_evidence_node(state, context)
 
@@ -36,6 +43,7 @@ def build_diagnosis_graph(context: GraphContext):
     async def checkpoint_node(state: DiagnosisGraphState) -> DiagnosisGraphState:
         return await human_checkpoint_node(state, context)
 
+    graph.add_node("memory_retrieval", memory_retrieval_node)
     graph.add_node("evidence", evidence_node)
     graph.add_node("case_retrieval", case_node)
     graph.add_node("rca", analyze_rca_node)
@@ -45,8 +53,10 @@ def build_diagnosis_graph(context: GraphContext):
     graph.add_node("multi_agent_recommendation", multi_agent_recommendation_node)
     graph.add_node("safety", safety_review_node)
     graph.add_node("final_report", final_report_node)
+    graph.add_node("memory_write", memory_write_node)
 
-    graph.set_entry_point("evidence")
+    graph.set_entry_point("memory_retrieval")
+    graph.add_edge("memory_retrieval", "evidence")
     graph.add_edge("evidence", "case_retrieval")
 
     graph.add_conditional_edges(
@@ -74,19 +84,24 @@ def build_diagnosis_graph(context: GraphContext):
     graph.add_edge("runbook", "safety")
     graph.add_edge("safety", "final_report")
     graph.add_edge("multi_agent_recommendation", "final_report")
-    graph.add_edge("final_report", END)
+    graph.add_edge("final_report", "memory_write")
+    graph.add_edge("memory_write", END)
 
     return graph.compile()
 
 
-def build_resume_graph():
+def build_resume_graph(context: GraphContext):
     graph = StateGraph(DiagnosisGraphState)
+
+    async def memory_write_node(state: DiagnosisGraphState) -> DiagnosisGraphState:
+        return await write_memory_node(state, context.memory_client)
 
     graph.add_node("resume_router", _identity_node)
     graph.add_node("runbook", recommend_runbook_node)
     graph.add_node("multi_agent_recommendation", multi_agent_recommendation_node)
     graph.add_node("safety", safety_review_node)
     graph.add_node("final_report", final_report_node)
+    graph.add_node("memory_write", memory_write_node)
 
     graph.set_entry_point("resume_router")
     graph.add_conditional_edges(
@@ -97,11 +112,11 @@ def build_resume_graph():
             "runbook": "runbook",
         },
     )
-
     graph.add_edge("runbook", "safety")
     graph.add_edge("safety", "final_report")
     graph.add_edge("multi_agent_recommendation", "final_report")
-    graph.add_edge("final_report", END)
+    graph.add_edge("final_report", "memory_write")
+    graph.add_edge("memory_write", END)
 
     return graph.compile()
 
@@ -123,16 +138,20 @@ async def run_diagnosis_graph(
         "enable_runbook_recommendation": request.enable_runbook_recommendation,
         "enable_human_checkpoint": request.enable_human_checkpoint,
         "enable_multi_agent_collaboration": request.enable_multi_agent_collaboration,
+        "enable_agent_memory": request.enable_agent_memory,
+        "enable_agent_memory_write": request.enable_agent_memory_write,
         "checkpoint_required": False,
         "checkpoint": None,
         "checkpoint_status": None,
         "resume_token": None,
         "evidence": [],
         "similar_cases": [],
+        "memories": [],
         "runbook_candidates": [],
         "safety_notes": [],
         "next_steps": [],
         "agent_messages": [],
+        "memory_write_status": None,
         "metadata": {},
     }
 
@@ -161,6 +180,8 @@ async def resume_diagnosis_graph(
     state["checkpoint_status"] = checkpoint.status
     state["checkpoint_required"] = False
     state.setdefault("agent_messages", [])
+    state.setdefault("memories", [])
+    state.setdefault("memory_write_status", None)
 
     if checkpoint.status == "rejected":
         state["runbook_candidates"] = []
@@ -171,7 +192,7 @@ async def resume_diagnosis_graph(
         final_report_node(state)
         return _to_response(state)
 
-    if checkpoint.status not in {"approved", "skipped"}:
+    if checkpoint.status != "approved":
         state["checkpoint_required"] = True
         state["safety_notes"] = state.get("safety_notes", []) + [
             f"Checkpoint is not approved. Current status={checkpoint.status}."
@@ -179,7 +200,7 @@ async def resume_diagnosis_graph(
         final_report_node(state)
         return _to_response(state)
 
-    app = build_resume_graph()
+    app = build_resume_graph(context)
     final_state = await app.ainvoke(state)
     return _to_response(final_state)
 
@@ -229,5 +250,7 @@ def _to_response(final_state: DiagnosisGraphState) -> DiagnosisResponse:
         checkpoint_id=final_state.get("checkpoint"),
         checkpoint_status=final_state.get("checkpoint_status"),
         agent_messages=final_state.get("agent_messages", []),
+        memories=final_state.get("memories", []),
+        memory_write_status=final_state.get("memory_write_status"),
         metadata=final_state.get("metadata", {}),
     )

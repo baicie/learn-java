@@ -1,7 +1,7 @@
 [project]
 name = "aiops-agent"
-version = "0.7.2"
-description = "AegisOps Python LangGraph diagnosis agent - Phase 7.2 multi-agent collaboration"
+version = "0.7.3"
+description = "AegisOps Python LangGraph diagnosis agent - Phase 7.3 agent memory"
 requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.115.0",

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from app.agent.contracts import AgentCheckpoint, EvidenceItem, SimilarCase
+from app.agent.contracts import AgentCheckpoint, AgentMemory, EvidenceItem, SimilarCase
 
 
 class FakeEvidenceClient:
@@ -133,3 +133,51 @@ class FailingCheckpointClient:
         resume_token: str | None = None,
     ) -> AgentCheckpoint:
         raise RuntimeError("checkpoint client unavailable")
+
+
+class FakeMemoryClient:
+    def __init__(self, memories: list[AgentMemory] | None = None):
+        self.memories = memories or []
+        self.search_called = False
+        self.create_called = False
+
+    async def search_memories(
+        self,
+        tenant_id: str,
+        query: str,
+        scope_type: str = "tenant",
+        scope_id: str | None = None,
+        tags: list[str] | None = None,
+        memory_types: list[str] | None = None,
+        top_k: int = 5,
+    ) -> list[AgentMemory]:
+        self.search_called = True
+        return self.memories[:top_k]
+
+    async def create_memory(
+        self,
+        tenant_id: str,
+        scope_type: str,
+        scope_id: str | None,
+        memory_type: str,
+        source_type: str,
+        source_id: str | None,
+        title: str,
+        content: str,
+        tags: list[str],
+        confidence: float,
+    ) -> AgentMemory:
+        self.create_called = True
+        memory = AgentMemory(
+            memory_id="agm_1",
+            title=title,
+            content=content,
+            memory_type=memory_type,
+            scope_type=scope_type,
+            scope_id=scope_id,
+            score=1.0,
+            confidence=confidence,
+            tags=tags,
+        )
+        self.memories.append(memory)
+        return memory

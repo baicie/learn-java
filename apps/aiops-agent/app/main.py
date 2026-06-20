@@ -1,4 +1,4 @@
-"""FastAPI entry point for the Phase 7.2 multi-agent agent."""
+"""FastAPI entry point for the Phase 7.3 agent memory agent."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ from app.agent.contracts import (
 )
 from app.agent.services.diagnosis_service import DiagnosisService
 
-app = FastAPI(title="AegisOps Agent", version="0.7.2")
+app = FastAPI(title="AegisOps Agent", version="0.7.3")
 
 diagnosis_service = DiagnosisService()
 

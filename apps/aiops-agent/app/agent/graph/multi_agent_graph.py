@@ -28,6 +28,7 @@ def multi_agent_rca_node(state: DiagnosisGraphState) -> DiagnosisGraphState:
         title=state.get("title", ""),
         evidence=state.get("evidence", []),
         similar_cases=state.get("similar_cases", []),
+        memories=state.get("memories", []),
         evidence_message=evidence_message,
     )
     messages = append_agent_message(messages, rca_message)

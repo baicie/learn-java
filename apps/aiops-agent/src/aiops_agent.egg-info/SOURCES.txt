@@ -21,6 +21,7 @@ src/aiops_agent.egg-info/requires.txt
 src/aiops_agent.egg-info/top_level.txt
 tests/test_api.py
 tests/test_case_retrieval_graph.py
+tests/test_checkpoint_client.py
 tests/test_contract.py
 tests/test_eval.py
 tests/test_evidence.py
@@ -28,8 +29,11 @@ tests/test_evidence_client.py
 tests/test_evidence_graph.py
 tests/test_final_report_graph.py
 tests/test_graph.py
+tests/test_human_checkpoint_graph.py
 tests/test_knowledge_client.py
 tests/test_llm.py
+tests/test_memory_client.py
+tests/test_memory_graph.py
 tests/test_multi_agent_agents.py
 tests/test_multi_agent_graph.py
 tests/test_phase7_orchestrator.py

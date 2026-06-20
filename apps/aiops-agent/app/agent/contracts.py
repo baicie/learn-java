@@ -64,6 +64,18 @@ class AgentCheckpoint(BaseModel):
     decision_comment: str | None = None
 
 
+class AgentMemory(BaseModel):
+    memory_id: str
+    title: str
+    content: str
+    memory_type: str
+    scope_type: str = "tenant"
+    scope_id: str | None = None
+    score: float = 0.0
+    confidence: float = 0.0
+    tags: list[str] = Field(default_factory=list)
+
+
 class DiagnosisRequest(BaseModel):
     tenant_id: str
     incident_id: str
@@ -76,6 +88,8 @@ class DiagnosisRequest(BaseModel):
     enable_runbook_recommendation: bool = True
     enable_human_checkpoint: bool = False
     enable_multi_agent_collaboration: bool = False
+    enable_agent_memory: bool = False
+    enable_agent_memory_write: bool = False
 
 
 class DiagnosisResumeRequest(BaseModel):
@@ -102,6 +116,8 @@ class DiagnosisResponse(BaseModel):
     checkpoint_id: str | None = None
     checkpoint_status: str | None = None
     agent_messages: list[AgentMessage] = Field(default_factory=list)
+    memories: list[AgentMemory] = Field(default_factory=list)
+    memory_write_status: str | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -113,4 +129,4 @@ class DiagnosisContractResponse(BaseModel):
     contract_version: str = "agent-diagnosis.v1"
     input_model: str = "DiagnosisRequest"
     output_model: str = "DiagnosisResponse"
-    graph_version: str = "phase7.2-multi-agent-collaboration"
+    graph_version: str = "phase7.3-agent-memory"

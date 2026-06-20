@@ -12,6 +12,7 @@ from app.agent.graph.orchestrator import resume_diagnosis_graph, run_diagnosis_g
 from app.agent.tools.checkpoint_client import CheckpointClient
 from app.agent.tools.evidence_client import EvidenceClient
 from app.agent.tools.knowledge_client import KnowledgeClient
+from app.agent.tools.memory_client import MemoryClient
 
 
 class DiagnosisService:
@@ -20,6 +21,7 @@ class DiagnosisService:
             evidence_client=EvidenceClient(),
             knowledge_client=KnowledgeClient(),
             checkpoint_client=CheckpointClient(),
+            memory_client=MemoryClient(),
         )
 
     async def diagnose(self, request: DiagnosisRequest) -> DiagnosisResponse:

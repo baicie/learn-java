@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, TypedDict
 
-from app.agent.contracts import AgentMessage, EvidenceItem, RunbookCandidate, SimilarCase
+from app.agent.contracts import AgentMemory, AgentMessage, EvidenceItem, RunbookCandidate, SimilarCase
 
 
 class DiagnosisGraphState(TypedDict, total=False):
@@ -19,9 +19,12 @@ class DiagnosisGraphState(TypedDict, total=False):
     enable_runbook_recommendation: bool
     enable_human_checkpoint: bool
     enable_multi_agent_collaboration: bool
+    enable_agent_memory: bool
+    enable_agent_memory_write: bool
 
     evidence: list[EvidenceItem]
     similar_cases: list[SimilarCase]
+    memories: list[AgentMemory]
     root_cause: str
     confidence: float
     runbook_candidates: list[RunbookCandidate]
@@ -34,4 +37,5 @@ class DiagnosisGraphState(TypedDict, total=False):
     checkpoint_status: str | None
     resume_token: str | None
     agent_messages: list[AgentMessage]
+    memory_write_status: str | None
     metadata: dict[str, Any]

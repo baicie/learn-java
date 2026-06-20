@@ -1,7 +1,7 @@
 Metadata-Version: 2.4
 Name: aiops-agent
-Version: 0.7.0
-Summary: AegisOps Python LangGraph diagnosis agent - Phase 7.0 modular graph
+Version: 0.7.3
+Summary: AegisOps Python LangGraph diagnosis agent - Phase 7.3 agent memory
 Requires-Python: >=3.11
 Requires-Dist: fastapi>=0.115.0
 Requires-Dist: uvicorn[standard]>=0.30.0

@@ -36,6 +36,7 @@ def final_report_node(state: DiagnosisGraphState) -> DiagnosisGraphState:
         "runbook_graph",
         "safety_graph",
         "final_report_graph",
+        "memory_graph",
     ]
     metadata["collaboration_mode"] = (
         "multi_agent"

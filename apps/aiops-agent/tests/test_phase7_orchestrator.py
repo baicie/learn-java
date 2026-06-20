@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from app.agent.contracts import DiagnosisRequest, DiagnosisResumeRequest, EvidenceItem, SimilarCase
+from app.agent.contracts import AgentMemory, DiagnosisRequest, DiagnosisResumeRequest, EvidenceItem, SimilarCase
 from app.agent.graph.context import GraphContext
 from app.agent.graph.orchestrator import resume_diagnosis_graph, run_diagnosis_graph
 from tests.fakes import (
@@ -12,6 +12,7 @@ from tests.fakes import (
     FakeCheckpointClient,
     FakeEvidenceClient,
     FakeKnowledgeClient,
+    FakeMemoryClient,
 )
 
 
@@ -63,7 +64,7 @@ async def test_orchestrator_runs_all_graph_modules():
     assert response.risk_level == "high"
     assert len(response.evidence) == 1
     assert len(response.similar_cases) == 1
-    assert response.metadata["graph_version"] == "phase7.2-multi-agent-collaboration"
+    assert response.metadata["graph_version"] == "phase7.3-agent-memory"
 
 
 @pytest.mark.asyncio
@@ -155,6 +156,93 @@ async def test_orchestrator_runs_multi_agent_collaboration():
 
 
 @pytest.mark.asyncio
+async def test_orchestrator_retrieves_and_writes_memory():
+    memory_client = FakeMemoryClient(
+        [
+            AgentMemory(
+                memory_id="agm_1",
+                title="Redis timeout pattern",
+                content="Redis timeout caused order service errors before.",
+                memory_type="root_cause_pattern",
+                score=0.9,
+                confidence=0.8,
+                tags=["redis"],
+            )
+        ]
+    )
+
+    context = GraphContext(
+        evidence_client=FakeEvidenceClient(
+            [
+                EvidenceItem(
+                    evidence_id="ev_1",
+                    evidence_type="log",
+                    title="Redis timeout",
+                    summary="redis dependency timeout happened",
+                    source="test",
+                ),
+                EvidenceItem(
+                    evidence_id="ev_2",
+                    evidence_type="metric",
+                    title="Redis latency spike",
+                    summary="redis latency increased to 5000ms",
+                    source="test",
+                ),
+                EvidenceItem(
+                    evidence_id="ev_3",
+                    evidence_type="metric",
+                    title="Redis CPU high",
+                    summary="redis cpu usage reached 95%",
+                    source="test",
+                ),
+            ]
+        ),
+        knowledge_client=FakeKnowledgeClient(
+            [
+                SimilarCase(
+                    case_id="case_1",
+                    title="Redis timeout case",
+                    summary="Redis timeout caused service degradation",
+                    root_cause="redis timeout",
+                    resolution="increase timeout and check pool",
+                    score=0.9,
+                ),
+                SimilarCase(
+                    case_id="case_2",
+                    title="Redis latency case",
+                    summary="Redis latency caused service degradation",
+                    root_cause="redis timeout",
+                    resolution="increase timeout",
+                    score=0.8,
+                ),
+            ]
+        ),
+        checkpoint_client=FakeCheckpointClient(),
+        memory_client=memory_client,
+    )
+
+    response = await run_diagnosis_graph(
+        DiagnosisRequest(
+            tenant_id="tenant_1",
+            incident_id="inc_1",
+            title="Order service redis timeout",
+            severity="high",
+            tags=["redis"],
+            enable_multi_agent_collaboration=True,
+            enable_agent_memory=True,
+            enable_agent_memory_write=True,
+        ),
+        context,
+    )
+
+    assert len(response.memories) == 1
+    assert memory_client.search_called is True
+    assert memory_client.create_called is True
+    assert response.memory_write_status == "created"
+    assert response.metadata["graph_version"] == "phase7.3-agent-memory"
+
+
+@pytest.mark.asyncio
 async def test_resume_after_checkpoint_approved_uses_multi_agent_recommendation():
     checkpoint_client = ApprovedCheckpointClient()
     checkpoint_client.checkpoint.state_snapshot = {
@@ -169,12 +257,16 @@ async def test_resume_after_checkpoint_approved_uses_multi_agent_recommendation(
         "enable_runbook_recommendation": True,
         "enable_human_checkpoint": True,
         "enable_multi_agent_collaboration": True,
+        "enable_agent_memory": False,
+        "enable_agent_memory_write": False,
         "evidence": [],
         "similar_cases": [],
+        "memories": [],
         "root_cause": "redis timeout",
         "confidence": 0.8,
         "risk_level": "high",
         "agent_messages": [],
+        "memory_write_status": None,
         "metadata": {},
     }
 

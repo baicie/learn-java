@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from app.agent.contracts import EvidenceItem, SimilarCase
+from app.agent.contracts import AgentMemory, EvidenceItem, SimilarCase
 from app.agent.graph.multi_agent_graph import (
     multi_agent_rca_node,
     multi_agent_recommendation_node,
@@ -58,3 +58,28 @@ def test_multi_agent_recommendation_node_adds_runbook_safety_reviewer_messages()
     assert result["agent_messages"][0].role == "runbook_agent"
     assert result["agent_messages"][1].role == "safety_agent"
     assert result["agent_messages"][2].role == "reviewer_agent"
+
+
+def test_multi_agent_rca_node_uses_memory_when_no_case_root_cause():
+    state = {
+        "title": "Order service timeout",
+        "evidence": [],
+        "similar_cases": [],
+        "memories": [
+            AgentMemory(
+                memory_id="agm_1",
+                title="Redis timeout pattern",
+                content="Redis timeout caused order service errors before.",
+                memory_type="root_cause_pattern",
+                score=0.9,
+                confidence=0.8,
+                tags=["redis"],
+            )
+        ],
+        "agent_messages": [],
+    }
+
+    result = multi_agent_rca_node(state)
+
+    assert "recurring pattern" in result["root_cause"].lower()
+    assert result["confidence"] > 0.3
