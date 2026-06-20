@@ -114,11 +114,70 @@ class IncidentCaseServiceTest {
             service.publish("tenant_1", created.id(), new IncidentCasePublishRequest("reviewer")));
   }
 
+  @Test
+  void listDefaultsToPublishedCases() {
+    FakeIncidentCaseRepository caseRepository = new FakeIncidentCaseRepository();
+    FakePostmortemRepository postmortemRepository = new FakePostmortemRepository();
+
+    IncidentCaseService service =
+        new IncidentCaseService(
+            caseRepository, postmortemRepository, new IncidentCaseDraftBuilder());
+
+    var created =
+        service.createFromPostmortem(
+            "tenant_1",
+            "pmr_1",
+            new IncidentCaseCreateFromPostmortemRequest("alice", 80, List.of()));
+
+    service.publish("tenant_1", created.id(), new IncidentCasePublishRequest("reviewer"));
+
+    var result = service.list("tenant_1", null, null, 20);
+
+    assertEquals("published", caseRepository.capturedListStatus);
+    assertEquals(1, result.size());
+    assertEquals("published", result.get(0).status());
+  }
+
+  @Test
+  void listAllCasesWhenStatusAll() {
+    FakeIncidentCaseRepository caseRepository = new FakeIncidentCaseRepository();
+    FakePostmortemRepository postmortemRepository = new FakePostmortemRepository();
+
+    IncidentCaseService service =
+        new IncidentCaseService(
+            caseRepository, postmortemRepository, new IncidentCaseDraftBuilder());
+
+    service.createFromPostmortem(
+        "tenant_1", "pmr_1", new IncidentCaseCreateFromPostmortemRequest("alice", 80, List.of()));
+
+    var result = service.list("tenant_1", "all", null, 20);
+
+    assertEquals(null, caseRepository.capturedListStatus);
+    assertEquals(1, result.size());
+  }
+
+  @Test
+  void listNormalizesTagFilter() {
+    FakeIncidentCaseRepository caseRepository = new FakeIncidentCaseRepository();
+    FakePostmortemRepository postmortemRepository = new FakePostmortemRepository();
+
+    IncidentCaseService service =
+        new IncidentCaseService(
+            caseRepository, postmortemRepository, new IncidentCaseDraftBuilder());
+
+    service.list("tenant_1", "published", "Order Service", 20);
+
+    assertEquals("order-service", caseRepository.capturedListTag);
+  }
+
   private static class FakeIncidentCaseRepository implements IncidentCaseRepository {
     IncidentCaseRecord caseRecord;
     final List<IncidentCaseSymptomRecord> symptoms = new ArrayList<>();
     final List<IncidentCaseResolutionStepRecord> steps = new ArrayList<>();
     final List<IncidentCaseTagRecord> tags = new ArrayList<>();
+    String capturedListStatus;
+    String capturedListTag;
+    int capturedListLimit;
 
     @Override
     public void createCase(IncidentCaseCreateCommand command) {
@@ -202,7 +261,19 @@ class IncidentCaseServiceTest {
     @Override
     public List<IncidentCaseRecord> listCases(
         String tenantId, String status, String tag, int limit) {
-      return caseRecord == null ? List.of() : List.of(caseRecord);
+      capturedListStatus = status;
+      capturedListTag = tag;
+      capturedListLimit = limit;
+
+      if (caseRecord == null) {
+        return List.of();
+      }
+
+      if (status != null && !status.equals(caseRecord.status())) {
+        return List.of();
+      }
+
+      return List.of(caseRecord);
     }
 
     @Override

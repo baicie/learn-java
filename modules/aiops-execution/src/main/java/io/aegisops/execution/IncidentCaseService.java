@@ -138,7 +138,7 @@ public class IncidentCaseService {
   }
 
   public List<IncidentCaseResponse> list(String tenantId, String status, String tag, int limit) {
-    String normalizedStatus = normalizeStatusOrNull(status);
+    String normalizedStatus = normalizeListStatus(status);
 
     return caseRepository
         .listCases(tenantId, normalizedStatus, normalizeTagOrNull(tag), limit)
@@ -261,15 +261,20 @@ public class IncidentCaseService {
     return Math.max(0, Math.min(value, 100));
   }
 
-  private String normalizeStatusOrNull(String value) {
+  private String normalizeListStatus(String value) {
     if (value == null || value.isBlank()) {
-      return null;
+      return "published";
     }
 
     String status = value.trim().toLowerCase();
+    if ("all".equals(status)) {
+      return null;
+    }
+
     if (!List.of("draft", "published", "archived").contains(status)) {
       throw new AppException("INCIDENT_CASE_STATUS_INVALID", "Invalid incident case status");
     }
+
     return status;
   }
 
