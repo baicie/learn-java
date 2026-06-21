@@ -11,13 +11,7 @@ public interface AgentMemoryRepository {
 
   Optional<AgentMemoryRecord> find(String tenantId, String memoryId);
 
-  List<AgentMemoryRecord> listActiveCandidates(
-      String tenantId,
-      String scopeType,
-      String scopeId,
-      List<String> memoryTypes,
-      List<String> tags,
-      int limit);
+  List<AgentMemoryRecord> listActiveCandidates(ListActiveMemoryParams params);
 
   boolean archive(String tenantId, String memoryId);
 

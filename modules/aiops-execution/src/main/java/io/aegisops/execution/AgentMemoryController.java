@@ -8,9 +8,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * Public read/archive API for Agent Memory.
- */
+/** Public read/archive API for Agent Memory. */
 @RestController
 public class AgentMemoryController {
   private final AgentMemoryService service;

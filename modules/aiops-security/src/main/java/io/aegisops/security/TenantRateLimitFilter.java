@@ -41,9 +41,8 @@ public class TenantRateLimitFilter extends OncePerRequestFilter {
 
   @Override
   protected void doFilterInternal(
-      HttpServletRequest request,
-      HttpServletResponse response,
-      FilterChain filterChain) throws ServletException, IOException {
+      HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+      throws ServletException, IOException {
     String tenantId = TenantContext.getTenantId();
     if (tenantId == null || tenantId.isBlank()) {
       tenantId = request.getHeader(SecurityConstants.HEADER_TENANT_ID);
@@ -65,12 +64,7 @@ public class TenantRateLimitFilter extends OncePerRequestFilter {
     boolean allowed = rateLimiter.tryAcquire(bucketKey, limit);
 
     if (!allowed) {
-      auditService.record(
-          tenantId,
-          "rate_limited",
-          "high",
-          "Tenant request rate limited",
-          request);
+      auditService.record(tenantId, "rate_limited", "high", "Tenant request rate limited", request);
       responseWriter.write(
           response,
           HttpStatus.TOO_MANY_REQUESTS.value(),

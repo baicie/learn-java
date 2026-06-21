@@ -20,10 +20,7 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 @Component
-@ConditionalOnProperty(
-    prefix = "aiops.evidence.victoria",
-    name = "enabled",
-    havingValue = "true")
+@ConditionalOnProperty(prefix = "aiops.evidence.victoria", name = "enabled", havingValue = "true")
 @EnableConfigurationProperties(VictoriaMetricsProperties.class)
 public class VictoriaMetricsEvidenceClient implements MetricsEvidenceClient {
   private final VictoriaMetricsProperties properties;
@@ -36,9 +33,7 @@ public class VictoriaMetricsEvidenceClient implements MetricsEvidenceClient {
   }
 
   VictoriaMetricsEvidenceClient(
-      VictoriaMetricsProperties properties,
-      ObjectMapper objectMapper,
-      RestTemplate restTemplate) {
+      VictoriaMetricsProperties properties, ObjectMapper objectMapper, RestTemplate restTemplate) {
     this.properties = properties;
     this.objectMapper = objectMapper;
     this.restTemplate = restTemplate;

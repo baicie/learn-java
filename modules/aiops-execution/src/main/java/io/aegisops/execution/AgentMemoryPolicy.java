@@ -58,7 +58,8 @@ public class AgentMemoryPolicy {
       throw new AppException("AGENT_MEMORY_SOURCE_INVALID", "Invalid memory source type");
     }
     if (containsSecret(request.title()) || containsSecret(request.content())) {
-      throw new AppException("AGENT_MEMORY_SECRET_REJECTED", "Memory content contains secret-like text");
+      throw new AppException(
+          "AGENT_MEMORY_SECRET_REJECTED", "Memory content contains secret-like text");
     }
   }
 

@@ -46,7 +46,8 @@ public class AgentObservabilityExtractor {
             incidentId,
             string(agentRun.get("traceId"), traceId),
             string(agentRun.get("contractVersion"), response.contractVersion()),
-            string(agentRun.get("generationMode"), string(raw.get("generationMode"), "deterministic")),
+            string(
+                agentRun.get("generationMode"), string(raw.get("generationMode"), "deterministic")),
             string(agentRun.get("provider"), response.provider()),
             string(agentRun.get("model"), response.model()),
             string(agentRun.get("status"), "completed"),
@@ -58,13 +59,16 @@ public class AgentObservabilityExtractor {
             writeJson(agentEval));
 
     List<AgentRunStepCommand> steps =
-        asList(agentRun.get("steps")).stream()
-            .map(item -> toStep(runId, asMap(item)))
-            .toList();
+        asList(agentRun.get("steps")).stream().map(item -> toStep(runId, asMap(item))).toList();
 
     List<AgentEvalResultCommand> evalResults =
         asList(agentEval.get("checks")).stream()
-            .map(item -> toEval(runId, string(agentEval.get("evaluatorName"), "aegisops-basic-eval-v1"), asMap(item)))
+            .map(
+                item ->
+                    toEval(
+                        runId,
+                        string(agentEval.get("evaluatorName"), "aegisops-basic-eval-v1"),
+                        asMap(item)))
             .toList();
 
     return new AgentObservabilityData(Optional.of(run), steps, evalResults);
@@ -87,7 +91,8 @@ public class AgentObservabilityExtractor {
         writeJson(asMap(step.get("metadata"))));
   }
 
-  private AgentEvalResultCommand toEval(String runId, String evaluatorName, Map<String, Object> check) {
+  private AgentEvalResultCommand toEval(
+      String runId, String evaluatorName, Map<String, Object> check) {
     return new AgentEvalResultCommand(
         newId("eval"),
         runId,

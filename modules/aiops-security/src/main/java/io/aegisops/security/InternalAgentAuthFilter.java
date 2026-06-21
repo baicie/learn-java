@@ -33,20 +33,15 @@ public class InternalAgentAuthFilter extends OncePerRequestFilter {
 
   @Override
   protected void doFilterInternal(
-      HttpServletRequest request,
-      HttpServletResponse response,
-      FilterChain filterChain) throws ServletException, IOException {
+      HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+      throws ServletException, IOException {
     String tenantId = request.getHeader(SecurityConstants.HEADER_TENANT_ID);
     String actualToken = request.getHeader(SecurityConstants.HEADER_INTERNAL_AGENT_TOKEN);
     String expectedToken = properties.getInternalAgentToken();
 
     if (!ConstantTimeTokenMatcher.matches(expectedToken, actualToken)) {
       auditService.record(
-          tenantId,
-          "internal_auth_failed",
-          "critical",
-          "Invalid internal agent token",
-          request);
+          tenantId, "internal_auth_failed", "critical", "Invalid internal agent token", request);
       responseWriter.write(
           response,
           HttpStatus.UNAUTHORIZED.value(),

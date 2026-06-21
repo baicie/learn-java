@@ -1,7 +1,7 @@
 package io.aegisops.security;
 
-import io.aegisops.common.tenant.TenantContext;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.aegisops.common.tenant.TenantContext;
 import jakarta.servlet.FilterChain;
 import java.util.Set;
 import org.junit.jupiter.api.AfterEach;
@@ -19,9 +19,7 @@ class TenantRequiredFilterTest {
 
     var filter =
         new TenantRequiredFilter(
-            props,
-            new SecurityErrorResponseWriter(new ObjectMapper()),
-            fakeAuditService());
+            props, new SecurityErrorResponseWriter(new ObjectMapper()), fakeAuditService());
 
     var request = new MockHttpServletRequest("GET", "/api/incidents/inc_1");
     var response = new MockHttpServletResponse();
@@ -40,9 +38,7 @@ class TenantRequiredFilterTest {
 
     var filter =
         new TenantRequiredFilter(
-            props,
-            new SecurityErrorResponseWriter(new ObjectMapper()),
-            fakeAuditService());
+            props, new SecurityErrorResponseWriter(new ObjectMapper()), fakeAuditService());
 
     var request = new MockHttpServletRequest("GET", "/api/incidents/inc_1");
     request.addHeader(SecurityConstants.HEADER_TENANT_ID, "tenant_1");
@@ -68,9 +64,7 @@ class TenantRequiredFilterTest {
 
     var filter =
         new TenantRequiredFilter(
-            props,
-            new SecurityErrorResponseWriter(new ObjectMapper()),
-            fakeAuditService());
+            props, new SecurityErrorResponseWriter(new ObjectMapper()), fakeAuditService());
 
     var request = new MockHttpServletRequest("GET", "/api/incidents/inc_1");
     var response = new MockHttpServletResponse();
@@ -79,8 +73,9 @@ class TenantRequiredFilterTest {
     UserPrincipal principal =
         new UserPrincipal("user_1", "tenant_1", "alice", "Alice", Set.of("admin"));
 
-    SecurityContextHolder.getContext().setAuthentication(
-        new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities()));
+    SecurityContextHolder.getContext()
+        .setAuthentication(
+            new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities()));
 
     try {
       filter.doFilter(request, response, chain);

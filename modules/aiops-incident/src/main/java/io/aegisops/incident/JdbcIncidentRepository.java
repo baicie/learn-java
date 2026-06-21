@@ -159,14 +159,7 @@ public class JdbcIncidentRepository implements IncidentRepository {
   }
 
   @Override
-  public void updateIncidentAggregation(
-      String tenantId,
-      String incidentId,
-      String title,
-      String summary,
-      String severity,
-      int alertCount,
-      OffsetDateTime lastSeenAt) {
+  public void updateIncidentAggregation(IncidentUpdateCommand cmd) {
     jdbc.update(
         """
                 update incident
@@ -178,13 +171,13 @@ public class JdbcIncidentRepository implements IncidentRepository {
                     updated_at = now()
                 where tenant_id = ? and id = ?
                 """,
-        title,
-        summary,
-        severity,
-        alertCount,
-        lastSeenAt,
-        tenantId,
-        incidentId);
+        cmd.title(),
+        cmd.summary(),
+        cmd.severity(),
+        cmd.alertCount(),
+        cmd.lastSeenAt(),
+        cmd.tenantId(),
+        cmd.incidentId());
   }
 
   @Override

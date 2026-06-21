@@ -16,6 +16,16 @@ public class ExecutionReportMarkdownBuilder {
       List<ExecutionAuditEventRecord> auditEvents) {
     StringBuilder md = new StringBuilder();
 
+    appendHeader(md, execution);
+    appendStepSummary(md, execution);
+    appendArtifactSummary(md, execution);
+    appendVerification(md, verifications);
+    appendAuditEvents(md, auditEvents);
+
+    return md.toString();
+  }
+
+  private void appendHeader(StringBuilder md, ExecutionRunResponse execution) {
     md.append("# Execution Report\n\n");
     md.append("## Summary\n\n");
     md.append("- Execution ID: ").append(value(execution.id())).append("\n");
@@ -37,7 +47,9 @@ public class ExecutionReportMarkdownBuilder {
     if (execution.errorMessage() != null && !execution.errorMessage().isBlank()) {
       md.append("- Error: ").append(escape(execution.errorMessage())).append("\n");
     }
+  }
 
+  private void appendStepSummary(StringBuilder md, ExecutionRunResponse execution) {
     md.append("\n## Step Summary\n\n");
     md.append("| Order | Step | Action | Target | Status |\n");
     md.append("|---:|---|---|---|---|\n");
@@ -55,13 +67,15 @@ public class ExecutionReportMarkdownBuilder {
           .append(escape(step.status()))
           .append(" |\n");
     }
+  }
 
+  private void appendArtifactSummary(StringBuilder md, ExecutionRunResponse execution) {
     md.append("\n## Artifact Summary\n\n");
     if (execution.artifacts().isEmpty()) {
       md.append("No artifacts.\n");
     } else {
       md.append("| Step ID | Artifact | Type |\n");
-      md.append("|---|---|---|\n");
+      md.append("|---|---|---\n");
 
       for (ExecutionArtifactResponse artifact : execution.artifacts()) {
         md.append("| ")
@@ -73,13 +87,16 @@ public class ExecutionReportMarkdownBuilder {
             .append(" |\n");
       }
     }
+  }
 
+  private void appendVerification(
+      StringBuilder md, List<ExecutionVerificationRecord> verifications) {
     md.append("\n## Verification\n\n");
     if (verifications.isEmpty()) {
       md.append("No verification records.\n");
     } else {
       md.append("| Type | Target | Status | Summary |\n");
-      md.append("|---|---|---|---|\n");
+      md.append("|---|---|---|---\n");
       for (ExecutionVerificationRecord verification : verifications) {
         md.append("| ")
             .append(escape(verification.verificationType()))
@@ -94,7 +111,9 @@ public class ExecutionReportMarkdownBuilder {
             .append(" |\n");
       }
     }
+  }
 
+  private void appendAuditEvents(StringBuilder md, List<ExecutionAuditEventRecord> auditEvents) {
     md.append("\n## Audit Events\n\n");
     if (auditEvents.isEmpty()) {
       md.append("No audit events.\n");
@@ -111,8 +130,6 @@ public class ExecutionReportMarkdownBuilder {
             .append("\n");
       }
     }
-
-    return md.toString();
   }
 
   private String value(Object value) {

@@ -1,11 +1,21 @@
 package io.aegisops.incident;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.aegisops.common.exception.AppException;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 class IncidentServiceTest {
@@ -62,7 +72,9 @@ class IncidentServiceTest {
     String aggregationKey = new IncidentAggregationPolicy().aggregationKey(existingAlert);
 
     IncidentSummaryRecord existing =
-        summary("inc_existing", "tenant_1", "CPU high", "warning", "open", aggregationKey, 1);
+        summary(
+            new SummaryParams(
+                "inc_existing", "tenant_1", "CPU high", "warning", "open", aggregationKey, 1));
 
     repository.incidents.put(existing.id(), existing);
     repository.activeByAggregationKey.put(aggregationKey, existing);
@@ -90,7 +102,9 @@ class IncidentServiceTest {
     String aggregationKey = new IncidentAggregationPolicy().aggregationKey(alert);
 
     IncidentSummaryRecord existing =
-        summary("inc_existing", "tenant_1", "CPU high", "warning", "open", aggregationKey, 1);
+        summary(
+            new SummaryParams(
+                "inc_existing", "tenant_1", "CPU high", "warning", "open", aggregationKey, 1));
 
     repository.incidents.put(existing.id(), existing);
     repository.activeByAggregationKey.put(aggregationKey, existing);
@@ -115,7 +129,9 @@ class IncidentServiceTest {
     IncidentService service = new IncidentService(repository, new IncidentAggregationPolicy());
 
     IncidentSummaryRecord incident =
-        summary("inc_1", "tenant_1", "CPU high", "critical", "open", "zabbix:fp_cpu", 2);
+        summary(
+            new SummaryParams(
+                "inc_1", "tenant_1", "CPU high", "critical", "open", TEST_AGGREGATION_KEY, 2));
     repository.incidents.put(incident.id(), incident);
     repository.activeByAggregationKey.put(incident.aggregationKey(), incident);
 
@@ -135,7 +151,10 @@ class IncidentServiceTest {
     IncidentService service = new IncidentService(repository, new IncidentAggregationPolicy());
 
     repository.incidents.put(
-        "inc_1", summary("inc_1", "tenant_1", "CPU high", "critical", "open", "zabbix:fp_cpu", 1));
+        "inc_1",
+        summary(
+            new SummaryParams(
+                "inc_1", "tenant_1", "CPU high", "critical", "open", TEST_AGGREGATION_KEY, 1)));
 
     AppException ex =
         assertThrows(
@@ -152,10 +171,26 @@ class IncidentServiceTest {
     IncidentService service = new IncidentService(repository, new IncidentAggregationPolicy());
 
     IncidentSummaryRecord closed =
-        summary("inc_closed", "tenant_1", "CPU high", "critical", "closed", "zabbix:fp_cpu", 2);
+        summary(
+            new SummaryParams(
+                "inc_closed",
+                "tenant_1",
+                "CPU high",
+                "critical",
+                "closed",
+                TEST_AGGREGATION_KEY,
+                2));
 
     IncidentSummaryRecord active =
-        summary("inc_active", "tenant_1", "CPU high again", "warning", "open", "zabbix:fp_cpu", 1);
+        summary(
+            new SummaryParams(
+                "inc_active",
+                "tenant_1",
+                "CPU high again",
+                "warning",
+                "open",
+                TEST_AGGREGATION_KEY,
+                1));
 
     repository.incidents.put(closed.id(), closed);
     repository.incidents.put(active.id(), active);
@@ -188,36 +223,10 @@ class IncidentServiceTest {
         OffsetDateTime.parse("2026-06-14T10:00:00+09:00"));
   }
 
-  private IncidentSummaryRecord summary(
-      String id,
-      String tenantId,
-      String title,
-      String severity,
-      String status,
-      String aggregationKey,
-      int alertCount) {
-    OffsetDateTime now = OffsetDateTime.parse("2026-06-14T10:00:00+09:00");
-    OffsetDateTime resolvedAt =
-        List.of("resolved", "closed", "ignored").contains(status) ? now : null;
+  private static final String TEST_AGGREGATION_KEY = "zabbix:fp_cpu";
 
-    return new IncidentSummaryRecord(
-        id,
-        tenantId,
-        title,
-        "summary",
-        severity,
-        status,
-        "system",
-        "asset_1",
-        aggregationKey,
-        alertCount,
-        BigDecimal.ZERO,
-        now,
-        now,
-        now,
-        resolvedAt,
-        now,
-        now);
+  private IncidentSummaryRecord summary(SummaryParams params) {
+    return new TestIncidentSummary(params).toSummary();
   }
 
   private static final class FakeIncidentRepository implements IncidentRepository {
@@ -299,36 +308,29 @@ class IncidentServiceTest {
     }
 
     @Override
-    public void updateIncidentAggregation(
-        String tenantId,
-        String incidentId,
-        String title,
-        String summary,
-        String severity,
-        int alertCount,
-        OffsetDateTime lastSeenAt) {
-      IncidentSummaryRecord old = incidents.get(incidentId);
+    public void updateIncidentAggregation(IncidentUpdateCommand cmd) {
+      IncidentSummaryRecord old = incidents.get(cmd.incidentId());
       IncidentSummaryRecord updated =
           new IncidentSummaryRecord(
               old.id(),
               old.tenantId(),
-              title,
-              summary,
-              severity,
+              cmd.title(),
+              cmd.summary(),
+              cmd.severity(),
               old.status(),
               old.source(),
               old.primaryAssetId(),
               old.aggregationKey(),
-              alertCount,
+              cmd.alertCount(),
               old.impactScore(),
               old.startedAt(),
               old.detectedAt(),
-              lastSeenAt,
+              cmd.lastSeenAt(),
               old.resolvedAt(),
               old.createdAt(),
               OffsetDateTime.now());
 
-      incidents.put(incidentId, updated);
+      incidents.put(cmd.incidentId(), updated);
       if (List.of("open", "investigating", "mitigating").contains(updated.status())) {
         activeByAggregationKey.put(updated.aggregationKey(), updated);
       }

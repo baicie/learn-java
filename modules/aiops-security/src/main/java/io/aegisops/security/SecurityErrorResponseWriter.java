@@ -13,11 +13,8 @@ public class SecurityErrorResponseWriter {
     this.objectMapper = objectMapper;
   }
 
-  public void write(
-      HttpServletResponse response,
-      int status,
-      String code,
-      String message) throws IOException {
+  public void write(HttpServletResponse response, int status, String code, String message)
+      throws IOException {
     response.setStatus(status);
     response.setContentType(MediaType.APPLICATION_JSON_VALUE);
     response.setCharacterEncoding("UTF-8");

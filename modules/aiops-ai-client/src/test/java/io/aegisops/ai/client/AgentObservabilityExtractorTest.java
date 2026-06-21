@@ -85,17 +85,20 @@ class AgentObservabilityExtractorTest {
                     "startedAt", "bad-time",
                     "finishedAt", "bad-time",
                     "durationMs", "not-number",
-                    "steps", List.of(
-                        Map.of(
-                            "id", "step_1",
-                            "sequenceNo", "not-number",
-                            "stepName", "load_context",
-                            "durationMs", "bad",
-                            "startedAt", "bad-time"))),
+                    "steps",
+                        List.of(
+                            Map.of(
+                                "id", "step_1",
+                                "sequenceNo", "not-number",
+                                "stepName", "load_context",
+                                "durationMs", "bad",
+                                "startedAt", "bad-time"))),
                 "agentEval",
                 Map.of(
-                    "evaluatorName", "aegisops-basic-eval-v1",
-                    "checks", List.of(
+                    "evaluatorName",
+                    "aegisops-basic-eval-v1",
+                    "checks",
+                    List.of(
                         Map.of(
                             "name", "required_fields",
                             "passed", true,

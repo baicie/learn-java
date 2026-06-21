@@ -9,11 +9,15 @@ public record AgentEvidenceProperties(
     Integer maxLogPatterns,
     Integer maxChanges) {
   public String normalizedInternalToken() {
-    return internalToken == null || internalToken.isBlank() ? "dev-internal-token" : internalToken.trim();
+    return internalToken == null || internalToken.isBlank()
+        ? "dev-internal-token"
+        : internalToken.trim();
   }
 
   public int normalizedDefaultLookbackMinutes() {
-    return defaultLookbackMinutes == null || defaultLookbackMinutes <= 0 ? 60 : defaultLookbackMinutes;
+    return defaultLookbackMinutes == null || defaultLookbackMinutes <= 0
+        ? 60
+        : defaultLookbackMinutes;
   }
 
   public int normalizedMaxLogPatterns() {

@@ -22,17 +22,7 @@ public class PostmortemDraftBuilder {
             + source.incident().severity()
             + ".";
 
-    String impact =
-        switch (safe(source.incident().severity())) {
-          case "critical" ->
-              "Critical impact. Service availability or core business flow may have been affected.";
-          case "high" ->
-              "High impact. Users or important business functions may have been affected.";
-          case "medium" ->
-              "Medium impact. Partial degradation or limited scope impact was observed.";
-          case "low" -> "Low impact. The incident appears to have limited customer-facing impact.";
-          default -> "Impact requires manual confirmation.";
-        };
+    String impact = chooseImpact(safe(source.incident().severity()));
 
     String detection =
         source.rcaAnalyses().isEmpty() && source.aiDiagnoses().isEmpty()
@@ -48,6 +38,17 @@ public class PostmortemDraftBuilder {
 
     return new PostmortemDraft(
         title, summary, impact, rootCause, detection, resolution, prevention, actionItems);
+  }
+
+  private String chooseImpact(String severity) {
+    return switch (severity) {
+      case "critical" ->
+          "Critical impact. Service availability or core business flow may have been affected.";
+      case "high" -> "High impact. Users or important business functions may have been affected.";
+      case "medium" -> "Medium impact. Partial degradation or limited scope impact was observed.";
+      case "low" -> "Low impact. The incident appears to have limited customer-facing impact.";
+      default -> "Impact requires manual confirmation.";
+    };
   }
 
   private String chooseRootCause(PostmortemSourceBundle source) {

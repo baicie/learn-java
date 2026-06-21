@@ -31,29 +31,23 @@ public final class RcaTestFixtures {
         now);
   }
 
-  public static RcaAlertRecord alert(
-      String id,
-      String severity,
-      String title,
-      String assetId,
-      String fingerprint,
-      int minuteOffset) {
+  public static RcaAlertRecord alert(AlertParams params) {
     OffsetDateTime base = OffsetDateTime.parse("2026-06-14T10:00:00+09:00");
 
     return new RcaAlertRecord(
-        id,
+        params.id(),
         "zabbix",
-        "source_" + id,
-        severity,
-        title,
-        "description " + id,
-        assetId,
+        "source_" + params.id(),
+        params.severity(),
+        params.title(),
+        "description " + params.id(),
+        params.assetId(),
         "host",
         "host-1",
-        fingerprint,
+        params.fingerprint(),
         "{}",
-        base.plusMinutes(minuteOffset),
-        base.plusMinutes(minuteOffset));
+        base.plusMinutes(params.minuteOffset()),
+        base.plusMinutes(params.minuteOffset()));
   }
 
   public static RcaAnalysisContext contextWithAlerts(List<RcaAlertRecord> alerts) {

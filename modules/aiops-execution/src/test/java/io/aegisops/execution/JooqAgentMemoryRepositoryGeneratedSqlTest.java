@@ -45,13 +45,7 @@ class JooqAgentMemoryRepositoryGeneratedSqlTest {
 
     repository.createEvent(
         new AgentMemoryEventCreateCommand(
-            "agme_1",
-            "tenant_1",
-            "agm_1",
-            "created",
-            "created",
-            "agent",
-            "{}"));
+            "agme_1", "tenant_1", "agm_1", "created", "created", "agent", "{}"));
 
     String sql = String.join("\n", capturedSql).toLowerCase();
 

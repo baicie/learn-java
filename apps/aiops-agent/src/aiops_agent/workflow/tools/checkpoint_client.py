@@ -12,12 +12,20 @@ from aiops_agent.settings import settings
 from aiops_agent.workflow.contracts import AgentCheckpoint
 from aiops_agent.workflow.errors import ToolError
 from aiops_agent.workflow.tools.internal_auth import internal_tool_headers
+from aiops_agent.workflow.tools.plugin_policy_guard import PluginToolPolicyGuard
+from aiops_agent.workflow.tools.tool_keys import CHECKPOINT_CREATE, CHECKPOINT_GET
 
 
 class CheckpointClient:
-    def __init__(self, base_url: str | None = None, timeout: float | None = None):
+    def __init__(
+        self,
+        base_url: str | None = None,
+        timeout: float | None = None,
+        policy_guard: PluginToolPolicyGuard | None = None,
+    ):
         self.base_url = (base_url or settings.workflow_api_base_url).rstrip("/")
         self.timeout = timeout or settings.workflow_request_timeout_seconds
+        self.policy_guard = policy_guard or PluginToolPolicyGuard()
 
     async def create_checkpoint(
         self,
@@ -31,6 +39,7 @@ class CheckpointClient:
         risk_level: str,
         state_snapshot: dict[str, Any],
     ) -> AgentCheckpoint:
+        await self.policy_guard.require_allowed(tenant_id, CHECKPOINT_CREATE)
         url = f"{self.base_url}/internal/agent/checkpoints"
         body = {
             "tenantId": tenant_id,
@@ -74,6 +83,7 @@ class CheckpointClient:
         checkpoint_id: str | None = None,
         resume_token: str | None = None,
     ) -> AgentCheckpoint:
+        await self.policy_guard.require_allowed(tenant_id, CHECKPOINT_GET)
         if checkpoint_id:
             url = f"{self.base_url}/internal/agent/checkpoints/{tenant_id}/{checkpoint_id}"
         elif resume_token:

@@ -13,15 +13,15 @@ class JooqTenantSecurityEventRepositoryGeneratedSqlTest {
   void createCapturesCorrectTableAndColumns() {
     AtomicReference<String> sqlRef = new AtomicReference<>();
 
-    MockDataProvider provider = context -> {
-      sqlRef.set(context.sql());
-      return new MockResult[] {
-        new MockResult(0, DSL.using(SQLDialect.POSTGRES).newResult())
-      };
-    };
+    MockDataProvider provider =
+        context -> {
+          sqlRef.set(context.sql());
+          return new MockResult[] {new MockResult(0, DSL.using(SQLDialect.POSTGRES).newResult())};
+        };
 
-    var repository = new JooqTenantSecurityEventRepository(
-        DSL.using(new MockConnection(provider), SQLDialect.POSTGRES));
+    var repository =
+        new JooqTenantSecurityEventRepository(
+            DSL.using(new MockConnection(provider), SQLDialect.POSTGRES));
 
     repository.create(
         new TenantSecurityEventCreateCommand(
@@ -36,6 +36,7 @@ class JooqTenantSecurityEventRepositoryGeneratedSqlTest {
             "{}"));
 
     String sql = sqlRef.get().toLowerCase();
-    assert sql.contains("tenant_security_event") : "SQL should reference tenant_security_event table: " + sql;
+    assert sql.contains("tenant_security_event")
+        : "SQL should reference tenant_security_event table: " + sql;
   }
 }

@@ -74,6 +74,12 @@ class Settings(BaseSettings):
     workflow_memory_enabled: bool = False
     workflow_memory_write_enabled: bool = False
 
+    # Phase 8.1 plugin tool policy. When enabled, the agent calls
+    # /internal/agent/plugins/tools/authorize before using allowlisted tools.
+    # Default false to avoid blocking local development without plugins enabled.
+    # SaaS deployments should set AIOPS_AGENT_WORKFLOW_PLUGIN_TOOL_POLICY_ENABLED=true.
+    workflow_plugin_tool_policy_enabled: bool = False
+
     def normalized_generation_mode(self) -> str:
         value = (self.generation_mode or "deterministic").strip().lower()
         if value not in {"deterministic", "openai-compatible"}:

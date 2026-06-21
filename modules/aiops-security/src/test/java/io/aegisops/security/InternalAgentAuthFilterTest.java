@@ -22,9 +22,7 @@ class InternalAgentAuthFilterTest {
     var audit = new FakeAuditService();
     var filter =
         new InternalAgentAuthFilter(
-            props,
-            new SecurityErrorResponseWriter(new ObjectMapper()),
-            audit);
+            props, new SecurityErrorResponseWriter(new ObjectMapper()), audit);
 
     MockHttpServletRequest request =
         new MockHttpServletRequest("POST", "/internal/agent/memories/search");
@@ -45,9 +43,7 @@ class InternalAgentAuthFilterTest {
 
     var filter =
         new InternalAgentAuthFilter(
-            props,
-            new SecurityErrorResponseWriter(new ObjectMapper()),
-            new FakeAuditService());
+            props, new SecurityErrorResponseWriter(new ObjectMapper()), new FakeAuditService());
 
     MockHttpServletRequest request =
         new MockHttpServletRequest("POST", "/internal/agent/memories/search");
@@ -73,7 +69,7 @@ class InternalAgentAuthFilterTest {
 
     @Override
     public void doFilter(
-            jakarta.servlet.ServletRequest request, jakarta.servlet.ServletResponse response)
+        jakarta.servlet.ServletRequest request, jakarta.servlet.ServletResponse response)
         throws IOException, ServletException {
       called = true;
     }

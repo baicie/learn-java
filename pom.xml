@@ -28,6 +28,7 @@
     <module>modules/aiops-ai-client</module>
     <module>modules/aiops-runbook</module>
     <module>modules/aiops-execution</module>
+    <module>modules/aiops-plugin</module>
     <module>apps/aiops-server</module>
     <module>apps/aiops-worker</module>
     <module>apps/aiops-runner</module>

@@ -28,7 +28,8 @@ public class InternalAgentMemoryController {
   }
 
   @PostMapping("/internal/agent/memories/search")
-  public ApiResponse<AgentMemorySearchResponse> search(@RequestBody AgentMemorySearchRequest request) {
+  public ApiResponse<AgentMemorySearchResponse> search(
+      @RequestBody AgentMemorySearchRequest request) {
     return ApiResponse.ok(service.searchInternal(request));
   }
 }

@@ -110,12 +110,13 @@ public class AgentMemoryService {
     List<AgentMemorySearchResult> results =
         repository
             .listActiveCandidates(
-                tenantId,
-                policy.normalize(request.scopeType(), ""),
-                blankToNull(request.scopeId()),
-                memoryTypes,
-                tags,
-                Math.max(topK * 20, 100))
+                new ListActiveMemoryParams(
+                    tenantId,
+                    policy.normalize(request.scopeType(), ""),
+                    blankToNull(request.scopeId()),
+                    memoryTypes,
+                    tags,
+                    Math.max(topK * 20, 100)))
             .stream()
             .map(memory -> toSearchResult(request.query(), memory))
             .filter(result -> result.score() > 0)
@@ -141,12 +142,7 @@ public class AgentMemoryService {
   }
 
   private AgentMemorySearchResult toSearchResult(String query, AgentMemoryRecord memory) {
-    double score =
-        scorer.score(
-            query,
-            memory.title(),
-            memory.content(),
-            memory.confidence());
+    double score = scorer.score(query, memory.title(), memory.content(), memory.confidence());
 
     return new AgentMemorySearchResult(
         memory.id(),
@@ -171,7 +167,8 @@ public class AgentMemoryService {
 
   private void validateSearchRequest(AgentMemorySearchRequest request) {
     if (request == null) {
-      throw new AppException("AGENT_MEMORY_SEARCH_REQUEST_REQUIRED", "Memory search request is required");
+      throw new AppException(
+          "AGENT_MEMORY_SEARCH_REQUEST_REQUIRED", "Memory search request is required");
     }
     if (request.tenantId() == null || request.tenantId().isBlank()) {
       throw new AppException("AGENT_MEMORY_TENANT_REQUIRED", "Tenant id is required");
@@ -207,7 +204,8 @@ public class AgentMemoryService {
   }
 
   private String normalizeTag(String value) {
-    return value.trim()
+    return value
+        .trim()
         .toLowerCase()
         .replaceAll("[^a-z0-9\\u4e00-\\u9fa5]+", "-")
         .replaceAll("^-+", "")

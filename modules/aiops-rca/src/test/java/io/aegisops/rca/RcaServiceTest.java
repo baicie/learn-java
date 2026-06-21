@@ -1,13 +1,18 @@
 package io.aegisops.rca;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.aegisops.common.exception.AppException;
 import io.aegisops.rca.rules.HighSeverityRcaRule;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
-import java.util.*;
+import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 class RcaServiceTest {
@@ -45,7 +50,9 @@ class RcaServiceTest {
     FakeRcaRepository repository = new FakeRcaRepository();
     repository.incident = RcaTestFixtures.incident();
     repository.alerts =
-        List.of(RcaTestFixtures.alert("a1", "critical", "CPU high", "asset_1", "fp_cpu", 0));
+        List.of(
+            RcaTestFixtures.alert(
+                new AlertParams("a1", "critical", "CPU high", "asset_1", "fp_cpu", 0)));
 
     RcaService service =
         new RcaService(
@@ -133,27 +140,19 @@ class RcaServiceTest {
     }
 
     @Override
-    public void saveAnalysis(
-        String id,
-        String tenantId,
-        String incidentId,
-        String suspectedRootCause,
-        BigDecimal confidence,
-        String summary,
-        String evidenceJson,
-        String modelVersion) {
+    public void saveAnalysis(SaveAnalysisParams params) {
       savedCount++;
       saved =
           new RcaAnalysisRecord(
-              id,
-              tenantId,
-              incidentId,
+              params.id(),
+              params.tenantId(),
+              params.incidentId(),
               "completed",
-              suspectedRootCause,
-              confidence,
-              summary,
-              evidenceJson,
-              modelVersion,
+              params.suspectedRootCause(),
+              params.confidence(),
+              params.summary(),
+              params.evidenceJson(),
+              params.modelVersion(),
               OffsetDateTime.parse("2026-06-14T10:00:00+09:00"));
     }
 
@@ -174,13 +173,7 @@ class RcaServiceTest {
     }
 
     @Override
-    public void addIncidentTimeline(
-        String id,
-        String incidentId,
-        OffsetDateTime eventTime,
-        String title,
-        String description,
-        String payloadJson) {
+    public void addIncidentTimeline(AddTimelineParams params) {
       timelineCount++;
     }
   }

@@ -2,6 +2,7 @@ package io.aegisops.execution;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import io.aegisops.execution.dto.PostmortemContent;
 import io.aegisops.execution.dto.PostmortemSourceBundle;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -14,14 +15,15 @@ class PostmortemMarkdownBuilderTest {
 
     String markdown =
         builder.build(
-            source(),
-            "summary",
-            "impact",
-            "root cause",
-            "detection",
-            "resolution",
-            "prevention",
-            List.of("fix monitor", "update runbook"));
+            new PostmortemContent(
+                source(),
+                "summary",
+                "impact",
+                "root cause",
+                "detection",
+                "resolution",
+                "prevention",
+                List.of("fix monitor", "update runbook")));
 
     assertTrue(markdown.contains("# Postmortem Report"));
     assertTrue(markdown.contains("Order service error"));

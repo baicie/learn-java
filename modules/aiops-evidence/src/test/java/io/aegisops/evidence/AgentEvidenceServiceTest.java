@@ -127,7 +127,8 @@ class AgentEvidenceServiceTest {
       return new LogEvidence(
           true,
           "",
-          List.of(new LogPattern("error", "timeout", 3, request.startedAt(), request.lastSeenAt())));
+          List.of(
+              new LogPattern("error", "timeout", 3, request.startedAt(), request.lastSeenAt())));
     }
 
     @Override

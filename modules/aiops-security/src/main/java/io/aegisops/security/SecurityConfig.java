@@ -25,9 +25,7 @@ public class SecurityConfig {
       HttpSecurity http,
       JwtTokenService tokenService,
       UserService userService,
-      InternalAgentAuthFilter internalAgentAuthFilter,
-      TenantRequiredFilter tenantRequiredFilter,
-      TenantRateLimitFilter tenantRateLimitFilter)
+      SecurityFilters filters)
       throws Exception {
     JwtAuthenticationFilter jwtAuthenticationFilter =
         new JwtAuthenticationFilter(tokenService, userService);
@@ -50,12 +48,18 @@ public class SecurityConfig {
                     .permitAll()
                     .anyRequest()
                     .authenticated())
-        .addFilterBefore(internalAgentAuthFilter, UsernamePasswordAuthenticationFilter.class)
+        .addFilterBefore(
+            filters.internalAgentAuthFilter, UsernamePasswordAuthenticationFilter.class)
         .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
-        .addFilterAfter(tenantRequiredFilter, JwtAuthenticationFilter.class)
-        .addFilterAfter(tenantRateLimitFilter, TenantRequiredFilter.class)
+        .addFilterAfter(filters.tenantRequiredFilter, JwtAuthenticationFilter.class)
+        .addFilterAfter(filters.tenantRateLimitFilter, TenantRequiredFilter.class)
         .build();
   }
+
+  public record SecurityFilters(
+      InternalAgentAuthFilter internalAgentAuthFilter,
+      TenantRequiredFilter tenantRequiredFilter,
+      TenantRateLimitFilter tenantRateLimitFilter) {}
 
   @Bean
   public PasswordEncoder passwordEncoder() {

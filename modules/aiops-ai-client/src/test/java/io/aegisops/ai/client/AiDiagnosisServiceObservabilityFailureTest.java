@@ -30,67 +30,67 @@ class AiDiagnosisServiceObservabilityFailureTest {
     OffsetDateTime now = OffsetDateTime.parse("2026-06-16T10:00:00+09:00");
 
     when(repository.findIncident("tenant_1", "inc_1"))
-        .thenReturn(Optional.of(
-            new AiIncidentRecord(
-                "inc_1",
-                "tenant_1",
-                "CPU high",
-                "summary",
-                "critical",
-                "open",
-                "zabbix",
-                "asset_1",
-                "agg",
-                1,
-                null,
-                BigDecimal.ZERO,
-                now.minusMinutes(10),
-                now.minusMinutes(10),
-                now,
-                now.minusMinutes(10),
-                now)));
+        .thenReturn(
+            Optional.of(
+                new AiIncidentRecord(
+                    "inc_1",
+                    "tenant_1",
+                    "CPU high",
+                    "summary",
+                    "critical",
+                    "open",
+                    "zabbix",
+                    "asset_1",
+                    "agg",
+                    1,
+                    null,
+                    BigDecimal.ZERO,
+                    now.minusMinutes(10),
+                    now.minusMinutes(10),
+                    now,
+                    now.minusMinutes(10),
+                    now)));
 
     when(repository.listIncidentAlerts("tenant_1", "inc_1")).thenReturn(List.of());
     when(repository.findLatestRca("tenant_1", "inc_1")).thenReturn(Optional.empty());
 
     when(agentClient.diagnose(any()))
-        .thenReturn(new AgentDiagnosisResponse(
-            "agent-diagnosis.v1",
-            "aiops-agent",
-            "langgraph-deterministic",
-            "aegisops_diagnosis_graph",
-            "summary",
-            "root",
-            "impact",
-            List.of("step"),
-            List.of(),
-            List.of(),
-            rawWithAgentRunAndEval()));
-
-    doThrow(new RuntimeException("agent_run insert failed"))
-        .when(repository)
-        .saveAgentRun(any());
-
-    when(repository.findDiagnosis(Mockito.eq("tenant_1"), Mockito.anyString()))
-        .thenReturn(Optional.of(
-            new AiDiagnosisRecord(
-                "diag_1",
-                "tenant_1",
-                "inc_1",
-                "completed",
+        .thenReturn(
+            new AgentDiagnosisResponse(
+                "agent-diagnosis.v1",
                 "aiops-agent",
                 "langgraph-deterministic",
                 "aegisops_diagnosis_graph",
                 "summary",
                 "root",
                 "impact",
-                "[\"step\"]",
-                "[]",
-                "[]",
-                now)));
+                List.of("step"),
+                List.of(),
+                List.of(),
+                rawWithAgentRunAndEval()));
 
-    AiDiagnosisService service =
-        new AiDiagnosisService(repository, agentClient, objectMapper());
+    doThrow(new RuntimeException("agent_run insert failed")).when(repository).saveAgentRun(any());
+
+    when(repository.findDiagnosis(Mockito.eq("tenant_1"), Mockito.anyString()))
+        .thenReturn(
+            Optional.of(
+                new AiDiagnosisRecord(
+                    "diag_1",
+                    "tenant_1",
+                    "inc_1",
+                    "completed",
+                    "aiops-agent",
+                    "langgraph-deterministic",
+                    "aegisops_diagnosis_graph",
+                    "summary",
+                    "root",
+                    "impact",
+                    "[\"step\"]",
+                    "[]",
+                    "[]",
+                    now)));
+
+    AiDiagnosisService service = new AiDiagnosisService(repository, agentClient, objectMapper());
 
     var response = service.diagnose("tenant_1", "inc_1", new AiDiagnoseRequest(true, "zh-CN"));
 

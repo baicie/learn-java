@@ -18,14 +18,7 @@ public interface IncidentRepository {
 
   void insertIncident(IncidentCreateCommand command);
 
-  void updateIncidentAggregation(
-      String tenantId,
-      String incidentId,
-      String title,
-      String summary,
-      String severity,
-      int alertCount,
-      OffsetDateTime lastSeenAt);
+  void updateIncidentAggregation(IncidentUpdateCommand command);
 
   boolean linkAlert(
       String id, String incidentId, String alertId, String relationType, OffsetDateTime occurredAt);

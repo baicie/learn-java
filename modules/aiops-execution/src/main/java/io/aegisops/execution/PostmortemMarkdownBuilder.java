@@ -1,5 +1,6 @@
 package io.aegisops.execution;
 
+import io.aegisops.execution.dto.PostmortemContent;
 import io.aegisops.execution.dto.PostmortemSourceBundle;
 import io.aegisops.execution.dto.PostmortemSourceBundle.AiDiagnosisSnapshot;
 import io.aegisops.execution.dto.PostmortemSourceBundle.ExecutionSnapshot;
@@ -11,16 +12,9 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class PostmortemMarkdownBuilder {
-  public String build(
-      PostmortemSourceBundle source,
-      String summary,
-      String impact,
-      String rootCause,
-      String detection,
-      String resolution,
-      String prevention,
-      List<String> actionItems) {
+  public String build(PostmortemContent content) {
     StringBuilder md = new StringBuilder();
+    PostmortemSourceBundle source = content.source();
 
     md.append("# Postmortem Report\n\n");
 
@@ -31,22 +25,26 @@ public class PostmortemMarkdownBuilder {
     md.append("- Status: ").append(value(source.incident().status())).append("\n");
     md.append("- Created At: ").append(value(source.incident().createdAt())).append("\n");
     md.append("- Updated At: ").append(value(source.incident().updatedAt())).append("\n\n");
-    md.append(summary).append("\n\n");
+    md.append(content.summary()).append("\n\n");
 
     md.append("## Impact\n\n");
-    md.append(blankToFallback(impact, "Impact was not explicitly recorded.")).append("\n\n");
+    md.append(blankToFallback(content.impact(), "Impact was not explicitly recorded."))
+        .append("\n\n");
 
     md.append("## Timeline\n\n");
     appendTimeline(md, source.timeline());
 
     md.append("\n## Root Cause\n\n");
-    md.append(blankToFallback(rootCause, "Root cause is unknown or not confirmed.")).append("\n\n");
+    md.append(blankToFallback(content.rootCause(), "Root cause is unknown or not confirmed."))
+        .append("\n\n");
 
     md.append("## Detection\n\n");
-    md.append(blankToFallback(detection, "Detection details are not available.")).append("\n\n");
+    md.append(blankToFallback(content.detection(), "Detection details are not available."))
+        .append("\n\n");
 
     md.append("## Resolution\n\n");
-    md.append(blankToFallback(resolution, "Resolution details are not available.")).append("\n\n");
+    md.append(blankToFallback(content.resolution(), "Resolution details are not available."))
+        .append("\n\n");
 
     md.append("## Execution Summary\n\n");
     appendExecutions(md, source.executions());
@@ -61,13 +59,14 @@ public class PostmortemMarkdownBuilder {
     appendAi(md, source.aiDiagnoses());
 
     md.append("\n## Prevention\n\n");
-    md.append(blankToFallback(prevention, "No prevention actions recorded.")).append("\n\n");
+    md.append(blankToFallback(content.prevention(), "No prevention actions recorded."))
+        .append("\n\n");
 
     md.append("## Follow-up Action Items\n\n");
-    if (actionItems.isEmpty()) {
+    if (content.actionItems().isEmpty()) {
       md.append("No follow-up action items generated.\n");
     } else {
-      for (String item : actionItems) {
+      for (String item : content.actionItems()) {
         md.append("- [ ] ").append(escape(item)).append("\n");
       }
     }

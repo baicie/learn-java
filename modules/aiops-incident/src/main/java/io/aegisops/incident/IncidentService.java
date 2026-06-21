@@ -84,99 +84,107 @@ public class IncidentService {
       String aggregationKey = entry.getKey();
       List<AlertCandidate> alerts = entry.getValue();
 
-      if (alerts.isEmpty()) {
-        continue;
-      }
-
-      var existingIncident =
-          repository.findActiveIncidentByAggregationKey(tenantId, aggregationKey);
-      String groupSeverity = policy.highestSeverity(alerts);
-      String incidentId;
-      boolean created = false;
-
-      if (existingIncident.isPresent()) {
-        incidentId = existingIncident.get().id();
-      } else {
-        incidentId = newId("inc");
-        created = true;
-
-        repository.insertIncident(
-            new IncidentCreateCommand(
-                incidentId,
-                tenantId,
-                policy.title(aggregationKey, alerts),
-                policy.summary(aggregationKey, alerts),
-                groupSeverity,
-                "system",
-                policy.primaryAssetId(alerts),
-                aggregationKey,
-                0,
-                policy.firstStartedAt(alerts),
-                OffsetDateTime.now(),
-                policy.lastSeenAt(alerts)));
-      }
-
-      int linkedInGroup = 0;
-      int index = 0;
-
-      for (AlertCandidate alert : alerts) {
-        boolean linked =
-            repository.linkAlert(
-                newId("ie"),
-                incidentId,
-                alert.id(),
-                index == 0 ? "primary" : "related",
-                alert.startsAt());
-
-        if (!linked) {
-          index++;
-          continue;
-        }
-
-        repository.addTimeline(
-            new TimelineCreateCommand(
-                newId("tl"),
-                incidentId,
-                alert.startsAt(),
-                "alert_linked",
-                alert.title(),
-                alert.description(),
-                "system",
-                alertPayload(alert, aggregationKey)));
-
-        alertsLinked++;
-        linkedInGroup++;
-        index++;
-      }
-
-      if (linkedInGroup == 0) {
-        continue;
-      }
-
-      int actualAlertCount = repository.countLinkedAlerts(incidentId);
-      String mergedSeverity =
-          existingIncident
-              .map(existing -> IncidentSeverity.max(existing.severity(), groupSeverity))
-              .orElse(groupSeverity);
-
-      repository.updateIncidentAggregation(
-          tenantId,
-          incidentId,
-          policy.title(aggregationKey, alerts),
-          policy.summary(aggregationKey, alerts),
-          mergedSeverity,
-          actualAlertCount,
-          policy.lastSeenAt(alerts));
-
-      if (created) {
+      var result = processGroup(tenantId, aggregationKey, alerts);
+      if (result.created()) {
         incidentsCreated++;
-      } else {
+      } else if (result.linked() > 0) {
         incidentsUpdated++;
       }
+      alertsLinked += result.linked();
     }
 
     return new IncidentAggregationResponse(
         candidates.size(), groups.size(), incidentsCreated, incidentsUpdated, alertsLinked);
+  }
+
+  private record GroupResult(boolean created, int linked) {}
+
+  private GroupResult processGroup(
+      String tenantId, String aggregationKey, List<AlertCandidate> alerts) {
+    if (alerts.isEmpty()) {
+      return new GroupResult(false, 0);
+    }
+
+    var existingIncident = repository.findActiveIncidentByAggregationKey(tenantId, aggregationKey);
+    String groupSeverity = policy.highestSeverity(alerts);
+    String incidentId;
+    boolean created = false;
+
+    if (existingIncident.isPresent()) {
+      incidentId = existingIncident.get().id();
+    } else {
+      incidentId = newId("inc");
+      created = true;
+
+      repository.insertIncident(
+          new IncidentCreateCommand(
+              incidentId,
+              tenantId,
+              policy.title(aggregationKey, alerts),
+              policy.summary(aggregationKey, alerts),
+              groupSeverity,
+              "system",
+              policy.primaryAssetId(alerts),
+              aggregationKey,
+              0,
+              policy.firstStartedAt(alerts),
+              OffsetDateTime.now(),
+              policy.lastSeenAt(alerts)));
+    }
+
+    int linkedInGroup = 0;
+    int index = 0;
+
+    for (AlertCandidate alert : alerts) {
+      boolean linked =
+          repository.linkAlert(
+              newId("ie"),
+              incidentId,
+              alert.id(),
+              index == 0 ? "primary" : "related",
+              alert.startsAt());
+
+      if (!linked) {
+        index++;
+        continue;
+      }
+
+      repository.addTimeline(
+          new TimelineCreateCommand(
+              newId("tl"),
+              incidentId,
+              alert.startsAt(),
+              "alert_linked",
+              alert.title(),
+              alert.description(),
+              "system",
+              alertPayload(alert, aggregationKey)));
+
+      linkedInGroup++;
+      index++;
+    }
+
+    if (linkedInGroup == 0) {
+      return new GroupResult(created, 0);
+    }
+
+    int actualAlertCount = repository.countLinkedAlerts(incidentId);
+    String mergedSeverity =
+        existingIncident
+            .map(existing -> IncidentSeverity.max(existing.severity(), groupSeverity))
+            .orElse(groupSeverity);
+
+    repository.updateIncidentAggregation(
+        new IncidentUpdateCommand(
+            tenantId,
+            incidentId,
+            policy.title(aggregationKey, alerts),
+            policy.summary(aggregationKey, alerts),
+            mergedSeverity,
+            actualAlertCount,
+            policy.lastSeenAt(alerts)));
+
+    return new GroupResult(created, linkedInGroup);
   }
 
   @Transactional

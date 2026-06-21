@@ -21,6 +21,7 @@ from aiops_agent.workflow.tools.checkpoint_client import CheckpointClient
 from aiops_agent.workflow.tools.evidence_client import EvidenceClient
 from aiops_agent.workflow.tools.knowledge_client import KnowledgeClient
 from aiops_agent.workflow.tools.memory_client import MemoryClient
+from aiops_agent.workflow.tools.plugin_policy_guard import PluginToolPolicyGuard
 
 
 class DiagnosisService:
@@ -84,21 +85,22 @@ class DiagnosisService:
 
     def _workflow_context(self, request: DiagnoseRequest | None = None) -> GraphContext:
         base_url = self.settings.workflow_api_base_url
+        policy_guard = PluginToolPolicyGuard()
         evidence_client = (
-            EvidenceClient(base_url=base_url)
+            EvidenceClient(base_url=base_url, policy_guard=policy_guard)
             if self.settings.workflow_evidence_enabled
             else _RequestEvidenceClient(request)
         )
         knowledge_client = (
-            KnowledgeClient(base_url=base_url)
+            KnowledgeClient(base_url=base_url, policy_guard=policy_guard)
             if self.settings.workflow_case_retrieval_enabled
             else _DisabledKnowledgeClient()
         )
         return GraphContext(
             evidence_client=evidence_client,
             knowledge_client=knowledge_client,
-            checkpoint_client=CheckpointClient(base_url=base_url),
-            memory_client=MemoryClient(base_url=base_url),
+            checkpoint_client=CheckpointClient(base_url=base_url, policy_guard=policy_guard),
+            memory_client=MemoryClient(base_url=base_url, policy_guard=policy_guard),
         )
 
 

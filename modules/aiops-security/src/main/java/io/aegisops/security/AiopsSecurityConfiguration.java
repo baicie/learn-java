@@ -7,10 +7,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-@EnableConfigurationProperties({
-    AiopsSecurityProperties.class,
-    AiopsQuotaProperties.class
-})
+@EnableConfigurationProperties({AiopsSecurityProperties.class, AiopsQuotaProperties.class})
 public class AiopsSecurityConfiguration {
   @Bean
   SecurityErrorResponseWriter securityErrorResponseWriter(ObjectMapper objectMapper) {
@@ -39,11 +36,7 @@ public class AiopsSecurityConfiguration {
       InMemoryTenantRateLimiter rateLimiter,
       SecurityErrorResponseWriter responseWriter,
       TenantSecurityAuditService auditService) {
-    return new TenantRateLimitFilter(
-        quotaProperties,
-        rateLimiter,
-        responseWriter,
-        auditService);
+    return new TenantRateLimitFilter(quotaProperties, rateLimiter, responseWriter, auditService);
   }
 
   /**

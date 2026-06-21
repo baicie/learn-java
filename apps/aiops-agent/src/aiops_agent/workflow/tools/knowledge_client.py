@@ -13,12 +13,20 @@ from aiops_agent.settings import settings
 from aiops_agent.workflow.contracts import SimilarCase
 from aiops_agent.workflow.errors import ToolError
 from aiops_agent.workflow.tools.internal_auth import internal_tool_headers
+from aiops_agent.workflow.tools.plugin_policy_guard import PluginToolPolicyGuard
+from aiops_agent.workflow.tools.tool_keys import KNOWLEDGE_SEARCH_CASES
 
 
 class KnowledgeClient:
-    def __init__(self, base_url: str | None = None, timeout: float | None = None):
+    def __init__(
+        self,
+        base_url: str | None = None,
+        timeout: float | None = None,
+        policy_guard: PluginToolPolicyGuard | None = None,
+    ):
         self.base_url = (base_url or settings.workflow_api_base_url).rstrip("/")
         self.timeout = timeout or settings.workflow_request_timeout_seconds
+        self.policy_guard = policy_guard or PluginToolPolicyGuard()
 
     async def search_cases(
         self,
@@ -27,6 +35,7 @@ class KnowledgeClient:
         tags: list[str],
         top_k: int,
     ) -> list[SimilarCase]:
+        await self.policy_guard.require_allowed(tenant_id, KNOWLEDGE_SEARCH_CASES)
         url = f"{self.base_url}/internal/agent/tools/search-cases"
         body = {
             "query": query,

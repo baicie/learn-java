@@ -2,7 +2,6 @@ package io.aegisops.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
-import java.util.Map;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 
@@ -12,8 +11,7 @@ public class TenantSecurityAuditService {
   private final ObjectMapper objectMapper;
 
   public TenantSecurityAuditService(
-      TenantSecurityEventRepository repository,
-      ObjectMapper objectMapper) {
+      TenantSecurityEventRepository repository, ObjectMapper objectMapper) {
     this.repository = repository;
     this.objectMapper = objectMapper;
   }
@@ -24,28 +22,26 @@ public class TenantSecurityAuditService {
       String severity,
       String summary,
       HttpServletRequest request) {
-    record(tenantId, eventType, severity, summary, request, Map.of());
+    record(new SecurityAuditRecord(tenantId, eventType, severity, summary, request));
   }
 
-  public void record(
-      String tenantId,
-      String eventType,
-      String severity,
-      String summary,
-      HttpServletRequest request,
-      Map<String, Object> metadata) {
+  public void record(String tenantId, String eventType, String severity, String summary) {
+    record(new SecurityAuditRecord(tenantId, eventType, severity, summary, null));
+  }
+
+  public void record(SecurityAuditRecord audit) {
     try {
       repository.create(
           new TenantSecurityEventCreateCommand(
               newId("tse"),
-              tenantId,
-              eventType,
-              severity,
+              audit.tenantId(),
+              audit.eventType(),
+              audit.severity(),
               "system",
-              request == null ? null : request.getRequestURI(),
-              request == null ? null : remoteAddr(request),
-              summary,
-              objectMapper.writeValueAsString(metadata == null ? Map.of() : metadata)));
+              audit.request() == null ? null : audit.request().getRequestURI(),
+              audit.request() == null ? null : remoteAddr(audit.request()),
+              audit.summary(),
+              objectMapper.writeValueAsString(audit.metadata())));
     } catch (Exception ignored) {
       // Security audit failure must not break request handling.
     }

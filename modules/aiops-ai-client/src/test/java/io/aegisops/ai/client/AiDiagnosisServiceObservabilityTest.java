@@ -26,8 +26,7 @@ class AiDiagnosisServiceObservabilityTest {
 
     OffsetDateTime now = OffsetDateTime.parse("2026-06-16T10:00:00+09:00");
 
-    when(repository.findIncident("tenant_1", "inc_1"))
-        .thenReturn(Optional.of(incident(now)));
+    when(repository.findIncident("tenant_1", "inc_1")).thenReturn(Optional.of(incident(now)));
     when(repository.listIncidentAlerts("tenant_1", "inc_1")).thenReturn(List.of());
     when(repository.findLatestRca("tenant_1", "inc_1")).thenReturn(Optional.empty());
 
@@ -56,24 +55,24 @@ class AiDiagnosisServiceObservabilityTest {
     raw.put("agentEval", agentEval);
 
     when(agentClient.diagnose(any()))
-        .thenReturn(new AgentDiagnosisResponse(
-            "agent-diagnosis.v1",
-            "aiops-agent",
-            "langgraph-deterministic",
-            "aegisops_diagnosis_graph",
-            "summary",
-            "root",
-            "impact",
-            List.of("step"),
-            List.of(),
-            List.of(),
-            raw));
+        .thenReturn(
+            new AgentDiagnosisResponse(
+                "agent-diagnosis.v1",
+                "aiops-agent",
+                "langgraph-deterministic",
+                "aegisops_diagnosis_graph",
+                "summary",
+                "root",
+                "impact",
+                List.of("step"),
+                List.of(),
+                List.of(),
+                raw));
 
     when(repository.findDiagnosis(Mockito.eq("tenant_1"), Mockito.anyString()))
         .thenReturn(Optional.empty());
 
-    AiDiagnosisService service =
-        new AiDiagnosisService(repository, agentClient, objectMapper());
+    AiDiagnosisService service = new AiDiagnosisService(repository, agentClient, objectMapper());
 
     try {
       service.diagnose("tenant_1", "inc_1", new AiDiagnoseRequest(true, "zh-CN"));
@@ -95,8 +94,7 @@ class AiDiagnosisServiceObservabilityTest {
 
     OffsetDateTime now = OffsetDateTime.parse("2026-06-16T10:00:00+09:00");
 
-    when(repository.findIncident("tenant_1", "inc_1"))
-        .thenReturn(Optional.of(incident(now)));
+    when(repository.findIncident("tenant_1", "inc_1")).thenReturn(Optional.of(incident(now)));
     when(repository.listIncidentAlerts("tenant_1", "inc_1")).thenReturn(List.of());
     when(repository.findLatestRca("tenant_1", "inc_1")).thenReturn(Optional.empty());
 
@@ -145,24 +143,24 @@ class AiDiagnosisServiceObservabilityTest {
     raw.put("agentEval", agentEval);
 
     when(agentClient.diagnose(any()))
-        .thenReturn(new AgentDiagnosisResponse(
-            "agent-diagnosis.v1",
-            "aiops-agent",
-            "langgraph-deterministic",
-            "aegisops_diagnosis_graph",
-            "summary",
-            "root",
-            "impact",
-            List.of("step"),
-            List.of(),
-            List.of(),
-            raw));
+        .thenReturn(
+            new AgentDiagnosisResponse(
+                "agent-diagnosis.v1",
+                "aiops-agent",
+                "langgraph-deterministic",
+                "aegisops_diagnosis_graph",
+                "summary",
+                "root",
+                "impact",
+                List.of("step"),
+                List.of(),
+                List.of(),
+                raw));
 
     when(repository.findDiagnosis(Mockito.eq("tenant_1"), Mockito.anyString()))
         .thenReturn(Optional.empty());
 
-    AiDiagnosisService service =
-        new AiDiagnosisService(repository, agentClient, objectMapper());
+    AiDiagnosisService service = new AiDiagnosisService(repository, agentClient, objectMapper());
 
     try {
       service.diagnose("tenant_1", "inc_1", new AiDiagnoseRequest(true, "zh-CN"));

@@ -22,12 +22,12 @@
     </dependency>
     <dependency>
       <groupId>io.aegisops</groupId>
-      <artifactId>aiops-user</artifactId>
+      <artifactId>aiops-persistence</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>io.aegisops</groupId>
-      <artifactId>aiops-persistence</artifactId>
+      <artifactId>aiops-user</artifactId>
       <version>${project.version}</version>
     </dependency>
 

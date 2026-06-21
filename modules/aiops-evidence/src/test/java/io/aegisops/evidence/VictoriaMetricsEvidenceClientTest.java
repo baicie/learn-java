@@ -24,8 +24,7 @@ class VictoriaMetricsEvidenceClientTest {
         MockRestServiceServer.bindTo(restTemplate).ignoreExpectOrder(true).build();
 
     server
-        .expect(
-            request -> assertTrue(request.getURI().toString().contains("/api/v1/query_range")))
+        .expect(request -> assertTrue(request.getURI().toString().contains("/api/v1/query_range")))
         .andRespond(
             withSuccess(
                 """

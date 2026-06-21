@@ -50,7 +50,15 @@ class JooqRcaRepositoryGeneratedSqlTest {
         new JooqRcaRepository(DSL.using(new MockConnection(provider), SQLDialect.POSTGRES));
 
     repository.saveAnalysis(
-        "rca_1", "tenant_1", "inc_1", "root", BigDecimal.valueOf(0.8), "summary", "", "rules-v1");
+        new SaveAnalysisParams(
+            "rca_1",
+            "tenant_1",
+            "inc_1",
+            "root",
+            BigDecimal.valueOf(0.8),
+            "summary",
+            "",
+            "rules-v1"));
 
     String sql = sqlRef.get().toLowerCase();
 

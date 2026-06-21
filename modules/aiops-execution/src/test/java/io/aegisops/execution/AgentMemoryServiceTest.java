@@ -22,11 +22,7 @@ class AgentMemoryServiceTest {
     AgentMemoryJson json = new AgentMemoryJson(new ObjectMapper());
 
     AgentMemoryService service =
-        new AgentMemoryService(
-            repository,
-            new AgentMemoryPolicy(),
-            json,
-            new AgentMemoryScorer());
+        new AgentMemoryService(repository, new AgentMemoryPolicy(), json, new AgentMemoryScorer());
 
     var created =
         service.createInternal(
@@ -126,13 +122,7 @@ class AgentMemoryServiceTest {
     }
 
     @Override
-    public List<AgentMemoryRecord> listActiveCandidates(
-        String tenantId,
-        String scopeType,
-        String scopeId,
-        List<String> memoryTypes,
-        List<String> tags,
-        int limit) {
+    public List<AgentMemoryRecord> listActiveCandidates(ListActiveMemoryParams params) {
       if (memory == null || !"active".equals(memory.status())) {
         return List.of();
       }

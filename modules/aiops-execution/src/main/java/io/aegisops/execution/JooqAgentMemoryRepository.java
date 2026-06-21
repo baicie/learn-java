@@ -55,34 +55,32 @@ public class JooqAgentMemoryRepository implements AgentMemoryRepository {
   }
 
   @Override
-  public List<AgentMemoryRecord> listActiveCandidates(
-      String tenantId,
-      String scopeType,
-      String scopeId,
-      List<String> memoryTypes,
-      List<String> tags,
-      int limit) {
+  public List<AgentMemoryRecord> listActiveCandidates(ListActiveMemoryParams params) {
     Condition condition =
-        AGENT_MEMORY.TENANT_ID.eq(tenantId)
+        AGENT_MEMORY
+            .TENANT_ID
+            .eq(params.tenantId())
             .and(AGENT_MEMORY.STATUS.eq("active"))
             .and(
-                AGENT_MEMORY.EXPIRES_AT.isNull()
+                AGENT_MEMORY
+                    .EXPIRES_AT
+                    .isNull()
                     .or(AGENT_MEMORY.EXPIRES_AT.gt(OffsetDateTime.now())));
 
-    if (scopeType != null && !scopeType.isBlank()) {
-      condition = condition.and(AGENT_MEMORY.SCOPE_TYPE.eq(scopeType));
+    if (params.scopeType() != null && !params.scopeType().isBlank()) {
+      condition = condition.and(AGENT_MEMORY.SCOPE_TYPE.eq(params.scopeType()));
     }
 
-    if (scopeId != null && !scopeId.isBlank()) {
-      condition = condition.and(AGENT_MEMORY.SCOPE_ID.eq(scopeId));
+    if (params.scopeId() != null && !params.scopeId().isBlank()) {
+      condition = condition.and(AGENT_MEMORY.SCOPE_ID.eq(params.scopeId()));
     }
 
-    if (memoryTypes != null && !memoryTypes.isEmpty()) {
-      condition = condition.and(AGENT_MEMORY.MEMORY_TYPE.in(memoryTypes));
+    if (params.memoryTypes() != null && !params.memoryTypes().isEmpty()) {
+      condition = condition.and(AGENT_MEMORY.MEMORY_TYPE.in(params.memoryTypes()));
     }
 
-    if (tags != null && !tags.isEmpty()) {
-      for (String tag : tags) {
+    if (params.tags() != null && !params.tags().isEmpty()) {
+      for (String tag : params.tags()) {
         condition =
             condition.and(
                 DSL.lower(AGENT_MEMORY.TAGS.cast(String.class)).contains(tag.toLowerCase()));
@@ -92,7 +90,7 @@ public class JooqAgentMemoryRepository implements AgentMemoryRepository {
     return selectMemory()
         .where(condition)
         .orderBy(AGENT_MEMORY.CONFIDENCE.desc(), AGENT_MEMORY.CREATED_AT.desc())
-        .limit(Math.max(1, Math.min(limit, 200)))
+        .limit(Math.max(1, Math.min(params.limit(), 200)))
         .fetch(this::toRecord);
   }
 

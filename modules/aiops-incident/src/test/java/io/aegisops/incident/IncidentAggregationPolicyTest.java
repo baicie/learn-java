@@ -12,15 +12,14 @@ class IncidentAggregationPolicyTest {
 
   @Test
   void usesFingerprintAsAggregationKey() {
-    AlertCandidate alert =
-        alert("a1", "zabbix", "critical", "CPU high", "asset_1", "zabbix:ds_1:trigger_1");
+    AlertCandidate alert = alert("a1", "zabbix", "critical", "CPU high", "zabbix:ds_1:trigger_1");
 
     assertEquals("zabbix:zabbix:ds_1:trigger_1", policy.aggregationKey(alert));
   }
 
   @Test
   void fallsBackToAssetAndNormalizedTitleWhenFingerprintMissing() {
-    AlertCandidate alert = alert("a1", "webhook", "warning", "Disk Usage > 90%", "asset_1", "");
+    AlertCandidate alert = alert("a1", "webhook", "warning", "Disk Usage > 90%", "");
 
     assertEquals("webhook:asset_1:disk-usage-90", policy.aggregationKey(alert));
   }
@@ -29,9 +28,9 @@ class IncidentAggregationPolicyTest {
   void selectsHighestSeverity() {
     List<AlertCandidate> alerts =
         List.of(
-            alert("a1", "zabbix", "warning", "CPU high", "asset_1", "fp"),
-            alert("a2", "zabbix", "critical", "CPU high", "asset_1", "fp"),
-            alert("a3", "zabbix", "info", "CPU high", "asset_1", "fp"));
+            alert("a1", "zabbix", "warning", "CPU high", "fp"),
+            alert("a2", "zabbix", "critical", "CPU high", "fp"),
+            alert("a3", "zabbix", "info", "CPU high", "fp"));
 
     assertEquals("critical", policy.highestSeverity(alerts));
   }
@@ -40,8 +39,8 @@ class IncidentAggregationPolicyTest {
   void titleUsesSameAlertTitleWhenAllSame() {
     List<AlertCandidate> alerts =
         List.of(
-            alert("a1", "zabbix", "warning", "CPU high", "asset_1", "fp"),
-            alert("a2", "zabbix", "critical", "CPU high", "asset_1", "fp"));
+            alert("a1", "zabbix", "warning", "CPU high", "fp"),
+            alert("a2", "zabbix", "critical", "CPU high", "fp"));
 
     assertEquals("CPU high", policy.title("zabbix:fp", alerts));
   }
@@ -50,8 +49,8 @@ class IncidentAggregationPolicyTest {
   void summaryContainsAlertCountAndAggregationKey() {
     List<AlertCandidate> alerts =
         List.of(
-            alert("a1", "zabbix", "warning", "CPU high", "asset_1", "fp"),
-            alert("a2", "zabbix", "critical", "CPU high", "asset_1", "fp"));
+            alert("a1", "zabbix", "warning", "CPU high", "fp"),
+            alert("a2", "zabbix", "critical", "CPU high", "fp"));
 
     String summary = policy.summary("zabbix:fp", alerts);
 
@@ -60,8 +59,12 @@ class IncidentAggregationPolicyTest {
     assertTrue(summary.contains("critical"));
   }
 
+  private AlertCandidate alert(String fingerprint) {
+    return new TestAlert("a1", fingerprint).toCandidate();
+  }
+
   private AlertCandidate alert(
-      String id, String source, String severity, String title, String assetId, String fingerprint) {
+      String id, String source, String severity, String title, String fingerprint) {
     return new AlertCandidate(
         id,
         "tenant_1",
@@ -70,11 +73,15 @@ class IncidentAggregationPolicyTest {
         severity,
         title,
         "desc " + id,
-        assetId,
+        "asset_1",
         "host",
         "host-1",
         fingerprint,
         OffsetDateTime.parse("2026-06-14T10:00:00+09:00"),
         OffsetDateTime.parse("2026-06-14T10:00:00+09:00"));
+  }
+
+  private AlertCandidate alert(String id, String fingerprint) {
+    return new TestAlert(id, fingerprint).toCandidate();
   }
 }

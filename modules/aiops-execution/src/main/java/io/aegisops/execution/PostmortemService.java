@@ -6,11 +6,13 @@ import io.aegisops.execution.dto.PostmortemActionItemCreateRequest;
 import io.aegisops.execution.dto.PostmortemActionItemRecord;
 import io.aegisops.execution.dto.PostmortemActionItemResponse;
 import io.aegisops.execution.dto.PostmortemActionItemStatusRequest;
+import io.aegisops.execution.dto.PostmortemContent;
 import io.aegisops.execution.dto.PostmortemGenerateRequest;
 import io.aegisops.execution.dto.PostmortemReportCreateCommand;
 import io.aegisops.execution.dto.PostmortemReportRecord;
 import io.aegisops.execution.dto.PostmortemReportResponse;
 import io.aegisops.execution.dto.PostmortemSectionCreateCommand;
+import io.aegisops.execution.dto.PostmortemSectionParams;
 import io.aegisops.execution.dto.PostmortemSectionRecord;
 import io.aegisops.execution.dto.PostmortemSectionResponse;
 import io.aegisops.execution.dto.PostmortemSourceBundle;
@@ -56,14 +58,15 @@ public class PostmortemService {
 
     String markdown =
         markdownBuilder.build(
-            filtered,
-            draft.summary(),
-            draft.impact(),
-            draft.rootCause(),
-            draft.detection(),
-            draft.resolution(),
-            draft.prevention(),
-            draft.actionItems());
+            new PostmortemContent(
+                filtered,
+                draft.summary(),
+                draft.impact(),
+                draft.rootCause(),
+                draft.detection(),
+                draft.resolution(),
+                draft.prevention(),
+                draft.actionItems()));
 
     String postmortemId = newId("pmr");
     String actor = blankToDefault(request == null ? null : request.generatedBy(), "system");
@@ -86,47 +89,106 @@ public class PostmortemService {
             json.write(filtered),
             actor));
 
-    int order = 1;
-    createSection(
-        tenantId, postmortemId, order++, "summary", "Incident Summary", draft.summary(), Map.of());
-    createSection(tenantId, postmortemId, order++, "impact", "Impact", draft.impact(), Map.of());
-    createSection(
-        tenantId,
-        postmortemId,
-        order++,
-        "timeline",
-        "Timeline",
-        buildTimelineSection(filtered),
-        Map.of("count", filtered.timeline().size()));
-    createSection(
-        tenantId, postmortemId, order++, "root_cause", "Root Cause", draft.rootCause(), Map.of());
-    createSection(
-        tenantId, postmortemId, order++, "detection", "Detection", draft.detection(), Map.of());
-    createSection(
-        tenantId, postmortemId, order++, "resolution", "Resolution", draft.resolution(), Map.of());
-    createSection(
-        tenantId, postmortemId, order++, "prevention", "Prevention", draft.prevention(), Map.of());
-
-    if (include(request == null ? null : request.generateActionItems())) {
-      for (String item : draft.actionItems()) {
-        repository.createActionItem(
-            new PostmortemActionItemCreateCommand(
-                newId("pmai"),
-                tenantId,
-                postmortemId,
-                item,
-                null,
-                null,
-                "medium",
-                "open",
-                null,
-                "ai_diagnosis",
-                null,
-                actor));
-      }
-    }
+    createReportSections(
+        new CreateSectionsContext(
+            tenantId,
+            postmortemId,
+            draft,
+            filtered,
+            actor,
+            include(request == null ? null : request.generateActionItems())));
 
     return get(tenantId, postmortemId);
+  }
+
+  private void createReportSections(CreateSectionsContext ctx) {
+    int order = 1;
+    createSection(
+        new PostmortemSectionParams(
+            ctx.tenantId(),
+            ctx.postmortemId(),
+            order++,
+            "summary",
+            "Incident Summary",
+            ctx.draft().summary(),
+            Map.of()));
+    createSection(
+        new PostmortemSectionParams(
+            ctx.tenantId(),
+            ctx.postmortemId(),
+            order++,
+            "impact",
+            "Impact",
+            ctx.draft().impact(),
+            Map.of()));
+    createSection(
+        new PostmortemSectionParams(
+            ctx.tenantId(),
+            ctx.postmortemId(),
+            order++,
+            "timeline",
+            "Timeline",
+            buildTimelineSection(ctx.source()),
+            Map.of("count", ctx.source().timeline().size())));
+    createSection(
+        new PostmortemSectionParams(
+            ctx.tenantId(),
+            ctx.postmortemId(),
+            order++,
+            "root_cause",
+            "Root Cause",
+            ctx.draft().rootCause(),
+            Map.of()));
+    createSection(
+        new PostmortemSectionParams(
+            ctx.tenantId(),
+            ctx.postmortemId(),
+            order++,
+            "detection",
+            "Detection",
+            ctx.draft().detection(),
+            Map.of()));
+    createSection(
+        new PostmortemSectionParams(
+            ctx.tenantId(),
+            ctx.postmortemId(),
+            order++,
+            "resolution",
+            "Resolution",
+            ctx.draft().resolution(),
+            Map.of()));
+    createSection(
+        new PostmortemSectionParams(
+            ctx.tenantId(),
+            ctx.postmortemId(),
+            order++,
+            "prevention",
+            "Prevention",
+            ctx.draft().prevention(),
+            Map.of()));
+
+    if (ctx.includeActionItems()) {
+      createActionItems(ctx);
+    }
+  }
+
+  private void createActionItems(CreateSectionsContext ctx) {
+    for (String item : ctx.draft().actionItems()) {
+      repository.createActionItem(
+          new PostmortemActionItemCreateCommand(
+              newId("pmai"),
+              ctx.tenantId(),
+              ctx.postmortemId(),
+              item,
+              null,
+              null,
+              "medium",
+              "open",
+              null,
+              "ai_diagnosis",
+              null,
+              ctx.actor()));
+    }
   }
 
   public PostmortemReportResponse get(String tenantId, String postmortemId) {
@@ -252,24 +314,17 @@ public class PostmortemService {
     return builder.toString();
   }
 
-  private void createSection(
-      String tenantId,
-      String postmortemId,
-      int order,
-      String sectionType,
-      String title,
-      String content,
-      Object metadata) {
+  private void createSection(PostmortemSectionParams params) {
     repository.createSection(
         new PostmortemSectionCreateCommand(
             newId("pms"),
-            tenantId,
-            postmortemId,
-            order,
-            sectionType,
-            title,
-            content,
-            json.write(metadata)));
+            params.tenantId(),
+            params.postmortemId(),
+            params.order(),
+            params.sectionType(),
+            params.title(),
+            params.content(),
+            json.write(params.metadata())));
   }
 
   private void validateActionItemRequest(PostmortemActionItemCreateRequest request) {

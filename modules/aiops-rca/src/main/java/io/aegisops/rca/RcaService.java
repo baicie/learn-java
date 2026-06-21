@@ -67,35 +67,37 @@ public class RcaService {
     String evidenceJson = writeJson(result.evidence());
 
     repository.saveAnalysis(
-        id,
-        tenantId,
-        incidentId,
-        result.suspectedRootCause(),
-        clampConfidence(result.confidence()),
-        result.summary(),
-        evidenceJson,
-        MODEL_VERSION);
+        new SaveAnalysisParams(
+            id,
+            tenantId,
+            incidentId,
+            result.suspectedRootCause(),
+            clampConfidence(result.confidence()),
+            result.summary(),
+            evidenceJson,
+            MODEL_VERSION));
 
     repository.updateIncidentRca(
         tenantId, incidentId, result.suspectedRootCause(), clampConfidence(result.confidence()));
 
     repository.addIncidentTimeline(
-        newId("tl"),
-        incidentId,
-        OffsetDateTime.now(),
-        "RCA analysis completed",
-        result.summary(),
-        """
+        new AddTimelineParams(
+            newId("tl"),
+            incidentId,
+            OffsetDateTime.now(),
+            "RCA analysis completed",
+            result.summary(),
+            """
                 {
                   "rcaAnalysisId": "%s",
                   "suspectedRootCause": "%s",
                   "confidence": "%s"
                 }
                 """
-            .formatted(
-                escapeJson(id),
-                escapeJson(result.suspectedRootCause()),
-                clampConfidence(result.confidence()).toPlainString()));
+                .formatted(
+                    escapeJson(id),
+                    escapeJson(result.suspectedRootCause()),
+                    clampConfidence(result.confidence()).toPlainString())));
 
     return repository
         .findAnalysis(tenantId, id)

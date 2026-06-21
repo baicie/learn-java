@@ -77,8 +77,6 @@ class AgentEvidenceInternalControllerTest {
   }
 
   private String json(Object value) throws Exception {
-    return new ObjectMapper()
-        .registerModule(new JavaTimeModule())
-        .writeValueAsString(value);
+    return new ObjectMapper().registerModule(new JavaTimeModule()).writeValueAsString(value);
   }
 }

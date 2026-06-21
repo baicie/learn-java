@@ -42,9 +42,8 @@ public class TenantRequiredFilter extends OncePerRequestFilter {
 
   @Override
   protected void doFilterInternal(
-      HttpServletRequest request,
-      HttpServletResponse response,
-      FilterChain filterChain) throws ServletException, IOException {
+      HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+      throws ServletException, IOException {
     String path = request.getRequestURI();
 
     if (!path.startsWith("/api/") && !path.startsWith("/internal/agent/")) {
@@ -60,17 +59,9 @@ public class TenantRequiredFilter extends OncePerRequestFilter {
 
     String tenantId = resolveTenantId(request);
     if (tenantId == null || tenantId.isBlank()) {
-      auditService.record(
-          null,
-          "tenant_missing",
-          "high",
-          "Tenant id is required",
-          request);
+      auditService.record(null, "tenant_missing", "high", "Tenant id is required", request);
       responseWriter.write(
-          response,
-          HttpStatus.BAD_REQUEST.value(),
-          "TENANT_REQUIRED",
-          "Tenant id is required");
+          response, HttpStatus.BAD_REQUEST.value(), "TENANT_REQUIRED", "Tenant id is required");
       return;
     }
 

@@ -11,7 +11,6 @@ import static io.aegisops.persistence.jooq.Tables.INCIDENT_TIMELINE;
 import static io.aegisops.persistence.jooq.Tables.RCA_ANALYSIS;
 
 import java.math.BigDecimal;
-import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 import org.jooq.Condition;
@@ -111,25 +110,17 @@ public class JooqRcaRepository implements RcaRepository {
   }
 
   @Override
-  public void saveAnalysis(
-      String id,
-      String tenantId,
-      String incidentId,
-      String suspectedRootCause,
-      BigDecimal confidence,
-      String summary,
-      String evidenceJson,
-      String modelVersion) {
+  public void saveAnalysis(SaveAnalysisParams params) {
     dsl.insertInto(RCA_ANALYSIS)
-        .set(RCA_ANALYSIS.ID, id)
-        .set(RCA_ANALYSIS.TENANT_ID, tenantId)
-        .set(RCA_ANALYSIS.INCIDENT_ID, incidentId)
+        .set(RCA_ANALYSIS.ID, params.id())
+        .set(RCA_ANALYSIS.TENANT_ID, params.tenantId())
+        .set(RCA_ANALYSIS.INCIDENT_ID, params.incidentId())
         .set(RCA_ANALYSIS.STATUS, "completed")
-        .set(RCA_ANALYSIS.SUSPECTED_ROOT_CAUSE, suspectedRootCause)
-        .set(RCA_ANALYSIS.CONFIDENCE, confidence)
-        .set(RCA_ANALYSIS.SUMMARY, summary)
-        .set(RCA_ANALYSIS.EVIDENCE, jsonbArrayValue(jsonArrayOrEmpty(evidenceJson)))
-        .set(RCA_ANALYSIS.MODEL_VERSION, modelVersion)
+        .set(RCA_ANALYSIS.SUSPECTED_ROOT_CAUSE, params.suspectedRootCause())
+        .set(RCA_ANALYSIS.CONFIDENCE, params.confidence())
+        .set(RCA_ANALYSIS.SUMMARY, params.summary())
+        .set(RCA_ANALYSIS.EVIDENCE, jsonbArrayValue(jsonArrayOrEmpty(params.evidenceJson())))
+        .set(RCA_ANALYSIS.MODEL_VERSION, params.modelVersion())
         .set(RCA_ANALYSIS.CREATED_AT, DSL.currentOffsetDateTime())
         .execute();
   }
@@ -153,22 +144,16 @@ public class JooqRcaRepository implements RcaRepository {
   }
 
   @Override
-  public void addIncidentTimeline(
-      String id,
-      String incidentId,
-      OffsetDateTime eventTime,
-      String title,
-      String description,
-      String payloadJson) {
+  public void addIncidentTimeline(AddTimelineParams params) {
     dsl.insertInto(INCIDENT_TIMELINE)
-        .set(INCIDENT_TIMELINE.ID, id)
-        .set(INCIDENT_TIMELINE.INCIDENT_ID, incidentId)
-        .set(INCIDENT_TIMELINE.EVENT_TIME, eventTime)
+        .set(INCIDENT_TIMELINE.ID, params.id())
+        .set(INCIDENT_TIMELINE.INCIDENT_ID, params.incidentId())
+        .set(INCIDENT_TIMELINE.EVENT_TIME, params.eventTime())
         .set(INCIDENT_TIMELINE.EVENT_TYPE, "rca_analyzed")
-        .set(INCIDENT_TIMELINE.TITLE, title)
-        .set(INCIDENT_TIMELINE.DESCRIPTION, description)
+        .set(INCIDENT_TIMELINE.TITLE, params.title())
+        .set(INCIDENT_TIMELINE.DESCRIPTION, params.description())
         .set(INCIDENT_TIMELINE.SOURCE, "system")
-        .set(INCIDENT_TIMELINE.PAYLOAD, jsonbValue(payloadJson))
+        .set(INCIDENT_TIMELINE.PAYLOAD, jsonbValue(params.payloadJson()))
         .execute();
   }
 

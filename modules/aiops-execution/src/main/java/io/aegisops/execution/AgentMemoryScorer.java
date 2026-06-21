@@ -35,10 +35,7 @@ public class AgentMemoryScorer {
     }
 
     String[] parts =
-        text.toLowerCase()
-            .replaceAll("[^a-z0-9\\u4e00-\\u9fa5]+", " ")
-            .trim()
-            .split("\\s+");
+        text.toLowerCase().replaceAll("[^a-z0-9\\u4e00-\\u9fa5]+", " ").trim().split("\\s+");
 
     Set<String> result = new HashSet<>();
     for (String part : parts) {

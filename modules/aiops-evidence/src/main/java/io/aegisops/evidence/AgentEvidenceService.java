@@ -55,8 +55,7 @@ public class AgentEvidenceService {
     try {
       return repository.queryLogs(request, properties.normalizedMaxLogPatterns());
     } catch (Exception ex) {
-      return LogEvidence.unavailable(
-          "Log evidence query failed: " + ex.getClass().getSimpleName());
+      return LogEvidence.unavailable("Log evidence query failed: " + ex.getClass().getSimpleName());
     }
   }
 

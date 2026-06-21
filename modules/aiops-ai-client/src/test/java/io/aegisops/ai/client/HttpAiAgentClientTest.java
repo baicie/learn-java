@@ -16,29 +16,27 @@ import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestTemplate;
 
 class HttpAiAgentClientTest {
-    @Test
-    void postsDiagnosisRequestWithContractHeaders() {
-        ObjectMapper objectMapper = new ObjectMapper();
-        RestTemplate restTemplate = new RestTemplate();
-        MockRestServiceServer server = MockRestServiceServer.bindTo(restTemplate).build();
+  @Test
+  void postsDiagnosisRequestWithContractHeaders() {
+    ObjectMapper objectMapper = new ObjectMapper();
+    RestTemplate restTemplate = new RestTemplate();
+    MockRestServiceServer server = MockRestServiceServer.bindTo(restTemplate).build();
 
-        AgentClientProperties properties = new AgentClientProperties(
-                "http://agent:9008",
-                "test-token",
-                1000,
-                1000);
+    AgentClientProperties properties =
+        new AgentClientProperties("http://agent:9008", "test-token", 1000, 1000);
 
-        HttpAiAgentClient client = new HttpAiAgentClient(
-                properties,
-                objectMapper,
-                restTemplate,
-                new AgentContractValidator());
+    HttpAiAgentClient client =
+        new HttpAiAgentClient(properties, objectMapper, restTemplate, new AgentContractValidator());
 
-        server.expect(requestTo("http://agent:9008/v1/diagnose"))
-                .andExpect(header(AgentContract.INTERNAL_TOKEN_HEADER, "test-token"))
-                .andExpect(header(AgentContract.TRACE_ID_HEADER, "trace_1"))
-                .andExpect(header(AgentContract.CONTRACT_VERSION_HEADER, AgentContract.DIAGNOSIS_CONTRACT_VERSION))
-                .andRespond(withSuccess("""
+    server
+        .expect(requestTo("http://agent:9008/v1/diagnose"))
+        .andExpect(header(AgentContract.INTERNAL_TOKEN_HEADER, "test-token"))
+        .andExpect(header(AgentContract.TRACE_ID_HEADER, "trace_1"))
+        .andExpect(
+            header(AgentContract.CONTRACT_VERSION_HEADER, AgentContract.DIAGNOSIS_CONTRACT_VERSION))
+        .andRespond(
+            withSuccess(
+                """
                         {
                           "contractVersion": "agent-diagnosis.v1",
                           "provider": "aiops-agent",
@@ -52,23 +50,28 @@ class HttpAiAgentClientTest {
                           "risks": ["risk"],
                           "raw": {"ok": true}
                         }
-                        """, MediaType.APPLICATION_JSON));
+                        """,
+                MediaType.APPLICATION_JSON));
 
-        AgentDiagnosisResponse response = client.diagnose(new AgentDiagnosisRequest(
+    AgentDiagnosisResponse response =
+        client.diagnose(
+            new AgentDiagnosisRequest(
                 AgentContract.DIAGNOSIS_CONTRACT_VERSION,
                 "tenant_1",
                 "inc_1",
-                new AgentIncidentContext("inc_1", null, null, null, null, null, null, null, 0, null, null, null, null, null),
+                new AgentIncidentContext(
+                    "inc_1", null, null, null, null, null, null, null, 0, null, null, null, null,
+                    null),
                 List.of(),
                 null,
                 "zh-CN",
                 "trace_1"));
 
-        assertEquals("aiops-agent", response.provider());
-        assertEquals("aegisops_diagnosis_graph", response.agentName());
-        assertEquals("root", response.rootCause());
-        assertEquals(AgentContract.DIAGNOSIS_CONTRACT_VERSION, response.contractVersion());
+    assertEquals("aiops-agent", response.provider());
+    assertEquals("aegisops_diagnosis_graph", response.agentName());
+    assertEquals("root", response.rootCause());
+    assertEquals(AgentContract.DIAGNOSIS_CONTRACT_VERSION, response.contractVersion());
 
-        server.verify();
-    }
+    server.verify();
+  }
 }

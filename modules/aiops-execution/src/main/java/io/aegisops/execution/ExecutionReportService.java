@@ -11,7 +11,6 @@ import io.aegisops.execution.dto.ExecutionReportRecord;
 import io.aegisops.execution.dto.ExecutionReportResponse;
 import io.aegisops.execution.dto.ExecutionReportSectionCreateCommand;
 import io.aegisops.execution.dto.ExecutionReportSectionRecord;
-import io.aegisops.execution.dto.ExecutionReportSectionResponse;
 import io.aegisops.execution.dto.ExecutionRunResponse;
 import io.aegisops.execution.dto.ExecutionVerificationCreateCommand;
 import io.aegisops.execution.dto.ExecutionVerificationCreateRequest;
@@ -19,7 +18,6 @@ import io.aegisops.execution.dto.ExecutionVerificationRecord;
 import io.aegisops.execution.dto.ExecutionVerificationResponse;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,6 +27,7 @@ public class ExecutionReportService {
   private final ExecutionReportRepository repository;
   private final ExecutionReportMarkdownBuilder markdownBuilder;
   private final ExecutionReportJson json;
+  private final ExecutionReportHelpers helpers = new ExecutionReportHelpers();
 
   public ExecutionReportService(
       ExecutionRequestService executionRequestService,
@@ -48,17 +47,18 @@ public class ExecutionReportService {
 
     validateTerminal(execution);
 
-    String reportId = newId("exr");
-    String actor = blankToDefault(request == null ? null : request.generatedBy(), "system");
+    String reportId = helpers.newId("exr");
+    String actor = helpers.blankToDefault(request == null ? null : request.generatedBy(), "system");
 
     appendAuditEvent(
-        tenantId,
-        executionId,
-        null,
-        "report_generated",
-        actor,
-        "Execution report generated",
-        Map.of("reportId", reportId));
+        new AppendAuditEventParams(
+            tenantId,
+            executionId,
+            null,
+            "report_generated",
+            actor,
+            "Execution report generated",
+            Map.of("reportId", reportId)));
 
     ExecutionRunResponse reportExecution =
         include(request == null ? null : request.includeArtifacts())
@@ -80,7 +80,7 @@ public class ExecutionReportService {
     String reportType =
         normalizeReportType(request == null ? null : request.reportType(), execution);
     String title = "Execution Report - " + execution.id();
-    String summary = buildSummary(execution);
+    String summary = helpers.buildSummary(execution);
 
     repository.createReport(
         new ExecutionReportCreateCommand(
@@ -94,42 +94,63 @@ public class ExecutionReportService {
             markdown,
             actor));
 
-    int order = 1;
-    createSection(tenantId, reportId, order++, "summary", "Summary", summary, Map.of());
-    createSection(
-        tenantId,
-        reportId,
-        order++,
-        "steps",
-        "Step Summary",
-        buildStepSummary(reportExecution),
-        Map.of("stepCount", reportExecution.steps().size()));
-    createSection(
-        tenantId,
-        reportId,
-        order++,
-        "artifacts",
-        "Artifact Summary",
-        buildArtifactSummary(reportExecution),
-        Map.of("artifactCount", reportExecution.artifacts().size()));
-    createSection(
-        tenantId,
-        reportId,
-        order++,
-        "verification",
-        "Verification",
-        buildVerificationSummary(verifications),
-        Map.of("verificationCount", verifications.size()));
-    createSection(
-        tenantId,
-        reportId,
-        order++,
-        "audit",
-        "Audit Events",
-        buildAuditSummary(auditEvents),
-        Map.of("auditEventCount", auditEvents.size()));
+    createReportSections(tenantId, reportId, reportExecution, verifications, auditEvents);
 
     return get(tenantId, reportId);
+  }
+
+  private void createReportSections(
+      String tenantId,
+      String reportId,
+      ExecutionRunResponse execution,
+      List<ExecutionVerificationRecord> verifications,
+      List<ExecutionAuditEventRecord> auditEvents) {
+    int order = 1;
+    createSection(
+        new CreateSectionParams(
+            tenantId,
+            reportId,
+            order++,
+            "summary",
+            "Summary",
+            helpers.buildSummary(execution),
+            Map.of()));
+    createSection(
+        new CreateSectionParams(
+            tenantId,
+            reportId,
+            order++,
+            "steps",
+            "Step Summary",
+            helpers.buildStepSummary(execution),
+            Map.of("stepCount", execution.steps().size())));
+    createSection(
+        new CreateSectionParams(
+            tenantId,
+            reportId,
+            order++,
+            "artifacts",
+            "Artifact Summary",
+            helpers.buildArtifactSummary(execution),
+            Map.of("artifactCount", execution.artifacts().size())));
+    createSection(
+        new CreateSectionParams(
+            tenantId,
+            reportId,
+            order++,
+            "verification",
+            "Verification",
+            helpers.buildVerificationSummary(verifications),
+            Map.of("verificationCount", verifications.size())));
+    createSection(
+        new CreateSectionParams(
+            tenantId,
+            reportId,
+            order++,
+            "audit",
+            "Audit Events",
+            helpers.buildAuditSummary(auditEvents),
+            Map.of("auditEventCount", auditEvents.size())));
   }
 
   public ExecutionReportResponse get(String tenantId, String reportId) {
@@ -163,15 +184,15 @@ public class ExecutionReportService {
     validateVerificationRequest(request);
     validateVerificationStep(execution, request.stepId());
 
-    String id = newId("exv");
-    String actor = blankToDefault(request.createdBy(), "system");
+    String id = helpers.newId("exv");
+    String actor = helpers.blankToDefault(request.createdBy(), "system");
 
     repository.createVerification(
         new ExecutionVerificationCreateCommand(
             id,
             tenantId,
             executionId,
-            blankToNull(request.stepId()),
+            helpers.blankToNull(request.stepId()),
             normalizeVerificationType(request.verificationType()),
             request.targetType().trim(),
             request.targetId(),
@@ -181,13 +202,14 @@ public class ExecutionReportService {
             actor));
 
     appendAuditEvent(
-        tenantId,
-        executionId,
-        blankToNull(request.stepId()),
-        "verification_created",
-        actor,
-        "Execution verification created",
-        Map.of("verificationId", id, "status", normalizeVerificationStatus(request.status())));
+        new AppendAuditEventParams(
+            tenantId,
+            executionId,
+            helpers.blankToNull(request.stepId()),
+            "verification_created",
+            actor,
+            "Execution verification created",
+            Map.of("verificationId", id, "status", normalizeVerificationStatus(request.status()))));
 
     return listVerifications(tenantId, executionId).stream()
         .filter(item -> item.id().equals(id))
@@ -202,35 +224,28 @@ public class ExecutionReportService {
       String tenantId, String executionId) {
     executionRequestService.getExecution(tenantId, executionId);
     return repository.listVerifications(tenantId, executionId).stream()
-        .map(this::toVerificationResponse)
+        .map(helpers::toVerificationResponse)
         .toList();
   }
 
   public List<ExecutionAuditEventResponse> listAuditEvents(String tenantId, String executionId) {
     executionRequestService.getExecution(tenantId, executionId);
     return repository.listAuditEvents(tenantId, executionId).stream()
-        .map(this::toAuditEventResponse)
+        .map(helpers::toAuditEventResponse)
         .toList();
   }
 
-  public void appendAuditEvent(
-      String tenantId,
-      String executionId,
-      String stepId,
-      String eventType,
-      String actor,
-      String summary,
-      Object payload) {
+  public void appendAuditEvent(AppendAuditEventParams params) {
     repository.createAuditEvent(
         new ExecutionAuditEventCreateCommand(
-            newId("xae"),
-            tenantId,
-            executionId,
-            blankToNull(stepId),
-            eventType,
-            blankToDefault(actor, "system"),
-            summary,
-            json.write(payload)));
+            helpers.newId("xae"),
+            params.tenantId(),
+            params.executionId(),
+            helpers.blankToNull(params.stepId()),
+            params.eventType(),
+            helpers.blankToDefault(params.actor(), "system"),
+            params.summary(),
+            json.write(params.payload())));
   }
 
   private void validateTerminal(ExecutionRunResponse execution) {
@@ -340,112 +355,17 @@ public class ExecutionReportService {
         execution.updatedAt());
   }
 
-  private void createSection(
-      String tenantId,
-      String reportId,
-      int order,
-      String sectionType,
-      String title,
-      String content,
-      Object metadata) {
+  private void createSection(CreateSectionParams params) {
     repository.createSection(
         new ExecutionReportSectionCreateCommand(
-            newId("exrs"),
-            tenantId,
-            reportId,
-            order,
-            sectionType,
-            title,
-            content,
-            json.write(metadata)));
-  }
-
-  private String buildSummary(ExecutionRunResponse execution) {
-    return "Execution "
-        + execution.id()
-        + " finished with status "
-        + execution.status()
-        + ". Mode="
-        + execution.mode()
-        + ", Kind="
-        + execution.executionKind()
-        + ".";
-  }
-
-  private String buildStepSummary(ExecutionRunResponse execution) {
-    StringBuilder builder = new StringBuilder();
-    for (var step : execution.steps()) {
-      builder
-          .append(step.sequenceNo())
-          .append(". ")
-          .append(step.name())
-          .append(" [")
-          .append(step.actionType())
-          .append("] -> ")
-          .append(step.status())
-          .append("\n");
-    }
-    return builder.isEmpty() ? "No steps." : builder.toString();
-  }
-
-  private String buildArtifactSummary(ExecutionRunResponse execution) {
-    StringBuilder builder = new StringBuilder();
-    for (var artifact : execution.artifacts()) {
-      builder
-          .append("- ")
-          .append(artifact.name())
-          .append(" (")
-          .append(artifact.artifactType())
-          .append(")")
-          .append(" step=")
-          .append(artifact.stepId())
-          .append("\n");
-    }
-    return builder.isEmpty() ? "No artifacts." : builder.toString();
-  }
-
-  private String buildVerificationSummary(List<ExecutionVerificationRecord> verifications) {
-    if (verifications.isEmpty()) {
-      return "No verification records.";
-    }
-
-    StringBuilder builder = new StringBuilder();
-    for (ExecutionVerificationRecord verification : verifications) {
-      builder
-          .append("- ")
-          .append(verification.verificationType())
-          .append(" ")
-          .append(verification.targetType())
-          .append(":")
-          .append(verification.targetId())
-          .append(" -> ")
-          .append(verification.status())
-          .append(" - ")
-          .append(verification.summary())
-          .append("\n");
-    }
-    return builder.toString();
-  }
-
-  private String buildAuditSummary(List<ExecutionAuditEventRecord> auditEvents) {
-    if (auditEvents.isEmpty()) {
-      return "No audit events.";
-    }
-
-    StringBuilder builder = new StringBuilder();
-    for (ExecutionAuditEventRecord event : auditEvents) {
-      builder
-          .append("- ")
-          .append(event.createdAt())
-          .append(" [")
-          .append(event.eventType())
-          .append("] ")
-          .append(event.summary())
-          .append(" by ")
-          .append(event.actor())
-          .append("\n");
-    }
-    return builder.toString();
+            helpers.newId("exrs"),
+            params.tenantId(),
+            params.reportId(),
+            params.order(),
+            params.sectionType(),
+            params.title(),
+            params.content(),
+            json.write(params.metadata())));
   }
 
   private ExecutionReportResponse toResponse(
@@ -461,58 +381,12 @@ public class ExecutionReportService {
         report.markdown(),
         report.generatedBy(),
         report.generatedAt(),
-        sections.stream().map(this::toSectionResponse).toList(),
+        sections.stream().map(helpers::toSectionResponse).toList(),
         report.createdAt(),
         report.updatedAt());
   }
 
-  private ExecutionReportSectionResponse toSectionResponse(ExecutionReportSectionRecord section) {
-    return new ExecutionReportSectionResponse(
-        section.id(),
-        section.sectionOrder(),
-        section.sectionType(),
-        section.title(),
-        section.content(),
-        section.metadataJson(),
-        section.createdAt());
-  }
-
-  private ExecutionVerificationResponse toVerificationResponse(ExecutionVerificationRecord record) {
-    return new ExecutionVerificationResponse(
-        record.id(),
-        record.executionId(),
-        record.stepId(),
-        record.verificationType(),
-        record.targetType(),
-        record.targetId(),
-        record.status(),
-        record.summary(),
-        record.detailsJson(),
-        record.createdBy(),
-        record.createdAt());
-  }
-
-  private ExecutionAuditEventResponse toAuditEventResponse(ExecutionAuditEventRecord record) {
-    return new ExecutionAuditEventResponse(
-        record.id(),
-        record.executionId(),
-        record.stepId(),
-        record.eventType(),
-        record.actor(),
-        record.summary(),
-        record.payloadJson(),
-        record.createdAt());
-  }
-
-  private String blankToDefault(String value, String fallback) {
-    return value == null || value.isBlank() ? fallback : value.trim();
-  }
-
-  private String blankToNull(String value) {
-    return value == null || value.isBlank() ? null : value.trim();
-  }
-
-  private String newId(String prefix) {
-    return prefix + "_" + UUID.randomUUID().toString().replace("-", "");
+  private ExecutionReportHelpers getHelpers() {
+    return helpers;
   }
 }
