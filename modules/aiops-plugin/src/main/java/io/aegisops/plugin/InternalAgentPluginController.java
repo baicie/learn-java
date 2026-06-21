@@ -1,6 +1,7 @@
 package io.aegisops.plugin;
 
 import io.aegisops.common.api.ApiResponse;
+import io.aegisops.common.tenant.TenantContext;
 import io.aegisops.plugin.dto.AgentToolAuthorizeRequest;
 import io.aegisops.plugin.dto.AgentToolAuthorizeResponse;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -18,6 +19,6 @@ public class InternalAgentPluginController {
   @PostMapping("/internal/agent/plugins/tools/authorize")
   public ApiResponse<AgentToolAuthorizeResponse> authorize(
       @RequestBody AgentToolAuthorizeRequest request) {
-    return ApiResponse.ok(service.authorizeTool(request));
+    return ApiResponse.ok(service.authorizeTool(TenantContext.requireTenantId(), request));
   }
 }

@@ -164,6 +164,7 @@ public class PluginService {
     validator.requireAllowedToolKey(toolKey);
     TenantPluginRecord tenantPlugin = loadTenantPlugin(tenantId, tenantPluginId);
     ensureTenantPluginEnabled(tenantPlugin);
+    ensureToolDeclaredByPlugin(tenantPlugin, toolKey);
 
     repository.upsertToolPolicy(
         new ToolPolicyCommand(
@@ -189,6 +190,7 @@ public class PluginService {
 
     return repository
         .findAllowedToolPolicy(tenantId, toolKey)
+        .filter(policy -> policy.tenantPluginId().equals(tenantPluginId))
         .map(this::toToolPolicyResponse)
         .orElseThrow(
             () -> new AppException("PLUGIN_TOOL_POLICY_NOT_FOUND", "Tool policy not found"));
@@ -199,6 +201,7 @@ public class PluginService {
       String tenantId, String tenantPluginId, String toolKey, String actor) {
     validator.requireAllowedToolKey(toolKey);
     TenantPluginRecord tenantPlugin = loadTenantPlugin(tenantId, tenantPluginId);
+    ensureToolDeclaredByPlugin(tenantPlugin, toolKey);
 
     repository.upsertToolPolicy(
         new ToolPolicyCommand(
@@ -235,43 +238,84 @@ public class PluginService {
     if (request == null || request.tenantId() == null || request.tenantId().isBlank()) {
       throw new AppException("PLUGIN_TOOL_TENANT_REQUIRED", "Tenant id is required");
     }
-    if (request.toolKey() == null || request.toolKey().isBlank()) {
+    return authorizeTool(request.tenantId(), request);
+  }
+
+  public AgentToolAuthorizeResponse authorizeTool(
+      String tenantId, AgentToolAuthorizeRequest request) {
+    if (tenantId == null || tenantId.isBlank()) {
+      throw new AppException("PLUGIN_TOOL_TENANT_REQUIRED", "Tenant id is required");
+    }
+    if (request == null || request.toolKey() == null || request.toolKey().isBlank()) {
       throw new AppException("PLUGIN_TOOL_KEY_REQUIRED", "Tool key is required");
     }
 
-    validator.requireAllowedToolKey(request.toolKey());
+    String currentTenantId = tenantId.trim();
+    if (request.tenantId() != null
+        && !request.tenantId().isBlank()
+        && !currentTenantId.equals(request.tenantId().trim())) {
+      throw new AppException(
+          "PLUGIN_TOOL_TENANT_MISMATCH", "Request tenant does not match current tenant context");
+    }
 
-    boolean allowed =
-        repository.findAllowedToolPolicy(request.tenantId(), request.toolKey()).isPresent();
+    String toolKey = request.toolKey().trim();
+    validator.requireAllowedToolKey(toolKey);
 
-    if (allowed) {
-      repository.createEvent(
-          new PluginEventCommand(
-              newId("ple"),
-              request.tenantId(),
-              null,
-              null,
-              "tool_authorized",
-              "Agent tool authorized",
-              "agent",
-              json.write(Map.of("toolKey", request.toolKey()))));
-      return new AgentToolAuthorizeResponse(
-          true, request.toolKey(), "allowed by tenant plugin policy");
+    var policy = repository.findAllowedToolPolicy(currentTenantId, toolKey);
+
+    if (policy.isPresent()) {
+      TenantPluginRecord tenantPlugin =
+          loadTenantPlugin(currentTenantId, policy.get().tenantPluginId());
+      if (isToolDeclaredByPlugin(tenantPlugin, toolKey)) {
+        repository.createEvent(
+            new PluginEventCommand(
+                newId("ple"),
+                currentTenantId,
+                policy.get().pluginId(),
+                policy.get().tenantPluginId(),
+                "tool_authorized",
+                "Agent tool authorized",
+                "agent",
+                json.write(Map.of("toolKey", toolKey))));
+        return new AgentToolAuthorizeResponse(true, toolKey, "allowed by tenant plugin policy");
+      }
     }
 
     repository.createEvent(
         new PluginEventCommand(
             newId("ple"),
-            request.tenantId(),
-            null,
-            null,
+            currentTenantId,
+            policy.map(TenantPluginToolPolicyRecord::pluginId).orElse(null),
+            policy.map(TenantPluginToolPolicyRecord::tenantPluginId).orElse(null),
             "tool_denied_by_policy",
             "Agent tool denied by plugin policy",
             "agent",
-            json.write(Map.of("toolKey", request.toolKey()))));
+            json.write(Map.of("toolKey", toolKey))));
 
-    return new AgentToolAuthorizeResponse(
-        false, request.toolKey(), "not allowed by tenant plugin policy");
+    return new AgentToolAuthorizeResponse(false, toolKey, "not allowed by tenant plugin policy");
+  }
+
+  private void ensureToolDeclaredByPlugin(TenantPluginRecord tenantPlugin, String toolKey) {
+    if (!isToolDeclaredByPlugin(tenantPlugin, toolKey)) {
+      throw new AppException(
+          "PLUGIN_TOOL_NOT_DECLARED", "Tool key is not declared by plugin manifest");
+    }
+  }
+
+  private boolean isToolDeclaredByPlugin(TenantPluginRecord tenantPlugin, String toolKey) {
+    Map<String, Object> manifest = json.readMap(tenantPlugin.manifestJson());
+    Object rawTools = manifest.get("agentTools");
+    if (!(rawTools instanceof List<?> tools)) {
+      return false;
+    }
+
+    for (Object item : tools) {
+      if (item instanceof Map<?, ?> tool && toolKey.equals(String.valueOf(tool.get("toolKey")))) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   private void allowDefaultTools(
