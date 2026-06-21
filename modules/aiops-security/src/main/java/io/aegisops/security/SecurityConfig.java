@@ -62,6 +62,15 @@ public class SecurityConfig {
       TenantRateLimitFilter tenantRateLimitFilter) {}
 
   @Bean
+  public SecurityFilters securityFilters(
+      InternalAgentAuthFilter internalAgentAuthFilter,
+      TenantRequiredFilter tenantRequiredFilter,
+      TenantRateLimitFilter tenantRateLimitFilter) {
+    return new SecurityFilters(
+        internalAgentAuthFilter, tenantRequiredFilter, tenantRateLimitFilter);
+  }
+
+  @Bean
   public PasswordEncoder passwordEncoder() {
     return new BCryptPasswordEncoder();
   }

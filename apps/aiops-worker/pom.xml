@@ -36,6 +36,7 @@
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>
         <configuration>
+          <skip>false</skip>
           <mainClass>io.aegisops.worker.AiOpsWorkerApplication</mainClass>
         </configuration>
       </plugin>

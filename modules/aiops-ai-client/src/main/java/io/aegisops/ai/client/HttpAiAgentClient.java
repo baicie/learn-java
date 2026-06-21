@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.aegisops.ai.client.dto.AgentDiagnosisRequest;
 import io.aegisops.ai.client.dto.AgentDiagnosisResponse;
 import io.aegisops.common.exception.AppException;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -22,6 +23,7 @@ public class HttpAiAgentClient implements AiAgentClient {
   private final RestTemplate restTemplate;
   private final AgentContractValidator contractValidator;
 
+  @Autowired
   public HttpAiAgentClient(AgentClientProperties properties, ObjectMapper objectMapper) {
     this(properties, objectMapper, createRestTemplate(properties), new AgentContractValidator());
   }
