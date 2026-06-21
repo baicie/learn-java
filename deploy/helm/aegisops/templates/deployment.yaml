@@ -1,0 +1,70 @@
+{{- $root := . -}}
+{{- range $appName, $app := .Values.apps }}
+{{- if $app.enabled }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "aegisops.fullname" $root }}-{{ $appName }}
+  labels:
+    {{- include "aegisops.labels" $root | nindent 4 }}
+    app.kubernetes.io/component: {{ $appName }}
+spec:
+  replicas: {{ $app.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "aegisops.selectorLabels" $root | nindent 6 }}
+      app.kubernetes.io/component: {{ $appName }}
+  template:
+    metadata:
+      labels:
+        {{- include "aegisops.selectorLabels" $root | nindent 8 }}
+        app.kubernetes.io/component: {{ $appName }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") $root | sha256sum }}
+        checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") $root | sha256sum }}
+    spec:
+      serviceAccountName: {{ include "aegisops.serviceAccountName" $root }}
+      imagePullSecrets:
+        {{- toYaml $root.Values.global.imagePullSecrets | nindent 8 }}
+      securityContext:
+        {{- toYaml $root.Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ $appName }}
+          image: {{ include "aegisops.image" (list $root $app.image) | quote }}
+          imagePullPolicy: {{ $root.Values.global.imagePullPolicy }}
+          securityContext:
+            {{- toYaml $root.Values.containerSecurityContext | nindent 12 }}
+          ports:
+            - name: http
+              containerPort: {{ $app.port }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "aegisops.fullname" $root }}-config
+            - secretRef:
+                name: {{ include "aegisops.fullname" $root }}-secret
+          env:
+            - name: AIOPS_APP_NAME
+              value: {{ $appName | quote }}
+            {{- range $key, $value := $app.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+          readinessProbe:
+            httpGet:
+              path: {{ ternary "/health" "/actuator/health" (eq $appName "agent") }}
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: {{ ternary "/health" "/actuator/health" (eq $appName "agent") }}
+              port: http
+            initialDelaySeconds: 60
+            periodSeconds: 20
+            failureThreshold: 6
+          resources:
+            {{- toYaml $app.resources | nindent 12 }}
+{{- end }}
+{{- end }}

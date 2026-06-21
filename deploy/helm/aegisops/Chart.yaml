@@ -1,0 +1,15 @@
+apiVersion: v2
+name: aegisops
+description: AegisOps private deployment chart
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+kubeVersion: ">=1.24.0"
+keywords:
+  - aiops
+  - observability
+  - incident
+  - agent
+maintainers:
+  - name: AegisOps
+    email: ops@example.com

@@ -1,0 +1,4 @@
+aegisops/aiops-server:0.1.0
+aegisops/aiops-worker:0.1.0
+aegisops/aiops-runner:0.1.0
+aegisops/aiops-agent:0.1.0

@@ -1,0 +1,40 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "aegisops.fullname" . }}-config
+  labels:
+    {{- include "aegisops.labels" . | nindent 4 }}
+data:
+  SPRING_PROFILES_ACTIVE: {{ .Values.config.springProfilesActive | quote }}
+  JAVA_OPTS: {{ .Values.config.javaOpts | quote }}
+  LOG_LEVEL: {{ .Values.config.logLevel | quote }}
+  TZ: {{ .Values.global.timezone | quote }}
+
+  POSTGRES_HOST: {{ .Values.external.postgres.host | quote }}
+  POSTGRES_PORT: {{ .Values.external.postgres.port | quote }}
+  POSTGRES_DB: {{ .Values.external.postgres.database | quote }}
+  POSTGRES_USER: {{ .Values.external.postgres.username | quote }}
+
+  REDIS_HOST: {{ .Values.external.redis.host | quote }}
+  REDIS_PORT: {{ .Values.external.redis.port | quote }}
+
+  CLICKHOUSE_HOST: {{ .Values.external.clickhouse.host | quote }}
+  CLICKHOUSE_HTTP_PORT: {{ .Values.external.clickhouse.httpPort | quote }}
+  CLICKHOUSE_TCP_PORT: {{ .Values.external.clickhouse.tcpPort | quote }}
+  CLICKHOUSE_DB: {{ .Values.external.clickhouse.database | quote }}
+  CLICKHOUSE_USER: {{ .Values.external.clickhouse.username | quote }}
+
+  MINIO_ENDPOINT: {{ .Values.external.minio.endpoint | quote }}
+  MINIO_BUCKET: {{ .Values.external.minio.bucket | quote }}
+
+  VICTORIA_METRICS_BASE_URL: {{ .Values.external.victoriaMetrics.baseUrl | quote }}
+
+  AIOPS_PUBLIC_API_RPM: {{ .Values.security.publicApiRequestsPerMinute | quote }}
+  AIOPS_INTERNAL_AGENT_RPM: {{ .Values.security.internalAgentRequestsPerMinute | quote }}
+  AIOPS_TENANT_REQUIRED: {{ .Values.security.tenantRequired | quote }}
+  AIOPS_INTERNAL_AGENT_TOKEN_REQUIRED: {{ .Values.security.internalAgentTokenRequired | quote }}
+
+  AIOPS_AGENT_EVIDENCE_API_BASE_URL: "http://{{ include "aegisops.fullname" . }}-server:8080"
+  AIOPS_AGENT_KNOWLEDGE_API_BASE_URL: "http://{{ include "aegisops.fullname" . }}-server:8080"
+  AIOPS_AGENT_CHECKPOINT_API_BASE_URL: "http://{{ include "aegisops.fullname" . }}-server:8080"
+  AIOPS_AGENT_MEMORY_API_BASE_URL: "http://{{ include "aegisops.fullname" . }}-server:8080"

@@ -1,0 +1,19 @@
+AegisOps has been installed.
+
+Release: {{ .Release.Name }}
+Namespace: {{ .Release.Namespace }}
+
+Services:
+{{- range $appName, $app := .Values.apps }}
+{{- if $app.enabled }}
+  - {{ include "aegisops.fullname" $ }}-{{ $appName }}:{{ $app.port }}
+{{- end }}
+{{- end }}
+
+Security:
+  - X-Tenant-Id is required for /api/** and /internal/agent/**
+  - X-AIOPS-INTERNAL-TOKEN is required for /internal/agent/**
+
+Next:
+  kubectl get pods -n {{ .Release.Namespace }}
+  kubectl get svc -n {{ .Release.Namespace }}
