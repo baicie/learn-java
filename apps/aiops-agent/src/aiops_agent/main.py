@@ -1,12 +1,15 @@
 from __future__ import annotations
 
-from fastapi import Depends, FastAPI, Header, HTTPException, status
+from fastapi import Depends, FastAPI, Header, HTTPException, Response, status
 
 from aiops_agent.contract import (
     load_contract_schema,
     validate_request_contract,
     validate_response_contract,
 )
+from aiops_agent.observability.logging import configure_json_logging
+from aiops_agent.observability.metrics import metrics_content_type, render_metrics
+from aiops_agent.observability.middleware import RequestContextMiddleware
 from aiops_agent.schemas import (
     ContractResponse,
     DiagnoseRequest,
@@ -20,7 +23,10 @@ from aiops_agent.workflow.contracts import (
 )
 from aiops_agent.workflow.contracts import DiagnosisResumeRequest
 
+configure_json_logging(settings.log_level)
+
 app = FastAPI(title="AegisOps LangGraph Agent Runtime", version="0.7.3")
+app.add_middleware(RequestContextMiddleware)
 
 
 def verify_internal_token(x_aegisops_internal_token: str | None = Header(default=None)) -> None:
@@ -92,3 +98,8 @@ async def diagnose_resume(
     service: DiagnosisService = Depends(diagnosis_service),
 ) -> WorkflowDiagnosisResponse:
     return await service.resume(request)
+
+
+@app.get("/metrics")
+async def metrics() -> Response:
+    return Response(content=render_metrics(), media_type=metrics_content_type())

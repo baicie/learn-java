@@ -1,0 +1,47 @@
+{{ if and .Values.observability.enabled .Values.observability.prometheusRule.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ include "aegisops.fullname" . }}
+  labels:
+    {{- include "aegisops.labels" . | nindent 4 }}
+    {{- with .Values.observability.prometheusRule.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  groups:
+    - name: aegisops.rules
+      rules:
+        - alert: AegisOpsHighHttp5xxRate
+          expr: "sum(rate(aegisops_http_requests_total{status=~\"5..\"}[5m])) / clamp_min(sum(rate(aegisops_http_requests_total[5m])), 1) > 0.05"
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "AegisOps HTTP 5xx rate is high"
+            description: "More than 5% of AegisOps HTTP requests are returning 5xx."
+        - alert: AegisOpsHighP95Latency
+          expr: "histogram_quantile(0.95, sum(rate(aegisops_http_request_duration_bucket[5m])) by (le, service)) > 2"
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "AegisOps p95 latency is high"
+            description: "p95 HTTP latency is above 2 seconds."
+        - alert: AegisOpsAgentHighErrorRate
+          expr: "sum(rate(aiops_agent_http_requests_total{status=~\"5..\"}[5m])) / clamp_min(sum(rate(aiops_agent_http_requests_total[5m])), 1) > 0.05"
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "AegisOps Agent 5xx rate is high"
+            description: "More than 5% of AI Ops Agent HTTP requests are returning 5xx."
+        - alert: AegisOpsAgentDiagnosisFailures
+          expr: "sum(rate(aiops_agent_diagnosis_total{status=\"failed\"}[5m])) > 0"
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "AegisOps Agent diagnosis failures detected"
+            description: "AI Ops Agent diagnosis failed in the last 10 minutes."
+{{ end }}

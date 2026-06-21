@@ -1,0 +1,71 @@
+{{ if and .Values.observability.enabled .Values.observability.grafanaDashboard.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "aegisops.fullname" . }}-dashboard
+  labels:
+    {{- include "aegisops.labels" . | nindent 4 }}
+    {{- with .Values.observability.grafanaDashboard.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+data:
+  aegisops-dashboard.json: |
+    {
+      "title": "AegisOps Production Overview",
+      "schemaVersion": 39,
+      "version": 1,
+      "refresh": "30s",
+      "panels": [
+        {
+          "type": "timeseries",
+          "title": "HTTP Requests",
+          "targets": [
+            {
+              "expr": "sum(rate(aegisops_http_requests_total[5m])) by (service)"
+            }
+          ],
+          "gridPos": {"x": 0, "y": 0, "w": 12, "h": 8}
+        },
+        {
+          "type": "timeseries",
+          "title": "HTTP 5xx Rate",
+          "targets": [
+            {
+              "expr": "sum(rate(aegisops_http_requests_total{status=~\"5..\"}[5m])) by (service)"
+            }
+          ],
+          "gridPos": {"x": 12, "y": 0, "w": 12, "h": 8}
+        },
+        {
+          "type": "timeseries",
+          "title": "HTTP p95 Latency",
+          "targets": [
+            {
+              "expr": "histogram_quantile(0.95, sum(rate(aegisops_http_request_duration_bucket[5m])) by (le, service))"
+            }
+          ],
+          "gridPos": {"x": 0, "y": 8, "w": 12, "h": 8}
+        },
+        {
+          "type": "timeseries",
+          "title": "Agent Requests",
+          "targets": [
+            {
+              "expr": "sum(rate(aiops_agent_http_requests_total[5m])) by (path, status)"
+            }
+          ],
+          "gridPos": {"x": 12, "y": 8, "w": 12, "h": 8}
+        },
+        {
+          "type": "timeseries",
+          "title": "Agent Diagnosis",
+          "targets": [
+            {
+              "expr": "sum(rate(aiops_agent_diagnosis_total[5m])) by (status)"
+            }
+          ],
+          "gridPos": {"x": 0, "y": 16, "w": 12, "h": 8}
+        }
+      ]
+    }
+{{ end }}

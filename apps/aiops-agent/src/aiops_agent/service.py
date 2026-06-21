@@ -6,6 +6,7 @@ from aiops_agent.eval import evaluate_diagnosis
 from aiops_agent.evidence import EvidenceClient as LegacyEvidenceClient
 from aiops_agent.graph import run_diagnosis_graph as run_legacy_diagnosis_graph
 from aiops_agent.llm import LlmClient
+from aiops_agent.observability.metrics import DIAGNOSIS_COUNT
 from aiops_agent.safety import apply_safety_boundary
 from aiops_agent.schemas import DiagnoseRequest, DiagnoseResponse
 from aiops_agent.settings import Settings
@@ -59,12 +60,14 @@ class DiagnosisService:
             )
             response = apply_safety_boundary(to_contract_response(request, result, self.settings))
             tracer.finish_step(step, "completed", "phase7 workflow completed")
+            DIAGNOSIS_COUNT.labels(status="success").inc()
         except Exception as exc:
             tracer.finish_step(
                 step,
                 "failed",
                 error_message=f"{type(exc).__name__}: {exc}",
             )
+            DIAGNOSIS_COUNT.labels(status="failed").inc()
             raise
 
         raw = dict(response.raw)

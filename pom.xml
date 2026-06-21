@@ -32,6 +32,7 @@
     <module>apps/aiops-server</module>
     <module>apps/aiops-worker</module>
     <module>apps/aiops-runner</module>
+    <module>modules/aiops-observability</module>
   </modules>
 
   <properties>

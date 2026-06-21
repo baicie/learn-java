@@ -1,0 +1,41 @@
+{{ if and .Values.observability.enabled .Values.observability.serviceMonitor.enabled }}
+{{- range $component := list "server" "worker" "runner" }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "aegisops.fullname" $ }}-{{ $component }}
+  labels:
+    {{- include "aegisops.labels" $ | nindent 4 }}
+    {{- with $.Values.observability.serviceMonitor.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: {{ $component }}
+  endpoints:
+    - port: http
+      path: /actuator/prometheus
+      interval: {{ $.Values.observability.serviceMonitor.interval }}
+      scrapeTimeout: {{ $.Values.observability.serviceMonitor.scrapeTimeout }}
+---
+{{- end }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "aegisops.fullname" . }}-agent
+  labels:
+    {{- include "aegisops.labels" . | nindent 4 }}
+    {{- with .Values.observability.serviceMonitor.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: agent
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: {{ .Values.observability.serviceMonitor.interval }}
+      scrapeTimeout: {{ .Values.observability.serviceMonitor.scrapeTimeout }}
+{{ end }}

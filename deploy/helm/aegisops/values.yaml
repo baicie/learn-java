@@ -149,3 +149,20 @@ networkPolicy:
 
 offline:
   enabled: false
+
+observability:
+  enabled: true
+  metrics:
+    enabled: true
+  serviceMonitor:
+    enabled: false
+    interval: 30s
+    scrapeTimeout: 10s
+    labels: {}
+  prometheusRule:
+    enabled: false
+    labels: {}
+  grafanaDashboard:
+    enabled: false
+    labels:
+      grafana_dashboard: "1"

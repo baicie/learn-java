@@ -7,8 +7,27 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: when_authorized
+  metrics:
+    tags:
+      application: ${AIOPS_APP_NAME:aiops-runner}
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+
 aiops:
+  observability:
+    enabled: ${AIOPS_OBSERVABILITY_ENABLED:true}
+    service-name: ${AIOPS_APP_NAME:aiops-runner}
+    request-id-header: ${AIOPS_REQUEST_ID_HEADER:X-Request-Id}
+    trace-id-header: ${AIOPS_TRACE_ID_HEADER:X-Trace-Id}
+    http-metrics-enabled: ${AIOPS_HTTP_METRICS_ENABLED:true}
   execution:
     api-enabled: false
     live-enabled: false

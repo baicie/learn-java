@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from aiops_agent.observability.headers import observability_headers
 from aiops_agent.settings import Settings, settings
 
 HEADER_TENANT_ID = "X-Tenant-Id"
@@ -17,7 +18,9 @@ def internal_tool_headers(
     if not tenant_id or not tenant_id.strip():
         raise ValueError("tenant_id is required for internal tool call")
 
-    return {
+    headers = {
         HEADER_TENANT_ID: tenant_id.strip(),
         HEADER_INTERNAL_AGENT_TOKEN: cfg.internal_agent_token,
     }
+    headers.update(observability_headers())
+    return headers

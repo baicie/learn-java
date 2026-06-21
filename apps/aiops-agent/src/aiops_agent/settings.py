@@ -80,6 +80,10 @@ class Settings(BaseSettings):
     # SaaS deployments should set AIOPS_AGENT_WORKFLOW_PLUGIN_TOOL_POLICY_ENABLED=true.
     workflow_plugin_tool_policy_enabled: bool = False
 
+    # Phase 9.0 observability.
+    log_level: str = "INFO"
+    observability_enabled: bool = True
+
     def normalized_generation_mode(self) -> str:
         value = (self.generation_mode or "deterministic").strip().lower()
         if value not in {"deterministic", "openai-compatible"}:
