@@ -38,3 +38,17 @@ def test_configmap_contains_observability_env():
     assert "AIOPS_HTTP_METRICS_ENABLED" in configmap
     assert "AIOPS_AGENT_OBSERVABILITY_ENABLED" in configmap
     assert "AIOPS_AGENT_LOG_LEVEL" in configmap
+
+
+def test_prometheus_rule_uses_micrometer_timer_seconds_bucket_name():
+    prometheus_rule = (ROOT / "templates" / "prometheusrule.yaml").read_text(encoding="utf-8")
+
+    assert "aegisops_http_request_duration_seconds_bucket" in prometheus_rule
+    assert "aegisops_http_request_duration_bucket" not in prometheus_rule
+
+
+def test_grafana_dashboard_uses_micrometer_timer_seconds_bucket_name():
+    dashboard = (ROOT / "templates" / "grafana-dashboard.yaml").read_text(encoding="utf-8")
+
+    assert "aegisops_http_request_duration_seconds_bucket" in dashboard
+    assert "aegisops_http_request_duration_bucket" not in dashboard

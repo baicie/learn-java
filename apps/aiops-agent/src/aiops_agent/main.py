@@ -26,7 +26,8 @@ from aiops_agent.workflow.contracts import DiagnosisResumeRequest
 configure_json_logging(settings.log_level)
 
 app = FastAPI(title="AegisOps LangGraph Agent Runtime", version="0.7.3")
-app.add_middleware(RequestContextMiddleware)
+if settings.observability_enabled:
+    app.add_middleware(RequestContextMiddleware)
 
 
 def verify_internal_token(x_aegisops_internal_token: str | None = Header(default=None)) -> None:

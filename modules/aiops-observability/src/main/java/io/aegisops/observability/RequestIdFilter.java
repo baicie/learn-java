@@ -1,6 +1,5 @@
 package io.aegisops.observability;
 
-import io.aegisops.common.tenant.TenantContext;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -29,16 +28,10 @@ public class RequestIdFilter extends OncePerRequestFilter {
       FilterChain filterChain) throws ServletException, IOException {
     String requestId = firstNonBlank(request.getHeader(properties.getRequestIdHeader()), newId());
     String traceId = firstNonBlank(request.getHeader(properties.getTraceIdHeader()), requestId);
-    String tenantId =
-        firstNonBlank(TenantContext.getTenantId(), request.getHeader("X-Tenant-Id"));
 
     MDC.put(ObservabilityConstants.MDC_REQUEST_ID, requestId);
     MDC.put(ObservabilityConstants.MDC_TRACE_ID, traceId);
     MDC.put(ObservabilityConstants.MDC_SERVICE, properties.getServiceName());
-
-    if (tenantId != null && !tenantId.isBlank()) {
-      MDC.put(ObservabilityConstants.MDC_TENANT_ID, tenantId);
-    }
 
     if (properties.isRequestIdResponseHeaderEnabled()) {
       response.setHeader(properties.getRequestIdHeader(), requestId);
@@ -50,7 +43,6 @@ public class RequestIdFilter extends OncePerRequestFilter {
     } finally {
       MDC.remove(ObservabilityConstants.MDC_REQUEST_ID);
       MDC.remove(ObservabilityConstants.MDC_TRACE_ID);
-      MDC.remove(ObservabilityConstants.MDC_TENANT_ID);
       MDC.remove(ObservabilityConstants.MDC_SERVICE);
     }
   }

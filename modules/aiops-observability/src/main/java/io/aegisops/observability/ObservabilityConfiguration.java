@@ -17,6 +17,11 @@ public class ObservabilityConfiguration {
   }
 
   @Bean
+  TenantMdcFilter tenantMdcFilter(ObservabilityProperties properties) {
+    return new TenantMdcFilter(properties);
+  }
+
+  @Bean
   HttpMetricsFilter httpMetricsFilter(
       MeterRegistry registry, ObservabilityProperties properties) {
     return new HttpMetricsFilter(registry, properties);
@@ -31,7 +36,16 @@ public class ObservabilityConfiguration {
   }
 
   @Bean
-  FilterRegistrationBean<HttpMetricsFilter> httpMetricsFilterRegistration(HttpMetricsFilter filter) {
+  FilterRegistrationBean<TenantMdcFilter> tenantMdcFilterRegistration(TenantMdcFilter filter) {
+    FilterRegistrationBean<TenantMdcFilter> registration = new FilterRegistrationBean<>(filter);
+    registration.setOrder(Ordered.LOWEST_PRECEDENCE - 20);
+    registration.addUrlPatterns("/*");
+    return registration;
+  }
+
+  @Bean
+  FilterRegistrationBean<HttpMetricsFilter> httpMetricsFilterRegistration(
+      HttpMetricsFilter filter) {
     FilterRegistrationBean<HttpMetricsFilter> registration = new FilterRegistrationBean<>(filter);
     registration.setOrder(Ordered.LOWEST_PRECEDENCE - 10);
     registration.addUrlPatterns("/*");
