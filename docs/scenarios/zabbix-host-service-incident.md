@@ -1,0 +1,139 @@
+---
+title: Scenario 01 - Zabbix Host & Service Incident Diagnosis
+type: scenario
+status: accepted
+phase: z0
+owner: platform-team
+created: 2026-06-21
+updated: 2026-06-21
+related: docs/architecture/phase-z0-module-boundaries.md
+---
+
+# Scenario 01: Zabbix Host & Service Incident Diagnosis
+
+## Goal
+
+This scenario defines the first AegisOps MVP path:
+
+```txt
+Zabbix collects host/service signals
+  -> AegisOps receives/syncs Zabbix problems
+  -> alert_event
+  -> incident
+  -> RCA / AI diagnosis
+  -> report
+```
+
+Phase Z0 only freezes the baseline. The full scenario will be completed by later Phase Z1-Z9.
+
+## Current Phase Z0 Baseline
+
+At commit f61134a, the system already supports:
+
+```txt
+1. Create Zabbix datasource.
+2. Test Zabbix datasource connection.
+3. Manually sync Zabbix hosts.
+4. Manually sync Zabbix problems.
+5. Write Zabbix hosts into asset.
+6. Write Zabbix problems into alert_event.
+7. Manually aggregate open alerts into incidents.
+8. Run RCA / AI diagnosis based on current incident context.
+```
+
+## Target Full Scenario
+
+The final target scenario is:
+
+```txt
+1. Start local docker-compose environment.
+2. Zabbix monitors aiops-demo-host and order-service.
+3. Inject CPU high / API slow / health check failed fault.
+4. Zabbix triggers problems.
+5. Zabbix sends webhook to AegisOps.
+6. AegisOps creates alert_event.
+7. AegisOps aggregates related alerts into one incident.
+8. AegisOps collects Zabbix evidence.
+9. RCA produces deterministic suspected root cause.
+10. AI Diagnosis summarizes evidence and recommendations.
+11. AegisOps generates Markdown incident report.
+```
+
+## Demo Service
+
+Future Phase Z1 will add:
+
+```txt
+order-service
+  GET  /health
+  POST /api/order/create
+```
+
+Fault modes:
+
+```txt
+CPU high
+API slow
+health check failed
+error log increased
+```
+
+## Zabbix Signals
+
+Minimum Zabbix signals:
+
+```txt
+host.cpu.util
+vm.memory.util
+system.cpu.load
+web.test.rspcode[/health]
+web.test.time[/api/order/create]
+log error count
+```
+
+## Zabbix Triggers
+
+Minimum triggers:
+
+```txt
+Host CPU High
+Order API Slow
+Order Health Check Failed
+Order Error Log Increased
+```
+
+## Current Manual Flow
+
+Phase Z0 supports the current manual flow:
+
+```txt
+POST /api/datasources/{id}/sync
+  -> host.get
+  -> asset upsert
+  -> problem.get
+  -> alert_event upsert
+
+POST /api/incidents/aggregate
+  -> open alert_event
+  -> incident
+```
+
+## Known Gaps After Phase Z0
+
+```txt
+1. No Zabbix webhook ingestion yet.
+2. No history.get / trend.get evidence yet.
+3. Incident aggregation is still basic.
+4. No Markdown report yet.
+5. No repeatable demo fault service yet.
+```
+
+## Next Phase
+
+After Phase Z0, continue with:
+
+```txt
+Phase Z1: Demo environment and fault scenario
+Phase Z2: Zabbix webhook ingestion
+Phase Z3: Alert standardization and incident aggregation strategy
+```

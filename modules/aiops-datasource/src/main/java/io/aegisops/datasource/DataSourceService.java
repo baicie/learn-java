@@ -3,15 +3,16 @@ package io.aegisops.datasource;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.aegisops.common.exception.AppException;
+import io.aegisops.datasource.zabbix.ZabbixAlertEventMapping;
+import io.aegisops.datasource.zabbix.ZabbixExternalIds;
+import io.aegisops.datasource.zabbix.ZabbixHostAssetMapping;
+import io.aegisops.datasource.zabbix.ZabbixSyncMapper;
 import io.aegisops.zabbix.ZabbixClient;
 import io.aegisops.zabbix.ZabbixClientFactory;
 import io.aegisops.zabbix.ZabbixConfig;
 import io.aegisops.zabbix.ZabbixHost;
 import io.aegisops.zabbix.ZabbixProblem;
-import io.aegisops.zabbix.ZabbixSeverity;
 import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -26,12 +27,17 @@ public class DataSourceService {
   private final JdbcTemplate jdbc;
   private final ObjectMapper objectMapper;
   private final ZabbixClientFactory zabbixClientFactory;
+  private final ZabbixSyncMapper zabbixSyncMapper;
 
   public DataSourceService(
-      JdbcTemplate jdbc, ObjectMapper objectMapper, ZabbixClientFactory zabbixClientFactory) {
+      JdbcTemplate jdbc,
+      ObjectMapper objectMapper,
+      ZabbixClientFactory zabbixClientFactory,
+      ZabbixSyncMapper zabbixSyncMapper) {
     this.jdbc = jdbc;
     this.objectMapper = objectMapper;
     this.zabbixClientFactory = zabbixClientFactory;
+    this.zabbixSyncMapper = zabbixSyncMapper;
   }
 
   public List<DataSourceRecord> list(String tenantId) {
@@ -296,20 +302,12 @@ public class DataSourceService {
   }
 
   private UpsertResult upsertHostAsset(String tenantId, String datasourceId, ZabbixHost host) {
-    if (host.hostId() == null || host.hostId().isBlank()) {
+    ZabbixHostAssetMapping mapping = zabbixSyncMapper.mapHost(datasourceId, host);
+    if (mapping == null) {
       return UpsertResult.asUpdated();
     }
 
-    String sourceId = zabbixSourceId(datasourceId, host.hostId());
-    String name = firstNonBlank(host.host(), host.name());
-    String displayName = firstNonBlank(host.name(), host.host());
-    String tagsJson =
-        writeJson(
-            Map.of(
-                "datasourceId", datasourceId,
-                "zabbixHostId", host.hostId(),
-                "groups", host.groups()));
-    String status = "1".equals(host.status()) ? "disabled" : "active";
+    String tagsJson = writeJson(mapping.tags());
 
     Boolean created =
         jdbc.queryForObject(
@@ -329,43 +327,33 @@ public class DataSourceService {
             Boolean.class,
             newId("asset"),
             tenantId,
-            name,
-            displayName,
-            sourceId,
-            host.ip(),
+            mapping.name(),
+            mapping.displayName(),
+            mapping.sourceId(),
+            mapping.ip(),
             tagsJson,
-            status);
+            mapping.status());
 
     return Boolean.TRUE.equals(created) ? UpsertResult.asCreated() : UpsertResult.asUpdated();
   }
 
   private UpsertResult upsertAlertEvent(
       String tenantId, String datasourceId, ZabbixProblem problem) {
-    if (problem.eventId() == null || problem.eventId().isBlank()) {
+    ZabbixAlertEventMapping mapping = zabbixSyncMapper.mapProblem(datasourceId, problem);
+    if (mapping == null) {
       return UpsertResult.asUpdated();
     }
 
-    String sourceEventId = zabbixSourceId(datasourceId, problem.eventId());
     String assetId = null;
 
-    if (!problem.hostIds().isEmpty()) {
+    if (!mapping.hostIds().isEmpty()) {
       assetId =
-          findAssetIdBySourceId(tenantId, zabbixSourceId(datasourceId, problem.hostIds().get(0)));
+          findAssetIdBySourceId(
+              tenantId, ZabbixExternalIds.sourceId(datasourceId, mapping.hostIds().get(0)));
     }
 
-    Map<String, Object> labels = new LinkedHashMap<>();
-    labels.put("datasourceId", datasourceId);
-    labels.put("zabbixEventId", problem.eventId());
-    labels.put("zabbixObjectId", problem.objectId());
-    labels.put("zabbixTags", problem.tags());
-
-    String labelsJson = writeJson(labels);
-    String rawPayloadJson = writeJson(problem.raw());
-    OffsetDateTime startsAt = OffsetDateTime.ofInstant(problem.clock(), ZoneOffset.UTC);
-    String severity = mapSeverity(problem.severity());
-
-    String fingerprintKey = firstNonBlank(problem.objectId(), problem.eventId());
-    String fingerprint = SOURCE_ZABBIX + ":" + datasourceId + ":" + fingerprintKey;
+    String labelsJson = writeJson(mapping.labels());
+    String rawPayloadJson = writeJson(mapping.rawPayload());
 
     Boolean created =
         jdbc.queryForObject(
@@ -373,7 +361,7 @@ public class DataSourceService {
                 insert into alert_event(id, tenant_id, source, source_event_id, severity, title, description,
                                         asset_id, entity_type, entity_name, labels, starts_at, status, raw_payload,
                                         fingerprint, created_at)
-                values (?, ?, 'zabbix', ?, ?, ?, ?, ?, 'host', ?, ?::jsonb, ?, 'open', ?::jsonb, ?, now())
+                values (?, ?, 'zabbix', ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?, ?, ?::jsonb, ?, now())
                 on conflict (tenant_id, source, source_event_id) where source_event_id is not null
                 do update set
                   severity = excluded.severity,
@@ -392,16 +380,18 @@ public class DataSourceService {
             Boolean.class,
             newId("alert"),
             tenantId,
-            sourceEventId,
-            severity,
-            problem.name(),
-            "Zabbix problem event " + problem.eventId(),
+            mapping.sourceEventId(),
+            mapping.severity(),
+            mapping.title(),
+            mapping.description(),
             assetId,
-            problem.name(),
+            mapping.entityType(),
+            mapping.entityName(),
             labelsJson,
-            startsAt,
+            mapping.startsAt(),
+            mapping.status(),
             rawPayloadJson,
-            fingerprint);
+            mapping.fingerprint());
 
     return Boolean.TRUE.equals(created) ? UpsertResult.asCreated() : UpsertResult.asUpdated();
   }
@@ -424,14 +414,6 @@ public class DataSourceService {
     return type == null ? "" : type.trim().toLowerCase();
   }
 
-  private String zabbixSourceId(String datasourceId, String zabbixId) {
-    return datasourceId + ":" + zabbixId;
-  }
-
-  private String mapSeverity(int severity) {
-    return ZabbixSeverity.map(severity);
-  }
-
   private String writeJson(Object value) {
     try {
       return objectMapper.writeValueAsString(value);
@@ -445,13 +427,6 @@ public class DataSourceService {
       return null;
     }
     return value.trim();
-  }
-
-  private String firstNonBlank(String first, String second) {
-    if (first != null && !first.isBlank()) {
-      return first;
-    }
-    return second;
   }
 
   private String newId(String prefix) {

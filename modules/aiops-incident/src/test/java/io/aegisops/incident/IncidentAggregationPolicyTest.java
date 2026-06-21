@@ -59,6 +59,27 @@ class IncidentAggregationPolicyTest {
     assertTrue(summary.contains("critical"));
   }
 
+  @Test
+  void shouldBuildRelatedAlertsTitleWhenDifferentTitles() {
+    List<AlertCandidate> alerts =
+        List.of(
+            alert("a1", "zabbix", "warning", "CPU High", "fp1"),
+            alert("a2", "zabbix", "critical", "API Slow", "fp2"));
+
+    assertEquals("2 related alerts on host-1", policy.title("zabbix:key", alerts));
+  }
+
+  @Test
+  void shouldPickHighestSeverity() {
+    List<AlertCandidate> alerts =
+        List.of(
+            alert("a1", "zabbix", "warning", "CPU high", "fp"),
+            alert("a2", "zabbix", "critical", "Health Check Failed", "fp"),
+            alert("a3", "zabbix", "info", "API Slow", "fp"));
+
+    assertEquals("critical", policy.highestSeverity(alerts));
+  }
+
   private AlertCandidate alert(String fingerprint) {
     return new TestAlert("a1", fingerprint).toCandidate();
   }
