@@ -2,6 +2,7 @@ package io.aegisops.datasource.zabbix;
 
 import io.aegisops.zabbix.ZabbixHost;
 import io.aegisops.zabbix.ZabbixProblem;
+import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
@@ -24,7 +25,7 @@ public class ZabbixSyncMapper {
     Map<String, Object> tags = new LinkedHashMap<>();
     tags.put("datasourceId", datasourceId);
     tags.put("zabbixHostId", host.hostId());
-    tags.put("groups", host.groups());
+    tags.put("groups", safeList(host.groups()));
 
     String status = "1".equals(host.status()) ? "disabled" : "active";
 
@@ -36,7 +37,8 @@ public class ZabbixSyncMapper {
       return null;
     }
 
-    Map<String, String> normalizedTags = ZabbixTagNormalizer.normalize(problem.tags());
+    Map<String, String> normalizedTags =
+        ZabbixTagNormalizer.normalize(problem.tags() == null ? Map.of() : problem.tags());
 
     String app = ZabbixTagNormalizer.first(normalizedTags, "app", "application");
     String env = ZabbixTagNormalizer.first(normalizedTags, "env", "environment");
@@ -52,7 +54,7 @@ public class ZabbixSyncMapper {
     labels.put("zabbixEventId", problem.eventId());
     labels.put("zabbixObjectId", problem.objectId());
     labels.put("zabbixHostIds", safeList(problem.hostIds()));
-    labels.put("zabbixTags", problem.tags());
+    labels.put("zabbixTags", problem.tags() == null ? Map.of() : problem.tags());
     labels.put("normalizedTags", normalizedTags);
 
     putIfPresent(labels, "app", app);
@@ -62,7 +64,7 @@ public class ZabbixSyncMapper {
 
     String fingerprintKey = firstNonBlank(problem.objectId(), problem.eventId());
     String title = firstNonBlank(problem.name(), "Zabbix problem " + problem.eventId());
-    OffsetDateTime startsAt = OffsetDateTime.ofInstant(problem.clock(), ZoneOffset.UTC);
+    OffsetDateTime startsAt = OffsetDateTime.ofInstant(problemClock(problem), ZoneOffset.UTC);
 
     return new ZabbixAlertEventMapping(
         ZabbixExternalIds.sourceId(datasourceId, problem.eventId()),
@@ -77,6 +79,10 @@ public class ZabbixSyncMapper {
         "open",
         problem.raw(),
         ZabbixExternalIds.fingerprint(datasourceId, fingerprintKey));
+  }
+
+  private Instant problemClock(ZabbixProblem problem) {
+    return problem.clock() == null ? Instant.now() : problem.clock();
   }
 
   private String inferEntityType(String service, String endpoint) {

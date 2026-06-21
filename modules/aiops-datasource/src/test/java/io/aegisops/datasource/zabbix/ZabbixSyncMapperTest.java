@@ -122,4 +122,22 @@ class ZabbixSyncMapperTest {
 
     assertThat(mapper.mapProblem("ds_1", problem)).isNull();
   }
+
+  @Test
+  void shouldFallbackClockWhenProblemClockMissing() {
+    ZabbixProblem problem =
+        new ZabbixProblem(
+            "20001",
+            "30001",
+            "problem without clock",
+            2,
+            null,
+            List.of("10084"),
+            Map.of("service", "order-service"),
+            null);
+
+    ZabbixAlertEventMapping mapping = mapper.mapProblem("ds_1", problem);
+
+    assertThat(mapping.startsAt()).isNotNull();
+  }
 }

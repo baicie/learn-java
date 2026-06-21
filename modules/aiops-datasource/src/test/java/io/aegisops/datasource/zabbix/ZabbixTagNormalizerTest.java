@@ -25,6 +25,36 @@ class ZabbixTagNormalizerTest {
   }
 
   @Test
+  void shouldNotTreatPlainMapWithNameKeyAsSingleTagItem() {
+    Map<String, String> tags =
+        ZabbixTagNormalizer.normalize(
+            Map.of(
+                "name", "order-service",
+                "env", "prod",
+                "service", "order-service"));
+
+    assertThat(tags)
+        .containsEntry("name", "order-service")
+        .containsEntry("env", "prod")
+        .containsEntry("service", "order-service");
+  }
+
+  @Test
+  void shouldNotTreatPlainMapWithTagKeyAsSingleTagItemWithoutValueField() {
+    Map<String, String> tags =
+        ZabbixTagNormalizer.normalize(
+            Map.of(
+                "tag", "business-tag",
+                "env", "prod",
+                "service", "order-service"));
+
+    assertThat(tags)
+        .containsEntry("tag", "business-tag")
+        .containsEntry("env", "prod")
+        .containsEntry("service", "order-service");
+  }
+
+  @Test
   void shouldNormalizeZabbixTagList() {
     Map<String, String> tags =
         ZabbixTagNormalizer.normalize(

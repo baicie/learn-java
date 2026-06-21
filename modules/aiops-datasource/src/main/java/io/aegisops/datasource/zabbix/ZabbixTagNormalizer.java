@@ -51,7 +51,7 @@ public final class ZabbixTagNormalizer {
   }
 
   private static void normalizeMapTags(Map<?, ?> source, Map<String, String> result) {
-    if (source.containsKey("tag") || source.containsKey("name") || source.containsKey("key")) {
+    if (looksLikeSingleZabbixTagItem(source)) {
       String key = valueOf(firstValue(source, "tag", "name", "key"));
       String value = valueOf(firstValue(source, "value", "val"));
       putIfValid(result, key, value);
@@ -61,6 +61,19 @@ public final class ZabbixTagNormalizer {
     for (Map.Entry<?, ?> entry : source.entrySet()) {
       putIfValid(result, valueOf(entry.getKey()), valueOf(entry.getValue()));
     }
+  }
+
+  private static boolean looksLikeSingleZabbixTagItem(Map<?, ?> source) {
+    return hasAnyKey(source, "tag", "name", "key") && hasAnyKey(source, "value", "val");
+  }
+
+  private static boolean hasAnyKey(Map<?, ?> source, String... keys) {
+    for (String key : keys) {
+      if (source.containsKey(key)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private static void normalizeOneTagItem(Object item, Map<String, String> result) {

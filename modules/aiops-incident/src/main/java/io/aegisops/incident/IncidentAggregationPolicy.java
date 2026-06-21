@@ -13,7 +13,8 @@ public class IncidentAggregationPolicy {
     String source = nonBlank(alert.source(), "unknown");
 
     if (alert.fingerprint() != null && !alert.fingerprint().isBlank()) {
-      return source + ":" + alert.fingerprint().trim();
+      String fingerprint = alert.fingerprint().trim();
+      return fingerprint.startsWith(source + ":") ? fingerprint : source + ":" + fingerprint;
     }
 
     String assetPart = nonBlank(alert.assetId(), "no-asset");

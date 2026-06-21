@@ -14,7 +14,14 @@ class IncidentAggregationPolicyTest {
   void usesFingerprintAsAggregationKey() {
     AlertCandidate alert = alert("a1", "zabbix", "critical", "CPU high", "zabbix:ds_1:trigger_1");
 
-    assertEquals("zabbix:zabbix:ds_1:trigger_1", policy.aggregationKey(alert));
+    assertEquals("zabbix:ds_1:trigger_1", policy.aggregationKey(alert));
+  }
+
+  @Test
+  void shouldPrefixSourceWhenFingerprintHasNoSourcePrefix() {
+    AlertCandidate alert = alert("a1", "zabbix", "critical", "CPU high", "ds_1:trigger_1");
+
+    assertEquals("zabbix:ds_1:trigger_1", policy.aggregationKey(alert));
   }
 
   @Test
