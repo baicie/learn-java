@@ -46,3 +46,25 @@ def test_external_dependencies_have_hosts():
     assert external["clickhouse"]["host"]
     assert external["minio"]["endpoint"]
     assert external["victoriaMetrics"]["baseUrl"]
+
+
+def test_values_ports_match_application_defaults():
+    values = load_yaml("values.yaml")
+
+    assert values["apps"]["server"]["port"] == 8080
+    assert values["apps"]["worker"]["port"] == 8081
+    assert values["apps"]["runner"]["port"] == 8092
+    assert values["apps"]["agent"]["port"] == 8000
+
+
+def test_configmap_contains_application_env_names():
+    configmap = (ROOT / "templates" / "configmap.yaml").read_text(encoding="utf-8")
+    secret = (ROOT / "templates" / "secret.yaml").read_text(encoding="utf-8")
+
+    assert "AIOPS_DB_URL" in configmap
+    assert "AIOPS_DB_USERNAME" in configmap
+    assert "AIOPS_AGENT_BASE_URL" in configmap
+    assert "AIOPS_EVIDENCE_VICTORIA_BASE_URL" in configmap
+
+    assert "AIOPS_DB_PASSWORD" in secret
+    assert "AIOPS_AGENT_INTERNAL_TOKEN" in secret

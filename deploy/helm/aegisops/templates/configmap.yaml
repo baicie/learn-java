@@ -10,6 +10,9 @@ data:
   LOG_LEVEL: {{ .Values.config.logLevel | quote }}
   TZ: {{ .Values.global.timezone | quote }}
 
+  AIOPS_DB_URL: {{ printf "jdbc:postgresql://%s:%v/%s" .Values.external.postgres.host .Values.external.postgres.port .Values.external.postgres.database | quote }}
+  AIOPS_DB_USERNAME: {{ .Values.external.postgres.username | quote }}
+
   POSTGRES_HOST: {{ .Values.external.postgres.host | quote }}
   POSTGRES_PORT: {{ .Values.external.postgres.port | quote }}
   POSTGRES_DB: {{ .Values.external.postgres.database | quote }}
@@ -28,6 +31,9 @@ data:
   MINIO_BUCKET: {{ .Values.external.minio.bucket | quote }}
 
   VICTORIA_METRICS_BASE_URL: {{ .Values.external.victoriaMetrics.baseUrl | quote }}
+  AIOPS_EVIDENCE_VICTORIA_BASE_URL: {{ .Values.external.victoriaMetrics.baseUrl | quote }}
+
+  AIOPS_AGENT_BASE_URL: "http://{{ include "aegisops.fullname" . }}-agent:8000"
 
   AIOPS_PUBLIC_API_RPM: {{ .Values.security.publicApiRequestsPerMinute | quote }}
   AIOPS_INTERNAL_AGENT_RPM: {{ .Values.security.internalAgentRequestsPerMinute | quote }}

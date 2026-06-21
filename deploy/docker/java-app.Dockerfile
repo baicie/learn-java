@@ -2,8 +2,15 @@
 
 ARG MAVEN_IMAGE=maven:3.9.9-eclipse-temurin-21
 ARG RUNTIME_IMAGE=eclipse-temurin:21-jre-alpine
+ARG APP_MODULE=apps/aiops-server
+ARG APP_NAME=aiops-server
+ARG APP_PORT=8080
 
 FROM ${MAVEN_IMAGE} AS build
+
+ARG APP_MODULE
+ARG APP_NAME
+
 WORKDIR /workspace
 
 COPY pom.xml ./
@@ -11,16 +18,18 @@ COPY apps ./apps
 COPY modules ./modules
 
 RUN --mount=type=cache,target=/root/.m2 \
-    mvn -pl ${APP_MODULE} -am -DskipTests package
+    mvn -pl "${APP_MODULE}" -am -DskipTests package
 
 FROM ${RUNTIME_IMAGE} AS runtime
 
-ARG APP_MODULE=apps/aiops-server
-ARG APP_NAME=aiops-server
+ARG APP_MODULE
+ARG APP_NAME
+ARG APP_PORT
 
 ENV TZ=UTC
 ENV JAVA_OPTS="-XX:MaxRAMPercentage=75 -XX:+ExitOnOutOfMemoryError"
 ENV SPRING_PROFILES_ACTIVE=private
+ENV APP_PORT="${APP_PORT}"
 
 RUN addgroup -S aiops && adduser -S aiops -G aiops \
     && mkdir -p /app /var/log/aegisops \
@@ -32,9 +41,9 @@ COPY --from=build /workspace/${APP_MODULE}/target/*.jar /app/app.jar
 
 USER aiops
 
-EXPOSE 8080
+EXPOSE ${APP_PORT}
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
-  CMD wget -qO- http://127.0.0.1:8080/actuator/health || exit 1
+  CMD wget -qO- "http://127.0.0.1:${APP_PORT}/actuator/health" || exit 1
 
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar /app/app.jar"]
