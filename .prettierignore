@@ -1,0 +1,2 @@
+# Helm templates contain Go template syntax - not valid YAML for parsers
+deploy/helm/
