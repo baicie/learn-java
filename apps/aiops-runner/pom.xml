@@ -22,17 +22,17 @@
     </dependency>
     <dependency>
       <groupId>io.aegisops</groupId>
+      <artifactId>aiops-observability</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.aegisops</groupId>
       <artifactId>aiops-persistence</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>io.aegisops</groupId>
       <artifactId>aiops-web</artifactId>
-      <version>${project.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>io.aegisops</groupId>
-      <artifactId>aiops-observability</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>

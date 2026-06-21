@@ -23,8 +23,7 @@ class TenantMdcFilterTest {
       filter.doFilter(
           request,
           response,
-          (req, res) ->
-              assertEquals("tenant_1", MDC.get(ObservabilityConstants.MDC_TENANT_ID)));
+          (req, res) -> assertEquals("tenant_1", MDC.get(ObservabilityConstants.MDC_TENANT_ID)));
     } finally {
       TenantContext.clear();
     }
@@ -44,8 +43,7 @@ class TenantMdcFilterTest {
     filter.doFilter(
         request,
         response,
-        (req, res) ->
-            assertEquals("tenant_header", MDC.get(ObservabilityConstants.MDC_TENANT_ID)));
+        (req, res) -> assertEquals("tenant_header", MDC.get(ObservabilityConstants.MDC_TENANT_ID)));
 
     assertNull(MDC.get(ObservabilityConstants.MDC_TENANT_ID));
   }

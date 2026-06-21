@@ -30,11 +30,9 @@ public class TenantMdcFilter extends OncePerRequestFilter {
 
   @Override
   protected void doFilterInternal(
-      HttpServletRequest request,
-      HttpServletResponse response,
-      FilterChain filterChain) throws ServletException, IOException {
-    String tenantId =
-        firstNonBlank(TenantContext.getTenantId(), request.getHeader("X-Tenant-Id"));
+      HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+      throws ServletException, IOException {
+    String tenantId = firstNonBlank(TenantContext.getTenantId(), request.getHeader("X-Tenant-Id"));
     boolean tenantMdcSet = false;
 
     if (tenantId != null && !tenantId.isBlank()) {

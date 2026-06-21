@@ -23,9 +23,8 @@ public class RequestIdFilter extends OncePerRequestFilter {
 
   @Override
   protected void doFilterInternal(
-      HttpServletRequest request,
-      HttpServletResponse response,
-      FilterChain filterChain) throws ServletException, IOException {
+      HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+      throws ServletException, IOException {
     String requestId = firstNonBlank(request.getHeader(properties.getRequestIdHeader()), newId());
     String traceId = firstNonBlank(request.getHeader(properties.getTraceIdHeader()), requestId);
 

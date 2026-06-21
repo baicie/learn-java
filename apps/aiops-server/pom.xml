@@ -57,6 +57,11 @@
     </dependency>
     <dependency>
       <groupId>io.aegisops</groupId>
+      <artifactId>aiops-observability</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.aegisops</groupId>
       <artifactId>aiops-plugin</artifactId>
       <version>${project.version}</version>
     </dependency>
@@ -83,11 +88,6 @@
     <dependency>
       <groupId>io.aegisops</groupId>
       <artifactId>aiops-user</artifactId>
-      <version>${project.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>io.aegisops</groupId>
-      <artifactId>aiops-observability</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>

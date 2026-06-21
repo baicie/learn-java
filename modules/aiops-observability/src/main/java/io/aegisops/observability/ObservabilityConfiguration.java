@@ -22,8 +22,7 @@ public class ObservabilityConfiguration {
   }
 
   @Bean
-  HttpMetricsFilter httpMetricsFilter(
-      MeterRegistry registry, ObservabilityProperties properties) {
+  HttpMetricsFilter httpMetricsFilter(MeterRegistry registry, ObservabilityProperties properties) {
     return new HttpMetricsFilter(registry, properties);
   }
 
