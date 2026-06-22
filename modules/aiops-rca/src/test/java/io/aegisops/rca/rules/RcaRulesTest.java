@@ -104,7 +104,8 @@ class RcaRulesTest {
             List.of(
                 RcaTestFixtures.alert(
                     new AlertParams("a1", "critical", "CPU high", "asset_1", "fp1", 0))),
-            List.of(RcaTestFixtures.relation()));
+            List.of(RcaTestFixtures.relation()),
+            List.of());
 
     RcaRuleResult result = rule.evaluate(context);
 
@@ -121,7 +122,8 @@ class RcaRulesTest {
             List.of(
                 RcaTestFixtures.alert(new AlertParams("a1", "warning", "A", "asset_1", "fp1", 0)),
                 RcaTestFixtures.alert(new AlertParams("a2", "warning", "B", "asset_1", "fp2", 1)),
-                RcaTestFixtures.alert(new AlertParams("a3", "warning", "C", "asset_2", "fp3", 2))));
+                RcaTestFixtures.alert(
+                    new AlertParams("a3", "warning", "Disk high", "asset_2", "fp3", 2))));
 
     RcaRuleResult result = rule.evaluate(context);
 

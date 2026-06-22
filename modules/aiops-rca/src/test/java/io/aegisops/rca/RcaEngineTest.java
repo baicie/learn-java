@@ -60,7 +60,8 @@ class RcaEngineTest {
                     new AlertParams("a2", "warning", "CPU high", "asset_1", "fp_cpu", 1)),
                 RcaTestFixtures.alert(
                     new AlertParams("a3", "warning", "CPU high", "asset_1", "fp_cpu", 2))),
-            List.of(RcaTestFixtures.relation()));
+            List.of(RcaTestFixtures.relation()),
+            List.of());
 
     RcaAnalysisResult result = engine.analyze(context);
 

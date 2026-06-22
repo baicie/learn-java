@@ -104,6 +104,7 @@ class RcaServiceTest {
     RcaIncidentRecord incident;
     List<RcaAlertRecord> alerts = List.of();
     List<RcaAssetRelationRecord> relations = List.of();
+    List<RcaDiagnosisEvidenceRecord> diagnosisEvidence = List.of();
     RcaAnalysisRecord latest;
     RcaAnalysisRecord saved;
     int savedCount;
@@ -132,6 +133,12 @@ class RcaServiceTest {
     @Override
     public List<RcaAssetRelationRecord> listAssetRelations(String tenantId, List<String> assetIds) {
       return relations;
+    }
+
+    @Override
+    public List<RcaDiagnosisEvidenceRecord> listDiagnosisEvidence(
+        String tenantId, String incidentId) {
+      return diagnosisEvidence;
     }
 
     @Override

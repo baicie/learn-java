@@ -7,55 +7,89 @@ import java.util.List;
 public final class RcaTestFixtures {
   private RcaTestFixtures() {}
 
-  public static RcaIncidentRecord incident() {
-    OffsetDateTime now = OffsetDateTime.parse("2026-06-14T10:00:00+09:00");
-
-    return new RcaIncidentRecord(
-        "inc_1",
-        "tenant_1",
-        "CPU high",
-        "summary",
-        "critical",
-        "open",
-        "system",
-        "asset_1",
-        "zabbix:fp_cpu",
-        3,
-        null,
-        null,
-        now.minusMinutes(5),
-        now,
-        now,
-        null,
-        now,
-        now);
+  public static RcaAnalysisContext contextWithEvidence(String... evidenceTypes) {
+    RcaDiagnosisEvidenceRecord[] evidence = new RcaDiagnosisEvidenceRecord[evidenceTypes.length];
+    for (int i = 0; i < evidenceTypes.length; i++) {
+      String type = evidenceTypes[i];
+      evidence[i] = evidence("evd_" + type, type, type, type);
+    }
+    return contextWithEvidence(evidence);
   }
 
-  public static RcaAlertRecord alert(AlertParams params) {
-    OffsetDateTime base = OffsetDateTime.parse("2026-06-14T10:00:00+09:00");
+  public static RcaAnalysisContext contextWithEvidence(RcaDiagnosisEvidenceRecord... evidence) {
+    return new RcaAnalysisContext(
+        incident(), List.of(), List.of(), evidence == null ? List.of() : List.of(evidence));
+  }
 
-    return new RcaAlertRecord(
-        params.id(),
+  public static RcaDiagnosisEvidenceRecord evidence(
+      String evidenceKey, String evidenceType, String title, String summary) {
+    return new RcaDiagnosisEvidenceRecord(
+        "id_" + evidenceKey,
+        "inc_1",
+        evidenceKey,
         "zabbix",
-        "source_" + params.id(),
-        params.severity(),
-        params.title(),
-        "description " + params.id(),
-        params.assetId(),
-        "host",
-        "host-1",
-        params.fingerprint(),
-        "{}",
-        base.plusMinutes(params.minuteOffset()),
-        base.plusMinutes(params.minuteOffset()));
+        evidenceType,
+        title,
+        summary,
+        OffsetDateTime.parse("2026-06-21T05:00:00Z"),
+        OffsetDateTime.parse("2026-06-21T05:30:00Z"),
+        BigDecimal.valueOf(0.86),
+        "{ \"summary\": \"" + summary + "\" }");
+  }
+
+  public static RcaAnalysisContext contextWithAlerts(RcaAlertRecord... alerts) {
+    return new RcaAnalysisContext(incident(), List.of(alerts), List.of(), List.of());
   }
 
   public static RcaAnalysisContext contextWithAlerts(List<RcaAlertRecord> alerts) {
-    return new RcaAnalysisContext(incident(), alerts, List.of());
+    return new RcaAnalysisContext(incident(), alerts, List.of(), List.of());
+  }
+
+  private static List<RcaAlertRecord> alertRecords(List<AlertParams> alerts) {
+    return alerts.stream().map(RcaTestFixtures::alert).toList();
+  }
+
+  public static RcaAlertRecord alert(AlertParams params) {
+    return new RcaAlertRecord(
+        params.id(),
+        "zabbix",
+        params.id(),
+        params.severity(),
+        params.title(),
+        null,
+        params.assetId(),
+        null,
+        null,
+        params.fingerprint(),
+        null,
+        OffsetDateTime.now().minusMinutes(params.minuteOffset()),
+        OffsetDateTime.now().minusMinutes(params.minuteOffset()));
   }
 
   public static RcaAssetRelationRecord relation() {
     return new RcaAssetRelationRecord(
-        "rel_1", "asset_1", "asset_2", "depends_on", new BigDecimal("0.9000"), "manual");
+        "rel_1", "asset_1", "asset_2", "depends_on", BigDecimal.ONE, "zabbix");
+  }
+
+  public static RcaIncidentRecord incident() {
+    return new RcaIncidentRecord(
+        "inc_1",
+        "tenant_1",
+        "order-service 主机与服务异常",
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        0,
+        null,
+        null,
+        OffsetDateTime.parse("2026-06-21T05:00:00Z"),
+        null,
+        OffsetDateTime.parse("2026-06-21T05:30:00Z"),
+        null,
+        OffsetDateTime.parse("2026-06-21T05:00:00Z"),
+        OffsetDateTime.parse("2026-06-21T05:30:00Z"));
   }
 }

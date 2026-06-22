@@ -12,5 +12,7 @@ public record RcaAnalysisResponse(
     BigDecimal confidence,
     String summary,
     List<RcaEvidence> evidence,
+    List<String> matchedRules,
+    List<String> evidenceRefs,
     String modelVersion,
     OffsetDateTime createdAt) {}

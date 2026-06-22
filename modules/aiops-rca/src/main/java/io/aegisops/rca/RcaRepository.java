@@ -11,6 +11,8 @@ public interface RcaRepository {
 
   List<RcaAssetRelationRecord> listAssetRelations(String tenantId, List<String> assetIds);
 
+  List<RcaDiagnosisEvidenceRecord> listDiagnosisEvidence(String tenantId, String incidentId);
+
   Optional<RcaAnalysisRecord> findLatestAnalysis(String tenantId, String incidentId);
 
   void saveAnalysis(SaveAnalysisParams params);
