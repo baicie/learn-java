@@ -1,4 +1,13 @@
 #!/usr/bin/env python3
+"""Idempotently provision a Zabbix demo host and HTTP Agent items.
+
+Re-running this script converges the existing host / items / triggers /
+web scenario onto the configuration declared in this file.  It splits
+each entity into a ``create_payload`` and an ``update_payload`` so that
+fields accepted only by ``*.create`` (e.g. ``hostid``) are never sent
+to ``*.update`` (which can fail or behave unpredictably on some Zabbix
+versions).
+"""
 
 import argparse
 import json
@@ -13,6 +22,13 @@ VALUE_TYPE_FLOAT = 0
 VALUE_TYPE_UINT = 3
 
 
+COMMON_TAGS = [
+    {"tag": "app", "value": "mall"},
+    {"tag": "env", "value": "demo"},
+    {"tag": "service", "value": "order-service"},
+]
+
+
 class ZabbixApi:
     def __init__(self, url: str, username: str, password: str):
         self.url = url
@@ -21,7 +37,7 @@ class ZabbixApi:
         self.auth = None
         self.request_id = 1
 
-    def call(self, method: str, params=None, auth=True):
+    def call(self, method, params=None, auth=True):
         payload = {
             "jsonrpc": "2.0",
             "method": method,
@@ -50,7 +66,7 @@ class ZabbixApi:
 
         return result.get("result")
 
-    def wait_ready(self, timeout_seconds: int = 180):
+    def wait_ready(self, timeout_seconds=180):
         deadline = time.time() + timeout_seconds
         last_error = None
 
@@ -86,7 +102,7 @@ def first(items):
     return items[0] if items else None
 
 
-def get_or_create_group(api: ZabbixApi, name: str) -> str:
+def get_or_create_group(api, name):
     groups = api.call("hostgroup.get", {"filter": {"name": [name]}})
     group = first(groups)
 
@@ -100,61 +116,38 @@ def get_or_create_group(api: ZabbixApi, name: str) -> str:
     return groupid
 
 
-def get_or_create_host(api: ZabbixApi, host: str, groupid: str) -> str:
+def get_or_create_host(api, host, groupid):
     hosts = api.call("host.get", {"filter": {"host": [host]}})
     found = first(hosts)
 
+    payload = {
+        "host": host,
+        "name": "AegisOps Demo Host",
+        "groups": [{"groupid": groupid}],
+        "tags": COMMON_TAGS,
+    }
+
     if found:
-        print(f"Host exists: {host} ({found['hostid']})")
-        return found["hostid"]
+        hostid = found["hostid"]
+        api.call("host.update", {"hostid": hostid, **payload})
+        print(f"Updated host: {host} ({hostid})")
+        return hostid
 
-    created = api.call(
-        "host.create",
-        {
-            "host": host,
-            "name": "AegisOps Demo Host",
-            "groups": [{"groupid": groupid}],
-            "interfaces": [
-                {
-                    "type": 1,
-                    "main": 1,
-                    "useip": 0,
-                    "ip": "",
-                    "dns": "demo-order-service",
-                    "port": "10050",
-                }
-            ],
-            "tags": [
-                {"tag": "app", "value": "mall"},
-                {"tag": "env", "value": "demo"},
-                {"tag": "service", "value": "order-service"},
-            ],
-        },
-    )
-
+    created = api.call("host.create", payload)
     hostid = created["hostids"][0]
     print(f"Created host: {host} ({hostid})")
     return hostid
 
 
-def get_item(api: ZabbixApi, hostid: str, key: str):
+def get_item(api, hostid, key):
     items = api.call("item.get", {"hostids": [hostid], "filter": {"key_": [key]}})
     return first(items)
 
 
-def upsert_http_item(
-    api: ZabbixApi,
-    hostid: str,
-    name: str,
-    key: str,
-    url: str,
-    value_type: int,
-    delay: str = "10s",
-):
-    payload = {
+def upsert_http_item(api, hostid, name, key, url, value_type, delay="10s"):
+    update_payload = {
         "name": name,
         "key_": key,
-        "hostid": hostid,
         "type": HTTP_AGENT_TYPE,
         "value_type": value_type,
         "delay": delay,
@@ -162,29 +155,25 @@ def upsert_http_item(
         "timeout": "5s",
         "history": "1d",
         "trends": "7d",
-        "tags": [
-            {"tag": "app", "value": "mall"},
-            {"tag": "env", "value": "demo"},
-            {"tag": "service", "value": "order-service"},
-        ],
+        "tags": COMMON_TAGS,
     }
 
     existing = get_item(api, hostid, key)
 
     if existing:
         itemid = existing["itemid"]
-        update_payload = {"itemid": itemid, **payload}
-        api.call("item.update", update_payload)
+        api.call("item.update", {"itemid": itemid, **update_payload})
         print(f"Updated item: {name} ({key})")
         return itemid
 
-    created = api.call("item.create", payload)
+    create_payload = {"hostid": hostid, **update_payload}
+    created = api.call("item.create", create_payload)
     itemid = created["itemids"][0]
     print(f"Created item: {name} ({key})")
     return itemid
 
 
-def get_trigger(api: ZabbixApi, hostid: str, description: str):
+def get_trigger(api, hostid, description):
     triggers = api.call(
         "trigger.get",
         {
@@ -195,22 +184,12 @@ def get_trigger(api: ZabbixApi, hostid: str, description: str):
     return first(triggers)
 
 
-def upsert_trigger(
-    api: ZabbixApi,
-    hostid: str,
-    description: str,
-    expression: str,
-    priority: int,
-):
+def upsert_trigger(api, hostid, description, expression, priority):
     payload = {
         "description": description,
         "expression": expression,
         "priority": priority,
-        "tags": [
-            {"tag": "app", "value": "mall"},
-            {"tag": "env", "value": "demo"},
-            {"tag": "service", "value": "order-service"},
-        ],
+        "tags": COMMON_TAGS,
     }
 
     existing = get_trigger(api, hostid, description)
@@ -226,57 +205,55 @@ def upsert_trigger(
     return triggerid
 
 
-def get_httptest(api: ZabbixApi, hostid: str, name: str):
+def get_httptest(api, hostid, name):
     tests = api.call("httptest.get", {"hostids": [hostid], "filter": {"name": [name]}})
     return first(tests)
 
 
-def upsert_web_scenario(api: ZabbixApi, hostid: str, base_url: str):
+def upsert_web_scenario(api, hostid, base_url):
     name = "AegisOps order-service scenario"
 
-    payload = {
+    steps = [
+        {
+            "name": "Health",
+            "no": 1,
+            "url": f"{base_url}/health",
+            "timeout": "5s",
+            "status_codes": "200",
+        },
+        {
+            "name": "Order Create",
+            "no": 2,
+            "url": f"{base_url}/api/order/create",
+            "timeout": "5s",
+            "status_codes": "200",
+            "posts": json.dumps({"skuId": "demo-sku", "quantity": 1}),
+            "headers": [
+                {
+                    "name": "Content-Type",
+                    "value": "application/json",
+                }
+            ],
+        },
+    ]
+
+    update_payload = {
         "name": name,
-        "hostid": hostid,
         "delay": "10s",
         "agent": "AegisOps Demo",
-        "tags": [
-            {"tag": "app", "value": "mall"},
-            {"tag": "env", "value": "demo"},
-            {"tag": "service", "value": "order-service"},
-        ],
-        "steps": [
-            {
-                "name": "Health",
-                "no": 1,
-                "url": f"{base_url}/health",
-                "timeout": "5s",
-                "status_codes": "200",
-            },
-            {
-                "name": "Order Create",
-                "no": 2,
-                "url": f"{base_url}/api/order/create",
-                "timeout": "5s",
-                "status_codes": "200",
-                "posts": json.dumps({"skuId": "demo-sku", "quantity": 1}),
-                "headers": [
-                    {
-                        "name": "Content-Type",
-                        "value": "application/json",
-                    }
-                ],
-            },
-        ],
+        "tags": COMMON_TAGS,
+        "steps": steps,
     }
 
     existing = get_httptest(api, hostid, name)
 
     if existing:
-        api.call("httptest.update", {"httptestid": existing["httptestid"], **payload})
+        api.call("httptest.update", {"httptestid": existing["httptestid"], **update_payload})
         print(f"Updated web scenario: {name}")
         return existing["httptestid"]
 
-    created = api.call("httptest.create", payload)
+    create_payload = {"hostid": hostid, **update_payload}
+    created = api.call("httptest.create", create_payload)
     httptestid = created["httptestids"][0]
     print(f"Created web scenario: {name}")
     return httptestid

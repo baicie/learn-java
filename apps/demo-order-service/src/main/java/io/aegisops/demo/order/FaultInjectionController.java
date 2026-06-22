@@ -20,7 +20,7 @@ public class FaultInjectionController {
   }
 
   @PostMapping("/demo/fault/apply")
-  public FaultStateResponse apply(@RequestBody FaultMode mode) {
+  public FaultStateResponse apply(@RequestBody(required = false) FaultMode mode) {
     return faultModeService.apply(mode);
   }
 

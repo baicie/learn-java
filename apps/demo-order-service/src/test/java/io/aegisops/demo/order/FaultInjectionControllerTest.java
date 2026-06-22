@@ -59,6 +59,24 @@ class FaultInjectionControllerTest {
   }
 
   @Test
+  void shouldIgnoreEmptyFaultModeBody() throws Exception {
+    mvc.perform(
+            post("/demo/fault/apply").contentType(MediaType.APPLICATION_JSON).content("{}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.slowApiEnabled", equalTo(false)))
+        .andExpect(jsonPath("$.cpuHighEnabled", equalTo(false)))
+        .andExpect(jsonPath("$.healthy", equalTo(true)));
+  }
+
+  @Test
+  void shouldIgnoreMissingFaultModeBody() throws Exception {
+    mvc.perform(post("/demo/fault/apply").contentType(MediaType.APPLICATION_JSON))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.slowApiEnabled", equalTo(false)))
+        .andExpect(jsonPath("$.healthy", equalTo(true)));
+  }
+
+  @Test
   void shouldEnableIncidentFaultMode() throws Exception {
     mvc.perform(post("/demo/fault/incident"))
         .andExpect(status().isOk())

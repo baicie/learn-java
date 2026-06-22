@@ -108,6 +108,15 @@ services:
       PHP_TZ: Asia/Tokyo
     ports:
       - "8081:8080"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget -q -O - http://localhost:8080/ >/dev/null || exit 1",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 20
     restart: unless-stopped
 
   zabbix-agent2:

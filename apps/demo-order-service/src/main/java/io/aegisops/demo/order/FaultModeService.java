@@ -30,6 +30,10 @@ public class FaultModeService {
   private final List<CompletableFuture<Void>> cpuTasks = new ArrayList<>();
 
   public synchronized FaultStateResponse apply(FaultMode mode) {
+    if (mode == null) {
+      return state();
+    }
+
     if (mode.slowApiEnabled() != null) {
       slowApiEnabled.set(mode.slowApiEnabled());
     }
