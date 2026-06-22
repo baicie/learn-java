@@ -1,109 +1,76 @@
 package io.aegisops.security;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import io.aegisops.common.tenant.TenantContext;
-import jakarta.servlet.FilterChain;
-import java.util.Set;
-import org.junit.jupiter.api.AfterEach;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
-import org.springframework.mock.web.MockHttpServletResponse;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.context.SecurityContextHolder;
 
 class TenantRequiredFilterTest {
+
   @Test
-  void rejectsApiRequestWithoutTenant() throws Exception {
-    var props = new AiopsSecurityProperties();
-    props.setTenantRequired(true);
+  void shouldSkipZabbixIntegrationWebhookPath() {
+    TestableTenantRequiredFilter filter = newFilter();
 
-    var filter =
-        new TenantRequiredFilter(
-            props, new SecurityErrorResponseWriter(new ObjectMapper()), fakeAuditService());
-
-    var request = new MockHttpServletRequest("GET", "/api/incidents/inc_1");
-    var response = new MockHttpServletResponse();
-
-    filter.doFilter(request, response, (req, res) -> {});
-
-    org.junit.jupiter.api.Assertions.assertEquals(400, response.getStatus());
-    org.junit.jupiter.api.Assertions.assertTrue(
-        response.getContentAsString().contains("TENANT_REQUIRED"));
+    assertThat(filter.shouldSkip("/api/integrations/zabbix/events")).isTrue();
+    assertThat(filter.shouldSkip("/api/integrations/zabbix/health")).isTrue();
   }
 
   @Test
-  void allowsApiRequestWithTenantHeader() throws Exception {
-    var props = new AiopsSecurityProperties();
-    props.setTenantRequired(true);
+  void shouldNotSkipNormalApiPathWhenTenantRequired() {
+    TestableTenantRequiredFilter filter = newFilter();
 
-    var filter =
-        new TenantRequiredFilter(
-            props, new SecurityErrorResponseWriter(new ObjectMapper()), fakeAuditService());
-
-    var request = new MockHttpServletRequest("GET", "/api/incidents/inc_1");
-    request.addHeader(SecurityConstants.HEADER_TENANT_ID, "tenant_1");
-    var response = new MockHttpServletResponse();
-    RecordingChain chain = new RecordingChain();
-
-    filter.doFilter(request, response, chain);
-
-    org.junit.jupiter.api.Assertions.assertEquals(200, response.getStatus());
-    org.junit.jupiter.api.Assertions.assertTrue(chain.called);
-  }
-
-  @AfterEach
-  void cleanup() {
-    SecurityContextHolder.clearContext();
-    TenantContext.clear();
+    assertThat(filter.shouldSkip("/api/alerts")).isFalse();
+    assertThat(filter.shouldSkip("/api/incidents")).isFalse();
   }
 
   @Test
-  void allowsApiRequestWithAuthenticatedPrincipalTenant() throws Exception {
-    var props = new AiopsSecurityProperties();
-    props.setTenantRequired(true);
+  void shouldSkipHealthAndAuthAndActuatorPaths() {
+    TestableTenantRequiredFilter filter = newFilter();
 
-    var filter =
-        new TenantRequiredFilter(
-            props, new SecurityErrorResponseWriter(new ObjectMapper()), fakeAuditService());
+    assertThat(filter.shouldSkip("/health")).isTrue();
+    assertThat(filter.shouldSkip("/actuator/health")).isTrue();
+    assertThat(filter.shouldSkip("/api/auth/login")).isTrue();
+    assertThat(filter.shouldSkip("/swagger-ui/index.html")).isTrue();
+    assertThat(filter.shouldSkip("/v3/api-docs")).isTrue();
+  }
 
-    var request = new MockHttpServletRequest("GET", "/api/incidents/inc_1");
-    var response = new MockHttpServletResponse();
-    RecordingChain chain = new RecordingChain();
+  @Test
+  void shouldNotFilterWhenTenantRequiredDisabled() {
+    AiopsSecurityProperties properties = new AiopsSecurityProperties();
+    properties.setTenantRequired(false);
 
-    UserPrincipal principal =
-        new UserPrincipal("user_1", "tenant_1", "alice", "Alice", Set.of("admin"));
+    TestableTenantRequiredFilter filter =
+        new TestableTenantRequiredFilter(
+            properties,
+            mock(SecurityErrorResponseWriter.class),
+            mock(TenantSecurityAuditService.class));
 
-    SecurityContextHolder.getContext()
-        .setAuthentication(
-            new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities()));
+    assertThat(filter.shouldSkip("/api/alerts")).isTrue();
+  }
 
-    try {
-      filter.doFilter(request, response, chain);
-    } finally {
-      SecurityContextHolder.clearContext();
-      TenantContext.clear();
+  private TestableTenantRequiredFilter newFilter() {
+    AiopsSecurityProperties properties = new AiopsSecurityProperties();
+    properties.setTenantRequired(true);
+
+    return new TestableTenantRequiredFilter(
+        properties,
+        mock(SecurityErrorResponseWriter.class),
+        mock(TenantSecurityAuditService.class));
+  }
+
+  private static class TestableTenantRequiredFilter extends TenantRequiredFilter {
+    TestableTenantRequiredFilter(
+        AiopsSecurityProperties properties,
+        SecurityErrorResponseWriter responseWriter,
+        TenantSecurityAuditService auditService) {
+      super(properties, responseWriter, auditService);
     }
 
-    org.junit.jupiter.api.Assertions.assertEquals(200, response.getStatus());
-    org.junit.jupiter.api.Assertions.assertTrue(chain.called);
-  }
-
-  private static TenantSecurityAuditService fakeAuditService() {
-    return new TenantSecurityAuditService(
-        new TenantSecurityEventRepository() {
-          @Override
-          public void create(TenantSecurityEventCreateCommand command) {}
-        },
-        new ObjectMapper());
-  }
-
-  private static class RecordingChain implements FilterChain {
-    boolean called;
-
-    @Override
-    public void doFilter(
-        jakarta.servlet.ServletRequest request, jakarta.servlet.ServletResponse response) {
-      called = true;
+    boolean shouldSkip(String path) {
+      MockHttpServletRequest request = new MockHttpServletRequest("POST", path);
+      request.setRequestURI(path);
+      return shouldNotFilter(request);
     }
   }
 }

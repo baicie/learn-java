@@ -40,6 +40,7 @@ public class SecurityConfig {
                     .permitAll()
                     .requestMatchers(
                         "/api/auth/**",
+                        "/api/integrations/zabbix/**",
                         "/actuator/**",
                         "/v3/api-docs/**",
                         "/swagger-ui/**",
@@ -83,6 +84,7 @@ public class SecurityConfig {
     config.setAllowedHeaders(List.of("*"));
     config.setExposedHeaders(List.of("X-Request-Id"));
     config.setAllowCredentials(true);
+
     UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
     source.registerCorsConfiguration("/**", config);
     return source;
