@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     default_locale: str = "zh-CN"
     contract_version: str = "agent-diagnosis.v1"
 
-    # deterministic | openai-compatible
+    # deterministic | mock | deterministic-evidence | openai-compatible
     generation_mode: str = "deterministic"
 
     # OpenAI-compatible /chat/completions settings.
@@ -86,7 +86,7 @@ class Settings(BaseSettings):
 
     def normalized_generation_mode(self) -> str:
         value = (self.generation_mode or "deterministic").strip().lower()
-        if value not in {"deterministic", "openai-compatible"}:
+        if value not in {"deterministic", "mock", "deterministic-evidence", "openai-compatible"}:
             return "deterministic"
         return value
 

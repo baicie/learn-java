@@ -58,6 +58,8 @@ class AiDiagnosisServiceObservabilityTest {
         .thenReturn(
             new AgentDiagnosisResponse(
                 "agent-diagnosis.v1",
+                "inc_1",
+                "completed",
                 "aiops-agent",
                 "langgraph-deterministic",
                 "aegisops_diagnosis_graph",
@@ -67,7 +69,11 @@ class AiDiagnosisServiceObservabilityTest {
                 List.of("step"),
                 List.of(),
                 List.of(),
-                raw));
+                List.of(),
+                List.of(),
+                List.of(),
+                raw,
+                now));
 
     when(repository.findDiagnosis(Mockito.eq("tenant_1"), Mockito.anyString()))
         .thenReturn(Optional.empty());
@@ -77,12 +83,9 @@ class AiDiagnosisServiceObservabilityTest {
     try {
       service.diagnose("tenant_1", "inc_1", new AiDiagnoseRequest(true, "zh-CN"));
     } catch (Exception ignored) {
-      // The test focuses on side effects before final findDiagnosis lookup.
     }
-
     verify(repository).saveDiagnosis(any());
     verify(repository).saveAgentRun(any());
-    // steps and checks lists are empty in this raw, so the batch calls are skipped.
     verify(repository, Mockito.never()).saveAgentRunSteps(any());
     verify(repository, Mockito.never()).saveAgentEvalResults(any());
   }
@@ -146,6 +149,8 @@ class AiDiagnosisServiceObservabilityTest {
         .thenReturn(
             new AgentDiagnosisResponse(
                 "agent-diagnosis.v1",
+                "inc_1",
+                "completed",
                 "aiops-agent",
                 "langgraph-deterministic",
                 "aegisops_diagnosis_graph",
@@ -155,7 +160,11 @@ class AiDiagnosisServiceObservabilityTest {
                 List.of("step"),
                 List.of(),
                 List.of(),
-                raw));
+                List.of(),
+                List.of(),
+                List.of(),
+                raw,
+                now));
 
     when(repository.findDiagnosis(Mockito.eq("tenant_1"), Mockito.anyString()))
         .thenReturn(Optional.empty());
@@ -165,9 +174,7 @@ class AiDiagnosisServiceObservabilityTest {
     try {
       service.diagnose("tenant_1", "inc_1", new AiDiagnoseRequest(true, "zh-CN"));
     } catch (Exception ignored) {
-      // The test focuses on side effects before final findDiagnosis lookup.
     }
-
     verify(repository).saveDiagnosis(any());
     verify(repository).saveAgentRun(any());
     verify(repository).saveAgentRunSteps(any());
@@ -195,7 +202,7 @@ class AiDiagnosisServiceObservabilityTest {
         now.minusMinutes(10),
         now.minusMinutes(10),
         now,
-        now,
+        now.minusMinutes(10),
         now);
   }
 }

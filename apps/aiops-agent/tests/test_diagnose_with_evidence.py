@@ -42,7 +42,7 @@ async def test_service_deterministic_mode_uses_evidence():
     response = await service.diagnose(request)
 
     assert response.provider == "aiops-agent"
-    assert response.raw["generationMode"] == "deterministic-evidence"
+    assert response.raw["generationMode"] == "deterministic"
     assert "evd_cpu" in response.raw["evidenceRefs"]
 
 
@@ -69,5 +69,5 @@ async def test_service_mock_mode_also_uses_evidence():
 
     response = await service.diagnose(request)
 
-    assert response.raw["generationMode"] == "deterministic-evidence"
+    assert response.raw["generationMode"] == "mock"
     assert "evd_cpu" in response.raw["evidenceRefs"]

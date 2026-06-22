@@ -58,6 +58,8 @@ class AiDiagnosisServiceObservabilityFailureTest {
         .thenReturn(
             new AgentDiagnosisResponse(
                 "agent-diagnosis.v1",
+                "inc_1",
+                "completed",
                 "aiops-agent",
                 "langgraph-deterministic",
                 "aegisops_diagnosis_graph",
@@ -67,7 +69,11 @@ class AiDiagnosisServiceObservabilityFailureTest {
                 List.of("step"),
                 List.of(),
                 List.of(),
-                rawWithAgentRunAndEval()));
+                List.of(),
+                List.of(),
+                List.of(),
+                rawWithAgentRunAndEval(),
+                now));
 
     doThrow(new RuntimeException("agent_run insert failed")).when(repository).saveAgentRun(any());
 
@@ -88,6 +94,7 @@ class AiDiagnosisServiceObservabilityFailureTest {
                     "[\"step\"]",
                     "[]",
                     "[]",
+                    "{}",
                     now)));
 
     AiDiagnosisService service = new AiDiagnosisService(repository, agentClient, objectMapper());

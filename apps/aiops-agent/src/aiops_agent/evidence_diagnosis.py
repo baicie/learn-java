@@ -179,7 +179,7 @@ def build_next_steps(flags: EvidenceFlags) -> list[str]:
     return list(dict.fromkeys(steps))
 
 
-def deterministic_diagnose(request: DiagnoseRequest) -> DiagnoseResponse:
+def deterministic_diagnose(request: DiagnoseRequest, generation_mode: str = "deterministic-evidence") -> DiagnoseResponse:
     flags = flags_from_request(request)
     refs = evidence_refs(request.evidence)
 
@@ -190,7 +190,7 @@ def deterministic_diagnose(request: DiagnoseRequest) -> DiagnoseResponse:
     timeline = build_timeline(request)
 
     raw = {
-        "generationMode": "deterministic-evidence",
+        "generationMode": generation_mode,
         "evidenceRefs": refs,
         "matchedRules": rules,
         "timeline": timeline,

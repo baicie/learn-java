@@ -346,6 +346,7 @@ public class JooqAiRepository implements AiRepository {
                 AI_DIAGNOSIS.NEXT_STEPS.cast(String.class).as("next_steps_json"),
                 AI_DIAGNOSIS.RUNBOOK_SUGGESTIONS.cast(String.class).as("runbook_suggestions_json"),
                 AI_DIAGNOSIS.RISKS.cast(String.class).as("risks_json"),
+                AI_DIAGNOSIS.RESPONSE_RAW.cast(String.class).as("response_raw_json"),
                 AI_DIAGNOSIS.CREATED_AT)
             .from(AI_DIAGNOSIS)
             .where(condition)
@@ -422,6 +423,7 @@ public class JooqAiRepository implements AiRepository {
         record.get("next_steps_json", String.class),
         record.get("runbook_suggestions_json", String.class),
         record.get("risks_json", String.class),
+        record.get("response_raw_json", String.class),
         record.get(AI_DIAGNOSIS.CREATED_AT));
   }
 

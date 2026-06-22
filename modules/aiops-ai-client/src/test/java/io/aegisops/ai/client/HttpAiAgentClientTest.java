@@ -39,6 +39,8 @@ class HttpAiAgentClientTest {
                 """
                         {
                           "contractVersion": "agent-diagnosis.v1",
+                          "incidentId": "inc_1",
+                          "status": "completed",
                           "provider": "aiops-agent",
                           "model": "langgraph-deterministic",
                           "agentName": "aegisops_diagnosis_graph",
@@ -48,6 +50,9 @@ class HttpAiAgentClientTest {
                           "nextSteps": ["step"],
                           "runbookSuggestions": ["runbook"],
                           "risks": ["risk"],
+                          "matchedRules": [],
+                          "evidenceRefs": [],
+                          "timeline": [],
                           "raw": {"ok": true}
                         }
                         """,

@@ -40,6 +40,30 @@ public class AgentContractValidator {
       requireText("alerts[" + i + "].id", request.alerts().get(i).id());
     }
 
+    if (request.evidence() == null) {
+      throw violation("evidence is required");
+    }
+
+    for (int i = 0; i < request.evidence().size(); i++) {
+      if (request.evidence().get(i) == null) {
+        throw violation("evidence[" + i + "] is null");
+      }
+      requireText("evidence[" + i + "].id", request.evidence().get(i).id());
+      requireText("evidence[" + i + "].evidenceKey", request.evidence().get(i).evidenceKey());
+      requireText("evidence[" + i + "].evidenceType", request.evidence().get(i).evidenceType());
+    }
+
+    if (request.timeline() == null) {
+      throw violation("timeline is required");
+    }
+
+    for (int i = 0; i < request.timeline().size(); i++) {
+      if (request.timeline().get(i) == null) {
+        throw violation("timeline[" + i + "] is null");
+      }
+      requireText("timeline[" + i + "].id", request.timeline().get(i).id());
+    }
+
     if (request.rca() != null) {
       requireText("rca.id", request.rca().id());
     }

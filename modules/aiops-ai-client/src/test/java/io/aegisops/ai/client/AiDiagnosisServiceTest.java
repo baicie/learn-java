@@ -144,6 +144,7 @@ class AiDiagnosisServiceTest {
         "[\"step\"]",
         "[]",
         "[]",
+        "{}",
         createdAt);
   }
 
@@ -155,6 +156,8 @@ class AiDiagnosisServiceTest {
 
       return new AgentDiagnosisResponse(
           AgentContract.DIAGNOSIS_CONTRACT_VERSION,
+          "inc_1",
+          "completed",
           "aiops-agent",
           "langgraph-deterministic",
           "aegisops_diagnosis_graph",
@@ -164,7 +167,11 @@ class AiDiagnosisServiceTest {
           List.of("Check CPU usage", "Check top process"),
           List.of("Host resource saturation runbook"),
           List.of("Do not restart blindly"),
-          Map.of("contractVersion", request.contractVersion()));
+          List.of(),
+          List.of(),
+          List.of(),
+          Map.of("contractVersion", request.contractVersion()),
+          OffsetDateTime.now());
     }
   }
 
@@ -173,6 +180,8 @@ class AiDiagnosisServiceTest {
     public AgentDiagnosisResponse diagnose(AgentDiagnosisRequest request) {
       return new AgentDiagnosisResponse(
           AgentContract.DIAGNOSIS_CONTRACT_VERSION,
+          "inc_1",
+          "completed",
           "aiops-agent",
           "langgraph-deterministic",
           "aegisops_diagnosis_graph",
@@ -182,7 +191,11 @@ class AiDiagnosisServiceTest {
           List.of("自动执行删除 namespace"),
           List.of(),
           List.of(),
-          Map.of());
+          List.of(),
+          List.of(),
+          List.of(),
+          Map.of(),
+          OffsetDateTime.now());
     }
   }
 
@@ -260,6 +273,7 @@ class AiDiagnosisServiceTest {
               command.nextStepsJson(),
               command.runbookSuggestionsJson(),
               command.risksJson(),
+              command.rawJson(),
               OffsetDateTime.parse("2026-06-14T10:00:00+09:00"));
     }
 

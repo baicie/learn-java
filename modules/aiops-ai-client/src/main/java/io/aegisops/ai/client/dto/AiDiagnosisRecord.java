@@ -16,4 +16,5 @@ public record AiDiagnosisRecord(
     String nextStepsJson,
     String runbookSuggestionsJson,
     String risksJson,
+    String responseRawJson,
     OffsetDateTime createdAt) {}

@@ -9,6 +9,7 @@ import io.aegisops.ai.client.dto.AgentDiagnosisResponse;
 import io.aegisops.ai.client.dto.AiAlertRecord;
 import io.aegisops.ai.client.dto.AiDiagnoseRequest;
 import io.aegisops.ai.client.dto.AiDiagnosisRecord;
+import io.aegisops.ai.client.dto.AiDiagnosisResponse;
 import io.aegisops.ai.client.dto.AiEvidenceRecord;
 import io.aegisops.ai.client.dto.AiIncidentRecord;
 import io.aegisops.ai.client.dto.AiRcaRecord;
@@ -50,6 +51,29 @@ class AiDiagnosisServiceEvidenceContextTest {
     assertThat(request.rca().evidenceRefs()).contains("evd_cpu", "evd_api", "evd_health");
   }
 
+  @Test
+  void shouldReturnEvidenceRefsAndMatchedRulesInResponse() {
+    FakeRepository repository = new FakeRepository();
+    CapturingAgentClient agentClient = new CapturingAgentClient();
+
+    AiDiagnosisService service =
+        new AiDiagnosisService(
+            repository,
+            agentClient,
+            new ObjectMapper().registerModule(new JavaTimeModule()),
+            new AgentContractValidator(),
+            new AgentObservabilityExtractor(new ObjectMapper()));
+
+    AiDiagnosisResponse response =
+        service.diagnose("tenant_1", "inc_1", new AiDiagnoseRequest(true, "zh-CN"));
+
+    assertThat(response.matchedRules()).contains("CPU_API_HEALTH_COMBINED");
+    assertThat(response.evidenceRefs()).contains("evd_cpu", "evd_api", "evd_health");
+    assertThat(response.raw()).isNotNull();
+    assertThat(response.raw()).containsKey("matchedRules");
+    assertThat(response.raw()).containsKey("evidenceRefs");
+  }
+
   private static final class CapturingAgentClient implements AiAgentClient {
     AgentDiagnosisRequest request;
 
@@ -58,6 +82,8 @@ class AiDiagnosisServiceEvidenceContextTest {
       this.request = request;
       return new AgentDiagnosisResponse(
           "agent-diagnosis.v1",
+          "inc_1",
+          "completed",
           "aiops-agent",
           "langgraph-deterministic",
           "aegisops_diagnosis_graph",
@@ -67,9 +93,13 @@ class AiDiagnosisServiceEvidenceContextTest {
           List.of("查看 CPU Top 进程"),
           List.of("主机 CPU 高位排查 Runbook"),
           List.of("证据不足时需要补充日志"),
+          List.of("CPU_API_HEALTH_COMBINED"),
+          List.of("evd_cpu", "evd_api", "evd_health"),
+          List.of(),
           Map.of(
               "evidenceRefs", List.of("evd_cpu", "evd_api", "evd_health"),
-              "matchedRules", List.of("CPU_API_HEALTH_COMBINED")));
+              "matchedRules", List.of("CPU_API_HEALTH_COMBINED")),
+          OffsetDateTime.now());
     }
   }
 
@@ -184,6 +214,7 @@ class AiDiagnosisServiceEvidenceContextTest {
               savedDiagnosis.nextStepsJson(),
               savedDiagnosis.runbookSuggestionsJson(),
               savedDiagnosis.risksJson(),
+              savedDiagnosis.rawJson(),
               OffsetDateTime.now()));
     }
 

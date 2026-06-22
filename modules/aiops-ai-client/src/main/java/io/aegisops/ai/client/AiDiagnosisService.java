@@ -23,6 +23,7 @@ import io.aegisops.ai.client.dto.TimelineCommand;
 import io.aegisops.common.exception.AppException;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -45,39 +46,25 @@ public class AiDiagnosisService {
 
   @Autowired
   public AiDiagnosisService(
-      AiRepository repository, AiAgentClient agentClient, ObjectMapper objectMapper) {
-    this(
-        repository,
-        agentClient,
-        objectMapper,
-        new AgentContractValidator(),
-        new AgentObservabilityExtractor(objectMapper));
-  }
-
-  public AiDiagnosisService(
       AiRepository repository,
       AiAgentClient agentClient,
       ObjectMapper objectMapper,
-      AgentContractValidator contractValidator) {
-    this(
-        repository,
-        agentClient,
-        objectMapper,
-        contractValidator,
-        new AgentObservabilityExtractor(objectMapper));
-  }
-
-  public AiDiagnosisService(
-      AiRepository repository,
-      AiAgentClient agentClient,
-      ObjectMapper objectMapper,
-      AgentContractValidator contractValidator,
-      AgentObservabilityExtractor observabilityExtractor) {
+      @Autowired(required = false) AgentContractValidator contractValidator,
+      @Autowired(required = false) AgentObservabilityExtractor observabilityExtractor) {
     this.repository = repository;
     this.agentClient = agentClient;
     this.objectMapper = objectMapper;
-    this.contractValidator = contractValidator;
-    this.observabilityExtractor = observabilityExtractor;
+    this.contractValidator =
+        contractValidator != null ? contractValidator : new AgentContractValidator();
+    this.observabilityExtractor =
+        observabilityExtractor != null
+            ? observabilityExtractor
+            : new AgentObservabilityExtractor(objectMapper);
+  }
+
+  public AiDiagnosisService(
+      AiRepository repository, AiAgentClient agentClient, ObjectMapper objectMapper) {
+    this(repository, agentClient, objectMapper, null, null);
   }
 
   public AiDiagnosisResponse latest(String tenantId, String incidentId) {
@@ -194,45 +181,7 @@ public class AiDiagnosisService {
     contractValidator.validateResponse(agentResponse);
 
     String diagnosisId = newId("diag");
-    String requestJson = writeJson(agentRequest);
-    String rawJson = writeJson(agentResponse.raw() == null ? Map.of() : agentResponse.raw());
-    String nextStepsJson = writeJson(agentResponse.nextSteps());
-    String runbookSuggestionsJson = writeJson(agentResponse.runbookSuggestions());
-    String risksJson = writeJson(agentResponse.risks());
-
-    repository.saveDiagnosis(
-        new SaveDiagnosisCommand(
-            diagnosisId,
-            tenantId,
-            incidentId,
-            agentResponse,
-            requestJson,
-            rawJson,
-            nextStepsJson,
-            runbookSuggestionsJson,
-            risksJson));
-
-    persistAgentObservability(
-        diagnosisId, tenantId, incidentId, agentRequest.traceId(), agentResponse);
-
-    repository.addIncidentTimeline(
-        new TimelineCommand(
-            newId("tl"),
-            incidentId,
-            OffsetDateTime.now(),
-            "AI diagnosis completed",
-            agentResponse.summary(),
-            writeJson(
-                Map.of(
-                    "contractVersion", agentResponse.contractVersion(),
-                    "traceId", agentRequest.traceId(),
-                    "aiDiagnosisId", diagnosisId,
-                    "provider", agentResponse.provider(),
-                    "model", agentResponse.model(),
-                    "agentName", agentResponse.agentName(),
-                    "rootCause", agentResponse.rootCause(),
-                    "evidenceRefs", rawList(agentResponse.raw(), "evidenceRefs"),
-                    "matchedRules", rawList(agentResponse.raw(), "matchedRules")))));
+    persistDiagnosisAndTimeline(tenantId, incidentId, diagnosisId, agentRequest, agentResponse);
 
     return repository
         .findDiagnosis(tenantId, diagnosisId)
@@ -241,38 +190,109 @@ public class AiDiagnosisService {
             () -> new AppException("AI_DIAGNOSIS_NOT_FOUND", "AI diagnosis not found after save"));
   }
 
+  private void persistDiagnosisAndTimeline(
+      String tenantId,
+      String incidentId,
+      String diagnosisId,
+      AgentDiagnosisRequest agentRequest,
+      AgentDiagnosisResponse agentResponse) {
+    Map<String, Object> raw = agentResponse.raw() == null ? Map.of() : agentResponse.raw();
+    List<String> evidenceRefs = extractList(raw.get("evidenceRefs"));
+    List<String> matchedRules = extractList(raw.get("matchedRules"));
+    repository.saveDiagnosis(
+        new SaveDiagnosisCommand(
+            diagnosisId,
+            tenantId,
+            incidentId,
+            agentResponse,
+            writeJson(agentRequest),
+            writeJson(raw),
+            writeJson(agentResponse.nextSteps()),
+            writeJson(agentResponse.runbookSuggestions()),
+            writeJson(agentResponse.risks())));
+    persistAgentObservability(
+        diagnosisId, tenantId, incidentId, agentRequest.traceId(), agentResponse);
+    Map<String, Object> tlPayload = new HashMap<>();
+    tlPayload.put("contractVersion", agentRequest.contractVersion());
+    tlPayload.put("traceId", agentRequest.traceId());
+    tlPayload.put("aiDiagnosisId", diagnosisId);
+    tlPayload.put("provider", agentResponse.provider());
+    tlPayload.put("model", agentResponse.model());
+    tlPayload.put("agentName", agentResponse.agentName());
+    tlPayload.put("rootCause", agentResponse.rootCause());
+    tlPayload.put("evidenceRefs", evidenceRefs);
+    tlPayload.put("matchedRules", matchedRules);
+    repository.addIncidentTimeline(
+        new TimelineCommand(
+            newId("tl"),
+            incidentId,
+            OffsetDateTime.now(),
+            "AI diagnosis completed",
+            agentResponse.summary(),
+            writeJson(tlPayload)));
+  }
+
   private AgentDiagnosisResponse sanitizeAgentResponse(AgentDiagnosisResponse response) {
     if (response == null) {
       throw new AppException("AI_AGENT_EMPTY_RESPONSE", "AI agent returned empty response");
     }
-
+    Map<String, Object> raw = response.raw() == null ? Map.of() : response.raw();
+    List<String> matchedRules = extractList(raw.get("matchedRules"));
+    List<String> evidenceRefs = extractList(raw.get("evidenceRefs"));
+    List<Map<String, Object>> timeline = extractMapList(raw.get("timeline"));
     return new AgentDiagnosisResponse(
         blankToDefault(response.contractVersion(), AgentContract.DIAGNOSIS_CONTRACT_VERSION),
+        response.incidentId(),
+        response.status() == null ? "completed" : response.status(),
         blankToDefault(response.provider(), "aiops-agent"),
         blankToDefault(response.model(), "langgraph-deterministic"),
         blankToDefault(response.agentName(), "aegisops_diagnosis_graph"),
         blankToDefault(response.summary(), "No summary generated."),
         blankToDefault(response.rootCause(), "No root cause generated."),
         blankToDefault(response.impact(), "Impact is unknown."),
-        response.nextSteps() == null ? List.of() : response.nextSteps(),
-        response.runbookSuggestions() == null ? List.of() : response.runbookSuggestions(),
-        response.risks() == null ? List.of() : response.risks(),
-        response.raw() == null ? Map.of() : response.raw());
+        nvl(response.nextSteps()),
+        nvl(response.runbookSuggestions()),
+        nvl(response.risks()),
+        matchedRules,
+        evidenceRefs,
+        timeline,
+        raw,
+        response.createdAt());
+  }
+
+  private static <T> List<T> nvl(List<T> v) {
+    return v == null ? List.of() : v;
+  }
+
+  private List<String> extractList(Object value) {
+    if (value instanceof Iterable<?> it) {
+      List<String> out = new ArrayList<>();
+      for (Object item : it) {
+        if (item != null) out.add(String.valueOf(item));
+      }
+      return List.copyOf(out);
+    }
+    return List.of();
+  }
+
+  private List<Map<String, Object>> extractMapList(Object value) {
+    if (value instanceof Iterable<?> it) {
+      List<Map<String, Object>> out = new ArrayList<>();
+      for (Object item : it) {
+        if (item instanceof Map<?, ?> m) {
+          out.add(objectMapper.convertValue(m, new TypeReference<Map<String, Object>>() {}));
+        }
+      }
+      return List.copyOf(out);
+    }
+    return List.of();
   }
 
   private boolean isReusableLatest(AiIncidentRecord incident, AiDiagnosisRecord latest) {
-    if (latest.createdAt() == null) {
-      return false;
-    }
-
+    if (latest.createdAt() == null) return false;
     OffsetDateTime baseline = incident.lastSeenAt();
-    if (baseline == null) {
-      baseline = incident.updatedAt();
-    }
-    if (baseline == null) {
-      baseline = incident.createdAt();
-    }
-
+    if (baseline == null) baseline = incident.updatedAt();
+    if (baseline == null) baseline = incident.createdAt();
     return baseline != null && !latest.createdAt().isBefore(baseline);
   }
 
@@ -311,14 +331,47 @@ public class AiDiagnosisService {
   }
 
   private AgentRcaContext toAgentRca(AiRcaRecord rca) {
+    List<String> ruleIds = List.of();
+    List<String> refs = List.of();
+    try {
+      if (rca.evidenceJson() != null && !rca.evidenceJson().isBlank()) {
+        List<Map<String, Object>> evList =
+            objectMapper.readValue(
+                rca.evidenceJson(), new TypeReference<List<Map<String, Object>>>() {});
+        ruleIds =
+            evList.stream()
+                .map(item -> item.get("ruleId"))
+                .filter(Objects::nonNull)
+                .map(String::valueOf)
+                .filter(v -> !v.isBlank())
+                .distinct()
+                .toList();
+        refs = new ArrayList<>();
+        for (Map<String, Object> item : evList) {
+          Object attrs = item.get("attributes");
+          if (attrs instanceof Map<?, ?> m) {
+            Object r = m.get("evidenceRefs");
+            if (r instanceof Iterable<?> it) {
+              for (Object x : it) {
+                if (x != null && !String.valueOf(x).isBlank()) {
+                  refs.add(String.valueOf(x).trim());
+                }
+              }
+            }
+          }
+        }
+        refs = refs.stream().distinct().toList();
+      }
+    } catch (Exception ignored) {
+    }
     return new AgentRcaContext(
         rca.id(),
         rca.suspectedRootCause(),
         rca.confidence(),
         rca.summary(),
         rca.evidenceJson(),
-        extractRcaList(rca.evidenceJson(), "ruleId"),
-        extractRcaEvidenceRefs(rca.evidenceJson()),
+        ruleIds,
+        refs,
         rca.modelVersion(),
         rca.createdAt());
   }
@@ -337,82 +390,20 @@ public class AiDiagnosisService {
         evidence.payloadJson());
   }
 
-  private AgentTimelineContext toAgentTimeline(AiTimelineRecord timeline) {
+  private AgentTimelineContext toAgentTimeline(AiTimelineRecord tl) {
     return new AgentTimelineContext(
-        timeline.id(),
-        timeline.eventTime(),
-        timeline.eventType(),
-        timeline.title(),
-        timeline.description(),
-        timeline.source(),
-        timeline.payloadJson());
-  }
-
-  private List<String> extractRcaList(String evidenceJson, String field) {
-    try {
-      if (evidenceJson == null || evidenceJson.isBlank()) {
-        return List.of();
-      }
-
-      List<Map<String, Object>> evidence =
-          objectMapper.readValue(evidenceJson, new TypeReference<List<Map<String, Object>>>() {});
-
-      return evidence.stream()
-          .map(item -> item.get(field))
-          .filter(Objects::nonNull)
-          .map(String::valueOf)
-          .filter(value -> !value.isBlank())
-          .distinct()
-          .toList();
-    } catch (Exception ex) {
-      return List.of();
-    }
-  }
-
-  private List<String> extractRcaEvidenceRefs(String evidenceJson) {
-    try {
-      if (evidenceJson == null || evidenceJson.isBlank()) {
-        return List.of();
-      }
-
-      List<Map<String, Object>> evidence =
-          objectMapper.readValue(evidenceJson, new TypeReference<List<Map<String, Object>>>() {});
-
-      List<String> out = new ArrayList<>();
-      for (Map<String, Object> item : evidence) {
-        Object attributes = item.get("attributes");
-        if (attributes instanceof Map<?, ?> map) {
-          Object refs = map.get("evidenceRefs");
-          if (refs instanceof Iterable<?> iterable) {
-            for (Object ref : iterable) {
-              if (ref != null && !String.valueOf(ref).isBlank()) {
-                out.add(String.valueOf(ref).trim());
-              }
-            }
-          }
-        }
-      }
-
-      return out.stream().distinct().toList();
-    } catch (Exception ex) {
-      return List.of();
-    }
-  }
-
-  private List<?> rawList(Map<String, Object> raw, String key) {
-    if (raw == null || raw.get(key) == null) {
-      return List.of();
-    }
-
-    Object value = raw.get(key);
-    if (value instanceof List<?> list) {
-      return list;
-    }
-
-    return List.of();
+        tl.id(),
+        tl.eventTime(),
+        tl.eventType(),
+        tl.title(),
+        tl.description(),
+        tl.source(),
+        tl.payloadJson());
   }
 
   private AiDiagnosisResponse toResponse(AiDiagnosisRecord record) {
+    Map<String, Object> raw = readMap(record.responseRawJson());
+
     return new AiDiagnosisResponse(
         record.id(),
         record.incidentId(),
@@ -426,7 +417,51 @@ public class AiDiagnosisService {
         readStringList(record.nextStepsJson()),
         readStringList(record.runbookSuggestionsJson()),
         readStringList(record.risksJson()),
+        readStringListFromRaw(raw, "matchedRules"),
+        readStringListFromRaw(raw, "evidenceRefs"),
+        readTimelineFromRaw(raw),
+        raw,
         record.createdAt());
+  }
+
+  private Map<String, Object> readMap(String json) {
+    try {
+      if (json == null || json.isBlank()) {
+        return Map.of();
+      }
+      return objectMapper.readValue(json, new TypeReference<Map<String, Object>>() {});
+    } catch (Exception ex) {
+      return Map.of();
+    }
+  }
+
+  private List<String> readStringListFromRaw(Map<String, Object> raw, String key) {
+    Object value = raw == null ? null : raw.get(key);
+    if (value instanceof Iterable<?> iterable) {
+      List<String> out = new ArrayList<>();
+      for (Object item : iterable) {
+        if (item != null && !String.valueOf(item).isBlank()) {
+          out.add(String.valueOf(item).trim());
+        }
+      }
+      return List.copyOf(out);
+    }
+    return List.of();
+  }
+
+  private List<Map<String, Object>> readTimelineFromRaw(Map<String, Object> raw) {
+    Object value = raw == null ? null : raw.get("timeline");
+    if (!(value instanceof Iterable<?> iterable)) {
+      return List.of();
+    }
+
+    List<Map<String, Object>> out = new ArrayList<>();
+    for (Object item : iterable) {
+      if (item instanceof Map<?, ?> map) {
+        out.add(objectMapper.convertValue(map, new TypeReference<Map<String, Object>>() {}));
+      }
+    }
+    return List.copyOf(out);
   }
 
   private void ensureIncidentExists(String tenantId, String incidentId) {

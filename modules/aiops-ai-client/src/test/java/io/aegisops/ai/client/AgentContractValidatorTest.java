@@ -8,8 +8,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import io.aegisops.ai.client.dto.AgentAlertContext;
 import io.aegisops.ai.client.dto.AgentDiagnosisRequest;
 import io.aegisops.ai.client.dto.AgentDiagnosisResponse;
+import io.aegisops.ai.client.dto.AgentEvidenceContext;
 import io.aegisops.ai.client.dto.AgentIncidentContext;
-import io.aegisops.ai.client.dto.AgentRcaContext;
+import io.aegisops.ai.client.dto.AgentTimelineContext;
+import java.time.OffsetDateTime;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -64,6 +67,103 @@ class AgentContractValidatorTest {
   }
 
   @Test
+  void rejectsNullEvidenceList() {
+    AgentDiagnosisRequest request =
+        new AgentDiagnosisRequest(
+            AgentContract.DIAGNOSIS_CONTRACT_VERSION,
+            "tenant_1",
+            "inc_1",
+            new AgentIncidentContext(
+                "inc_1", null, null, null, null, null, null, null, 0, null, null, null, null, null),
+            List.of(),
+            null,
+            null,
+            List.of(),
+            "zh-CN",
+            "trace_1");
+
+    AgentContractViolationException ex =
+        assertThrows(
+            AgentContractViolationException.class, () -> validator.validateRequest(request));
+
+    assertEquals("AI_AGENT_CONTRACT_VIOLATION", ex.errorCode());
+    assertTrue(ex.getMessage().contains("evidence is required"));
+  }
+
+  @Test
+  void rejectsInvalidEvidenceItem() {
+    AgentDiagnosisRequest request =
+        new AgentDiagnosisRequest(
+            AgentContract.DIAGNOSIS_CONTRACT_VERSION,
+            "tenant_1",
+            "inc_1",
+            new AgentIncidentContext(
+                "inc_1", null, null, null, null, null, null, null, 0, null, null, null, null, null),
+            List.of(),
+            null,
+            List.of(
+                new AgentEvidenceContext(
+                    null, "", "zabbix", "", null, null, null, null, null, "{}")),
+            List.of(),
+            "zh-CN",
+            "trace_1");
+
+    AgentContractViolationException ex =
+        assertThrows(
+            AgentContractViolationException.class, () -> validator.validateRequest(request));
+
+    assertEquals("AI_AGENT_CONTRACT_VIOLATION", ex.errorCode());
+  }
+
+  @Test
+  void rejectsNullTimelineList() {
+    AgentDiagnosisRequest request =
+        new AgentDiagnosisRequest(
+            AgentContract.DIAGNOSIS_CONTRACT_VERSION,
+            "tenant_1",
+            "inc_1",
+            new AgentIncidentContext(
+                "inc_1", null, null, null, null, null, null, null, 0, null, null, null, null, null),
+            List.of(),
+            null,
+            List.of(),
+            null,
+            "zh-CN",
+            "trace_1");
+
+    AgentContractViolationException ex =
+        assertThrows(
+            AgentContractViolationException.class, () -> validator.validateRequest(request));
+
+    assertEquals("AI_AGENT_CONTRACT_VIOLATION", ex.errorCode());
+    assertTrue(ex.getMessage().contains("timeline is required"));
+  }
+
+  @Test
+  void rejectsNullTimelineItem() {
+    AgentDiagnosisRequest request =
+        new AgentDiagnosisRequest(
+            AgentContract.DIAGNOSIS_CONTRACT_VERSION,
+            "tenant_1",
+            "inc_1",
+            new AgentIncidentContext(
+                "inc_1", null, null, null, null, null, null, null, 0, null, null, null, null, null),
+            List.of(),
+            null,
+            List.of(),
+            Arrays.asList((AgentTimelineContext) null),
+            "zh-CN",
+            "trace_1");
+
+    AgentContractViolationException ex =
+        assertThrows(
+            AgentContractViolationException.class, () -> validator.validateRequest(request));
+
+    assertEquals("AI_AGENT_CONTRACT_VIOLATION", ex.errorCode());
+    assertTrue(ex.getMessage().contains("timeline[0] is null"));
+  }
+
+  @Test
   void validatesValidResponse() {
     assertDoesNotThrow(() -> validator.validateResponse(validResponse()));
   }
@@ -73,6 +173,8 @@ class AgentContractValidatorTest {
     AgentDiagnosisResponse response =
         new AgentDiagnosisResponse(
             AgentContract.DIAGNOSIS_CONTRACT_VERSION,
+            "inc_1",
+            "completed",
             "aiops-agent",
             "model",
             "agent",
@@ -82,7 +184,11 @@ class AgentContractValidatorTest {
             List.of("Run rm -rf / automatically"),
             List.of(),
             List.of(),
-            Map.of());
+            List.of(),
+            List.of(),
+            List.of(),
+            Map.of(),
+            OffsetDateTime.now());
 
     AgentContractViolationException ex =
         assertThrows(
@@ -111,6 +217,8 @@ class AgentContractValidatorTest {
   private AgentDiagnosisResponse validResponse() {
     return new AgentDiagnosisResponse(
         AgentContract.DIAGNOSIS_CONTRACT_VERSION,
+        "inc_1",
+        "completed",
         "aiops-agent",
         "langgraph-deterministic",
         "aegisops_diagnosis_graph",
@@ -120,12 +228,10 @@ class AgentContractValidatorTest {
         List.of("step"),
         List.of("runbook"),
         List.of("risk"),
-        Map.of("ok", true));
-  }
-
-  @SuppressWarnings("unused")
-  private static final class _unused {
-    // Force compile of AgentRcaContext to avoid unused import warning if filtered out.
-    AgentRcaContext rca = new AgentRcaContext("r", null, null, null, null, null, null, null, null);
+        List.of(),
+        List.of(),
+        List.of(),
+        Map.of("ok", true),
+        OffsetDateTime.now());
   }
 }

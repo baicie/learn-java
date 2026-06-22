@@ -38,12 +38,9 @@ class DiagnosisService:
         self.evidence_client = evidence_client
 
     async def diagnose(self, request: DiagnoseRequest) -> DiagnoseResponse:
-        if self.settings.normalized_generation_mode() in {
-            "deterministic",
-            "mock",
-            "deterministic-evidence",
-        }:
-            response = deterministic_diagnose(request)
+        mode = self.settings.normalized_generation_mode()
+        if mode in {"deterministic", "mock", "deterministic-evidence"}:
+            response = deterministic_diagnose(request, generation_mode=mode)
             raw = dict(response.raw)
             if self.settings.eval_enabled:
                 raw["agentEval"] = evaluate_diagnosis(response)

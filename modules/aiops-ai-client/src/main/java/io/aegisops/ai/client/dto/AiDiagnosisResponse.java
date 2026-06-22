@@ -2,6 +2,7 @@ package io.aegisops.ai.client.dto;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Map;
 
 public record AiDiagnosisResponse(
     String id,
@@ -16,4 +17,8 @@ public record AiDiagnosisResponse(
     List<String> nextSteps,
     List<String> runbookSuggestions,
     List<String> risks,
+    List<String> matchedRules,
+    List<String> evidenceRefs,
+    List<Map<String, Object>> timeline,
+    Map<String, Object> raw,
     OffsetDateTime createdAt) {}
