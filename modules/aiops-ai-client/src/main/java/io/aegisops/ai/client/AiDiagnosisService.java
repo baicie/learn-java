@@ -5,21 +5,27 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.aegisops.ai.client.dto.AgentAlertContext;
 import io.aegisops.ai.client.dto.AgentDiagnosisRequest;
 import io.aegisops.ai.client.dto.AgentDiagnosisResponse;
+import io.aegisops.ai.client.dto.AgentEvidenceContext;
 import io.aegisops.ai.client.dto.AgentIncidentContext;
 import io.aegisops.ai.client.dto.AgentRcaContext;
 import io.aegisops.ai.client.dto.AgentRunDetailResponse;
+import io.aegisops.ai.client.dto.AgentTimelineContext;
 import io.aegisops.ai.client.dto.AiAlertRecord;
 import io.aegisops.ai.client.dto.AiDiagnoseRequest;
 import io.aegisops.ai.client.dto.AiDiagnosisRecord;
 import io.aegisops.ai.client.dto.AiDiagnosisResponse;
+import io.aegisops.ai.client.dto.AiEvidenceRecord;
 import io.aegisops.ai.client.dto.AiIncidentRecord;
 import io.aegisops.ai.client.dto.AiRcaRecord;
+import io.aegisops.ai.client.dto.AiTimelineRecord;
 import io.aegisops.ai.client.dto.SaveDiagnosisCommand;
 import io.aegisops.ai.client.dto.TimelineCommand;
 import io.aegisops.common.exception.AppException;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -165,6 +171,8 @@ public class AiDiagnosisService {
 
     List<AiAlertRecord> alerts = repository.listIncidentAlerts(tenantId, incidentId);
     AiRcaRecord rca = repository.findLatestRca(tenantId, incidentId).orElse(null);
+    List<AiEvidenceRecord> evidence = repository.listDiagnosisEvidence(tenantId, incidentId);
+    List<AiTimelineRecord> timeline = repository.listIncidentTimeline(tenantId, incidentId, 50);
 
     AgentDiagnosisRequest agentRequest =
         new AgentDiagnosisRequest(
@@ -174,6 +182,8 @@ public class AiDiagnosisService {
             toAgentIncident(incident),
             alerts.stream().map(this::toAgentAlert).toList(),
             rca == null ? null : toAgentRca(rca),
+            evidence.stream().map(this::toAgentEvidence).toList(),
+            timeline.stream().map(this::toAgentTimeline).toList(),
             normalized.normalizedLocale(),
             UUID.randomUUID().toString());
 
@@ -220,7 +230,9 @@ public class AiDiagnosisService {
                     "provider", agentResponse.provider(),
                     "model", agentResponse.model(),
                     "agentName", agentResponse.agentName(),
-                    "rootCause", agentResponse.rootCause()))));
+                    "rootCause", agentResponse.rootCause(),
+                    "evidenceRefs", rawList(agentResponse.raw(), "evidenceRefs"),
+                    "matchedRules", rawList(agentResponse.raw(), "matchedRules")))));
 
     return repository
         .findDiagnosis(tenantId, diagnosisId)
@@ -305,8 +317,99 @@ public class AiDiagnosisService {
         rca.confidence(),
         rca.summary(),
         rca.evidenceJson(),
+        extractRcaList(rca.evidenceJson(), "ruleId"),
+        extractRcaEvidenceRefs(rca.evidenceJson()),
         rca.modelVersion(),
         rca.createdAt());
+  }
+
+  private AgentEvidenceContext toAgentEvidence(AiEvidenceRecord evidence) {
+    return new AgentEvidenceContext(
+        evidence.id(),
+        evidence.evidenceKey(),
+        evidence.source(),
+        evidence.evidenceType(),
+        evidence.title(),
+        evidence.summary(),
+        evidence.timeRangeStart(),
+        evidence.timeRangeEnd(),
+        evidence.confidence(),
+        evidence.payloadJson());
+  }
+
+  private AgentTimelineContext toAgentTimeline(AiTimelineRecord timeline) {
+    return new AgentTimelineContext(
+        timeline.id(),
+        timeline.eventTime(),
+        timeline.eventType(),
+        timeline.title(),
+        timeline.description(),
+        timeline.source(),
+        timeline.payloadJson());
+  }
+
+  private List<String> extractRcaList(String evidenceJson, String field) {
+    try {
+      if (evidenceJson == null || evidenceJson.isBlank()) {
+        return List.of();
+      }
+
+      List<Map<String, Object>> evidence =
+          objectMapper.readValue(evidenceJson, new TypeReference<List<Map<String, Object>>>() {});
+
+      return evidence.stream()
+          .map(item -> item.get(field))
+          .filter(Objects::nonNull)
+          .map(String::valueOf)
+          .filter(value -> !value.isBlank())
+          .distinct()
+          .toList();
+    } catch (Exception ex) {
+      return List.of();
+    }
+  }
+
+  private List<String> extractRcaEvidenceRefs(String evidenceJson) {
+    try {
+      if (evidenceJson == null || evidenceJson.isBlank()) {
+        return List.of();
+      }
+
+      List<Map<String, Object>> evidence =
+          objectMapper.readValue(evidenceJson, new TypeReference<List<Map<String, Object>>>() {});
+
+      List<String> out = new ArrayList<>();
+      for (Map<String, Object> item : evidence) {
+        Object attributes = item.get("attributes");
+        if (attributes instanceof Map<?, ?> map) {
+          Object refs = map.get("evidenceRefs");
+          if (refs instanceof Iterable<?> iterable) {
+            for (Object ref : iterable) {
+              if (ref != null && !String.valueOf(ref).isBlank()) {
+                out.add(String.valueOf(ref).trim());
+              }
+            }
+          }
+        }
+      }
+
+      return out.stream().distinct().toList();
+    } catch (Exception ex) {
+      return List.of();
+    }
+  }
+
+  private List<?> rawList(Map<String, Object> raw, String key) {
+    if (raw == null || raw.get(key) == null) {
+      return List.of();
+    }
+
+    Object value = raw.get(key);
+    if (value instanceof List<?> list) {
+      return list;
+    }
+
+    return List.of();
   }
 
   private AiDiagnosisResponse toResponse(AiDiagnosisRecord record) {

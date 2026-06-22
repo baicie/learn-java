@@ -9,5 +9,7 @@ public record AgentDiagnosisRequest(
     AgentIncidentContext incident,
     List<AgentAlertContext> alerts,
     AgentRcaContext rca,
+    List<AgentEvidenceContext> evidence,
+    List<AgentTimelineContext> timeline,
     String locale,
     String traceId) {}

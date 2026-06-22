@@ -64,6 +64,8 @@ class HttpAiAgentClientTest {
                     null),
                 List.of(),
                 null,
+                List.of(),
+                List.of(),
                 "zh-CN",
                 "trace_1"));
 

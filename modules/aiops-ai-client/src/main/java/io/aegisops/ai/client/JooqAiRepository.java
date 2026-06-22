@@ -21,8 +21,10 @@ import io.aegisops.ai.client.dto.AgentRunStepCommand;
 import io.aegisops.ai.client.dto.AgentRunStepRecord;
 import io.aegisops.ai.client.dto.AiAlertRecord;
 import io.aegisops.ai.client.dto.AiDiagnosisRecord;
+import io.aegisops.ai.client.dto.AiEvidenceRecord;
 import io.aegisops.ai.client.dto.AiIncidentRecord;
 import io.aegisops.ai.client.dto.AiRcaRecord;
+import io.aegisops.ai.client.dto.AiTimelineRecord;
 import io.aegisops.ai.client.dto.SaveAgentRunCommand;
 import io.aegisops.ai.client.dto.SaveDiagnosisCommand;
 import io.aegisops.ai.client.dto.TimelineCommand;
@@ -31,15 +33,17 @@ import java.util.Optional;
 import org.jooq.Condition;
 import org.jooq.DSLContext;
 import org.jooq.impl.DSL;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
-/** jOOQ generated Tables based repository for the AI client. */
 @Repository
 public class JooqAiRepository implements AiRepository {
   private final DSLContext dsl;
+  private final JdbcTemplate jdbc;
 
-  public JooqAiRepository(DSLContext dsl) {
+  public JooqAiRepository(DSLContext dsl, JdbcTemplate jdbc) {
     this.dsl = dsl;
+    this.jdbc = jdbc;
   }
 
   @Override
@@ -110,6 +114,40 @@ public class JooqAiRepository implements AiRepository {
         .orderBy(RCA_ANALYSIS.CREATED_AT.desc())
         .limit(1)
         .fetchOptional(JooqAiRepository::toAiRcaRecord);
+  }
+
+  @Override
+  public List<AiEvidenceRecord> listDiagnosisEvidence(String tenantId, String incidentId) {
+    return jdbc.query(
+        """
+        select id, evidence_key, source, evidence_type, title, summary,
+               time_range_start, time_range_end, confidence, payload_json::text as payload_json
+        from diagnosis_evidence
+        where tenant_id = ? and incident_id = ?
+        order by created_at asc
+        """,
+        AiRepositoryRowMappers.evidenceMapper(),
+        tenantId,
+        incidentId);
+  }
+
+  @Override
+  public List<AiTimelineRecord> listIncidentTimeline(
+      String tenantId, String incidentId, int limit) {
+    return jdbc.query(
+        """
+        select t.id, t.event_time, t.event_type, t.title, t.description, t.source,
+               t.payload::text as payload_json
+        from incident_timeline t
+        join incident i on i.id = t.incident_id
+        where i.tenant_id = ? and t.incident_id = ?
+        order by t.event_time asc
+        limit ?
+        """,
+        AiRepositoryRowMappers.timelineMapper(),
+        tenantId,
+        incidentId,
+        Math.max(1, Math.min(limit, 100)));
   }
 
   @Override

@@ -7,8 +7,10 @@ import io.aegisops.ai.client.dto.AgentRunStepCommand;
 import io.aegisops.ai.client.dto.AgentRunStepRecord;
 import io.aegisops.ai.client.dto.AiAlertRecord;
 import io.aegisops.ai.client.dto.AiDiagnosisRecord;
+import io.aegisops.ai.client.dto.AiEvidenceRecord;
 import io.aegisops.ai.client.dto.AiIncidentRecord;
 import io.aegisops.ai.client.dto.AiRcaRecord;
+import io.aegisops.ai.client.dto.AiTimelineRecord;
 import io.aegisops.ai.client.dto.SaveAgentRunCommand;
 import io.aegisops.ai.client.dto.SaveDiagnosisCommand;
 import io.aegisops.ai.client.dto.TimelineCommand;
@@ -21,6 +23,10 @@ public interface AiRepository {
   List<AiAlertRecord> listIncidentAlerts(String tenantId, String incidentId);
 
   Optional<AiRcaRecord> findLatestRca(String tenantId, String incidentId);
+
+  List<AiEvidenceRecord> listDiagnosisEvidence(String tenantId, String incidentId);
+
+  List<AiTimelineRecord> listIncidentTimeline(String tenantId, String incidentId, int limit);
 
   Optional<AiDiagnosisRecord> findLatestDiagnosis(String tenantId, String incidentId);
 

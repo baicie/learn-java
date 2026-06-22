@@ -44,8 +44,33 @@ class RcaContext(BaseModel):
     confidence: float | None = None
     summary: str | None = None
     evidenceJson: str | None = None
+    matchedRules: list[str] = Field(default_factory=list)
+    evidenceRefs: list[str] = Field(default_factory=list)
     modelVersion: str | None = None
     createdAt: datetime | None = None
+
+
+class EvidenceContext(BaseModel):
+    id: str
+    evidenceKey: str
+    source: str | None = None
+    evidenceType: str
+    title: str | None = None
+    summary: str | None = None
+    timeRangeStart: datetime | None = None
+    timeRangeEnd: datetime | None = None
+    confidence: float | None = None
+    payloadJson: str | None = None
+
+
+class TimelineContext(BaseModel):
+    id: str
+    eventTime: datetime | None = None
+    eventType: str | None = None
+    title: str | None = None
+    description: str | None = None
+    source: str | None = None
+    payloadJson: str | None = None
 
 
 class DiagnoseRequest(BaseModel):
@@ -55,6 +80,8 @@ class DiagnoseRequest(BaseModel):
     incident: IncidentContext
     alerts: list[AlertContext] = Field(default_factory=list)
     rca: RcaContext | None = None
+    evidence: list[EvidenceContext] = Field(default_factory=list)
+    timeline: list[TimelineContext] = Field(default_factory=list)
     locale: str = "zh-CN"
     traceId: str
 

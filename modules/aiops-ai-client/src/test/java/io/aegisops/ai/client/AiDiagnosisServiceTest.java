@@ -13,8 +13,10 @@ import io.aegisops.ai.client.dto.AiAlertRecord;
 import io.aegisops.ai.client.dto.AiDiagnoseRequest;
 import io.aegisops.ai.client.dto.AiDiagnosisRecord;
 import io.aegisops.ai.client.dto.AiDiagnosisResponse;
+import io.aegisops.ai.client.dto.AiEvidenceRecord;
 import io.aegisops.ai.client.dto.AiIncidentRecord;
 import io.aegisops.ai.client.dto.AiRcaRecord;
+import io.aegisops.ai.client.dto.AiTimelineRecord;
 import io.aegisops.ai.client.dto.SaveDiagnosisCommand;
 import io.aegisops.ai.client.dto.TimelineCommand;
 import io.aegisops.common.exception.AppException;
@@ -226,6 +228,17 @@ class AiDiagnosisServiceTest {
         return Optional.empty();
       }
       return Optional.of(saved);
+    }
+
+    @Override
+    public List<AiEvidenceRecord> listDiagnosisEvidence(String tenantId, String incidentId) {
+      return List.of();
+    }
+
+    @Override
+    public List<AiTimelineRecord> listIncidentTimeline(
+        String tenantId, String incidentId, int limit) {
+      return List.of();
     }
 
     @Override

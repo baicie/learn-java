@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from aiops_agent.eval import evaluate_diagnosis
 from aiops_agent.evidence import EvidenceClient as LegacyEvidenceClient
+from aiops_agent.evidence_diagnosis import deterministic_diagnose
 from aiops_agent.graph import run_diagnosis_graph as run_legacy_diagnosis_graph
 from aiops_agent.llm import LlmClient
 from aiops_agent.observability.metrics import DIAGNOSIS_COUNT
@@ -37,6 +38,18 @@ class DiagnosisService:
         self.evidence_client = evidence_client
 
     async def diagnose(self, request: DiagnoseRequest) -> DiagnoseResponse:
+        if self.settings.normalized_generation_mode() in {
+            "deterministic",
+            "mock",
+            "deterministic-evidence",
+        }:
+            response = deterministic_diagnose(request)
+            raw = dict(response.raw)
+            if self.settings.eval_enabled:
+                raw["agentEval"] = evaluate_diagnosis(response)
+            DIAGNOSIS_COUNT.labels(status="success").inc()
+            return response.model_copy(update={"raw": raw})
+
         if self.settings.normalized_generation_mode() == "openai-compatible":
             return run_legacy_diagnosis_graph(
                 request,
@@ -116,6 +129,25 @@ class _RequestEvidenceClient:
             return []
 
         evidence: list[EvidenceItem] = []
+
+        evidence.extend(
+            EvidenceItem(
+                evidence_id=item.evidenceKey,
+                evidence_type=item.evidenceType,
+                title=item.title or item.evidenceType,
+                summary=item.summary or "",
+                source=item.source or "diagnosis_evidence",
+                metadata={
+                    "id": item.id,
+                    "confidence": item.confidence,
+                    "payloadJson": item.payloadJson,
+                    "timeRangeStart": item.timeRangeStart.isoformat() if item.timeRangeStart else None,
+                    "timeRangeEnd": item.timeRangeEnd.isoformat() if item.timeRangeEnd else None,
+                },
+            )
+            for item in self.request.evidence
+        )
+
         if self.request.rca is not None:
             summary = (
                 self.request.rca.suspectedRootCause
@@ -129,7 +161,11 @@ class _RequestEvidenceClient:
                     title="Existing RCA result",
                     summary=summary,
                     source="aiops-server",
-                    metadata={"confidence": self.request.rca.confidence},
+                    metadata={
+                        "confidence": self.request.rca.confidence,
+                        "matchedRules": self.request.rca.matchedRules,
+                        "evidenceRefs": self.request.rca.evidenceRefs,
+                    },
                 )
             )
 

@@ -33,6 +33,8 @@ class AgentContractValidatorTest {
                 "inc_1", null, null, null, null, null, null, null, 0, null, null, null, null, null),
             List.of(),
             null,
+            List.of(),
+            List.of(),
             "zh-CN",
             "trace_1");
 
@@ -53,6 +55,8 @@ class AgentContractValidatorTest {
             null,
             List.of(),
             null,
+            List.of(),
+            List.of(),
             "zh-CN",
             "trace_1");
 
@@ -98,6 +102,8 @@ class AgentContractValidatorTest {
             new AgentAlertContext(
                 "alert_1", null, null, null, null, null, null, null, null, null, null, null)),
         null,
+        List.of(),
+        List.of(),
         "zh-CN",
         "trace_1");
   }
@@ -120,6 +126,6 @@ class AgentContractValidatorTest {
   @SuppressWarnings("unused")
   private static final class _unused {
     // Force compile of AgentRcaContext to avoid unused import warning if filtered out.
-    AgentRcaContext rca = new AgentRcaContext("r", null, null, null, null, null, null);
+    AgentRcaContext rca = new AgentRcaContext("r", null, null, null, null, null, null, null, null);
   }
 }
