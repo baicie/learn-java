@@ -42,6 +42,8 @@ public class ReportService {
                           true, normalized.normalizedLocale(), normalized.normalizedCreatedBy())));
     }
 
+    repository.acquireIncidentReportLock(tenantId, incidentId);
+
     ReportContext context = buildContext(tenantId, incidentId, normalized.normalizedLocale());
     String markdown = renderer.render(context);
     String snapshotJson = writeSnapshot(context);

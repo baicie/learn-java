@@ -18,6 +18,8 @@ public interface ReportRepository {
 
   Optional<IncidentReportRecord> findLatestReport(String tenantId, String incidentId);
 
+  void acquireIncidentReportLock(String tenantId, String incidentId);
+
   int nextVersionNo(String tenantId, String incidentId);
 
   IncidentReportRecord insertReport(InsertReportParams params);

@@ -199,6 +199,9 @@ class ReportServiceTest {
     }
 
     @Override
+    public void acquireIncidentReportLock(String tenantId, String incidentId) {}
+
+    @Override
     public int nextVersionNo(String tenantId, String incidentId) {
       return insertedReports.size() + 1;
     }

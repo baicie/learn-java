@@ -21,9 +21,9 @@ public class JdbcReportRepository implements ReportRepository {
       return Optional.ofNullable(
           jdbc.queryForObject(
               """
-              select id, tenant_id, title, summary, severity, status, source,
-                     primary_asset_id, aggregation_key, alert_count, impact_score,
-                     suspected_root_cause, rca_confidence,
+             select id, tenant_id, title, summary, severity, status, source,
+                    primary_asset_id, aggregation_key, alert_count, impact_score,
+                    suspected_root_cause, confidence as rca_confidence,
                      started_at, detected_at, last_seen_at, resolved_at, created_at, updated_at
               from incident
               where tenant_id = ? and id = ?
@@ -237,6 +237,15 @@ public class JdbcReportRepository implements ReportRepository {
     } catch (EmptyResultDataAccessException ex) {
       return Optional.empty();
     }
+  }
+
+  @Override
+  public void acquireIncidentReportLock(String tenantId, String incidentId) {
+    jdbc.queryForList(
+        """
+        select pg_advisory_xact_lock(hashtext('incident_report'), hashtext(?))
+        """,
+        tenantId + ":" + incidentId);
   }
 
   @Override
