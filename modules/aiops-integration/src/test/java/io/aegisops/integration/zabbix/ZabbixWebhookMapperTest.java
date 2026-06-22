@@ -59,6 +59,9 @@ class ZabbixWebhookMapperTest {
         .containsEntry("zabbixEventId", "20001")
         .containsEntry("zabbixTriggerId", "30001")
         .containsEntry("service", "order-service");
+    assertThat(mapping.aggregationKey())
+        .isEqualTo("zabbix:ds_1:10084:order-service:demo:202606210510");
+    assertThat(mapping.labels()).containsEntry("aggregationKey", mapping.aggregationKey());
   }
 
   @Test

@@ -16,4 +16,5 @@ public record ZabbixAlertEventMapping(
     OffsetDateTime startsAt,
     String status,
     Object rawPayload,
-    String fingerprint) {}
+    String fingerprint,
+    String aggregationKey) {}

@@ -14,5 +14,8 @@ public record AlertCandidate(
     String entityType,
     String entityName,
     String fingerprint,
+    String aggregationKey,
+    String labelsJson,
     OffsetDateTime startsAt,
+    OffsetDateTime endsAt,
     OffsetDateTime createdAt) {}

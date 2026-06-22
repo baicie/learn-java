@@ -360,8 +360,8 @@ public class DataSourceService {
             """
                 insert into alert_event(id, tenant_id, source, source_event_id, severity, title, description,
                                         asset_id, entity_type, entity_name, labels, starts_at, status, raw_payload,
-                                        fingerprint, created_at)
-                values (?, ?, 'zabbix', ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?, ?, ?::jsonb, ?, now())
+                                        fingerprint, aggregation_key, created_at, updated_at)
+                values (?, ?, 'zabbix', ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?, ?, ?::jsonb, ?, ?, now(), now())
                 on conflict (tenant_id, source, source_event_id) where source_event_id is not null
                 do update set
                   severity = excluded.severity,
@@ -374,7 +374,9 @@ public class DataSourceService {
                   starts_at = excluded.starts_at,
                   status = excluded.status,
                   raw_payload = excluded.raw_payload,
-                  fingerprint = excluded.fingerprint
+                  fingerprint = excluded.fingerprint,
+                  aggregation_key = excluded.aggregation_key,
+                  updated_at = now()
                 returning (xmax = 0) as created
                 """,
             Boolean.class,
@@ -391,7 +393,8 @@ public class DataSourceService {
             mapping.startsAt(),
             mapping.status(),
             rawPayloadJson,
-            mapping.fingerprint());
+            mapping.fingerprint(),
+            mapping.aggregationKey());
 
     return Boolean.TRUE.equals(created) ? UpsertResult.asCreated() : UpsertResult.asUpdated();
   }

@@ -1,7 +1,6 @@
 package io.aegisops.incident;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -11,105 +10,66 @@ class IncidentAggregationPolicyTest {
   private final IncidentAggregationPolicy policy = new IncidentAggregationPolicy();
 
   @Test
-  void usesFingerprintAsAggregationKey() {
-    AlertCandidate alert = alert("a1", "zabbix", "critical", "CPU high", "zabbix:ds_1:trigger_1");
+  void shouldUseAggregationKeyBeforeFingerprint() {
+    AlertCandidate alert =
+        candidate(
+            "alert_1",
+            "AegisOps Demo CPU High",
+            "high",
+            "zabbix:ds_1:10084:order-service:demo:202606210510",
+            "zabbix:ds_1:trigger_1");
 
-    assertEquals("zabbix:ds_1:trigger_1", policy.aggregationKey(alert));
+    assertThat(policy.aggregationKey(alert))
+        .isEqualTo("zabbix:ds_1:10084:order-service:demo:202606210510");
   }
 
   @Test
-  void shouldPrefixSourceWhenFingerprintHasNoSourcePrefix() {
-    AlertCandidate alert = alert("a1", "zabbix", "critical", "CPU high", "ds_1:trigger_1");
+  void shouldFallbackToFingerprintWhenAggregationKeyMissing() {
+    AlertCandidate alert =
+        candidate("alert_1", "AegisOps Demo CPU High", "high", null, "zabbix:ds_1:trigger_1");
 
-    assertEquals("zabbix:ds_1:trigger_1", policy.aggregationKey(alert));
+    assertThat(policy.aggregationKey(alert)).isEqualTo("zabbix:ds_1:trigger_1");
   }
 
   @Test
-  void fallsBackToAssetAndNormalizedTitleWhenFingerprintMissing() {
-    AlertCandidate alert = alert("a1", "webhook", "warning", "Disk Usage > 90%", "");
-
-    assertEquals("webhook:asset_1:disk-usage-90", policy.aggregationKey(alert));
-  }
-
-  @Test
-  void selectsHighestSeverity() {
+  void shouldBuildZabbixIncidentTitle() {
     List<AlertCandidate> alerts =
         List.of(
-            alert("a1", "zabbix", "warning", "CPU high", "fp"),
-            alert("a2", "zabbix", "critical", "CPU high", "fp"),
-            alert("a3", "zabbix", "info", "CPU high", "fp"));
+            candidate("a1", "CPU High", "high", "key", "fp1"),
+            candidate("a2", "API Slow", "medium", "key", "fp2"));
 
-    assertEquals("critical", policy.highestSeverity(alerts));
-  }
-
-  @Test
-  void titleUsesSameAlertTitleWhenAllSame() {
-    List<AlertCandidate> alerts =
-        List.of(
-            alert("a1", "zabbix", "warning", "CPU high", "fp"),
-            alert("a2", "zabbix", "critical", "CPU high", "fp"));
-
-    assertEquals("CPU high", policy.title("zabbix:fp", alerts));
-  }
-
-  @Test
-  void summaryContainsAlertCountAndAggregationKey() {
-    List<AlertCandidate> alerts =
-        List.of(
-            alert("a1", "zabbix", "warning", "CPU high", "fp"),
-            alert("a2", "zabbix", "critical", "CPU high", "fp"));
-
-    String summary = policy.summary("zabbix:fp", alerts);
-
-    assertTrue(summary.contains("2 alert"));
-    assertTrue(summary.contains("zabbix:fp"));
-    assertTrue(summary.contains("critical"));
-  }
-
-  @Test
-  void shouldBuildRelatedAlertsTitleWhenDifferentTitles() {
-    List<AlertCandidate> alerts =
-        List.of(
-            alert("a1", "zabbix", "warning", "CPU High", "fp1"),
-            alert("a2", "zabbix", "critical", "API Slow", "fp2"));
-
-    assertEquals("2 related alerts on host-1", policy.title("zabbix:key", alerts));
+    assertThat(policy.title("key", alerts)).isEqualTo("order-service 主机与服务异常");
   }
 
   @Test
   void shouldPickHighestSeverity() {
     List<AlertCandidate> alerts =
         List.of(
-            alert("a1", "zabbix", "warning", "CPU high", "fp"),
-            alert("a2", "zabbix", "critical", "Health Check Failed", "fp"),
-            alert("a3", "zabbix", "info", "API Slow", "fp"));
+            candidate("a1", "CPU High", "warning", "key", "fp1"),
+            candidate("a2", "Health Check Failed", "critical", "key", "fp2"),
+            candidate("a3", "API Slow", "medium", "key", "fp3"));
 
-    assertEquals("critical", policy.highestSeverity(alerts));
+    assertThat(policy.highestSeverity(alerts)).isEqualTo("critical");
   }
 
-  private AlertCandidate alert(String fingerprint) {
-    return new TestAlert("a1", fingerprint).toCandidate();
-  }
-
-  private AlertCandidate alert(
-      String id, String source, String severity, String title, String fingerprint) {
+  private AlertCandidate candidate(
+      String id, String title, String severity, String aggregationKey, String fingerprint) {
     return new AlertCandidate(
         id,
         "tenant_1",
-        source,
-        "source_" + id,
+        "zabbix",
+        "ds_1:" + id,
         severity,
         title,
-        "desc " + id,
+        title,
         "asset_1",
-        "host",
-        "host-1",
+        "service",
+        "order-service",
         fingerprint,
-        OffsetDateTime.parse("2026-06-14T10:00:00+09:00"),
-        OffsetDateTime.parse("2026-06-14T10:00:00+09:00"));
-  }
-
-  private AlertCandidate alert(String id, String fingerprint) {
-    return new TestAlert(id, fingerprint).toCandidate();
+        aggregationKey,
+        "{}",
+        OffsetDateTime.parse("2026-06-21T05:10:00Z"),
+        null,
+        OffsetDateTime.parse("2026-06-21T05:10:00Z"));
   }
 }

@@ -50,8 +50,8 @@ public class ZabbixWebhookService {
             """
             insert into alert_event(id, tenant_id, source, source_event_id, severity, title, description,
                                     asset_id, entity_type, entity_name, labels, starts_at, ends_at, status,
-                                    raw_payload, fingerprint, created_at, updated_at)
-            values (?, ?, 'zabbix', ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?, ?, ?, ?::jsonb, ?, now(), now())
+                                    raw_payload, fingerprint, aggregation_key, created_at, updated_at)
+            values (?, ?, 'zabbix', ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?, ?, ?, ?::jsonb, ?, ?, now(), now())
             on conflict (tenant_id, source, source_event_id) where source_event_id is not null
             do update set
               severity = excluded.severity,
@@ -66,6 +66,7 @@ public class ZabbixWebhookService {
               status = excluded.status,
               raw_payload = excluded.raw_payload,
               fingerprint = excluded.fingerprint,
+              aggregation_key = excluded.aggregation_key,
               updated_at = now()
             returning id, (xmax = 0) as created
             """,
@@ -84,7 +85,8 @@ public class ZabbixWebhookService {
             mapping.endsAt(),
             mapping.status(),
             rawPayloadJson,
-            mapping.fingerprint());
+            mapping.fingerprint(),
+            mapping.aggregationKey());
 
     return new ZabbixWebhookIngestResponse(
         result.alertId(),

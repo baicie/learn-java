@@ -32,4 +32,8 @@ public interface IncidentRepository {
   int countLinkedAlerts(String incidentId);
 
   void updateStatus(String tenantId, String incidentId, String status, boolean terminal);
+
+  List<IncidentSummaryRecord> findActiveIncidentsReadyToResolve(String tenantId);
+
+  List<AlertCandidate> listLinkedAlertCandidates(String tenantId, String incidentId);
 }

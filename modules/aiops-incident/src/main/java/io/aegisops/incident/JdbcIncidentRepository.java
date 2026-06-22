@@ -40,7 +40,8 @@ public class JdbcIncidentRepository implements IncidentRepository {
     return jdbc.query(
         """
                 select id, tenant_id, source, source_event_id, severity, title, description,
-                       asset_id, entity_type, entity_name, fingerprint, starts_at, created_at
+                       asset_id, entity_type, entity_name, fingerprint, aggregation_key,
+                       labels::text as labels_json, starts_at, ends_at, created_at
                 from alert_event a
                 where tenant_id = ?
                   and status = 'open'
@@ -66,11 +67,83 @@ public class JdbcIncidentRepository implements IncidentRepository {
                 rs.getString("entity_type"),
                 rs.getString("entity_name"),
                 rs.getString("fingerprint"),
+                rs.getString("aggregation_key"),
+                rs.getString("labels_json"),
                 rs.getObject("starts_at", OffsetDateTime.class),
+                rs.getObject("ends_at", OffsetDateTime.class),
                 rs.getObject("created_at", OffsetDateTime.class)),
         tenantId,
         since,
         limit);
+  }
+
+  @Override
+  public List<IncidentSummaryRecord> findActiveIncidentsReadyToResolve(String tenantId) {
+    return jdbc.query(
+        """
+                select i.id, i.tenant_id, i.title, i.summary, i.severity, i.status, i.source,
+                       i.primary_asset_id, i.aggregation_key, i.alert_count, i.impact_score,
+                       i.started_at, i.detected_at, i.last_seen_at, i.resolved_at,
+                       i.created_at, i.updated_at
+                from incident i
+                where i.tenant_id = ?
+                  and i.status in ('open', 'investigating', 'mitigating')
+                  and exists (
+                    select 1
+                    from incident_event ie
+                    join alert_event a on a.id = ie.event_id
+                    where ie.incident_id = i.id
+                      and ie.event_type = 'alert'
+                  )
+                  and not exists (
+                    select 1
+                    from incident_event ie
+                    join alert_event a on a.id = ie.event_id
+                    where ie.incident_id = i.id
+                      and ie.event_type = 'alert'
+                      and a.status = 'open'
+                  )
+                order by i.started_at asc
+                """,
+        (rs, rowNum) -> IncidentRows.summary(rs),
+        tenantId);
+  }
+
+  @Override
+  public List<AlertCandidate> listLinkedAlertCandidates(String tenantId, String incidentId) {
+    ensureIncidentBelongsToTenant(tenantId, incidentId);
+
+    return jdbc.query(
+        """
+                select a.id, a.tenant_id, a.source, a.source_event_id, a.severity, a.title,
+                       a.description, a.asset_id, a.entity_type, a.entity_name, a.fingerprint,
+                       a.aggregation_key, a.labels::text as labels_json, a.starts_at, a.ends_at,
+                       a.created_at
+                from incident_event ie
+                join alert_event a on a.id = ie.event_id
+                where ie.incident_id = ?
+                  and ie.event_type = 'alert'
+                order by a.starts_at asc
+                """,
+        (rs, rowNum) ->
+            new AlertCandidate(
+                rs.getString("id"),
+                rs.getString("tenant_id"),
+                rs.getString("source"),
+                rs.getString("source_event_id"),
+                rs.getString("severity"),
+                rs.getString("title"),
+                rs.getString("description"),
+                rs.getString("asset_id"),
+                rs.getString("entity_type"),
+                rs.getString("entity_name"),
+                rs.getString("fingerprint"),
+                rs.getString("aggregation_key"),
+                rs.getString("labels_json"),
+                rs.getObject("starts_at", OffsetDateTime.class),
+                rs.getObject("ends_at", OffsetDateTime.class),
+                rs.getObject("created_at", OffsetDateTime.class)),
+        incidentId);
   }
 
   @Override

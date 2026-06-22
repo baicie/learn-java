@@ -66,9 +66,16 @@ public class ZabbixSyncMapper {
     String title = firstNonBlank(problem.name(), "Zabbix problem " + problem.eventId());
     OffsetDateTime startsAt = OffsetDateTime.ofInstant(problemClock(problem), ZoneOffset.UTC);
 
+    List<String> hostIds = safeList(problem.hostIds());
+    String hostId = hostIds.isEmpty() ? null : hostIds.get(0);
+    String aggregationKey =
+        ZabbixAggregationKeyBuilder.build(datasourceId, hostId, service, env, startsAt);
+
+    labels.put("aggregationKey", aggregationKey);
+
     return new ZabbixAlertEventMapping(
         ZabbixExternalIds.sourceId(datasourceId, problem.eventId()),
-        safeList(problem.hostIds()),
+        hostIds,
         ZabbixSeverityMapper.map(problem.severity()),
         title,
         "Zabbix problem event " + problem.eventId(),
@@ -78,7 +85,8 @@ public class ZabbixSyncMapper {
         startsAt,
         "open",
         problem.raw(),
-        ZabbixExternalIds.fingerprint(datasourceId, fingerprintKey));
+        ZabbixExternalIds.fingerprint(datasourceId, fingerprintKey),
+        aggregationKey);
   }
 
   private Instant problemClock(ZabbixProblem problem) {

@@ -23,7 +23,10 @@ public record TestAlert(String id, String fingerprint) {
         "host",
         "host-1",
         fingerprint,
+        fingerprint,
+        "{}",
         FIXED_TIME,
+        null,
         FIXED_TIME);
   }
 }

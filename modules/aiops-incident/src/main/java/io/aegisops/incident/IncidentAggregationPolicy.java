@@ -10,6 +10,10 @@ import org.springframework.stereotype.Component;
 @Component
 public class IncidentAggregationPolicy {
   public String aggregationKey(AlertCandidate alert) {
+    if (alert.aggregationKey() != null && !alert.aggregationKey().isBlank()) {
+      return alert.aggregationKey().trim();
+    }
+
     String source = nonBlank(alert.source(), "unknown");
 
     if (alert.fingerprint() != null && !alert.fingerprint().isBlank()) {
@@ -25,6 +29,17 @@ public class IncidentAggregationPolicy {
   public String title(String aggregationKey, List<AlertCandidate> alerts) {
     if (alerts == null || alerts.isEmpty()) {
       return "Incident " + aggregationKey;
+    }
+
+    if (isZabbixGroup(alerts)) {
+      String service =
+          alerts.stream()
+              .map(AlertCandidate::entityName)
+              .filter(value -> value != null && !value.isBlank())
+              .findFirst()
+              .orElse("zabbix service");
+
+      return service + " 主机与服务异常";
     }
 
     String firstTitle = alerts.get(0).title();
@@ -47,6 +62,16 @@ public class IncidentAggregationPolicy {
 
   public String summary(String aggregationKey, List<AlertCandidate> alerts) {
     String severity = highestSeverity(alerts);
+
+    if (isZabbixGroup(alerts)) {
+      return "Aggregated "
+          + alerts.size()
+          + " Zabbix alert(s), severity="
+          + severity
+          + ", aggregationKey="
+          + aggregationKey;
+    }
+
     return "Aggregated "
         + alerts.size()
         + " alert(s), severity="
@@ -81,6 +106,12 @@ public class IncidentAggregationPolicy {
         .filter(Objects::nonNull)
         .max(Comparator.naturalOrder())
         .orElse(OffsetDateTime.now());
+  }
+
+  private boolean isZabbixGroup(List<AlertCandidate> alerts) {
+    return alerts != null
+        && !alerts.isEmpty()
+        && alerts.stream().allMatch(alert -> "zabbix".equalsIgnoreCase(alert.source()));
   }
 
   private String normalizeTitle(String title) {

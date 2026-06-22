@@ -6,6 +6,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
@@ -93,8 +94,54 @@ public class IncidentService {
       alertsLinked += result.linked();
     }
 
+    int incidentsResolved = reconcileResolvedIncidents(tenantId);
+
     return new IncidentAggregationResponse(
-        candidates.size(), groups.size(), incidentsCreated, incidentsUpdated, alertsLinked);
+        candidates.size(),
+        groups.size(),
+        incidentsCreated,
+        incidentsUpdated + incidentsResolved,
+        alertsLinked);
+  }
+
+  private int reconcileResolvedIncidents(String tenantId) {
+    List<IncidentSummaryRecord> readyToResolve =
+        repository.findActiveIncidentsReadyToResolve(tenantId);
+
+    int resolved = 0;
+
+    for (IncidentSummaryRecord incident : readyToResolve) {
+      repository.updateStatus(tenantId, incident.id(), "resolved", true);
+
+      List<AlertCandidate> alerts = repository.listLinkedAlertCandidates(tenantId, incident.id());
+      OffsetDateTime resolvedAt =
+          alerts.stream()
+              .map(AlertCandidate::endsAt)
+              .filter(Objects::nonNull)
+              .max(OffsetDateTime::compareTo)
+              .orElse(OffsetDateTime.now());
+
+      repository.addTimeline(
+          new TimelineCreateCommand(
+              newId("tl"),
+              incident.id(),
+              resolvedAt,
+              "incident_resolved",
+              "Incident auto-resolved",
+              "All linked alerts are resolved",
+              "system",
+              """
+              {
+                "aggregationKey": "%s",
+                "reason": "all_linked_alerts_resolved"
+              }
+              """
+                  .formatted(escapeJson(incident.aggregationKey()))));
+
+      resolved++;
+    }
+
+    return resolved;
   }
 
   private record GroupResult(boolean created, int linked) {}

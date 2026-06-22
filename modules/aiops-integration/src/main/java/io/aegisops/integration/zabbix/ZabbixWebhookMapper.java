@@ -1,6 +1,7 @@
 package io.aegisops.integration.zabbix;
 
 import io.aegisops.common.exception.AppException;
+import io.aegisops.datasource.zabbix.ZabbixAggregationKeyBuilder;
 import io.aegisops.datasource.zabbix.ZabbixExternalIds;
 import io.aegisops.datasource.zabbix.ZabbixSeverityMapper;
 import io.aegisops.datasource.zabbix.ZabbixTagNormalizer;
@@ -58,6 +59,10 @@ public class ZabbixWebhookMapper {
     String title = firstNonBlank(payload.title(), "Zabbix event " + problemId);
     String description = firstNonBlank(payload.message(), title);
     String fingerprint = ZabbixExternalIds.fingerprint(resolvedDatasourceId, objectId);
+    String hostId = firstNonBlank(payload.hostId());
+    String aggregationKey =
+        ZabbixAggregationKeyBuilder.build(resolvedDatasourceId, hostId, service, env, startsAt);
+    labels.put("aggregationKey", aggregationKey);
 
     return new ZabbixWebhookAlertMapping(
         resolvedDatasourceId,
@@ -73,7 +78,8 @@ public class ZabbixWebhookMapper {
         endsAt,
         status,
         payload,
-        fingerprint);
+        fingerprint,
+        aggregationKey);
   }
 
   private Map<String, String> extractEntityLabels(
