@@ -1,6 +1,7 @@
 package io.aegisops.rca;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -11,6 +12,7 @@ import org.jooq.tools.jdbc.MockConnection;
 import org.jooq.tools.jdbc.MockDataProvider;
 import org.jooq.tools.jdbc.MockResult;
 import org.junit.jupiter.api.Test;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 class JooqRcaRepositoryGeneratedSqlTest {
   @Test
@@ -24,7 +26,8 @@ class JooqRcaRepositoryGeneratedSqlTest {
         };
 
     JooqRcaRepository repository =
-        new JooqRcaRepository(DSL.using(new MockConnection(provider), SQLDialect.POSTGRES));
+        new JooqRcaRepository(
+            DSL.using(new MockConnection(provider), SQLDialect.POSTGRES), mock(JdbcTemplate.class));
 
     repository.listAssetRelations("tenant_1", List.of("asset_1", "asset_2"));
 
@@ -47,7 +50,8 @@ class JooqRcaRepositoryGeneratedSqlTest {
         };
 
     JooqRcaRepository repository =
-        new JooqRcaRepository(DSL.using(new MockConnection(provider), SQLDialect.POSTGRES));
+        new JooqRcaRepository(
+            DSL.using(new MockConnection(provider), SQLDialect.POSTGRES), mock(JdbcTemplate.class));
 
     repository.saveAnalysis(
         new SaveAnalysisParams(
@@ -79,7 +83,8 @@ class JooqRcaRepositoryGeneratedSqlTest {
         };
 
     JooqRcaRepository repository =
-        new JooqRcaRepository(DSL.using(new MockConnection(provider), SQLDialect.POSTGRES));
+        new JooqRcaRepository(
+            DSL.using(new MockConnection(provider), SQLDialect.POSTGRES), mock(JdbcTemplate.class));
 
     repository.listIncidentAlerts("tenant_1", "inc_1");
 

@@ -2,6 +2,7 @@ package io.aegisops.rca;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.math.BigDecimal;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -25,7 +26,7 @@ class RcaEngineEvidenceAwareTest {
                 "metric_error_log_increased"));
 
     assertThat(result.suspectedRootCause()).contains("CPU");
-    assertThat(result.confidence()).isGreaterThanOrEqualTo(new java.math.BigDecimal("0.88"));
+    assertThat(result.confidence()).isLessThanOrEqualTo(new BigDecimal("0.95"));
     assertThat(result.matchedRules())
         .contains(
             "CPU_API_HEALTH_COMBINED",
@@ -62,5 +63,27 @@ class RcaEngineEvidenceAwareTest {
     assertThat(result.matchedRules())
         .containsExactly("CPU_API_HEALTH_COMBINED", "HOST_CPU_HIGH_WITH_SERVICE_SLOW");
     assertThat(result.suspectedRootCause()).contains("健康检查失败");
+  }
+
+  @Test
+  void shouldCapConfidenceWithoutOverstatingCertainty() {
+    RcaEngine engine =
+        new RcaEngine(
+            List.of(
+                new HostCpuHighWithServiceSlowRule(),
+                new ServiceHealthCheckFailedRule(),
+                new ErrorLogIncreasedRule(),
+                new CpuApiHealthCombinedRule()));
+
+    RcaAnalysisResult result =
+        engine.analyze(
+            RcaTestFixtures.contextWithEvidence(
+                "metric_cpu_high",
+                "metric_api_slow",
+                "metric_health_check_failed",
+                "metric_error_log_increased"));
+
+    assertThat(result.confidence()).isLessThanOrEqualTo(new BigDecimal("0.95"));
+    assertThat(result.confidence()).isGreaterThanOrEqualTo(new BigDecimal("0.80"));
   }
 }

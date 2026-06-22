@@ -9,6 +9,8 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class RcaEngine {
+  private static final BigDecimal MAX_CONFIDENCE = new BigDecimal("0.95");
+
   private final List<RcaRule> rules;
 
   public RcaEngine(List<RcaRule> rules) {
@@ -20,7 +22,10 @@ public class RcaEngine {
         rules.stream()
             .map(rule -> rule.evaluate(context))
             .filter(RcaRuleResult::matched)
-            .sorted(Comparator.comparing(RcaRuleResult::score).reversed())
+            .sorted(
+                Comparator.comparing(RcaRuleResult::score)
+                    .reversed()
+                    .thenComparing(RcaRuleResult::ruleId))
             .toList();
 
     if (matched.isEmpty()) {
@@ -42,12 +47,7 @@ public class RcaEngine {
     List<String> evidenceRefs =
         evidence.stream().flatMap(item -> extractEvidenceRefs(item).stream()).distinct().toList();
 
-    BigDecimal confidence =
-        matched.stream()
-            .map(result -> result.confidence().multiply(normalizeScore(result.score())))
-            .reduce(BigDecimal.ZERO, BigDecimal::add)
-            .min(new BigDecimal("0.99"))
-            .setScale(4, RoundingMode.HALF_UP);
+    BigDecimal confidence = aggregateConfidence(top, matchedRules, evidenceRefs);
 
     String summary =
         "RCA matched "
@@ -60,6 +60,36 @@ public class RcaEngine {
 
     return new RcaAnalysisResult(
         top.suspectedRootCause(), confidence, summary, evidence, matchedRules, evidenceRefs);
+  }
+
+  private static BigDecimal aggregateConfidence(
+      RcaRuleResult top, List<String> matchedRules, List<String> evidenceRefs) {
+    BigDecimal base = safeConfidence(top.confidence());
+
+    BigDecimal ruleBoost =
+        BigDecimal.valueOf(Math.max(0, matchedRules.size() - 1))
+            .multiply(new BigDecimal("0.03"))
+            .min(new BigDecimal("0.06"));
+
+    BigDecimal evidenceBoost =
+        BigDecimal.valueOf(Math.max(0, evidenceRefs.size() - 1))
+            .multiply(new BigDecimal("0.01"))
+            .min(new BigDecimal("0.03"));
+
+    return base.add(ruleBoost)
+        .add(evidenceBoost)
+        .min(MAX_CONFIDENCE)
+        .setScale(4, RoundingMode.HALF_UP);
+  }
+
+  private static BigDecimal safeConfidence(BigDecimal value) {
+    if (value == null || value.compareTo(BigDecimal.ZERO) < 0) {
+      return BigDecimal.ZERO;
+    }
+    if (value.compareTo(BigDecimal.ONE) > 0) {
+      return BigDecimal.ONE;
+    }
+    return value;
   }
 
   private static List<String> extractEvidenceRefs(RcaEvidence evidence) {
@@ -85,13 +115,5 @@ public class RcaEngine {
     }
 
     return List.copyOf(out);
-  }
-
-  private static BigDecimal normalizeScore(BigDecimal score) {
-    if (score == null || score.compareTo(BigDecimal.ZERO) <= 0) {
-      return BigDecimal.ZERO;
-    }
-
-    return score.min(new BigDecimal("1.00"));
   }
 }

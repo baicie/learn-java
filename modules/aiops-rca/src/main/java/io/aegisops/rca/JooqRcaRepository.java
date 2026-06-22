@@ -5,27 +5,32 @@ import static io.aegisops.persistence.AegisJooq.jsonbArrayValue;
 import static io.aegisops.persistence.AegisJooq.jsonbValue;
 import static io.aegisops.persistence.jooq.Tables.ALERT_EVENT;
 import static io.aegisops.persistence.jooq.Tables.ASSET_RELATION;
-import static io.aegisops.persistence.jooq.Tables.DIAGNOSIS_EVIDENCE;
 import static io.aegisops.persistence.jooq.Tables.INCIDENT;
 import static io.aegisops.persistence.jooq.Tables.INCIDENT_EVENT;
 import static io.aegisops.persistence.jooq.Tables.INCIDENT_TIMELINE;
 import static io.aegisops.persistence.jooq.Tables.RCA_ANALYSIS;
 
 import java.math.BigDecimal;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 import org.jooq.Condition;
 import org.jooq.DSLContext;
 import org.jooq.impl.DSL;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 /** jOOQ generated Tables based RCA repository. */
 @Repository
 public class JooqRcaRepository implements RcaRepository {
   private final DSLContext dsl;
+  private final JdbcTemplate jdbc;
 
-  public JooqRcaRepository(DSLContext dsl) {
+  public JooqRcaRepository(DSLContext dsl, JdbcTemplate jdbc) {
     this.dsl = dsl;
+    this.jdbc = jdbc;
   }
 
   @Override
@@ -107,23 +112,17 @@ public class JooqRcaRepository implements RcaRepository {
   @Override
   public List<RcaDiagnosisEvidenceRecord> listDiagnosisEvidence(
       String tenantId, String incidentId) {
-    return dsl.select(
-            DIAGNOSIS_EVIDENCE.ID,
-            DIAGNOSIS_EVIDENCE.INCIDENT_ID,
-            DIAGNOSIS_EVIDENCE.EVIDENCE_KEY,
-            DIAGNOSIS_EVIDENCE.SOURCE,
-            DIAGNOSIS_EVIDENCE.EVIDENCE_TYPE,
-            DIAGNOSIS_EVIDENCE.TITLE,
-            DIAGNOSIS_EVIDENCE.SUMMARY,
-            DIAGNOSIS_EVIDENCE.TIME_RANGE_START,
-            DIAGNOSIS_EVIDENCE.TIME_RANGE_END,
-            DIAGNOSIS_EVIDENCE.CONFIDENCE,
-            DIAGNOSIS_EVIDENCE.PAYLOAD_JSON.cast(String.class).as("payload_json"))
-        .from(DIAGNOSIS_EVIDENCE)
-        .where(DIAGNOSIS_EVIDENCE.TENANT_ID.eq(tenantId))
-        .and(DIAGNOSIS_EVIDENCE.INCIDENT_ID.eq(incidentId))
-        .orderBy(DIAGNOSIS_EVIDENCE.CREATED_AT.asc())
-        .fetch(JooqRcaRepository::toDiagnosisEvidenceRecord);
+    return jdbc.query(
+        """
+        select id, incident_id, evidence_key, source, evidence_type, title, summary,
+               time_range_start, time_range_end, confidence, payload_json::text as payload_json
+        from diagnosis_evidence
+        where tenant_id = ? and incident_id = ?
+        order by created_at asc
+        """,
+        this::toDiagnosisEvidenceRecord,
+        tenantId,
+        incidentId);
   }
 
   @Override
@@ -201,6 +200,32 @@ public class JooqRcaRepository implements RcaRepository {
     return query.fetchOptional(JooqRcaRepository::toAnalysisRecord);
   }
 
+  private RcaDiagnosisEvidenceRecord toDiagnosisEvidenceRecord(ResultSet rs, int rowNum)
+      throws SQLException {
+    return new RcaDiagnosisEvidenceRecord(
+        rs.getString("id"),
+        rs.getString("incident_id"),
+        rs.getString("evidence_key"),
+        rs.getString("source"),
+        rs.getString("evidence_type"),
+        rs.getString("title"),
+        rs.getString("summary"),
+        toOffsetDateTime(rs.getObject("time_range_start")),
+        toOffsetDateTime(rs.getObject("time_range_end")),
+        rs.getBigDecimal("confidence"),
+        rs.getString("payload_json"));
+  }
+
+  private static OffsetDateTime toOffsetDateTime(Object value) {
+    if (value == null) {
+      return null;
+    }
+    if (value instanceof OffsetDateTime odt) {
+      return odt;
+    }
+    return null;
+  }
+
   private static RcaIncidentRecord toIncidentRecord(org.jooq.Record record) {
     return new RcaIncidentRecord(
         record.get(INCIDENT.ID),
@@ -248,21 +273,6 @@ public class JooqRcaRepository implements RcaRepository {
         record.get(ASSET_RELATION.RELATION_TYPE),
         record.get(ASSET_RELATION.CONFIDENCE),
         record.get(ASSET_RELATION.SOURCE));
-  }
-
-  private static RcaDiagnosisEvidenceRecord toDiagnosisEvidenceRecord(org.jooq.Record record) {
-    return new RcaDiagnosisEvidenceRecord(
-        record.get(DIAGNOSIS_EVIDENCE.ID),
-        record.get(DIAGNOSIS_EVIDENCE.INCIDENT_ID),
-        record.get(DIAGNOSIS_EVIDENCE.EVIDENCE_KEY),
-        record.get(DIAGNOSIS_EVIDENCE.SOURCE),
-        record.get(DIAGNOSIS_EVIDENCE.EVIDENCE_TYPE),
-        record.get(DIAGNOSIS_EVIDENCE.TITLE),
-        record.get(DIAGNOSIS_EVIDENCE.SUMMARY),
-        record.get(DIAGNOSIS_EVIDENCE.TIME_RANGE_START),
-        record.get(DIAGNOSIS_EVIDENCE.TIME_RANGE_END),
-        record.get(DIAGNOSIS_EVIDENCE.CONFIDENCE),
-        record.get("payload_json", String.class));
   }
 
   private static RcaAnalysisRecord toAnalysisRecord(org.jooq.Record record) {

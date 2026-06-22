@@ -5,9 +5,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Helper that builds {@link RcaEvidence} records tagged with their backing diagnosis-evidence refs.
- */
 public final class RcaEvidenceFactory {
   private RcaEvidenceFactory() {}
 
@@ -22,7 +19,9 @@ public final class RcaEvidenceFactory {
     attributes.put("evidenceTypes", evidenceTypes(refs));
     attributes.put("source", "diagnosis_evidence");
 
-    return new RcaEvidence(ruleId, title, null, score, confidence, attributes);
+    String description = summarize(refs);
+
+    return new RcaEvidence(ruleId, title, description, score, confidence, attributes);
   }
 
   public static RcaEvidence synthetic(
@@ -60,5 +59,18 @@ public final class RcaEvidenceFactory {
         .filter(value -> value != null && !value.isBlank())
         .distinct()
         .toList();
+  }
+
+  private static String summarize(List<RcaDiagnosisEvidenceRecord> refs) {
+    if (refs == null || refs.isEmpty()) {
+      return "No diagnosis evidence refs attached.";
+    }
+    return refs.stream()
+        .map(RcaDiagnosisEvidenceRecord::summary)
+        .filter(value -> value != null && !value.isBlank())
+        .distinct()
+        .limit(3)
+        .reduce((left, right) -> left + "；" + right)
+        .orElse("Matched diagnosis evidence refs: " + evidenceRefs(refs));
   }
 }
