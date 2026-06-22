@@ -108,6 +108,94 @@ class DefaultZabbixClientEvidenceApiTest {
     server.verify();
   }
 
+  @Test
+  void shouldFetchEventsByObjectIds() {
+    expectLogin();
+    server
+        .expect(content().string(org.hamcrest.Matchers.containsString("\"method\":\"event.get\"")))
+        .andExpect(
+            content().string(org.hamcrest.Matchers.containsString("\"objectids\":[\"30001\"]")))
+        .andRespond(
+            withSuccess(
+                """
+                {
+                  "jsonrpc": "2.0",
+                  "result": [
+                    {
+                      "eventid": "20001",
+                      "objectid": "30001",
+                      "name": "CPU High",
+                      "severity": "4",
+                      "value": "1",
+                      "clock": "1782000000",
+                      "hosts": [{"hostid": "10084"}],
+                      "tags": [{"tag": "service", "value": "order-service"}]
+                    }
+                  ],
+                  "id": 2
+                }
+                """,
+                MediaType.APPLICATION_JSON));
+
+    List<ZabbixEvent> events =
+        client.getEvents(
+            new ZabbixEventQuery(
+                null,
+                List.of("10084"),
+                List.of("30001"),
+                Instant.parse("2026-06-21T05:00:00Z"),
+                Instant.parse("2026-06-21T05:30:00Z"),
+                100));
+
+    assertThat(events).hasSize(1);
+    assertThat(events.get(0).eventId()).isEqualTo("20001");
+    assertThat(events.get(0).objectId()).isEqualTo("30001");
+    assertThat(events.get(0).hostIds()).containsExactly("10084");
+    assertThat(events.get(0).tags()).containsEntry("service", "order-service");
+
+    server.verify();
+  }
+
+  @Test
+  void shouldFetchTriggersByTriggerIds() {
+    expectLogin();
+    server
+        .expect(
+            content().string(org.hamcrest.Matchers.containsString("\"method\":\"trigger.get\"")))
+        .andExpect(
+            content().string(org.hamcrest.Matchers.containsString("\"triggerids\":[\"30001\"]")))
+        .andRespond(
+            withSuccess(
+                """
+                {
+                  "jsonrpc": "2.0",
+                  "result": [
+                    {
+                      "triggerid": "30001",
+                      "description": "CPU High",
+                      "expression": "last(/host/demo.cpu.util)>80",
+                      "priority": "4",
+                      "value": "1",
+                      "hosts": [{"hostid": "10084"}],
+                      "tags": [{"tag": "service", "value": "order-service"}]
+                    }
+                  ],
+                  "id": 2
+                }
+                """,
+                MediaType.APPLICATION_JSON));
+
+    List<ZabbixTrigger> triggers =
+        client.getTriggers(new ZabbixTriggerQuery(List.of("10084"), List.of("30001"), null, 100));
+
+    assertThat(triggers).hasSize(1);
+    assertThat(triggers.get(0).triggerId()).isEqualTo("30001");
+    assertThat(triggers.get(0).expression()).contains("demo.cpu.util");
+    assertThat(triggers.get(0).hostIds()).containsExactly("10084");
+
+    server.verify();
+  }
+
   private void expectLogin() {
     server
         .expect(content().string(org.hamcrest.Matchers.containsString("\"method\":\"user.login\"")))

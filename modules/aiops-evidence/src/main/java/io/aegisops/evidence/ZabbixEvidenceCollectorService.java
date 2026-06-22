@@ -50,10 +50,6 @@ public class ZabbixEvidenceCollectorService {
     }
 
     String datasourceId = firstDatasourceId(alerts);
-    String hostKey = firstHostKey(alerts);
-    String service = firstLabel(alerts, "service");
-    String env = firstLabel(alerts, "env");
-
     if (datasourceId == null || datasourceId.isBlank()) {
       throw new AppException("ZABBIX_DATASOURCE_MISSING", "Cannot infer Zabbix datasourceId");
     }
@@ -62,25 +58,33 @@ public class ZabbixEvidenceCollectorService {
     ZabbixClient client = zabbixClientFactory.create(readZabbixConfig(datasource.configJson()));
 
     TimeRange range = timeRange(incident, request);
+    ZabbixEvidenceScope scope = new ZabbixEvidenceScopeBuilder(alerts, client).build();
 
-    List<ZabbixItem> items = fetchItems(client, hostKey);
+    List<ZabbixItem> items = fetchItems(client, scope.apiHostId());
     List<ZabbixItem> matchedItems =
         items.stream()
             .filter(item -> ZabbixEvidenceSignal.classify(item) != ZabbixEvidenceSignal.UNKNOWN)
             .toList();
 
-    DraftBundle drafts = buildMetricDrafts(incidentId, hostKey, matchedItems, client, range);
+    DraftBundle drafts =
+        buildMetricDrafts(incidentId, scope.displayHostKey(), matchedItems, client, range);
 
-    List<ZabbixEvent> events = fetchEvents(client, hostKey, range);
+    List<ZabbixEvent> events = fetchEvents(client, scope, range);
     if (!events.isEmpty()) {
       drafts.add(
-          eventTimelineDraft(new EventContext(incidentId, hostKey, service, env, events), range));
+          eventTimelineDraft(
+              new EventContext(
+                  incidentId, scope.displayHostKey(), scope.service(), scope.env(), events),
+              range));
     }
 
-    List<ZabbixTrigger> triggers = fetchTriggers(client, hostKey);
+    List<ZabbixTrigger> triggers = fetchTriggers(client, scope);
     if (!triggers.isEmpty()) {
       drafts.add(
-          triggerDraft(new TriggerContext(incidentId, hostKey, service, env, triggers), range));
+          triggerDraft(
+              new TriggerContext(
+                  incidentId, scope.displayHostKey(), scope.service(), scope.env(), triggers),
+              range));
     }
 
     UpsertStats stats = persistDrafts(tenantId, incidentId, drafts);
@@ -128,25 +132,44 @@ public class ZabbixEvidenceCollectorService {
             incidentId);
   }
 
-  private List<ZabbixItem> fetchItems(ZabbixClient client, String hostKey) {
-    return client.getItems(
-        new ZabbixItemQuery(hostKey == null ? List.of() : List.of(hostKey), null, null, 500));
+  private List<ZabbixItem> fetchItems(ZabbixClient client, String apiHostId) {
+    if (apiHostId == null || apiHostId.isBlank()) {
+      return List.of();
+    }
+
+    return client.getItems(new ZabbixItemQuery(List.of(apiHostId), null, null, 500));
   }
 
-  private List<ZabbixEvent> fetchEvents(ZabbixClient client, String hostKey, TimeRange range) {
+  private List<ZabbixEvent> fetchEvents(
+      ZabbixClient client, ZabbixEvidenceScope scope, TimeRange range) {
+    if (scope.eventIds().isEmpty()
+        && scope.objectIds().isEmpty()
+        && (scope.apiHostId() == null || scope.apiHostId().isBlank())) {
+      return List.of();
+    }
+
     return client.getEvents(
         new ZabbixEventQuery(
-            null,
-            hostKey == null ? List.of() : List.of(hostKey),
-            null,
+            scope.eventIds(),
+            scope.apiHostId() == null ? List.of() : List.of(scope.apiHostId()),
+            scope.objectIds(),
             range.from().toInstant(),
             range.to().toInstant(),
             100));
   }
 
-  private List<ZabbixTrigger> fetchTriggers(ZabbixClient client, String hostKey) {
+  private List<ZabbixTrigger> fetchTriggers(ZabbixClient client, ZabbixEvidenceScope scope) {
+    if (scope.triggerIds().isEmpty()
+        && (scope.apiHostId() == null || scope.apiHostId().isBlank())) {
+      return List.of();
+    }
+
     return client.getTriggers(
-        new ZabbixTriggerQuery(hostKey == null ? List.of() : List.of(hostKey), null, null, 100));
+        new ZabbixTriggerQuery(
+            scope.apiHostId() == null ? List.of() : List.of(scope.apiHostId()),
+            scope.triggerIds(),
+            null,
+            100));
   }
 
   private DraftBundle buildMetricDrafts(
@@ -277,41 +300,6 @@ public class ZabbixEvidenceCollectorService {
     return null;
   }
 
-  private String firstHostKey(List<ZabbixEvidenceDao.AlertContext> alerts) {
-    for (ZabbixEvidenceDao.AlertContext alert : alerts) {
-      String hostId = stringLabel(alert.labels(), "zabbixHostId");
-      if (hostId != null) {
-        return hostId;
-      }
-
-      Object hostIds = alert.labels().get("zabbixHostIds");
-      if (hostIds instanceof Iterable<?> iterable) {
-        for (Object item : iterable) {
-          if (item != null && !String.valueOf(item).isBlank()) {
-            return String.valueOf(item).trim();
-          }
-        }
-      }
-
-      String hostName = stringLabel(alert.labels(), "zabbixHostName");
-      if (hostName != null) {
-        return hostName;
-      }
-    }
-
-    return null;
-  }
-
-  private String firstLabel(List<ZabbixEvidenceDao.AlertContext> alerts, String key) {
-    for (ZabbixEvidenceDao.AlertContext alert : alerts) {
-      String value = stringLabel(alert.labels(), key);
-      if (value != null) {
-        return value;
-      }
-    }
-    return null;
-  }
-
   private String stringLabel(Map<String, Object> labels, String key) {
     if (labels == null || key == null) {
       return null;
@@ -359,6 +347,15 @@ public class ZabbixEvidenceCollectorService {
   }
 
   record TimeRange(OffsetDateTime from, OffsetDateTime to) {}
+
+  record ZabbixEvidenceScope(
+      String apiHostId,
+      String displayHostKey,
+      String service,
+      String env,
+      List<String> eventIds,
+      List<String> triggerIds,
+      List<String> objectIds) {}
 
   private record EventContext(
       String incidentId, String hostKey, String service, String env, List<ZabbixEvent> events) {}
