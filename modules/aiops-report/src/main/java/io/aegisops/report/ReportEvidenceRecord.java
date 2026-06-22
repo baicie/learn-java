@@ -1,0 +1,17 @@
+package io.aegisops.report;
+
+import java.math.BigDecimal;
+import java.time.OffsetDateTime;
+
+public record ReportEvidenceRecord(
+    String id,
+    String evidenceKey,
+    String source,
+    String evidenceType,
+    String title,
+    String summary,
+    OffsetDateTime timeRangeStart,
+    OffsetDateTime timeRangeEnd,
+    BigDecimal confidence,
+    String payloadJson,
+    OffsetDateTime createdAt) {}
