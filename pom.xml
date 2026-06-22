@@ -20,6 +20,7 @@
     <module>modules/aiops-security</module>
     <module>modules/aiops-zabbix-adapter</module>
     <module>modules/aiops-datasource</module>
+    <module>modules/aiops-integration</module>
     <module>modules/aiops-asset</module>
     <module>modules/aiops-alert</module>
     <module>modules/aiops-incident</module>
