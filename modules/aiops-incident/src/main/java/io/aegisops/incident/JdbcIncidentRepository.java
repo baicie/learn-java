@@ -364,17 +364,30 @@ public class JdbcIncidentRepository implements IncidentRepository {
 
   @Override
   public void updateStatus(String tenantId, String incidentId, String status, boolean terminal) {
+    updateStatusAt(tenantId, incidentId, status, terminal, OffsetDateTime.now());
+  }
+
+  @Override
+  public void updateStatusAt(
+      String tenantId,
+      String incidentId,
+      String status,
+      boolean terminal,
+      OffsetDateTime resolvedAt) {
+    OffsetDateTime effectiveResolvedAt = resolvedAt == null ? OffsetDateTime.now() : resolvedAt;
+
     int updated =
         jdbc.update(
             """
                 update incident
                 set status = ?,
-                    resolved_at = case when ? then coalesce(resolved_at, now()) else null end,
+                    resolved_at = case when ? then coalesce(resolved_at, ?) else null end,
                     updated_at = now()
                 where tenant_id = ? and id = ?
                 """,
             status,
             terminal,
+            effectiveResolvedAt,
             tenantId,
             incidentId);
 

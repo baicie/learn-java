@@ -61,6 +61,7 @@ class ZabbixWebhookMapperTest {
         .containsEntry("service", "order-service");
     assertThat(mapping.aggregationKey())
         .isEqualTo("zabbix:ds_1:10084:order-service:demo:202606210510");
+    assertThat(mapping.labels()).containsEntry("aggregationHostKey", "10084");
     assertThat(mapping.labels()).containsEntry("aggregationKey", mapping.aggregationKey());
   }
 
@@ -242,5 +243,42 @@ class ZabbixWebhookMapperTest {
     assertThatThrownBy(() -> mapper.map(null, payload))
         .isInstanceOf(AppException.class)
         .hasMessageContaining("eventId");
+  }
+
+  @Test
+  void shouldFallbackToHostNameWhenHostIdMissingForAggregationKey() {
+    ZabbixWebhookPayload payload =
+        new ZabbixWebhookPayload(
+            "ds_1",
+            "20001",
+            null,
+            null,
+            "30001",
+            null,
+            "1",
+            "PROBLEM",
+            "High",
+            "CPU High",
+            "CPU high",
+            null,
+            "aiops-demo-host",
+            null,
+            "mall",
+            "demo",
+            null,
+            "order-service",
+            null,
+            null,
+            null,
+            OffsetDateTime.parse("2026-06-21T05:10:00Z"),
+            null,
+            null,
+            Map.of());
+
+    ZabbixWebhookAlertMapping mapping = mapper.map(null, payload);
+
+    assertThat(mapping.aggregationKey())
+        .isEqualTo("zabbix:ds_1:aiops-demo-host:order-service:demo:202606210510");
+    assertThat(mapping.labels()).containsEntry("aggregationHostKey", "aiops-demo-host");
   }
 }

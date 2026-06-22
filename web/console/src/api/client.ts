@@ -133,7 +133,7 @@ export type IncidentDetailRecord = {
 }
 
 export type IncidentAggregationResponse = {
-  scannedAlerts: number
+  alertsScanned: number
   groups: number
   incidentsCreated: number
   incidentsUpdated: number

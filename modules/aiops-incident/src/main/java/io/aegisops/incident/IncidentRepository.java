@@ -33,6 +33,13 @@ public interface IncidentRepository {
 
   void updateStatus(String tenantId, String incidentId, String status, boolean terminal);
 
+  void updateStatusAt(
+      String tenantId,
+      String incidentId,
+      String status,
+      boolean terminal,
+      OffsetDateTime resolvedAt);
+
   List<IncidentSummaryRecord> findActiveIncidentsReadyToResolve(String tenantId);
 
   List<AlertCandidate> listLinkedAlertCandidates(String tenantId, String incidentId);

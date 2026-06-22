@@ -111,15 +111,16 @@ public class IncidentService {
     int resolved = 0;
 
     for (IncidentSummaryRecord incident : readyToResolve) {
-      repository.updateStatus(tenantId, incident.id(), "resolved", true);
-
       List<AlertCandidate> alerts = repository.listLinkedAlertCandidates(tenantId, incident.id());
+
       OffsetDateTime resolvedAt =
           alerts.stream()
               .map(AlertCandidate::endsAt)
               .filter(Objects::nonNull)
               .max(OffsetDateTime::compareTo)
               .orElse(OffsetDateTime.now());
+
+      repository.updateStatusAt(tenantId, incident.id(), "resolved", true, resolvedAt);
 
       repository.addTimeline(
           new TimelineCreateCommand(

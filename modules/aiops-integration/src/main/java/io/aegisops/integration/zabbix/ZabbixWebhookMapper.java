@@ -59,9 +59,11 @@ public class ZabbixWebhookMapper {
     String title = firstNonBlank(payload.title(), "Zabbix event " + problemId);
     String description = firstNonBlank(payload.message(), title);
     String fingerprint = ZabbixExternalIds.fingerprint(resolvedDatasourceId, objectId);
-    String hostId = firstNonBlank(payload.hostId());
+    String hostKey = firstNonBlank(payload.hostId(), payload.hostName(), payload.host());
     String aggregationKey =
-        ZabbixAggregationKeyBuilder.build(resolvedDatasourceId, hostId, service, env, startsAt);
+        ZabbixAggregationKeyBuilder.build(resolvedDatasourceId, hostKey, service, env, startsAt);
+
+    labels.put("aggregationHostKey", hostKey);
     labels.put("aggregationKey", aggregationKey);
 
     return new ZabbixWebhookAlertMapping(

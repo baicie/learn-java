@@ -45,27 +45,11 @@ class IncidentServiceTest {
 
   @Test
   void shouldAutoResolveIncidentWhenAllLinkedAlertsResolved() {
-    FakeIncidentRepository repository = new FakeIncidentRepository(List.of());
-    repository.activeReadyToResolve =
-        List.of(
-            new IncidentSummaryRecord(
-                "inc_1",
-                "tenant_1",
-                "order-service 主机与服务异常",
-                "summary",
-                "critical",
-                "open",
-                "system",
-                "asset_1",
-                "zabbix:ds_1:10084:order-service:demo:202606210510",
-                4,
-                BigDecimal.ZERO,
-                OffsetDateTime.parse("2026-06-21T05:10:00Z"),
-                OffsetDateTime.parse("2026-06-21T05:10:00Z"),
-                OffsetDateTime.parse("2026-06-21T05:12:00Z"),
-                null,
-                OffsetDateTime.parse("2026-06-21T05:10:00Z"),
-                OffsetDateTime.parse("2026-06-21T05:12:00Z")));
+    FakeIncidentRepository repository =
+        new FakeIncidentRepository(
+            List.of(
+                alert("a1", "AegisOps Demo CPU High", "high", "zabbix:ds_1:trigger_cpu", null),
+                alert("a2", "AegisOps Demo API Slow", "medium", "zabbix:ds_1:trigger_api", null)));
 
     repository.linkedAlertCandidates =
         List.of(
@@ -77,6 +61,8 @@ class IncidentServiceTest {
     service.aggregateOpenAlerts("tenant_1", new IncidentAggregateRequest(60, 100));
 
     assertThat(repository.statusUpdates).contains("inc_1:resolved");
+    assertThat(repository.statusUpdateTimes)
+        .anyMatch(entry -> entry.startsWith("inc_1:2026-06-21T05:21"));
     assertThat(repository.timelineEvents).contains("incident_resolved");
   }
 
@@ -109,10 +95,14 @@ class IncidentServiceTest {
   private static class FakeIncidentRepository implements IncidentRepository {
     private final List<AlertCandidate> candidates;
     private final List<IncidentCreateCommand> insertedIncidents = new ArrayList<>();
+    private final java.util.Map<String, IncidentSummaryRecord> createdIncidents =
+        new java.util.LinkedHashMap<>();
     private final List<String> linkedAlerts = new ArrayList<>();
     private final List<String> statusUpdates = new ArrayList<>();
+    private final List<String> statusUpdateTimes = new ArrayList<>();
     private final List<String> timelineEvents = new ArrayList<>();
-    private List<IncidentSummaryRecord> activeReadyToResolve = List.of();
+    private String lastTenantId = "tenant_1";
+    private int idCounter = 1;
     private List<AlertCandidate> linkedAlertCandidates = List.of();
 
     FakeIncidentRepository(List<AlertCandidate> candidates) {
@@ -120,7 +110,9 @@ class IncidentServiceTest {
     }
 
     @Override
-    public void acquireTenantAggregationLock(String tenantId) {}
+    public void acquireTenantAggregationLock(String tenantId) {
+      lastTenantId = tenantId;
+    }
 
     @Override
     public List<AlertCandidate> findOpenAlertCandidates(
@@ -135,18 +127,41 @@ class IncidentServiceTest {
 
     @Override
     public Optional<IncidentSummaryRecord> findIncident(String tenantId, String incidentId) {
-      return Optional.empty();
+      return createdIncidents.values().stream()
+          .filter(inc -> inc.id().equals(incidentId))
+          .findFirst();
     }
 
     @Override
     public Optional<IncidentSummaryRecord> findActiveIncidentByAggregationKey(
         String tenantId, String aggregationKey) {
-      return Optional.empty();
+      return Optional.ofNullable(createdIncidents.get(aggregationKey));
     }
 
     @Override
     public void insertIncident(IncidentCreateCommand command) {
+      String deterministicId = "inc_" + idCounter++;
       insertedIncidents.add(command);
+      IncidentSummaryRecord summary =
+          new IncidentSummaryRecord(
+              deterministicId,
+              command.tenantId(),
+              command.title(),
+              command.summary(),
+              command.severity(),
+              "open",
+              command.source(),
+              command.primaryAssetId(),
+              command.aggregationKey(),
+              0,
+              BigDecimal.ZERO,
+              command.startedAt(),
+              command.startedAt(),
+              null,
+              null,
+              command.startedAt(),
+              command.startedAt());
+      createdIncidents.put(command.aggregationKey(), summary);
     }
 
     @Override
@@ -185,12 +200,26 @@ class IncidentServiceTest {
 
     @Override
     public void updateStatus(String tenantId, String incidentId, String status, boolean terminal) {
+      updateStatusAt(tenantId, incidentId, status, terminal, OffsetDateTime.now());
+    }
+
+    @Override
+    public void updateStatusAt(
+        String tenantId,
+        String incidentId,
+        String status,
+        boolean terminal,
+        OffsetDateTime resolvedAt) {
       statusUpdates.add(incidentId + ":" + status);
+      statusUpdateTimes.add(incidentId + ":" + resolvedAt);
     }
 
     @Override
     public List<IncidentSummaryRecord> findActiveIncidentsReadyToResolve(String tenantId) {
-      return activeReadyToResolve;
+      if (!lastTenantId.equals(tenantId)) {
+        return List.of();
+      }
+      return new ArrayList<>(createdIncidents.values());
     }
 
     @Override

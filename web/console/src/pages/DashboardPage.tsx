@@ -96,7 +96,7 @@ export function DashboardPage() {
     onSuccess: async (result) => {
       setBanner({
         tone: 'success',
-        text: `Aggregated ${result.scannedAlerts} alerts, created ${result.incidentsCreated}, updated ${result.incidentsUpdated}, linked ${result.alertsLinked}`,
+        text: `Aggregated ${result.alertsScanned} alerts, created ${result.incidentsCreated}, updated ${result.incidentsUpdated}, linked ${result.alertsLinked}`,
       })
       await invalidateAll()
     },
