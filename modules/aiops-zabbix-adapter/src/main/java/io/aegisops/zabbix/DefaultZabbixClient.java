@@ -17,11 +17,12 @@ import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
-final class DefaultZabbixClient implements ZabbixClient {
+final class DefaultZabbixClient implements ZabbixClient, JsonRpcCaller {
   private final ZabbixConfig config;
   private final ObjectMapper objectMapper;
   private final RestTemplate restTemplate;
   private final AtomicLong requestId = new AtomicLong(1);
+  private final ZabbixEvidenceApi evidenceApi;
 
   DefaultZabbixClient(ZabbixConfig config, ObjectMapper objectMapper) {
     this(config, objectMapper, defaultRestTemplate(config));
@@ -32,6 +33,7 @@ final class DefaultZabbixClient implements ZabbixClient {
     this.config = config;
     this.objectMapper = objectMapper;
     this.restTemplate = restTemplate;
+    this.evidenceApi = new ZabbixEvidenceApi(objectMapper);
   }
 
   private static RestTemplate defaultRestTemplate(ZabbixConfig config) {
@@ -107,6 +109,31 @@ final class DefaultZabbixClient implements ZabbixClient {
     return problems;
   }
 
+  @Override
+  public List<ZabbixItem> getItems(ZabbixItemQuery query) {
+    return evidenceApi.getItems(this, query);
+  }
+
+  @Override
+  public List<ZabbixHistoryPoint> getHistory(ZabbixHistoryQuery query) {
+    return evidenceApi.getHistory(this, query);
+  }
+
+  @Override
+  public List<ZabbixTrendPoint> getTrends(ZabbixTrendQuery query) {
+    return evidenceApi.getTrends(this, query);
+  }
+
+  @Override
+  public List<ZabbixEvent> getEvents(ZabbixEventQuery query) {
+    return evidenceApi.getEvents(this, query);
+  }
+
+  @Override
+  public List<ZabbixTrigger> getTriggers(ZabbixTriggerQuery query) {
+    return evidenceApi.getTriggers(this, query);
+  }
+
   private Map<String, List<String>> fetchHostIdsByEventId(String auth, List<String> eventIds) {
     if (eventIds.isEmpty()) {
       return Map.of();
@@ -158,7 +185,8 @@ final class DefaultZabbixClient implements ZabbixClient {
     return Math.min(limit, 5000);
   }
 
-  private String authToken() {
+  @Override
+  public String authToken() {
     if (config.hasApiToken()) {
       return config.apiToken();
     }
@@ -209,7 +237,8 @@ final class DefaultZabbixClient implements ZabbixClient {
     return result.asText();
   }
 
-  private JsonNode call(String method, Object params, String auth) {
+  @Override
+  public JsonNode call(String method, Object params, String auth) {
     try {
       ObjectNode body = objectMapper.createObjectNode();
       body.put("jsonrpc", "2.0");
