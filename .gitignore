@@ -13,6 +13,7 @@ dist/
 coverage/
 .pnpm-store/
 temp/
+web/console/tsconfig.tsbuildinfo
 
 # Python build artefacts
 __pycache__/
