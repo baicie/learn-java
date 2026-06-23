@@ -1,11 +1,25 @@
 #!/usr/bin/env bash
+#
+# Phase Z9 Zabbix MVP Demo Script
+#
+# Usage (Linux/macOS/Git Bash):
+#   ./demo-zabbix-scenario.sh
+#
+# Environment variables:
+#   AIOPS_BASE_URL                  - API base URL (default: http://localhost:8080)
+#   AIOPS_ZABBIX_WEBHOOK_TOKEN      - Webhook token (default: dev-zabbix-webhook-token)
+#   AIOPS_ZABBIX_DATASOURCE_ID      - Zabbix datasource ID (default: auto-created)
+#
+# Note: This script requires bash, curl, and jq.
+# On Windows without WSL/Git Bash, use Node.js instead:
+#   node scripts/demo-zabbix-scenario.mjs
+#
 # shellcheck disable=SC2086
 set -euo pipefail
 
 BASE_URL="${AIOPS_BASE_URL:-http://localhost:8080}"
-TENANT_ID="${AIOPS_TENANT_ID:-tenant_default}"
 DATASOURCE_ID="${AIOPS_ZABBIX_DATASOURCE_ID:-ds_zabbix_demo}"
-WEBHOOK_TOKEN="${AIOPS_ZABBIX_WEBHOOK_TOKEN:-zabbix-demo-token}"
+WEBHOOK_TOKEN="${AIOPS_ZABBIX_WEBHOOK_TOKEN:-dev-zabbix-webhook-token}"
 AUTH_TOKEN="${AIOPS_TOKEN:-}"
 
 CURL_OPTS=(-sS)
@@ -47,10 +61,13 @@ webhook() {
   local trigger_id="$2"
   local title="$3"
   local severity="$4"
+  local ts
+  ts=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
   curl "${CURL_OPTS[@]}" \
     -H "Content-Type: application/json" \
     -H "X-AegisOps-Webhook-Token: ${WEBHOOK_TOKEN}" \
+    -H "X-Tenant-Id: ${TENANT_ID}" \
     -d "{
       \"datasourceId\": \"${DATASOURCE_ID}\",
       \"eventId\": \"${event_id}\",
@@ -68,7 +85,7 @@ webhook() {
       \"env\": \"demo\",
       \"service\": \"order-service\",
       \"endpoint\": \"/api/order/create\",
-      \"startsAt\": \"2026-06-21T05:10:00Z\",
+      \"startsAt\": \"${ts}\",
       \"tags\": {
         \"service\": \"order-service\",
         \"env\": \"demo\"
@@ -91,18 +108,18 @@ latest_incident_id() {
 main() {
   need_cmd curl
   need_cmd jq
+  need_cmd date
 
   echo "== Phase Z9 Zabbix MVP Demo =="
   echo "BASE_URL=${BASE_URL}"
-  echo "TENANT_ID=${TENANT_ID}"
   echo "DATASOURCE_ID=${DATASOURCE_ID}"
 
   echo
   echo "1. Ingest Zabbix webhook events"
-  webhook "20001" "30001" "CPU High" "High"
-  webhook "20002" "30002" "API Slow" "Average"
-  webhook "20003" "30003" "Health Check Failed" "Disaster"
-  webhook "20004" "30004" "Error Log Increased" "Warning"
+  webhook "20001" "30001" "CPU High" "high"
+  webhook "20002" "30002" "API Slow" "average"
+  webhook "20003" "30003" "Health Check Failed" "disaster"
+  webhook "20004" "30004" "Error Log Increased" "warning"
 
   echo
   echo "2. Aggregate Incident"

@@ -19,7 +19,7 @@ public record AgentClientProperties(
 
   public String normalizedInternalToken() {
     return internalToken == null || internalToken.isBlank()
-        ? "dev-internal-token"
+        ? "dev-internal-agent-token"
         : internalToken.trim();
   }
 

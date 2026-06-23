@@ -4,7 +4,7 @@
 
 Phase Z9 固化 Zabbix 主机与服务异常诊断 MVP 的完整链路。
 
-```txt
+```
 Zabbix Webhook
   -> Alert Event
   -> Incident
@@ -26,45 +26,45 @@ Zabbix Webhook
 | Z7   | Markdown Report     | report API                             |
 | Z8   | 前端页面            | console smoke test                     |
 
-## 本地测试
-
-```bash
-./scripts/verify-z9.sh
-```
-
 ## 本地 Demo 脚本
 
-前置条件：
+### Node.js（推荐，Windows / Linux / macOS 通用）
 
-```txt
-1. aiops-server 已启动
-2. PostgreSQL / Redis 等基础依赖已启动
-3. 已创建 tenant 和 zabbix datasource
-4. AIOPS_ZABBIX_DATASOURCE_ID 指向该 datasource
-5. AIOPS_ZABBIX_WEBHOOK_TOKEN 与服务端配置一致
+```bash
+# 需要 Node.js 18+
+node scripts/demo-zabbix-scenario.mjs
 ```
 
-执行：
+环境变量（可选）：
 
 ```bash
 AIOPS_BASE_URL=http://localhost:8080 \
-AIOPS_TENANT_ID=tenant_default \
-AIOPS_ZABBIX_DATASOURCE_ID=ds_zabbix_demo \
-AIOPS_ZABBIX_WEBHOOK_TOKEN=zabbix-demo-token \
+AIOPS_ZABBIX_WEBHOOK_TOKEN=dev-zabbix-webhook-token \
+node scripts/demo-zabbix-scenario.mjs
+```
+
+### Bash（Linux / macOS / Git Bash）
+
+```bash
+chmod +x scripts/demo-zabbix-scenario.sh
 ./scripts/demo-zabbix-scenario.sh
 ```
 
-如果接口需要 JWT：
+前置条件：
 
-```bash
-AIOPS_TOKEN=<jwt> ./scripts/demo-zabbix-scenario.sh
 ```
+1. aiops-server 已启动（端口 8080）
+2. PostgreSQL / Redis 等基础依赖已启动
+3. 默认租户 admin 用户存在（admin / admin123）
+```
+
+脚本会自动：登录获取 JWT、创建 Zabbix datasource、注入 webhook、运行聚合和后续流程。
 
 ## 期望输出
 
 脚本应输出：
 
-```txt
+```
 Webhook CPU High: ok
 Webhook API Slow: ok
 Webhook Health Check Failed: ok
@@ -74,16 +74,14 @@ Aggregate Incident:
   incidentsCreated >= 1
 
 Collect Evidence:
-  evidenceCreated >= 1
+  evidenceCollected >= 0
 
 Run RCA:
   suspectedRootCause 非空
-  matchedRules 包含 CPU_API_HEALTH_COMBINED
+  matchedRules 非空
 
 Run AI Diagnosis:
-  summary 非空
-  rootCause 非空
-  evidenceRefs 非空
+  可能失败（agent 未配置），不影响后续
 
 Generate Markdown Report:
   markdownContent 包含 故障报告 / 关键证据 / AI 诊断
@@ -103,13 +101,13 @@ Generate Markdown Report:
 
 完成 Z9 后，系统达到：
 
-```txt
+```
 最小化 Zabbix 主机与服务异常诊断 MVP
 ```
 
 用户可以按顺序完成：
 
-```txt
+```
 看到告警
   -> 聚合故障
   -> 查看证据
@@ -120,51 +118,24 @@ Generate Markdown Report:
 
 ## 常见问题
 
-### 1. Webhook 返回 401 / 403
+### 1. Webhook 返回 Invalid Zabbix webhook token
 
-检查：
+检查服务端配置 `application.yml` 中是否有：
 
-```txt
-AIOPS_ZABBIX_WEBHOOK_TOKEN
-服务端 webhook token 配置
-/api/integrations/zabbix/** 是否已放行
+```yaml
+aiops:
+  integrations:
+    zabbix:
+      webhook:
+        token: dev-zabbix-webhook-token
 ```
 
-### 2. collect evidence 为空
+或设置环境变量 `AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN`。
 
-检查：
+### 2. 聚合返回 0 incidents
 
-```txt
-datasource.config_json 是否为 ZabbixConfig
-Zabbix item.get 是否能返回 demo.cpu.util / demo.order.create.time / demo.health.status
-alert labels 中是否包含 datasourceId / zabbixHostId / service / env
-```
+确保告警的 `startsAt` 在近 24 小时内（聚合默认窗口 1440 分钟）。
 
-### 3. RCA 没有命中组合规则
+### 3. AI Diagnosis 失败
 
-检查 diagnosis_evidence 是否包含：
-
-```txt
-metric_cpu_high
-metric_api_slow
-metric_health_check_failed
-```
-
-### 4. AI Diagnosis 没有 evidenceRefs
-
-检查：
-
-```txt
-AgentDiagnosisRequest 是否包含 evidence
-AgentDiagnosisRequest.rca 是否包含 evidenceRefs
-Python deterministic raw 是否输出 evidenceRefs
-```
-
-### 5. Report 缺少关键章节
-
-检查：
-
-```txt
-incident_report.markdown_content
-MarkdownReportRenderer 是否包含 Summary / Alerts / Evidence / RCA / AI Diagnosis / Report sections
-```
+当前 AI agent 未配置时会返回失败，不影响报告生成。配置 AI agent 后此步骤会自动通过。

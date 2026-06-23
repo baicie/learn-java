@@ -54,7 +54,7 @@ aiops:
     rate-limit-enabled: true
   agent:
     base-url: ${AIOPS_AGENT_BASE_URL:http://localhost:9008}
-    internal-token: ${AIOPS_AGENT_INTERNAL_TOKEN:dev-internal-token}
+    internal-token: ${AIOPS_AGENT_INTERNAL_TOKEN:dev-internal-agent-token}
     connect-timeout-millis: ${AIOPS_AGENT_CONNECT_TIMEOUT:3000}
     read-timeout-millis: ${AIOPS_AGENT_READ_TIMEOUT:30000}
     evidence:
@@ -68,6 +68,10 @@ aiops:
       base-url: ${AIOPS_EVIDENCE_VICTORIA_BASE_URL:http://localhost:8428}
       timeout-millis: ${AIOPS_EVIDENCE_VICTORIA_TIMEOUT_MILLIS:3000}
       step: ${AIOPS_EVIDENCE_VICTORIA_STEP:60s}
+  integrations:
+    zabbix:
+      webhook:
+        token: ${AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN:dev-zabbix-webhook-token}
 
 springdoc:
   swagger-ui:

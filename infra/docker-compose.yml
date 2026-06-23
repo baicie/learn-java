@@ -160,17 +160,17 @@ services:
       dockerfile: Dockerfile
     container_name: aegisops-agent
     environment:
-      AIOPS_AGENT_INTERNAL_TOKEN: dev-internal-token
+      AIOPS_AGENT_INTERNAL_AGENT_TOKEN: dev-internal-agent-token
       AIOPS_AGENT_PROVIDER: aiops-agent
-      AIOPS_AGENT_MODEL: langgraph-deterministic
       AIOPS_AGENT_NAME: aegisops_diagnosis_graph
       AIOPS_AGENT_AGENT_NAME: aegisops_diagnosis_graph
       AIOPS_AGENT_CONTRACT_VERSION: agent-diagnosis.v1
-      AIOPS_AGENT_GENERATION_MODE: deterministic
-      # Phase4.2 optional LLM provider. Keep empty in local/CI deterministic mode.
-      AIOPS_AGENT_OPENAI_BASE_URL: ""
-      AIOPS_AGENT_OPENAI_API_KEY: ""
-      AIOPS_AGENT_OPENAI_TIMEOUT_SECONDS: 30
+      AIOPS_AGENT_GENERATION_MODE: openai-compatible
+      AIOPS_AGENT_MODEL: deepseek-v4-flash
+      # Phase4.2 LLM provider
+      AIOPS_AGENT_OPENAI_BASE_URL: https://api.deepseek.com/v1
+      AIOPS_AGENT_OPENAI_API_KEY: ${AIOPS_DEEPSEEK_API_KEY}
+      AIOPS_AGENT_OPENAI_TIMEOUT_SECONDS: 60
       AIOPS_AGENT_OPENAI_TEMPERATURE: 0.2
       AIOPS_AGENT_OPENAI_MAX_TOKENS: 1200
       AIOPS_AGENT_OPENAI_RESPONSE_FORMAT_ENABLED: "true"
