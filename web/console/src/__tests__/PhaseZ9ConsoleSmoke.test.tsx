@@ -1,98 +1,92 @@
 import '@testing-library/jest-dom'
+import { renderWithRouter } from '../test/test-utils'
+import { IncidentDetailPage } from '../pages/IncidentDetailPage'
+import { Route, Routes } from 'react-router-dom'
 import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { Route, Routes } from 'react-router-dom'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { IncidentDetailPage } from '../pages/IncidentDetailPage'
-import { renderWithRouter } from '../test/test-utils'
-
-const mockIncidents = [
-  {
-    incident: {
-      id: 'inc_z9',
-      title: 'order-service 主机与服务异常',
-      summary: 'CPU 高位、接口慢、健康检查失败',
-      severity: 'critical',
-      status: 'open',
-      source: 'zabbix',
-      alertCount: 4,
-      aggregationKey: 'zabbix:ds_zabbix_z9:10084:order-service:demo:202606210510',
-    },
-    alerts: [
-      {
-        id: 'alert_cpu',
-        title: 'CPU High',
-        severity: 'high',
-        status: 'open',
-        entityName: 'order-service',
-        source: 'zabbix',
-        fingerprint: 'fp1',
-        startsAt: '2026-06-21T05:10:00Z',
-        relationType: 'primary',
-      },
-    ],
-    timeline: [
-      {
-        id: 'tl_1',
-        title: 'CPU High',
-        eventType: 'alert_linked',
-        eventTime: '2026-06-21T05:10:00Z',
-        source: 'system',
-        description: '',
-        payloadJson: '{}',
-      },
-    ],
-    evidence: [
-      {
-        id: 'evd_cpu',
-        evidenceKey: 'evd_cpu',
-        evidenceType: 'metric_cpu_high',
-        title: 'CPU 使用率持续高位',
-        summary: 'CPU 最大值 96%',
-      },
-    ],
-    rca: {
-      id: 'rca_z9',
-      suspectedRootCause: '疑似 CPU 饱和导致服务响应变慢',
-      confidence: 0.88,
-      summary: 'RCA matched 3 rules',
-      matchedRules: ['CPU_API_HEALTH_COMBINED'],
-      evidenceRefs: ['evd_cpu'],
-      evidence: [],
-      modelVersion: 'rules-v2',
-      createdAt: '2026-06-21T05:17:00Z',
-    },
-    aiDiagnosis: {
-      id: 'ai_z9',
-      summary: 'order-service 出现 CPU 高位、接口慢和健康检查失败。',
-      rootCause: '疑似 CPU 饱和。',
-      impact: '影响 order-service。',
-      nextSteps: ['查看 CPU Top 进程'],
-      evidenceRefs: ['evd_cpu'],
-      status: 'completed',
-      provider: 'aiops-agent',
-      model: 'mock',
-      agentName: 'aegis_diagnosis_graph',
-      runbookSuggestions: [],
-      risks: [],
-      createdAt: '2026-06-21T05:18:00Z',
-    },
-    report: {
-      id: 'rpt_z9',
-      incidentId: 'inc_z9',
-      versionNo: 1,
-      markdownContent: '# 故障报告：order-service 主机与服务异常',
-    },
+const mockIncidentBundle = {
+  incident: {
+    id: 'inc_z9',
+    title: 'order-service 主机与服务异常',
+    summary: 'CPU 高位、接口慢、健康检查失败',
+    severity: 'critical',
+    status: 'open',
+    source: 'zabbix',
+    alertCount: 4,
+    aggregationKey: 'zabbix:ds_zabbix_z9:10084:order-service:demo:202606210510',
   },
-]
+  alerts: [
+    {
+      id: 'alert_cpu',
+      title: 'CPU High',
+      severity: 'high',
+      status: 'open',
+      entityName: 'order-service',
+      source: 'zabbix',
+      fingerprint: 'fp1',
+      startsAt: '2026-06-21T05:10:00Z',
+      relationType: 'primary',
+    },
+  ],
+  timeline: [
+    {
+      id: 'tl_1',
+      title: 'CPU High',
+      eventType: 'alert_linked',
+      eventTime: '2026-06-21T05:10:00Z',
+      source: 'system',
+      description: '',
+      payloadJson: '{}',
+    },
+  ],
+  evidence: [
+    {
+      id: 'evd_cpu',
+      evidenceKey: 'evd_cpu',
+      evidenceType: 'metric_cpu_high',
+      title: 'CPU 使用率持续高位',
+      summary: 'CPU 最大值 96%',
+    },
+  ],
+  rca: {
+    id: 'rca_z9',
+    suspectedRootCause: '疑似 CPU 饱和导致服务响应变慢',
+    confidence: 0.88,
+    summary: 'RCA matched 3 rules',
+    matchedRules: ['CPU_API_HEALTH_COMBINED'],
+    evidenceRefs: ['evd_cpu'],
+    evidence: [],
+    modelVersion: 'rules-v2',
+    createdAt: '2026-06-21T05:17:00Z',
+  },
+  aiDiagnosis: {
+    id: 'ai_z9',
+    summary: 'order-service 出现 CPU 高位、接口慢和健康检查失败。',
+    rootCause: '疑似 CPU 饱和。',
+    impact: '影响 order-service。',
+    nextSteps: ['查看 CPU Top 进程'],
+    evidenceRefs: ['evd_cpu'],
+    status: 'completed',
+    provider: 'aiops-agent',
+    model: 'mock',
+    agentName: 'aegis_diagnosis_graph',
+    runbookSuggestions: [],
+    risks: [],
+    createdAt: '2026-06-21T05:18:00Z',
+  },
+  report: {
+    id: 'rpt_z9',
+    incidentId: 'inc_z9',
+    versionNo: 1,
+    markdownContent: '# 故障报告：order-service 主机与服务异常',
+  },
+}
 
-const { mockGetIncidentBundle } = vi.hoisted(() => {
-  let callIndex = 0
-  return {
-    mockGetIncidentBundle: vi.fn(() => mockIncidents[callIndex++]),
-  }
-})
+const { mockGetIncidentBundle } = vi.hoisted(() => ({
+  mockGetIncidentBundle: vi.fn(),
+}))
 
 vi.mock('../api/client', () => ({
   getIncidentBundle: mockGetIncidentBundle,
@@ -111,7 +105,15 @@ vi.mock('../api/client', () => ({
   }),
 }))
 
+afterEach(() => {
+  mockGetIncidentBundle.mockClear()
+})
+
 describe('Phase Z9 console smoke', () => {
+  beforeEach(() => {
+    mockGetIncidentBundle.mockResolvedValue(mockIncidentBundle)
+  })
+
   it('walks incident detail tabs and actions', async () => {
     const api = await import('../api/client')
 

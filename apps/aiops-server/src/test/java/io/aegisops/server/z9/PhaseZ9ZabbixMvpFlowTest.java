@@ -2,7 +2,6 @@ package io.aegisops.server.z9;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -11,6 +10,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.aegisops.ai.client.AiAgentClient;
 import io.aegisops.ai.client.dto.AgentDiagnosisRequest;
 import io.aegisops.ai.client.dto.AgentDiagnosisResponse;
+import io.aegisops.common.tenant.TenantContext;
 import io.aegisops.integration.zabbix.ZabbixWebhookTokenVerifier;
 import io.aegisops.zabbix.ZabbixClient;
 import io.aegisops.zabbix.ZabbixClientFactory;
@@ -25,6 +25,7 @@ import java.time.OffsetDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.stubbing.Answer;
@@ -34,6 +35,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
@@ -45,7 +48,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
  * <p>Verifies the complete MVP flow: Webhook ingest -> Alert -> Incident aggregation -> Evidence
  * collection -> RCA analysis -> AI diagnosis -> Markdown report.
  */
-@Testcontainers
+@Testcontainers(disabledWithoutDocker = true)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureMockMvc(addFilters = false)
 class PhaseZ9ZabbixMvpFlowTest {
@@ -60,6 +63,14 @@ class PhaseZ9ZabbixMvpFlowTest {
           .withUsername("aiops")
           .withPassword("aiops");
 
+  @DynamicPropertySource
+  static void registerDatasourceProperties(DynamicPropertyRegistry registry) {
+    registry.add("spring.datasource.url", postgres::getJdbcUrl);
+    registry.add("spring.datasource.username", postgres::getUsername);
+    registry.add("spring.datasource.password", postgres::getPassword);
+    registry.add("spring.datasource.driver-class-name", () -> "org.postgresql.Driver");
+  }
+
   @Autowired private MockMvc mvc;
   @Autowired private JdbcTemplate jdbc;
   @Autowired private ObjectMapper objectMapper;
@@ -70,7 +81,9 @@ class PhaseZ9ZabbixMvpFlowTest {
 
   @BeforeEach
   void setUp() {
-    doNothing().when(tokenVerifier).verify(any());
+    TenantContext.setTenantId(TENANT_ID);
+
+    when(tokenVerifier.verify(any())).thenReturn(true);
 
     ZabbixClient zabbixClient = org.mockito.Mockito.mock(ZabbixClient.class);
     when(zabbixClientFactory.create(any())).thenReturn(zabbixClient);
@@ -114,6 +127,11 @@ class PhaseZ9ZabbixMvpFlowTest {
     when(aiAgentClient.diagnose(any())).thenAnswer(inv -> aiResponse(inv.getArgument(0)));
 
     seedTenantAndDatasource();
+  }
+
+  @AfterEach
+  void tearDown() {
+    TenantContext.clear();
   }
 
   @Test
@@ -181,7 +199,9 @@ class PhaseZ9ZabbixMvpFlowTest {
                       "force": true
                     }
                     """))
-        .andExpect(jsonPath("$.data.suspectedRootCause").isNotEmpty());
+        .andExpect(jsonPath("$.data.suspectedRootCause").isNotEmpty())
+        .andExpect(jsonPath("$.data.matchedRules").isArray())
+        .andExpect(jsonPath("$.data.evidenceRefs").isArray());
 
     mvc.perform(
             post("/api/incidents/{incidentId}/ai/diagnose", incidentId)
@@ -194,7 +214,9 @@ class PhaseZ9ZabbixMvpFlowTest {
                       "locale": "zh-CN"
                     }
                     """))
-        .andExpect(jsonPath("$.data.summary").isNotEmpty());
+        .andExpect(jsonPath("$.data.summary").isNotEmpty())
+        .andExpect(jsonPath("$.data.evidenceRefs").isArray())
+        .andExpect(jsonPath("$.data.matchedRules").isArray());
 
     mvc.perform(
             post("/api/incidents/{incidentId}/reports", incidentId)
@@ -354,7 +376,7 @@ class PhaseZ9ZabbixMvpFlowTest {
         """
         insert into datasource(id, tenant_id, name, type, status, config_json, created_at, updated_at)
         values (?, ?, 'Phase Z9 Zabbix', 'zabbix', 'active',
-          '{"url": "http://zabbix.local/api_jsonrpc.php", "username": "Admin", "password": "zabbix", "token": null, "connectTimeoutSeconds": 3, "readTimeoutSeconds": 3}'::jsonb,
+          '{"endpoint": "http://zabbix.local/api_jsonrpc.php", "username": "Admin", "password": "zabbix", "apiToken": null, "connectTimeoutSeconds": 3, "readTimeoutSeconds": 3}'::jsonb,
           now(), now())
         on conflict (id) do update set
           tenant_id = excluded.tenant_id,
