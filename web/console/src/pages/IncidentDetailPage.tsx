@@ -5,6 +5,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import {
   getIncidentBundle,
   collectIncidentEvidence,
+  analyzeIncidentRca,
   runIncidentAiDiagnosis,
   generateReport,
   type IncidentDetailBundle,
@@ -155,6 +156,20 @@ function RcaTab({ rca }: { rca?: RcaAnalysisResponse | null }) {
         <p className="mt-1 text-sm">{rca.summary || '-'}</p>
       </div>
       <div>
+        <h4 className="text-sm font-semibold">命中规则</h4>
+        <ListItems values={rca.matchedRules} renderCode />
+        {(!rca.matchedRules || rca.matchedRules.length === 0) && (
+          <p className="mt-1 text-sm text-muted-foreground">-</p>
+        )}
+      </div>
+      <div>
+        <h4 className="text-sm font-semibold">证据引用</h4>
+        <ListItems values={rca.evidenceRefs} renderCode />
+        {(!rca.evidenceRefs || rca.evidenceRefs.length === 0) && (
+          <p className="mt-1 text-sm text-muted-foreground">-</p>
+        )}
+      </div>
+      <div>
         <h4 className="text-sm font-semibold">证据链</h4>
         {rca.evidence.length > 0 ? (
           <div className="mt-2 space-y-2">
@@ -256,6 +271,15 @@ export function IncidentDetailPage() {
     onError: (err) => setBanner({ tone: 'warning', text: String(err) }),
   })
 
+  const rcaMut = useMutation({
+    mutationFn: () => analyzeIncidentRca(incidentId!, true),
+    onSuccess: () => {
+      setBanner({ tone: 'success', text: 'RCA 诊断完成。' })
+      void queryClient.invalidateQueries({ queryKey: ['incident-bundle', incidentId] })
+    },
+    onError: (err) => setBanner({ tone: 'warning', text: String(err) }),
+  })
+
   const aiMut = useMutation({
     mutationFn: () => runIncidentAiDiagnosis(incidentId!),
     onSuccess: () => {
@@ -274,7 +298,7 @@ export function IncidentDetailPage() {
     onError: (err) => setBanner({ tone: 'warning', text: String(err) }),
   })
 
-  const isBusy = collectMut.isPending || aiMut.isPending || reportMut.isPending
+  const isBusy = collectMut.isPending || rcaMut.isPending || aiMut.isPending || reportMut.isPending
 
   if (!incidentId) {
     return (
@@ -334,6 +358,11 @@ export function IncidentDetailPage() {
                 <Button size="sm" onClick={() => void collectMut.mutate()} disabled={isBusy}>
                   {collectMut.isPending ? '采集中...' : 'Collect Evidence'}
                 </Button>
+
+                <Button size="sm" onClick={() => void rcaMut.mutate()} disabled={isBusy}>
+                  {rcaMut.isPending ? 'RCA 中...' : 'Run RCA'}
+                </Button>
+
                 <Button size="sm" onClick={() => void aiMut.mutate()} disabled={isBusy}>
                   {aiMut.isPending ? '诊断中...' : 'Run AI Diagnosis'}
                 </Button>

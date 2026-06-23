@@ -67,6 +67,19 @@ const { mockGetIncidentBundle } = vi.hoisted(() => {
 vi.mock('../api/client', () => ({
   getIncidentBundle: mockGetIncidentBundle,
   collectIncidentEvidence: vi.fn().mockResolvedValue({ collected: 3, message: 'ok' }),
+  analyzeIncidentRca: vi.fn().mockResolvedValue({
+    id: 'rca_2',
+    incidentId: 'inc_1',
+    status: 'completed',
+    suspectedRootCause: 'CPU high',
+    confidence: 0.88,
+    summary: 'RCA result',
+    evidence: [],
+    matchedRules: ['CPU_API_HEALTH_COMBINED'],
+    evidenceRefs: ['evd_cpu'],
+    modelVersion: 'rules-v2-evidence',
+    createdAt: '2026-06-21T05:17:00Z',
+  }),
   runIncidentAiDiagnosis: vi.fn().mockResolvedValue({
     id: 'ai_2',
     incidentId: 'inc_1',
@@ -103,7 +116,7 @@ describe('IncidentDetailPage', () => {
     expect(screen.getAllByText('critical')).toHaveLength(2)
   })
 
-  it('shows action buttons after loading', async () => {
+  it('shows all four action buttons after loading', async () => {
     renderWithRouter(
       <Routes>
         <Route path="/incidents/:incidentId" element={<IncidentDetailPage />} />
@@ -112,6 +125,7 @@ describe('IncidentDetailPage', () => {
     )
     expect(await screen.findByRole('heading', { level: 2 })).toHaveTextContent('Memory-Warning-002')
     expect(screen.getByRole('button', { name: 'Collect Evidence' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Run RCA' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Run AI Diagnosis' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Generate Report' })).toBeInTheDocument()
   })

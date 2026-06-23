@@ -157,6 +157,8 @@ export type RcaAnalysisResponse = {
   confidence: number
   summary: string
   evidence: RcaEvidence[]
+  matchedRules?: string[]
+  evidenceRefs?: string[]
   modelVersion: string
   createdAt: string
 }
@@ -338,8 +340,16 @@ export type DiagnosisEvidenceRecord = {
 }
 
 export type EvidenceCollectResponse = {
-  collected: number
-  message: string
+  incidentId?: string
+  itemsMatched?: number
+  historyPoints?: number
+  trendPoints?: number
+  events?: number
+  triggers?: number
+  evidenceCreated?: number
+  evidenceUpdated?: number
+  collected?: number
+  message?: string
 }
 
 // --- Z8: Incident report types ---
@@ -362,6 +372,7 @@ export type IncidentReportRecord = {
 export type IncidentDetailBundle = {
   incident: IncidentRecord
   alerts: IncidentAlertRecord[]
+  timeline: IncidentTimelineRecord[]
   evidence: DiagnosisEvidenceRecord[]
   rca?: RcaAnalysisResponse | null
   aiDiagnosis?: AiDiagnosisResponse | null
@@ -369,10 +380,6 @@ export type IncidentDetailBundle = {
 }
 
 // --- Z8: API functions ---
-
-export function listIncidentAlerts(incidentId: string) {
-  return apiRequest<IncidentAlertRecord[]>(`/api/incidents/${incidentId}/alerts`)
-}
 
 export function listIncidentEvidence(incidentId: string) {
   return apiRequest<DiagnosisEvidenceRecord[]>(`/api/incidents/${incidentId}/evidence`)
@@ -411,13 +418,20 @@ export function generateReport(incidentId: string) {
 }
 
 export async function getIncidentBundle(incidentId: string): Promise<IncidentDetailBundle> {
-  const [incident, alerts, evidence, rca, aiDiagnosis, report] = await Promise.all([
-    apiRequest<IncidentRecord>(`/api/incidents/${incidentId}`),
-    listIncidentAlerts(incidentId).catch(() => []),
+  const [detail, evidence, rca, aiDiagnosis, report] = await Promise.all([
+    getIncident(incidentId),
     listIncidentEvidence(incidentId).catch(() => []),
     getLatestIncidentRca(incidentId).catch(() => null),
     getIncidentAiDiagnosis(incidentId).catch(() => null),
     getLatestReport(incidentId).catch(() => null),
   ])
-  return { incident, alerts, evidence, rca, aiDiagnosis, report }
+  return {
+    incident: detail.incident,
+    alerts: detail.alerts ?? [],
+    timeline: detail.timeline ?? [],
+    evidence,
+    rca,
+    aiDiagnosis,
+    report,
+  }
 }

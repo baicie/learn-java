@@ -68,42 +68,56 @@ describe('aiopsApi Z8 endpoints', () => {
     )
   })
 
-  it('calls getIncidentBundle and parallelizes requests', async () => {
-    const mockIncident = {
+  it('calls getIncidentBundle and unwraps IncidentDetailRecord', async () => {
+    const mockIncidentDetail = {
       data: {
-        id: 'inc_1',
-        title: 'Test',
-        severity: 'high',
-        status: 'open',
-        source: 'zabbix',
-        alertCount: 1,
-        createdAt: '',
-        updatedAt: '',
-        tenantId: '',
+        incident: {
+          id: 'inc_1',
+          title: 'Test',
+          severity: 'high',
+          status: 'open',
+          source: 'zabbix',
+          alertCount: 1,
+          createdAt: '',
+          updatedAt: '',
+          tenantId: '',
+        },
+        alerts: [
+          {
+            id: 'alert_1',
+            source: 'zabbix',
+            severity: 'high',
+            title: 'CPU High',
+            status: 'open',
+            fingerprint: 'fp1',
+            startsAt: '',
+            relationType: 'primary',
+          },
+        ],
+        timeline: [],
       },
       success: true,
       timestamp: new Date().toISOString(),
     }
-    const mockAlerts = {
-      data: [],
-      success: true,
-      timestamp: new Date().toISOString(),
-    }
+
     const mockEvidence = {
       data: [],
       success: true,
       timestamp: new Date().toISOString(),
     }
+
     const mockRca = {
       data: null,
       success: true,
       timestamp: new Date().toISOString(),
     }
+
     const mockAi = {
       data: null,
       success: true,
       timestamp: new Date().toISOString(),
     }
+
     const mockReport = {
       data: null,
       success: true,
@@ -113,7 +127,7 @@ describe('aiopsApi Z8 endpoints', () => {
     let callCount = 0
     vi.spyOn(globalThis, 'fetch').mockImplementation(() => {
       callCount++
-      const responses = [mockIncident, mockAlerts, mockEvidence, mockRca, mockAi, mockReport]
+      const responses = [mockIncidentDetail, mockEvidence, mockRca, mockAi, mockReport]
       const idx = Math.min(callCount - 1, responses.length - 1)
       return Promise.resolve(
         new Response(JSON.stringify(responses[idx]), {
@@ -127,7 +141,9 @@ describe('aiopsApi Z8 endpoints', () => {
     const result = await getIncidentBundle('inc_1')
 
     expect(result.incident.id).toBe('inc_1')
-    expect(result.alerts).toBeDefined()
-    expect(result.evidence).toBeDefined()
+    expect(result.incident.title).toBe('Test')
+    expect(result.alerts).toHaveLength(1)
+    expect(result.timeline).toEqual([])
+    expect(result.evidence).toEqual([])
   })
 })
