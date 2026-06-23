@@ -302,6 +302,10 @@ export type AiDiagnosisResponse = {
   nextSteps: string[]
   runbookSuggestions: string[]
   risks: string[]
+  matchedRules?: string[]
+  evidenceRefs?: string[]
+  timeline?: Array<Record<string, unknown>>
+  raw?: Record<string, unknown>
   createdAt: string
 }
 
@@ -314,4 +318,106 @@ export function diagnoseIncidentAi(id: string, force = true) {
 
 export function getLatestIncidentAiDiagnosis(id: string) {
   return apiRequest<AiDiagnosisResponse>(`/api/incidents/${id}/ai/latest`)
+}
+
+// --- Z8: Evidence types ---
+
+export type DiagnosisEvidenceRecord = {
+  id: string
+  incidentId?: string
+  evidenceKey: string
+  source?: string
+  evidenceType: string
+  title?: string
+  summary?: string
+  timeRangeStart?: string
+  timeRangeEnd?: string
+  confidence?: number
+  payloadJson?: string
+  createdAt?: string
+}
+
+export type EvidenceCollectResponse = {
+  collected: number
+  message: string
+}
+
+// --- Z8: Incident report types ---
+
+export type IncidentReportRecord = {
+  id: string
+  incidentId: string
+  versionNo: number
+  reportType?: string
+  format?: string
+  title?: string
+  markdownContent: string
+  snapshotJson?: string
+  createdBy?: string
+  createdAt?: string
+  updatedAt?: string
+}
+
+// --- Z8: Incident detail bundle ---
+export type IncidentDetailBundle = {
+  incident: IncidentRecord
+  alerts: IncidentAlertRecord[]
+  evidence: DiagnosisEvidenceRecord[]
+  rca?: RcaAnalysisResponse | null
+  aiDiagnosis?: AiDiagnosisResponse | null
+  report?: IncidentReportRecord | null
+}
+
+// --- Z8: API functions ---
+
+export function listIncidentAlerts(incidentId: string) {
+  return apiRequest<IncidentAlertRecord[]>(`/api/incidents/${incidentId}/alerts`)
+}
+
+export function listIncidentEvidence(incidentId: string) {
+  return apiRequest<DiagnosisEvidenceRecord[]>(`/api/incidents/${incidentId}/evidence`)
+}
+
+export function collectIncidentEvidence(incidentId: string) {
+  return apiRequest<EvidenceCollectResponse>(
+    `/api/incidents/${incidentId}/evidence/zabbix/collect`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ lookbackMinutes: 30 }),
+    },
+  )
+}
+
+export function getIncidentAiDiagnosis(incidentId: string) {
+  return apiRequest<AiDiagnosisResponse>(`/api/incidents/${incidentId}/ai/latest`)
+}
+
+export function runIncidentAiDiagnosis(incidentId: string, force = true) {
+  return apiRequest<AiDiagnosisResponse>(`/api/incidents/${incidentId}/ai/diagnose`, {
+    method: 'POST',
+    body: JSON.stringify({ force, locale: 'zh-CN' }),
+  })
+}
+
+export function getLatestReport(incidentId: string) {
+  return apiRequest<IncidentReportRecord>(`/api/incidents/${incidentId}/reports/latest`)
+}
+
+export function generateReport(incidentId: string) {
+  return apiRequest<IncidentReportRecord>(`/api/incidents/${incidentId}/reports`, {
+    method: 'POST',
+    body: JSON.stringify({ force: true, locale: 'zh-CN', createdBy: 'frontend' }),
+  })
+}
+
+export async function getIncidentBundle(incidentId: string): Promise<IncidentDetailBundle> {
+  const [incident, alerts, evidence, rca, aiDiagnosis, report] = await Promise.all([
+    apiRequest<IncidentRecord>(`/api/incidents/${incidentId}`),
+    listIncidentAlerts(incidentId).catch(() => []),
+    listIncidentEvidence(incidentId).catch(() => []),
+    getLatestIncidentRca(incidentId).catch(() => null),
+    getIncidentAiDiagnosis(incidentId).catch(() => null),
+    getLatestReport(incidentId).catch(() => null),
+  ])
+  return { incident, alerts, evidence, rca, aiDiagnosis, report }
 }
