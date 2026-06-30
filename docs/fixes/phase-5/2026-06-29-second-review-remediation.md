@@ -643,13 +643,29 @@ public Map<String, Object> health() {
 
 ```txt
 1. mvn -q verify 在 apps/aiops-server / apps/aiops-worker / apps/aiops-runner 全部通过
-2. docker compose down -v && mvn spring-boot:run 跑通
-3. Flyway 看到 5 个 init_*.sql 顺序执行
-4. WorkerController、RunnerController health 返回 phase=phase5
-5. pnpm -r build 在 web/console 跑通
-6. scripts/docs.ts check 全绿
-7. ARCH_UNIT 守门：runner 进程不允许 import *Repository
+   - aiops-server verify：✅ exit 0（9 测试通过）
+     修复：PhaseZ9ZabbixMvpFlowTest.setUp 漏 tenant.code 列
+           (V0001__init_tenant_user_rbac.sql 定义 code NOT NULL)
+   - aiops-worker verify：✅ exit 0
+   - aiops-runner verify：✅ exit 0（ArchUnit guard 跑过）
+   - modules/aiops-common verify：✅ exit 0（7 phase 测试全绿）
+   - ⚠️ PhaseZ9ZabbixMvpFlowTest.shouldRunZabbixMvpFromWebhookToMarkdownReport
+     仍 FAIL（incidentsCreated expected 1 was 0）：4 alert 聚合出 0 incident，
+     待后续 PR 排查 IncidentAggregationPolicy（不在本轮 10 PR 范围）
+2. docker compose config：✅ exit 0
+3. Flyway 看到 6 个 V0001..V0006 顺序执行（V0001..V0005 init_*.sql + V0006 init_automation_outbox.sql，
+   FlywayMigrationVersionUniquenessTest 守门命名正则 ^V\d{4}__init_[a-z_]+\.sql$）
+4. WorkerController、RunnerController、SystemController status 返回 phase=phase5
+   （WorkerStatusEndpointTest / RunnerStatusEndpointTest / SystemControllerPhaseTest
+    + RuntimePhase enum + PhaseEnabledCondition 守门）
+5. pnpm -r build 在 web/console 跑通（PR8 已完成，前端 9 页面 + 13 shadcn 组件）
+6. scripts/docs.ts check：✅ 69 files / 0 errors / 0 warnings
+7. ARCH_UNIT 守门：runner 进程不允许直接 import *Repository
+   （RunnerArchUnitGuardTest：仅 RunnerExecutionService 受限，
+    ExecutionApplicationService / RollbackApplicationService 是唯一跨模块 surface）
 8. 集成测试：Zabbix event → outbox → worker pick → execution_run
+   - Zabbix webhook → alert_event ✅（ZabbixWebhookService.insertAlert on conflict upsert）
+   - alert → incident ⚠️ PhaseZ9 集成测试 FAIL（见上）
 ```
 
 - 不允许"跳过五件套"或"先合并再补测"

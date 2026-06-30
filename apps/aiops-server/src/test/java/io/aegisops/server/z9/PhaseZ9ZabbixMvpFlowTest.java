@@ -385,8 +385,8 @@ class PhaseZ9ZabbixMvpFlowTest {
   private void seedTenantAndDatasource() {
     jdbc.update(
         """
-        insert into tenant(id, name, status, created_at, updated_at)
-        values (?, 'Phase Z9 Tenant', 'active', now(), now())
+        insert into tenant(id, code, name, status, created_at, updated_at)
+        values (?, 'tenant_z9', 'Phase Z9 Tenant', 'active', now(), now())
         on conflict (id) do nothing
         """,
         TENANT_ID);
