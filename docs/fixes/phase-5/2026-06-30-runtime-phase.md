@@ -103,9 +103,11 @@ aiops-server / aiops-worker / aiops-runner 全部 SUCCESS
 
 ## 后续动作（不在本 PR 范围）
 
-1. `aiops-integration` 模块的 `ZabbixWebhookMapperTest` 编译错误——pre-existing，
-   与本 PR 无关，应在 PR3 / PR4 范围内修复。
-2. `@ConditionalOnProperty(prefix = "aiops.runtime", name = "phase")` 门控接入——
+1. `@ConditionalOnProperty(prefix = "aiops.runtime", name = "phase")` 门控接入——
    随 Phase 6 落地，本 PR 仅约定 phase 来源。
-3. 三 app 的 controller 单元测试——本 PR 不引入 test 依赖扩张，需要更克制地选择何时引入
+2. 三 app 的 controller 单元测试——本 PR 不引入 test 依赖扩张，需要更克制地选择何时引入
    `spring-boot-starter-test` 到 aiops-worker / aiops-runner。
+3. 2026-06-30 09:21 复核：上一版本文件误判 aiops-integration 模块存在
+   ZabbixWebhook 测试编译错误，实际原因为 aiops-common 改动后 stale build
+   artifact 导致 surefire 跑旧字节码。`mvn clean test` 后 14/14 PASS，
+   全仓库 26 模块 BUILD SUCCESS。后续遇到类似错误先 `mvn clean` 验证。
