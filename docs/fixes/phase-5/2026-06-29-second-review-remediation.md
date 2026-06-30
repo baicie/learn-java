@@ -508,18 +508,22 @@ public Map<String, Object> health() {
 ### 修复方案
 
 ```txt
-1. 写 ADR 0003-aiops-agent-boundary.md：
-   - aiops-agent 是 LLM 本地推理 sidecar（Ollama / vLLM 兼容）
-   - 边界：仅通过 HTTP 暴露 OpenAI 兼容 chat/embeddings 接口
-   - 不直接访问 PostgreSQL / MinIO
-   - 部署：与 aiops-server 1:1 部署在 K8s 同一个 Pod 内
-2. 在 docker-compose.yml 增加 aiops-agent 服务（profile=ai-local）
-3. 在 AGENTS §3.2 注释中说明 aiops-agent 的存在与边界
+1. 写 ADR 0003-aiops-agent-boundary.md（已改为纯文档，无 schema/接口/安全/跨 app 改动 → L1）：
+   - 校正：aiops-agent 不是「Ollama/vLLM 本地推理 sidecar」（§10 原文为错误描述）
+   - 实际：Python FastAPI + LangGraph 多 Agent 协作运行时，依赖外部 LLM（OpenAI/Azure/OpenAI-compatible）
+   - 边界：仅通过 HTTP + internal token 与 aiops-server 通信，不直接访问 PostgreSQL/MinIO/ClickHouse
+   - 部署：docker-compose（profile=ai，port 9008）+ Helm（port 8000，replica=1）
+   - 决策：保留 Python 栈 / 不直接访问主库 / contract version 稳定性 / 不参与调度执行
+2. 同步更新 §12 表格 PR9 状态
 ```
 
 ### 状态
 
-- **PR9 待办**
+- **PR9 已完成（ADR 0003 落地）**
+  - `docs/adr/0003-aiops-agent-boundary.md` 写入，含 4 项决策 + 事实核查
+  - 显式标注 §10 修复方案「Ollama/vLLM sidecar」为错误描述，基于代码更正
+  - ADR 与 SKILL §10 互补（SKILL 管行为规范，本 ADR 管部署边界）
+  - PR9 为 L1（纯文档，无 schema/接口/安全/跨 app 改动）
 
 ---
 
@@ -559,7 +563,7 @@ public Map<String, Object> health() {
 | PR6       | demo-order-service ADR + profile                                  | 2 小时   | 无                                               | **已完成（ADR + Spring profile + Maven profile）**                        |
 | PR7       | docs 收敛 + roadmap 指向 SKILL.md                                 | 半天     | PR6（共享 ADR 目录）                             | **已完成（6 个事实源 + 53 个 frontmatter + check 全绿）**                 |
 | PR8       | web/console Phase A（最小骨架）                                   | 2~3 天   | 无（独立仓库或子目录）                           | **已完成（9 页面 + 13 shadcn 组件 + 14 测试全绿 + tsbuildinfo untrack）** |
-| PR9       | aiops-agent ADR                                                   | 1 小时   | 无                                               | 待办                                                                      |
+| PR9       | aiops-agent ADR                                                   | 1 小时   | 无                                               | **已完成（L1 纯文档，ADR 0003 + 校正 §10 错误描述）**                     |
 | PR10      | scripts 拆分                                                      | 1 小时   | 无                                               | 待办                                                                      |
 
 ## 13. 推进纪律
@@ -605,7 +609,7 @@ public Map<String, Object> health() {
 | demo-order-service 不在三 app 列表                    | §7         | P1     | **PR6 已完成（ADR 0002 + profile 守门）**            |
 | 缺 web/console                                        | §8         | P1     | **PR8 已完成（9 页面 + 13 shadcn 组件 + 五件套绿）** |
 | 文档分散                                              | §9         | P1     | **PR7 已完成（6 个事实源 + check 全绿）**            |
-| aiops-agent 未声明                                    | §10        | P2     | PR9                                                  |
+| aiops-agent 未声明                                    | §10        | P2     | **PR9 已完成（L1 纯文档 ADR，校正 §10 错误描述）**   |
 | scripts 职责混淆                                      | §11        | P2     | PR10                                                 |
 
 ## 15. 验收

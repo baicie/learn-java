@@ -36,17 +36,17 @@ related:
 
 ## 2. 当前 PR 推进位次（PR-mega-1）
 
-| PR  | 主题                                  | 等级  | 状态                |
-| --- | ------------------------------------- | ----- | ------------------- |
-| PR1 | JooqPersistenceConfiguration          | L2    | 已完成              |
-| PR2 | Flyway clean-slate schema             | L3    | 已完成              |
-| PR3 | Outbox 派单表 + worker 骨架           | L3    | 已完成（PR5）       |
-| PR4 | ArchUnit 守门                         | L2    | 已完成              |
-| PR5 | Worker full skeleton + dispatch chain | L3    | 已完成              |
-| PR6 | demo-order ADR + profile              | L1+L2 | 已完成              |
-| PR7 | 文档治理加固                          | L1    | **进行中**（本 PR） |
-| PR8 | web/console React 骨架                | L1    | 待办                |
-| PR9 | aiops-agent 边界 ADR                  | L2    | 待办                |
+| PR  | 主题                                  | 等级  | 状态          |
+| --- | ------------------------------------- | ----- | ------------- |
+| PR1 | JooqPersistenceConfiguration          | L2    | 已完成        |
+| PR2 | Flyway clean-slate schema             | L3    | 已完成        |
+| PR3 | Outbox 派单表 + worker 骨架           | L3    | 已完成（PR5） |
+| PR4 | ArchUnit 守门                         | L2    | 已完成        |
+| PR5 | Worker full skeleton + dispatch chain | L3    | 已完成        |
+| PR6 | demo-order ADR + profile              | L1+L2 | 已完成        |
+| PR7 | 文档治理加固                          | L1    | 已完成        |
+| PR8 | web/console React 骨架                | L1    | **已完成**    |
+| PR9 | aiops-agent 边界 ADR                  | L1    | **已完成**    |
 
 完整 PR 计划见 `docs/fixes/phase-5/2026-06-29-second-review-remediation.md`。
 
