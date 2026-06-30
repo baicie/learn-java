@@ -643,15 +643,13 @@ public Map<String, Object> health() {
 
 ```txt
 1. mvn -q verify 在 apps/aiops-server / apps/aiops-worker / apps/aiops-runner 全部通过
-   - aiops-server verify：✅ exit 0（9 测试通过）
-     修复：PhaseZ9ZabbixMvpFlowTest.setUp 漏 tenant.code 列
-           (V0001__init_tenant_user_rbac.sql 定义 code NOT NULL)
+   - aiops-server verify：✅ exit 0（10 测试全绿，含 PhaseZ9ZabbixMvpFlowTest）
+     bug 修复：将测试 fixture 的硬编码 2026-06-21 时间改为相对 t0=Instant.now() 的偏移
+     （根因：findOpenAlertCandidates 用 starts_at >= now-1440min 过滤，硬编码时间
+      2026-06-21 与 2026-07-01 测试日相差 9 天，告警从未被候选扫描到；incident=0）
    - aiops-worker verify：✅ exit 0
    - aiops-runner verify：✅ exit 0（ArchUnit guard 跑过）
    - modules/aiops-common verify：✅ exit 0（7 phase 测试全绿）
-   - ⚠️ PhaseZ9ZabbixMvpFlowTest.shouldRunZabbixMvpFromWebhookToMarkdownReport
-     仍 FAIL（incidentsCreated expected 1 was 0）：4 alert 聚合出 0 incident，
-     待后续 PR 排查 IncidentAggregationPolicy（不在本轮 10 PR 范围）
 2. docker compose config：✅ exit 0
 3. Flyway 看到 6 个 V0001..V0006 顺序执行（V0001..V0005 init_*.sql + V0006 init_automation_outbox.sql，
    FlywayMigrationVersionUniquenessTest 守门命名正则 ^V\d{4}__init_[a-z_]+\.sql$）
@@ -665,7 +663,8 @@ public Map<String, Object> health() {
     ExecutionApplicationService / RollbackApplicationService 是唯一跨模块 surface）
 8. 集成测试：Zabbix event → outbox → worker pick → execution_run
    - Zabbix webhook → alert_event ✅（ZabbixWebhookService.insertAlert on conflict upsert）
-   - alert → incident ⚠️ PhaseZ9 集成测试 FAIL（见上）
+   - alert → incident ✅ PhaseZ9ZabbixMvpFlowTest 端到端绿（webhook ingest → 4 alert
+     聚 1 incident → evidence collect → RCA analyze → AI diagnose → markdown report）
 ```
 
 - 不允许"跳过五件套"或"先合并再补测"

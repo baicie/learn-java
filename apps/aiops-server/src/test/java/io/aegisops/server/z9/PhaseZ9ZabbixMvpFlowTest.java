@@ -56,6 +56,13 @@ class PhaseZ9ZabbixMvpFlowTest {
   private static final String TENANT_ID = "tenant_z9";
   private static final String DATASOURCE_ID = "ds_zabbix_z9";
 
+  /**
+   * Test-time anchor for all {@code startsAt} / zabbix history clock values. Captured once per
+   * {@code @BeforeEach} so the {@code aggregateOpenAlerts(since=now-1440min)} query window picks up
+   * the seeded alerts regardless of when the test happens to run.
+   */
+  private Instant t0;
+
   @Container
   static PostgreSQLContainer<?> postgres =
       new PostgreSQLContainer<>("postgres:16-alpine")
@@ -81,6 +88,7 @@ class PhaseZ9ZabbixMvpFlowTest {
 
   @BeforeEach
   void setUp() {
+    t0 = Instant.now();
     TenantContext.setTenantId(TENANT_ID);
 
     when(tokenVerifier.verify(any())).thenReturn(true);
@@ -111,6 +119,8 @@ class PhaseZ9ZabbixMvpFlowTest {
                     List.of("10084"),
                     Map.of("service", "order-service", "env", "demo"),
                     Map.of())));
+    // Anchor a second event fixture to t0 so the aggregate window picks it up regardless of run
+    // date.
     when(zabbixClient.getTriggers(any()))
         .thenReturn(
             List.of(
@@ -289,7 +299,7 @@ class PhaseZ9ZabbixMvpFlowTest {
     payload.put("env", "demo");
     payload.put("service", "order-service");
     payload.put("endpoint", "/api/order/create");
-    payload.put("startsAt", "2026-06-21T05:10:00Z");
+    payload.put("startsAt", t0.minusSeconds(60).toString());
     payload.put("tags", Map.of("service", "order-service", "env", "demo"));
 
     mvc.perform(
@@ -308,26 +318,25 @@ class PhaseZ9ZabbixMvpFlowTest {
 
       if ("item_cpu".equals(itemId)) {
         return List.of(
-            point(itemId, "20", "2026-06-21T05:00:00Z"),
-            point(itemId, "95", "2026-06-21T05:10:00Z"),
-            point(itemId, "96", "2026-06-21T05:20:00Z"));
+            point(itemId, "20", t0.minusSeconds(1200)),
+            point(itemId, "95", t0.minusSeconds(60)),
+            point(itemId, "96", t0.plusSeconds(600)));
       }
 
       if ("item_api".equals(itemId)) {
         return List.of(
-            point(itemId, "0.12", "2026-06-21T05:00:00Z"),
-            point(itemId, "2.5", "2026-06-21T05:10:00Z"));
+            point(itemId, "0.12", t0.minusSeconds(1200)),
+            point(itemId, "2.5", t0.minusSeconds(60)));
       }
 
       if ("item_health".equals(itemId)) {
         return List.of(
-            point(itemId, "1", "2026-06-21T05:00:00Z"), point(itemId, "0", "2026-06-21T05:10:00Z"));
+            point(itemId, "1", t0.minusSeconds(1200)), point(itemId, "0", t0.minusSeconds(60)));
       }
 
       if ("item_error".equals(itemId)) {
         return List.of(
-            point(itemId, "0", "2026-06-21T05:00:00Z"),
-            point(itemId, "12", "2026-06-21T05:10:00Z"));
+            point(itemId, "0", t0.minusSeconds(1200)), point(itemId, "12", t0.minusSeconds(60)));
       }
 
       return List.of();
@@ -348,8 +357,8 @@ class PhaseZ9ZabbixMvpFlowTest {
         Map.of());
   }
 
-  private ZabbixHistoryPoint point(String itemId, String value, String clock) {
-    return new ZabbixHistoryPoint(itemId, 0, Instant.parse(clock), value, Map.of("value", value));
+  private ZabbixHistoryPoint point(String itemId, String value, Instant clock) {
+    return new ZabbixHistoryPoint(itemId, 0, clock, value, Map.of("value", value));
   }
 
   private AgentDiagnosisResponse aiResponse(AgentDiagnosisRequest req) {
