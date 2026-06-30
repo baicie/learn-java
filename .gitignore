@@ -21,3 +21,9 @@ __pycache__/
 *.egg-info/
 .venv/
 .pytest_cache/
+
+# Infra secrets & env files (must NEVER be committed)
+infra/.env
+infra/.env.*
+deploy/**/.env
+deploy/**/.env.*
