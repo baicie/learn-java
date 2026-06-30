@@ -1,11 +1,12 @@
 package io.aegisops.worker;
 
 import io.aegisops.common.runtime.RuntimeProperties;
+import io.aegisops.worker.outbox.OutboxProperties;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 
-@EnableConfigurationProperties(RuntimeProperties.class)
+@EnableConfigurationProperties({RuntimeProperties.class, OutboxProperties.class})
 @SpringBootApplication(scanBasePackages = "io.aegisops")
 public class AiOpsWorkerApplication {
   public static void main(String[] args) {

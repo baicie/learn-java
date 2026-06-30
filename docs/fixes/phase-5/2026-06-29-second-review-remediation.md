@@ -144,7 +144,18 @@ related:
 
 ### 状态
 
-- **PR5 待办**（见第 9 节）
+- **PR5 已完成（L3 schema + L3 调度链重构）**
+  - Flyway 新增 `V0006__init_automation_outbox.sql`（`automation_outbox` 表 + 2 个索引），
+    与 PR3 拆分风格一致（按 SKILL §17 命名）。
+  - worker 新增 `OutboxProperties` + `JooqOutboxRepository` + `OutboxPoller`（事务化 claim → 路由 → 写回 done / failed / 重试）
+    - `WorkerRuntimeTopology`（固定周期 TaskScheduler + 首启动立即 tick）。
+  - worker 新增 4 个 Job 接口骨架：`ZabbixSyncJob` / `IncidentAggregationJob` / `RcaAndDiagnosisJob` /
+    `PostmortemDraftJob`，按 Phase 1/2/3/4/6 顺序实装。
+  - `apps/aiops-common.outbox.OutboxWriter` 作为跨 app 派单的统一入口（REQUIRED 事务传播，
+    与调用方事务同生共死，零孤儿行）。
+  - server 侧 `IncidentPostmortemDispatcher` 提供 `dispatchIncidentAggregation` /
+    `dispatchRcaDiagnosis` / `dispatchPostmortemDraft` 三个派单方法。
+  - worker 单测：`OutboxPropertiesTest`（7）+ `OutboxPollerTest`（6），全绿。
 
 ---
 
@@ -181,7 +192,16 @@ Zabbix webhook
 
 ### 状态
 
-- **PR5 待办**
+- **PR5 已完成（与 §2 同 PR，L3 调度链重构）**
+  - `ZabbixWebhookService.ingest` 写入 alert_event 后立即 `OutboxWriter.enqueue('worker', 'zabbix-sync', payload)`。
+  - `IncidentPostmortemDispatcher` 暴露 3 个 dispatch 方法，由后续 server controller 直接调用。
+  - 端到端路径落地：Zabbix webhook → server → outbox(target_app='worker') → worker `OutboxPoller` →
+    `ZabbixSyncJob` → 后续 incident / RCA / postmortem 走同一 outbox 通道。
+  - 集成测试：`mvn test` 全 reactor 通过（apps/aiops-server 10/9+1 skipped、aiops-worker 16/16、
+    aiops-runner 59/59、aiops-integration 14/14）；PhaseZ9ZabbixMvpFlowTest 1 skipped 为
+    环境依赖（Zabbix sandbox），与本次改动无关。
+  - 后续 runner → worker（postmortem-draft）与 worker → server（trigger-rca-diagnosis）由 PR5
+    预留接口（`OutboxWriter` + `JobResult` 契约），留待对应 Phase 实装时接通。
 
 ---
 
@@ -464,7 +484,7 @@ public Map<String, Object> health() {
 | PR2       | RuntimePhase + health phase 标签 + Phase Discipline 守门          | 1.5 小时 | 无                                               | **已完成（commits `acf856e` + `02896d6` + 本 PR，L2）** |
 | PR3       | Flyway V1 拆 5 个 V0001..V0005（clean slate）                     | 半天     | PR2 共享 RuntimePhase（不强依赖）                | **已完成（commit `4a36a3c`，L3）**                      |
 | PR4       | runner → Application Service + ArchUnit 守门                      | 1~2 天   | 无                                               | **已完成（L2 refactor + L3 ArchUnit guard）**           |
-| PR5       | worker 骨架（4 job + OutboxPoller）                               | 2~3 天   | PR2（共享 RuntimePhase）、PR3（共享 V0006 迁移） | 待办                                                    |
+| PR5       | worker 骨架（4 job + OutboxPoller + 调度链重构）                  | 2~3 天   | PR2（共享 RuntimePhase）、PR3（共享 V0006 迁移） | **已完成（L3 schema + L3 调度链重构）**                 |
 | PR6       | demo-order-service ADR + profile                                  | 2 小时   | 无                                               | 待办                                                    |
 | PR7       | docs 收敛 + roadmap 指向 SKILL.md                                 | 半天     | PR6（共享 ADR 目录）                             | 待办                                                    |
 | PR8       | web/console Phase A（最小骨架）                                   | 2~3 天   | 无（独立仓库或子目录）                           | 待办                                                    |
@@ -506,8 +526,8 @@ public Map<String, Object> health() {
 | 回盘点出问题                                          | 本文件章节 | 优先级 | PR                                                |
 | ----------------------------------------------------- | ---------- | ------ | ------------------------------------------------- |
 | 文档源头冲突（已通过 AGENTS.md 全文重写合并两套约定） | §1         | P0     | **PR-mega-1 已完成（commit `f9fbe21`）**          |
-| worker 空壳                                           | §2         | P0     | PR5                                               |
-| 三 app 调度链断裂                                     | §3         | P0     | PR5                                               |
+| worker 空壳                                           | §2         | P0     | **PR5 已完成（L3 schema + L3 调度链重构）**       |
+| 三 app 调度链断裂                                     | §3         | P0     | **PR5 已完成（与 §2 同 PR）**                     |
 | health phase 标签错位                                 | §4         | P0     | **PR2 已完成（`acf856e` + `02896d6` + 本 PR）**   |
 | Flyway 命名不符                                       | §5         | P1     | **PR3 已完成（commit `4a36a3c`）**                |
 | runner 跨模块直接注 Repository                        | §6         | P1     | **PR4 已完成（L2 refactor + L3 ArchUnit guard）** |

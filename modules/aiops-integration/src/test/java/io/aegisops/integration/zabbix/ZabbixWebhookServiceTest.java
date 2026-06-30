@@ -15,12 +15,15 @@ class ZabbixWebhookServiceTest {
   @Test
   void shouldRejectInvalidTokenBeforeDatabaseAccess() {
     JdbcTemplate jdbc = org.mockito.Mockito.mock(JdbcTemplate.class);
+    io.aegisops.common.outbox.OutboxWriter outboxWriter =
+        org.mockito.Mockito.mock(io.aegisops.common.outbox.OutboxWriter.class);
     ZabbixWebhookService service =
         new ZabbixWebhookService(
             jdbc,
             new ObjectMapper(),
             new ZabbixWebhookTokenVerifier(new ZabbixWebhookProperties("secret")),
-            new ZabbixWebhookMapper());
+            new ZabbixWebhookMapper(),
+            outboxWriter);
 
     ZabbixWebhookPayload payload =
         new ZabbixWebhookPayload(

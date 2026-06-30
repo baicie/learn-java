@@ -1,6 +1,12 @@
 spring:
   application:
     name: aiops-worker
+  datasource:
+    url: ${AIOPS_DB_URL:jdbc:postgresql://localhost:5432/aegisops}
+    username: ${AIOPS_DB_USER:aegisops}
+    password: ${AIOPS_DB_PASSWORD:aegisops}
+  jooq:
+    sql-dialect: postgres
 server:
   port: ${AIOPS_WORKER_PORT:8081}
 management:
@@ -30,3 +36,8 @@ aiops:
     http-metrics-enabled: ${AIOPS_HTTP_METRICS_ENABLED:true}
   runtime:
     phase: ${AIOPS_RUNTIME_PHASE:phase5}
+  outbox:
+    enabled: ${AIOPS_OUTBOX_ENABLED:true}
+    poll-delay-ms: ${AIOPS_OUTBOX_POLL_MS:5000}
+    batch-size: ${AIOPS_OUTBOX_BATCH:10}
+    target-app: ${AIOPS_OUTBOX_TARGET_APP:worker}

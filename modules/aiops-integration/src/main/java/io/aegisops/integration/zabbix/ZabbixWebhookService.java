@@ -3,7 +3,10 @@ package io.aegisops.integration.zabbix;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.aegisops.common.exception.AppException;
+import io.aegisops.common.outbox.OutboxWriter;
 import io.aegisops.datasource.zabbix.ZabbixExternalIds;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.UUID;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -11,20 +14,26 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class ZabbixWebhookService {
+  private static final String OUTBOX_TARGET_APP = "worker";
+  private static final String OUTBOX_JOB_NAME = "zabbix-sync";
+
   private final JdbcTemplate jdbc;
   private final ObjectMapper objectMapper;
   private final ZabbixWebhookTokenVerifier tokenVerifier;
   private final ZabbixWebhookMapper mapper;
+  private final OutboxWriter outboxWriter;
 
   public ZabbixWebhookService(
       JdbcTemplate jdbc,
       ObjectMapper objectMapper,
       ZabbixWebhookTokenVerifier tokenVerifier,
-      ZabbixWebhookMapper mapper) {
+      ZabbixWebhookMapper mapper,
+      OutboxWriter outboxWriter) {
     this.jdbc = jdbc;
     this.objectMapper = objectMapper;
     this.tokenVerifier = tokenVerifier;
     this.mapper = mapper;
+    this.outboxWriter = outboxWriter;
   }
 
   public ZabbixWebhookIngestResponse ingest(
@@ -38,6 +47,24 @@ public class ZabbixWebhookService {
     String assetId = resolveAssetId(datasource.tenantId(), mapping);
 
     return upsertAlert(datasource, mapping, assetId);
+  }
+
+  /**
+   * Hands the freshly upserted alert off to the worker process via the {@code automation_outbox}
+   * table. The worker polls {@code target_app='worker'} and dispatches by {@code job_name}.
+   */
+  private void dispatchToWorker(
+      ZabbixWebhookIngestResponse response, ZabbixWebhookAlertMapping mapping) {
+    Map<String, Object> payload = new LinkedHashMap<>();
+    payload.put("alertId", response.alertId());
+    payload.put("datasourceId", response.datasourceId());
+    payload.put("tenantId", response.tenantId());
+    payload.put("sourceEventId", response.sourceEventId());
+    payload.put("status", response.status());
+    payload.put("created", response.created());
+    payload.put("severity", mapping.severity());
+    payload.put("assetExternalIds", mapping.hostIds());
+    outboxWriter.enqueue(OUTBOX_TARGET_APP, OUTBOX_JOB_NAME, payload);
   }
 
   private ZabbixWebhookIngestResponse upsertAlert(
@@ -88,14 +115,17 @@ public class ZabbixWebhookService {
             mapping.fingerprint(),
             mapping.aggregationKey());
 
-    return new ZabbixWebhookIngestResponse(
-        result.alertId(),
-        datasource.id(),
-        datasource.tenantId(),
-        mapping.sourceEventId(),
-        mapping.status(),
-        result.created(),
-        result.created() ? "Zabbix alert event created" : "Zabbix alert event updated");
+    ZabbixWebhookIngestResponse response =
+        new ZabbixWebhookIngestResponse(
+            result.alertId(),
+            datasource.id(),
+            datasource.tenantId(),
+            mapping.sourceEventId(),
+            mapping.status(),
+            result.created(),
+            result.created() ? "Zabbix alert event created" : "Zabbix alert event updated");
+    dispatchToWorker(response, mapping);
+    return response;
   }
 
   private DataSourceBinding getDatasourceBinding(String datasourceId) {
