@@ -354,7 +354,19 @@ public Map<String, Object> health() {
 
 ### 状态
 
-- **PR6 待办**
+- **PR6 已完成（ADR + Spring profile 守门 + Maven profile 划分）**
+  - ADR 0002（`docs/adr/0002-mvp-fourth-app-justification.md`）正式接受 demo-order-service
+    作为 Phase Z9 demo 期间的辅助应用，明确其**不进入 MVP 生产运行时拓扑**
+  - `apps/demo-order-service/.../DemoOrderServiceApplication` 启动时检测 active profile，
+    无 `demo` profile 时 `System.exit(1)` 并打印 ADR 索引路径
+  - `application.yml` 显式声明 `spring.profiles.active: none`（默认禁用），
+    `application-demo.yml` 声明 demo profile 真实端口、metrics、白名单
+  - 根 `pom.xml` 把 `apps/demo-order-service` 从默认 `<modules>` 移走，新增
+    `<profile id="demo">`（`activeByDefault=false`），需 `mvn verify -Pdemo` 显式启用
+  - demo-order 测试 3 个原测试加 `@ActiveProfiles("demo")` 守门；新增
+    `DemoOrderServiceApplicationProfileGuardTest`（6 个 case）覆盖静态守门方法
+  - demo-order 测试：20/20 全绿（profile guard 6 + fault 7 + order 5 + zabbix 2）
+  - 默认 reactor 25 modules；`-Pdemo` 26 modules（含 demo-order）
 
 ---
 
@@ -485,7 +497,7 @@ public Map<String, Object> health() {
 | PR3       | Flyway V1 拆 5 个 V0001..V0005（clean slate）                     | 半天     | PR2 共享 RuntimePhase（不强依赖）                | **已完成（commit `4a36a3c`，L3）**                      |
 | PR4       | runner → Application Service + ArchUnit 守门                      | 1~2 天   | 无                                               | **已完成（L2 refactor + L3 ArchUnit guard）**           |
 | PR5       | worker 骨架（4 job + OutboxPoller + 调度链重构）                  | 2~3 天   | PR2（共享 RuntimePhase）、PR3（共享 V0006 迁移） | **已完成（L3 schema + L3 调度链重构）**                 |
-| PR6       | demo-order-service ADR + profile                                  | 2 小时   | 无                                               | 待办                                                    |
+| PR6       | demo-order-service ADR + profile                                  | 2 小时   | 无                                               | **已完成（ADR + Spring profile + Maven profile）**      |
 | PR7       | docs 收敛 + roadmap 指向 SKILL.md                                 | 半天     | PR6（共享 ADR 目录）                             | 待办                                                    |
 | PR8       | web/console Phase A（最小骨架）                                   | 2~3 天   | 无（独立仓库或子目录）                           | 待办                                                    |
 | PR9       | aiops-agent ADR                                                   | 1 小时   | 无                                               | 待办                                                    |
@@ -531,7 +543,7 @@ public Map<String, Object> health() {
 | health phase 标签错位                                 | §4         | P0     | **PR2 已完成（`acf856e` + `02896d6` + 本 PR）**   |
 | Flyway 命名不符                                       | §5         | P1     | **PR3 已完成（commit `4a36a3c`）**                |
 | runner 跨模块直接注 Repository                        | §6         | P1     | **PR4 已完成（L2 refactor + L3 ArchUnit guard）** |
-| demo-order-service 不在三 app 列表                    | §7         | P1     | PR6                                               |
+| demo-order-service 不在三 app 列表                    | §7         | P1     | **PR6 已完成（ADR 0002 + profile 守门）**         |
 | 缺 web/console                                        | §8         | P1     | PR8                                               |
 | 文档分散                                              | §9         | P1     | PR7                                               |
 | aiops-agent 未声明                                    | §10        | P2     | PR9                                               |
