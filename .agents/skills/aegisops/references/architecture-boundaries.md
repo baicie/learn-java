@@ -7,6 +7,7 @@
 Delivers REST API and SSE streaming to the frontend.
 
 **Allowed to:**
+
 - expose HTTP endpoints
 - handle authentication and authorization
 - manage tenant, user, and role data
@@ -20,6 +21,7 @@ Delivers REST API and SSE streaming to the frontend.
 - push real-time updates via SSE
 
 **Forbidden to:**
+
 - execute shell commands directly
 - execute Ansible directly
 - execute SSH directly
@@ -33,6 +35,7 @@ Delivers REST API and SSE streaming to the frontend.
 Performs background ingestion, analysis, and orchestration.
 
 **Allowed to:**
+
 - poll Zabbix for hosts, triggers, problems, and events
 - normalize and deduplicate AlertEvents
 - aggregate AlertEvents into Incidents
@@ -46,6 +49,7 @@ Performs background ingestion, analysis, and orchestration.
 - write results back to PostgreSQL
 
 **Forbidden to:**
+
 - expose HTTP endpoints directly to the internet
 - execute Ansible or SSH
 - make direct user-facing API calls
@@ -57,6 +61,7 @@ Performs background ingestion, analysis, and orchestration.
 Executes automation jobs with isolation and safety.
 
 **Allowed to:**
+
 - execute Ansible playbooks
 - execute SSH commands
 - execute webhooks
@@ -66,38 +71,47 @@ Executes automation jobs with isolation and safety.
 - perform post-execution health checks
 
 **Forbidden to:**
+
 - expose any API endpoints
 - initiate connections to aiops-server for instructions
 - execute jobs without a valid AutomationJob record
 - execute jobs that are not in an approved state
+- inject `ExecutionRepository` or `RollbackRepository` directly; all cross-module writes to `io.aegisops.execution` must go through `io.aegisops.execution.service.ExecutionApplicationService` or `io.aegisops.execution.service.RollbackApplicationService` (ArchUnit guard: `RunnerArchUnitGuardTest`)
 
 ## Module Boundaries
 
 Each module under `modules/` has a defined public API surface.
 
-### adapters — aiops-*-adapter modules
+### adapters — aiops-\*-adapter modules
 
 All external system access goes through adapter modules. No business logic here.
 
 **Public interfaces only:**
+
 - `aiops-zabbix-adapter`: `ZabbixAdapter`, `ZabbixClient`
 - `aiops-vm-adapter`: `MetricQueryClient`, `MetricAdapter`
 - `aiops-clickhouse-adapter`: `LogQueryClient`, `EventQueryClient`
 - `aiops-otel-adapter`: `OtelAdapter`
 
-### domain — aiops-*-domain or co-located domain packages
+### domain — aiops-\*-domain or co-located domain packages
 
 Core business logic lives here. No dependencies on adapters or other domain modules.
 
 **Public interfaces only:**
+
 - `AlertEventService.fingerprint()`
 - `IncidentAggregator.aggregate()`
 - `RcaEngine.evaluate()`
 - `DiagnosisOrchestrator.diagnose()`
 
-### application — aiops-*-service packages (or `apps/`)
+### application — aiops-\*-service packages (or `apps/`)
 
 Orchestrates domain logic and adapters. No direct HTTP handling.
+
+**Cross-module contracts** live in the `service/` sub-package of each module. Only the methods
+that other modules genuinely need are exposed, so internal JOOQ/DB types never leak across module
+edges. Example: `io.aegisops.execution.service.ExecutionApplicationService` is the only runner-visible
+surface of `aiops-execution`; `RunnerArchUnitGuardTest` enforces this at the CI level.
 
 ### infrastructure — cross-cutting concerns
 
@@ -123,10 +137,10 @@ No reverse dependencies. Domain never depends on adapters. Server never imports 
 
 ## External System Access Matrix
 
-| Caller | Zabbix | VictoriaMetrics | ClickHouse | MinIO | PostgreSQL | Redis | Ansible |
-|--------|--------|----------------|------------|-------|------------|-------|---------|
-| server | — | — | — | — | write+read | read+write | — |
-| worker | adapter | adapter | adapter | adapter | write+read | read+write | — |
-| runner | — | — | — | read | write | read | executor |
+| Caller | Zabbix  | VictoriaMetrics | ClickHouse | MinIO   | PostgreSQL | Redis      | Ansible  |
+| ------ | ------- | --------------- | ---------- | ------- | ---------- | ---------- | -------- |
+| server | —       | —               | —          | —       | write+read | read+write | —        |
+| worker | adapter | adapter         | adapter    | adapter | write+read | read+write | —        |
+| runner | —       | —               | —          | read    | write      | read       | executor |
 
 No direct access. All go through the respective adapter/client module.
