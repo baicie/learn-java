@@ -305,7 +305,7 @@ public Map<String, Object> health() {
 
 ### 状态
 
-- **PR4 待办**
+- **PR4 已完成（L2 refactor + ArchUnit 守门）**
 
 ---
 
@@ -463,7 +463,7 @@ public Map<String, Object> health() {
 | PR-mega-1 | AGENTS.md 全文重写（1733 → 441 行，与 SKILL.md 合并文档源头约定） | ~30 分钟 | 无                                               | **已完成（commit `f9fbe21`，L1）**                      |
 | PR2       | RuntimePhase + health phase 标签 + Phase Discipline 守门          | 1.5 小时 | 无                                               | **已完成（commits `acf856e` + `02896d6` + 本 PR，L2）** |
 | PR3       | Flyway V1 拆 5 个 V0001..V0005（clean slate）                     | 半天     | PR2 共享 RuntimePhase（不强依赖）                | **已完成（commit `4a36a3c`，L3）**                      |
-| PR4       | runner → Application Service + ArchUnit 守门                      | 1~2 天   | 无                                               | 待办                                                    |
+| PR4       | runner → Application Service + ArchUnit 守门                      | 1~2 天   | 无                                               | **已完成（L2 refactor + L3 ArchUnit guard）**           |
 | PR5       | worker 骨架（4 job + OutboxPoller）                               | 2~3 天   | PR2（共享 RuntimePhase）、PR3（共享 V0006 迁移） | 待办                                                    |
 | PR6       | demo-order-service ADR + profile                                  | 2 小时   | 无                                               | 待办                                                    |
 | PR7       | docs 收敛 + roadmap 指向 SKILL.md                                 | 半天     | PR6（共享 ADR 目录）                             | 待办                                                    |
@@ -503,19 +503,19 @@ public Map<String, Object> health() {
 
 ## 14. 与第二轮回盘对应
 
-| 回盘点出问题                                          | 本文件章节 | 优先级 | PR                                              |
-| ----------------------------------------------------- | ---------- | ------ | ----------------------------------------------- |
-| 文档源头冲突（已通过 AGENTS.md 全文重写合并两套约定） | §1         | P0     | **PR-mega-1 已完成（commit `f9fbe21`）**        |
-| worker 空壳                                           | §2         | P0     | PR5                                             |
-| 三 app 调度链断裂                                     | §3         | P0     | PR5                                             |
-| health phase 标签错位                                 | §4         | P0     | **PR2 已完成（`acf856e` + `02896d6` + 本 PR）** |
-| Flyway 命名不符                                       | §5         | P1     | **PR3 已完成（commit `4a36a3c`）**              |
-| runner 跨模块直接注 Repository                        | §6         | P1     | PR4                                             |
-| demo-order-service 不在三 app 列表                    | §7         | P1     | PR6                                             |
-| 缺 web/console                                        | §8         | P1     | PR8                                             |
-| 文档分散                                              | §9         | P1     | PR7                                             |
-| aiops-agent 未声明                                    | §10        | P2     | PR9                                             |
-| scripts 职责混淆                                      | §11        | P2     | PR10                                            |
+| 回盘点出问题                                          | 本文件章节 | 优先级 | PR                                                |
+| ----------------------------------------------------- | ---------- | ------ | ------------------------------------------------- |
+| 文档源头冲突（已通过 AGENTS.md 全文重写合并两套约定） | §1         | P0     | **PR-mega-1 已完成（commit `f9fbe21`）**          |
+| worker 空壳                                           | §2         | P0     | PR5                                               |
+| 三 app 调度链断裂                                     | §3         | P0     | PR5                                               |
+| health phase 标签错位                                 | §4         | P0     | **PR2 已完成（`acf856e` + `02896d6` + 本 PR）**   |
+| Flyway 命名不符                                       | §5         | P1     | **PR3 已完成（commit `4a36a3c`）**                |
+| runner 跨模块直接注 Repository                        | §6         | P1     | **PR4 已完成（L2 refactor + L3 ArchUnit guard）** |
+| demo-order-service 不在三 app 列表                    | §7         | P1     | PR6                                               |
+| 缺 web/console                                        | §8         | P1     | PR8                                               |
+| 文档分散                                              | §9         | P1     | PR7                                               |
+| aiops-agent 未声明                                    | §10        | P2     | PR9                                               |
+| scripts 职责混淆                                      | §11        | P2     | PR10                                              |
 
 ## 15. 验收
 

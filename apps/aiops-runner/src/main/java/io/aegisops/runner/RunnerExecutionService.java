@@ -2,13 +2,13 @@ package io.aegisops.runner;
 
 import io.aegisops.common.exception.AppException;
 import io.aegisops.execution.ExecutionProperties;
-import io.aegisops.execution.ExecutionRepository;
-import io.aegisops.execution.RollbackRepository;
 import io.aegisops.execution.dto.ExecutionArtifactCreateCommand;
 import io.aegisops.execution.dto.ExecutionRunRecord;
 import io.aegisops.execution.dto.ExecutionRunStatusUpdateCommand;
 import io.aegisops.execution.dto.ExecutionStepRecord;
 import io.aegisops.execution.dto.ExecutionStepStatusUpdateCommand;
+import io.aegisops.execution.service.ExecutionApplicationService;
+import io.aegisops.execution.service.RollbackApplicationService;
 import io.aegisops.runner.executor.StepExecutionContext;
 import io.aegisops.runner.executor.StepExecutionResult;
 import io.aegisops.runner.executor.StepExecutor;
@@ -19,22 +19,29 @@ import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Picks up queued execution runs and drives each step through its {@link StepExecutor}. This class
+ * sits in {@code apps/aiops-runner} and must only depend on cross-module {@code
+ * *ApplicationService} contracts (e.g. {@link ExecutionApplicationService}) — it MUST NOT touch the
+ * {@code io.aegisops.execution.*Repository} types directly. The ArchUnit guard in {@code
+ * apps/aiops-runner} enforces that.
+ */
 @Service
 public class RunnerExecutionService {
-  private final ExecutionRepository repository;
-  private final RollbackRepository rollbackRepository;
+  private final ExecutionApplicationService executionApplicationService;
+  private final RollbackApplicationService rollbackApplicationService;
   private final ExecutionProperties executionProperties;
   private final RunnerProperties runnerProperties;
   private final List<StepExecutor> executors;
 
   public RunnerExecutionService(
-      ExecutionRepository repository,
-      RollbackRepository rollbackRepository,
+      ExecutionApplicationService executionApplicationService,
+      RollbackApplicationService rollbackApplicationService,
       ExecutionProperties executionProperties,
       RunnerProperties runnerProperties,
       List<StepExecutor> executors) {
-    this.repository = repository;
-    this.rollbackRepository = rollbackRepository;
+    this.executionApplicationService = executionApplicationService;
+    this.rollbackApplicationService = rollbackApplicationService;
     this.executionProperties = executionProperties;
     this.runnerProperties = runnerProperties;
     this.executors =
@@ -49,7 +56,8 @@ public class RunnerExecutionService {
     OffsetDateTime leaseUntil = now.plusSeconds(executionProperties.normalizedLeaseSeconds());
 
     Optional<ExecutionRunRecord> claimed =
-        repository.claimNextQueuedRun(runnerProperties.getRunnerId(), now, leaseUntil);
+        executionApplicationService.claimNextQueuedRun(
+            runnerProperties.getRunnerId(), now, leaseUntil);
 
     if (claimed.isEmpty()) {
       return false;
@@ -61,7 +69,7 @@ public class RunnerExecutionService {
 
   public int sweepTimeouts() {
     List<ExecutionRunRecord> expired =
-        repository.findExpiredRunningRuns(
+        executionApplicationService.findExpiredRunningRuns(
             OffsetDateTime.now(), Math.max(1, runnerProperties.getTimeoutSweepLimit()));
 
     int count = 0;
@@ -73,7 +81,8 @@ public class RunnerExecutionService {
   }
 
   public void process(ExecutionRunRecord run) {
-    List<ExecutionStepRecord> steps = repository.listExecutionSteps(run.tenantId(), run.id());
+    List<ExecutionStepRecord> steps =
+        executionApplicationService.listExecutionSteps(run.tenantId(), run.id());
 
     if (steps.isEmpty()) {
       failRunAndPlan(run, "Execution has no steps.");
@@ -114,7 +123,7 @@ public class RunnerExecutionService {
     OffsetDateTime startedAt = OffsetDateTime.now();
 
     ensureUpdated(
-        repository.updateStepStatus(
+        executionApplicationService.updateStepStatus(
             new ExecutionStepStatusUpdateCommand(
                 run.tenantId(), step.id(), "running", startedAt, null, null, null)),
         "EXECUTION_STEP_UPDATE_FAILED",
@@ -132,7 +141,7 @@ public class RunnerExecutionService {
     OffsetDateTime finishedAt = OffsetDateTime.now();
 
     ensureUpdated(
-        repository.updateStepStatus(
+        executionApplicationService.updateStepStatus(
             new ExecutionStepStatusUpdateCommand(
                 run.tenantId(),
                 step.id(),
@@ -149,10 +158,11 @@ public class RunnerExecutionService {
 
   private void persistArtifacts(List<ExecutionArtifactCreateCommand> artifacts) {
     for (ExecutionArtifactCreateCommand artifact : artifacts) {
-      repository.createArtifact(artifact);
+      executionApplicationService.createArtifact(artifact);
       if (artifact.stepId() != null && !artifact.stepId().isBlank()) {
         ensureUpdated(
-            repository.incrementStepArtifactCount(artifact.tenantId(), artifact.stepId()),
+            executionApplicationService.incrementStepArtifactCount(
+                artifact.tenantId(), artifact.stepId()),
             "EXECUTION_ARTIFACT_COUNT_UPDATE_FAILED",
             "Execution step artifact count was not updated");
       }
@@ -164,7 +174,7 @@ public class RunnerExecutionService {
     for (ExecutionStepRecord step : steps) {
       if (step.sequenceNo() > failedSequenceNo && "queued".equals(step.status())) {
         ensureUpdated(
-            repository.updateStepStatus(
+            executionApplicationService.updateStepStatus(
                 new ExecutionStepStatusUpdateCommand(
                     run.tenantId(),
                     step.id(),
@@ -184,7 +194,7 @@ public class RunnerExecutionService {
     OffsetDateTime leaseUntil = now.plusSeconds(executionProperties.normalizedLeaseSeconds());
 
     ensureUpdated(
-        repository.heartbeat(
+        executionApplicationService.heartbeat(
             run.tenantId(), run.id(), runnerProperties.getRunnerId(), now, leaseUntil),
         "EXECUTION_HEARTBEAT_FAILED",
         "Execution heartbeat failed");
@@ -192,32 +202,33 @@ public class RunnerExecutionService {
 
   private void timeout(ExecutionRunRecord run) {
     ensureUpdated(
-        repository.timeoutRun(run.tenantId(), run.id(), "Execution lease timed out."),
+        executionApplicationService.timeoutRun(
+            run.tenantId(), run.id(), "Execution lease timed out."),
         "EXECUTION_TIMEOUT_FAILED",
         "Execution run was not marked timeout");
 
     ensureUpdated(
-        repository.timeoutExecutionSteps(run.tenantId(), run.id()),
+        executionApplicationService.timeoutExecutionSteps(run.tenantId(), run.id()),
         "EXECUTION_STEP_TIMEOUT_FAILED",
         "Execution steps were not marked timeout");
 
     if ("rollback".equals(run.executionKind()) && run.rollbackPlanId() != null) {
       ensureUpdated(
-          rollbackRepository.markFailed(run.tenantId(), run.rollbackPlanId()),
+          rollbackApplicationService.markFailed(run.tenantId(), run.rollbackPlanId()),
           "ROLLBACK_PLAN_UPDATE_FAILED",
           "Rollback plan status was not updated");
       return;
     }
 
     ensureUpdated(
-        repository.updatePlanStatus(run.tenantId(), run.planId(), "failed"),
+        executionApplicationService.updatePlanStatus(run.tenantId(), run.planId(), "failed"),
         "AUTOMATION_PLAN_UPDATE_FAILED",
         "Automation plan status was not updated");
   }
 
   private void succeedRunAndPlan(ExecutionRunRecord run) {
     ensureUpdated(
-        repository.updateRunStatus(
+        executionApplicationService.updateRunStatus(
             new ExecutionRunStatusUpdateCommand(
                 run.tenantId(),
                 run.id(),
@@ -231,19 +242,19 @@ public class RunnerExecutionService {
         "Execution run was not marked succeeded");
 
     if ("rollback".equals(run.executionKind()) && run.rollbackPlanId() != null) {
-      rollbackRepository.markSucceeded(run.tenantId(), run.rollbackPlanId());
+      rollbackApplicationService.markSucceeded(run.tenantId(), run.rollbackPlanId());
       return;
     }
 
     ensureUpdated(
-        repository.updatePlanStatus(run.tenantId(), run.planId(), "succeeded"),
+        executionApplicationService.updatePlanStatus(run.tenantId(), run.planId(), "succeeded"),
         "AUTOMATION_PLAN_UPDATE_FAILED",
         "Automation plan status was not updated");
   }
 
   private void failRunAndPlan(ExecutionRunRecord run, String errorMessage) {
     ensureUpdated(
-        repository.updateRunStatus(
+        executionApplicationService.updateRunStatus(
             new ExecutionRunStatusUpdateCommand(
                 run.tenantId(),
                 run.id(),
@@ -257,12 +268,12 @@ public class RunnerExecutionService {
         "Execution run was not marked failed");
 
     if ("rollback".equals(run.executionKind()) && run.rollbackPlanId() != null) {
-      rollbackRepository.markFailed(run.tenantId(), run.rollbackPlanId());
+      rollbackApplicationService.markFailed(run.tenantId(), run.rollbackPlanId());
       return;
     }
 
     ensureUpdated(
-        repository.updatePlanStatus(run.tenantId(), run.planId(), "failed"),
+        executionApplicationService.updatePlanStatus(run.tenantId(), run.planId(), "failed"),
         "AUTOMATION_PLAN_UPDATE_FAILED",
         "Automation plan status was not updated");
   }
