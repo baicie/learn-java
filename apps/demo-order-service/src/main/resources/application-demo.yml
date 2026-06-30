@@ -1,0 +1,32 @@
+# demo profile 下的真实配置（仅 dev / staging / smoke-test 启用）
+# 启动命令：--spring.profiles.active=demo
+# 详见 ADR 0002 (docs/adr/0002-mvp-fourth-app-justification.md)
+server:
+  port: ${DEMO_ORDER_PORT:8090}
+  error:
+    include-message: always
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: when_authorized
+  metrics:
+    tags:
+      application: demo-order-service
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+
+aiops:
+  demo:
+    # 在 demo profile 下显式声明本服务允许被 AI Ops 全栈抓取，避免 prod 误启
+    enabled: true
+    # 故障注入端点仅在 demo 内网开放，prod 不暴露
+    fault-injection-allowed: true

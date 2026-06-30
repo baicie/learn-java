@@ -34,7 +34,6 @@
     <module>apps/aiops-server</module>
     <module>apps/aiops-worker</module>
     <module>apps/aiops-runner</module>
-    <module>apps/demo-order-service</module>
     <module>modules/aiops-observability</module>
   </modules>
 
@@ -168,4 +167,21 @@
       </plugin>
     </plugins>
   </build>
+
+  <profiles>
+    <!--
+      demo profile: 包含 apps/demo-order-service（Phase Z9 demo 用业务侧模拟进程）。
+      默认 build 不包含此模块；通过 `mvn verify -Pdemo` 显式启用。
+      详见 ADR 0002 (docs/adr/0002-mvp-fourth-app-justification.md)。
+    -->
+    <profile>
+      <id>demo</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <modules>
+        <module>apps/demo-order-service</module>
+      </modules>
+    </profile>
+  </profiles>
 </project>
