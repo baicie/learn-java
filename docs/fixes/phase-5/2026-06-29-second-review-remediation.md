@@ -401,7 +401,43 @@ public Map<String, Object> health() {
 
 ### 状态
 
-- **PR8 待办**（独立 PR，与后端 PR2~PR7 不混在同一次提交）
+- **PR8 已完成（web/console 骨架已在仓库存在并跑通）**
+  - `web/console/` 由历史 phase (Phase Z8/Z9) 多次提交累积，骨架**早于** PR7 落地
+    （最近合并含 `feat(console): 新增前端场景化页面与多页路由（Phase Z8）`
+    与 `test(z9): 新增端到端测试与验收脚本`），本次 PR8 主要落地**最终闭环**
+  - 修复 `src/__tests__/PhaseZ9ConsoleSmoke.test.tsx` 缺 `beforeEach` 导入
+    导致 `pnpm typecheck` 失败（`Cannot find name 'beforeEach'`），
+    同时 lint:fix 修掉 import-x/order 4 个 warnings
+  - `git rm --cached web/console/tsconfig.tsbuildinfo`：tsbuildinfo 已在
+    .gitignore 但历史已被 tracked，借此次 untrack 避免污染 PR
+  - web/console 五件套实测全绿：
+    - pnpm typecheck：0 errors
+    - pnpm lint:ci：0 errors 0 warnings
+    - pnpm test：5 files / 14 tests / 0 failures
+    - pnpm build：dist 产出（index.css 55KB / index.js 535KB gzip 166KB，
+      chunk size 告警属于后续 PR 范畴）
+  - 路由 + 页面（实际比 §8 修复方案要求的 5 个更完整）：
+    - /login（LoginPage） ← POST /api/auth/login
+    - /（DashboardPage，调用 /api/auth/me）
+    - /datasources（DatasourcesPage） ← GET/POST /api/datasources
+    - /alerts（AlertsPage） ← GET /api/alerts
+    - /incidents（IncidentsPage） ← GET /api/incidents
+    - /incidents/:incidentId（IncidentDetailPage）← GET /api/incidents/{id}
+    - /evidence（EvidencePage） ← POST /api/incidents/{id}/evidence/zabbix/collect
+    - /ai-diagnosis（AiDiagnosisPage） ← POST /api/incidents/{id}/ai/diagnose
+    - /reports（ReportsPage） ← POST /api/incidents/{id}/reports
+    - \*（NotFoundPage） ← 404 fallback
+  - 集中 `src/api/client.ts`：438 行 typed API 客户端（覆盖 SKILL §16 全部
+    资源 endpoint + Bearer token 自动注入 + ApiResponse<T> envelope 解析）
+  - shadcn/ui 组件库 13 个（button / card / table / input / form / select /
+    dialog / badge / empty / skeleton / sonner + tabs / tooltip / field），
+    严格遵循 AGENTS §3.4 语义 token / gap-_ / size-_ / FieldGroup 等规则
+  - Page Object 风格 smoke test：实际比 §8 要求更完整，
+    `PhaseZ9ConsoleSmoke.test.tsx` 走通 IncidentDetailPage 全部 tab
+    （Overview/Evidence/RCA/AI Diagnosis/Report）+ 4 个 action 按钮；
+    `IncidentDetailPage.test.tsx` 验证 critical 标题与 4 个 action 渲染；
+    `api.test.ts` 覆盖 Z8 endpoints（getLatestReport / generateReport /
+    getIncidentBundle）
 
 ---
 
@@ -513,18 +549,18 @@ public Map<String, Object> health() {
 
 ## 12. PR 推进顺序
 
-| PR        | 标题                                                              | 工作量   | 依赖                                             | 状态                                                      |
-| --------- | ----------------------------------------------------------------- | -------- | ------------------------------------------------ | --------------------------------------------------------- |
-| PR-mega-1 | AGENTS.md 全文重写（1733 → 441 行，与 SKILL.md 合并文档源头约定） | ~30 分钟 | 无                                               | **已完成（commit `f9fbe21`，L1）**                        |
-| PR2       | RuntimePhase + health phase 标签 + Phase Discipline 守门          | 1.5 小时 | 无                                               | **已完成（commits `acf856e` + `02896d6` + 本 PR，L2）**   |
-| PR3       | Flyway V1 拆 5 个 V0001..V0005（clean slate）                     | 半天     | PR2 共享 RuntimePhase（不强依赖）                | **已完成（commit `4a36a3c`，L3）**                        |
-| PR4       | runner → Application Service + ArchUnit 守门                      | 1~2 天   | 无                                               | **已完成（L2 refactor + L3 ArchUnit guard）**             |
-| PR5       | worker 骨架（4 job + OutboxPoller + 调度链重构）                  | 2~3 天   | PR2（共享 RuntimePhase）、PR3（共享 V0006 迁移） | **已完成（L3 schema + L3 调度链重构）**                   |
-| PR6       | demo-order-service ADR + profile                                  | 2 小时   | 无                                               | **已完成（ADR + Spring profile + Maven profile）**        |
-| PR7       | docs 收敛 + roadmap 指向 SKILL.md                                 | 半天     | PR6（共享 ADR 目录）                             | **已完成（6 个事实源 + 53 个 frontmatter + check 全绿）** |
-| PR8       | web/console Phase A（最小骨架）                                   | 2~3 天   | 无（独立仓库或子目录）                           | 待办                                                      |
-| PR9       | aiops-agent ADR                                                   | 1 小时   | 无                                               | 待办                                                      |
-| PR10      | scripts 拆分                                                      | 1 小时   | 无                                               | 待办                                                      |
+| PR        | 标题                                                              | 工作量   | 依赖                                             | 状态                                                                      |
+| --------- | ----------------------------------------------------------------- | -------- | ------------------------------------------------ | ------------------------------------------------------------------------- |
+| PR-mega-1 | AGENTS.md 全文重写（1733 → 441 行，与 SKILL.md 合并文档源头约定） | ~30 分钟 | 无                                               | **已完成（commit `f9fbe21`，L1）**                                        |
+| PR2       | RuntimePhase + health phase 标签 + Phase Discipline 守门          | 1.5 小时 | 无                                               | **已完成（commits `acf856e` + `02896d6` + 本 PR，L2）**                   |
+| PR3       | Flyway V1 拆 5 个 V0001..V0005（clean slate）                     | 半天     | PR2 共享 RuntimePhase（不强依赖）                | **已完成（commit `4a36a3c`，L3）**                                        |
+| PR4       | runner → Application Service + ArchUnit 守门                      | 1~2 天   | 无                                               | **已完成（L2 refactor + L3 ArchUnit guard）**                             |
+| PR5       | worker 骨架（4 job + OutboxPoller + 调度链重构）                  | 2~3 天   | PR2（共享 RuntimePhase）、PR3（共享 V0006 迁移） | **已完成（L3 schema + L3 调度链重构）**                                   |
+| PR6       | demo-order-service ADR + profile                                  | 2 小时   | 无                                               | **已完成（ADR + Spring profile + Maven profile）**                        |
+| PR7       | docs 收敛 + roadmap 指向 SKILL.md                                 | 半天     | PR6（共享 ADR 目录）                             | **已完成（6 个事实源 + 53 个 frontmatter + check 全绿）**                 |
+| PR8       | web/console Phase A（最小骨架）                                   | 2~3 天   | 无（独立仓库或子目录）                           | **已完成（9 页面 + 13 shadcn 组件 + 14 测试全绿 + tsbuildinfo untrack）** |
+| PR9       | aiops-agent ADR                                                   | 1 小时   | 无                                               | 待办                                                                      |
+| PR10      | scripts 拆分                                                      | 1 小时   | 无                                               | 待办                                                                      |
 
 ## 13. 推进纪律
 
@@ -558,19 +594,19 @@ public Map<String, Object> health() {
 
 ## 14. 与第二轮回盘对应
 
-| 回盘点出问题                                          | 本文件章节 | 优先级 | PR                                                |
-| ----------------------------------------------------- | ---------- | ------ | ------------------------------------------------- |
-| 文档源头冲突（已通过 AGENTS.md 全文重写合并两套约定） | §1         | P0     | **PR-mega-1 已完成（commit `f9fbe21`）**          |
-| worker 空壳                                           | §2         | P0     | **PR5 已完成（L3 schema + L3 调度链重构）**       |
-| 三 app 调度链断裂                                     | §3         | P0     | **PR5 已完成（与 §2 同 PR）**                     |
-| health phase 标签错位                                 | §4         | P0     | **PR2 已完成（`acf856e` + `02896d6` + 本 PR）**   |
-| Flyway 命名不符                                       | §5         | P1     | **PR3 已完成（commit `4a36a3c`）**                |
-| runner 跨模块直接注 Repository                        | §6         | P1     | **PR4 已完成（L2 refactor + L3 ArchUnit guard）** |
-| demo-order-service 不在三 app 列表                    | §7         | P1     | **PR6 已完成（ADR 0002 + profile 守门）**         |
-| 缺 web/console                                        | §8         | P1     | PR8                                               |
-| 文档分散                                              | §9         | P1     | **PR7 已完成（6 个事实源 + check 全绿）**         |
-| aiops-agent 未声明                                    | §10        | P2     | PR9                                               |
-| scripts 职责混淆                                      | §11        | P2     | PR10                                              |
+| 回盘点出问题                                          | 本文件章节 | 优先级 | PR                                                   |
+| ----------------------------------------------------- | ---------- | ------ | ---------------------------------------------------- |
+| 文档源头冲突（已通过 AGENTS.md 全文重写合并两套约定） | §1         | P0     | **PR-mega-1 已完成（commit `f9fbe21`）**             |
+| worker 空壳                                           | §2         | P0     | **PR5 已完成（L3 schema + L3 调度链重构）**          |
+| 三 app 调度链断裂                                     | §3         | P0     | **PR5 已完成（与 §2 同 PR）**                        |
+| health phase 标签错位                                 | §4         | P0     | **PR2 已完成（`acf856e` + `02896d6` + 本 PR）**      |
+| Flyway 命名不符                                       | §5         | P1     | **PR3 已完成（commit `4a36a3c`）**                   |
+| runner 跨模块直接注 Repository                        | §6         | P1     | **PR4 已完成（L2 refactor + L3 ArchUnit guard）**    |
+| demo-order-service 不在三 app 列表                    | §7         | P1     | **PR6 已完成（ADR 0002 + profile 守门）**            |
+| 缺 web/console                                        | §8         | P1     | **PR8 已完成（9 页面 + 13 shadcn 组件 + 五件套绿）** |
+| 文档分散                                              | §9         | P1     | **PR7 已完成（6 个事实源 + check 全绿）**            |
+| aiops-agent 未声明                                    | §10        | P2     | PR9                                                  |
+| scripts 职责混淆                                      | §11        | P2     | PR10                                                 |
 
 ## 15. 验收
 

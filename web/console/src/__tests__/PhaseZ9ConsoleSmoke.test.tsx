@@ -1,10 +1,11 @@
 import '@testing-library/jest-dom'
-import { renderWithRouter } from '../test/test-utils'
-import { IncidentDetailPage } from '../pages/IncidentDetailPage'
-import { Route, Routes } from 'react-router-dom'
 import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { Route, Routes } from 'react-router-dom'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
+import { IncidentDetailPage } from '../pages/IncidentDetailPage'
+import { renderWithRouter } from '../test/test-utils'
 
 const mockIncidentBundle = {
   incident: {
