@@ -1,5 +1,6 @@
 package io.aegisops.runner;
 
+import io.aegisops.common.runtime.RuntimeProperties;
 import io.aegisops.execution.ExecutionProperties;
 import io.aegisops.runner.executor.ansible.AnsibleRunnerProperties;
 import org.springframework.boot.SpringApplication;
@@ -9,6 +10,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 
 @EnableScheduling
 @EnableConfigurationProperties({
+  RuntimeProperties.class,
   RunnerProperties.class,
   ExecutionProperties.class,
   AnsibleRunnerProperties.class

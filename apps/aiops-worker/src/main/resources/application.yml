@@ -28,3 +28,5 @@ aiops:
     request-id-header: ${AIOPS_REQUEST_ID_HEADER:X-Request-Id}
     trace-id-header: ${AIOPS_TRACE_ID_HEADER:X-Trace-Id}
     http-metrics-enabled: ${AIOPS_HTTP_METRICS_ENABLED:true}
+  runtime:
+    phase: ${AIOPS_RUNTIME_PHASE:phase5}

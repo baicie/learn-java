@@ -50,3 +50,5 @@ aiops:
       cleanup-workspace: ${AIOPS_RUNNER_ANSIBLE_CLEANUP_WORKSPACE:true}
       max-output-chars: ${AIOPS_RUNNER_ANSIBLE_MAX_OUTPUT_CHARS:65536}
       max-materialized-file-bytes: ${AIOPS_RUNNER_ANSIBLE_MAX_MATERIALIZED_FILE_BYTES:1048576}
+  runtime:
+    phase: ${AIOPS_RUNTIME_PHASE:phase5}
