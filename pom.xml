@@ -139,7 +139,7 @@
         <artifactId>maven-checkstyle-plugin</artifactId>
         <version>${maven-checkstyle-plugin.version}</version>
         <configuration>
-          <configLocation>${maven.multiModuleProjectDirectory}/config/checkstyle/checkstyle.xml</configLocation>
+          <configLocation>${maven.multiModuleProjectDirectory}/infra/checkstyle/checkstyle.xml</configLocation>
           <consoleOutput>true</consoleOutput>
           <encoding>${project.build.sourceEncoding}</encoding>
           <failsOnError>true</failsOnError>
