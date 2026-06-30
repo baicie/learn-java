@@ -60,7 +60,8 @@
         kb_document | kb_chunk | kb_search_log |
         agent_eval_dataset | agent_eval_case | agent_prompt_profile | agent_eval_run | agent_eval_case_result |
         agent_memory | agent_memory_event | tenant_quota_policy | tenant_security_event |
-        plugin_descriptor | tenant_plugin | tenant_plugin_tool_policy | plugin_event
+        plugin_descriptor | tenant_plugin | tenant_plugin_tool_policy | plugin_event |
+        automation_outbox
       </includes>
 
       <excludes>flyway_schema_history</excludes>
