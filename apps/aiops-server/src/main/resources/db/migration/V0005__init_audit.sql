@@ -1,0 +1,1 @@
+create table if not exists audit_log (  id varchar(64) primary key,  tenant_id varchar(64),  actor_user_id varchar(64),  action varchar(128) not null,  target_type varchar(64),  target_id varchar(64),  detail_json jsonb not null default '{}'::jsonb,  created_at timestamptz not null default now());create index if not exists idx_audit_log_created on audit_log(created_at desc);
