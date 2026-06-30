@@ -1,3 +1,14 @@
+---
+title: Phase4.6：jOOQ Codegen 正式化
+type: design
+status: accepted
+phase: global
+owner: ai
+created: 2026-06-30
+updated: 2026-06-30
+related: []
+---
+
 # Phase4.6：jOOQ Codegen 正式化
 
 基于当前 `mvp` 最新实现，Phase4.6 建议做 **jOOQ generated Tables 接入**，让 Phase4.5 的 no-codegen `AegisTables.str(table, "column")` 过渡到真正的编译期表结构。

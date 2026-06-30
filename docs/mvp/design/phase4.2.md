@@ -1,3 +1,14 @@
+---
+title: Phase4.2：LangGraph Agent 可选真实 LLM Provider
+type: design
+status: accepted
+phase: global
+owner: ai
+created: 2026-06-30
+updated: 2026-06-30
+related: []
+---
+
 # Phase4.2：LangGraph Agent 可选真实 LLM Provider
 
 基于当前 `mvp` 最新实现，Phase4.2 应该作为 **Phase4.1 Contract + Safety Boundary 之后的增量阶段** 来做，而不是覆盖已有实现。

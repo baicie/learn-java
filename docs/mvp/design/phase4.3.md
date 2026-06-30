@@ -1,3 +1,14 @@
+---
+title: Phase4.3：Evidence Tools 接入 Metrics / Logs / Changes
+type: design
+status: accepted
+phase: global
+owner: ai
+created: 2026-06-30
+updated: 2026-06-30
+related: []
+---
+
 # Phase4.3：Evidence Tools 接入 Metrics / Logs / Changes
 
 基于当前 `mvp` 最新实现，Phase4.3 不改 Java → Python 的 `AgentDiagnosisRequest v1` 协议，而是在 **Python LangGraph Agent 内部新增 evidence tool 调用**。

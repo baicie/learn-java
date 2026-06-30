@@ -1,3 +1,13 @@
+---
+title: Phase5.6 Ansible Sandbox Execution
+type: design
+status: accepted
+phase: global
+owner: ai
+created: 2026-06-30
+updated: 2026-06-30
+related: []
+---
 # Phase5.6 Ansible Sandbox Execution
 
 ## 目标

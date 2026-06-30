@@ -1,3 +1,14 @@
+---
+title: Phase6.2：Knowledge Base & Vector Retrieval
+type: design
+status: accepted
+phase: global
+owner: ai
+created: 2026-06-30
+updated: 2026-06-30
+related: []
+---
+
 # Phase6.2：Knowledge Base & Vector Retrieval
 
 > Phase6.2 目标：把 Phase6.1 的 **Incident Case Library** 变成可检索知识库。

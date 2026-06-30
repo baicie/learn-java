@@ -1,3 +1,14 @@
+---
+title: Phase7.2：Multi-Agent Collaboration
+type: design
+status: accepted
+phase: global
+owner: ai
+created: 2026-06-30
+updated: 2026-06-30
+related: []
+---
+
 # Phase7.2：Multi-Agent Collaboration
 
 > Phase7.2 目标：把 Phase7.0/7.1 的单 Graph 推理拆成 **多角色协作式诊断**。

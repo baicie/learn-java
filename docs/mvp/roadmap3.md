@@ -1,3 +1,25 @@
+---
+title: MVP Roadmap 3 (Historical Draft)
+type: phase
+status: deprecated
+phase: global
+owner: ai
+created: 2026-06-30
+updated: 2026-06-30
+related:
+  - docs/mvp-roadmap.md
+  - .agents/skills/aegisops/SKILL.md
+---
+
+# MVP Roadmap 3 (Historical Draft)
+
+# MVP Roadmap 3（历史草案，已 deprecated）
+
+> **此文件已废弃。** 事实源入口：`docs/mvp-roadmap.md`（单一指 SKILL §14）。
+> 历史内容仅供溯源查阅，禁止继续更新本文。2026-06-30 起按 PR7 落地替换。
+
+---
+
 # 我建议微调这份路线图
 
 整体方向是对的，尤其这句我认为应该作为项目架构原则固定下来：

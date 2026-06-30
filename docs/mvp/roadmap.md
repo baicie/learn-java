@@ -1,4 +1,26 @@
-可以。下面我按 **“我认为最适合你当前能力、最容易做出 MVP、后续也能商业化扩展”** 的方案来设计。
+---
+title: MVP Roadmap (Historical Draft)
+type: phase
+status: deprecated
+phase: global
+owner: ai
+created: 2026-06-30
+updated: 2026-06-30
+related:
+  - docs/mvp-roadmap.md
+  - .agents/skills/aegisops/SKILL.md
+---
+
+# MVP Roadmap (Historical Draft)
+
+# MVP Roadmap（历史草案，已 deprecated）
+
+> **此文件已废弃。** 事实源入口：`docs/mvp-roadmap.md`（单一指 SKILL §14）。
+> 历史内容仅供溯源查阅，禁止继续更新本文。2026-06-30 起按 PR7 落地替换。
+
+---
+
+下面我按 **“我认为最适合你当前能力、最容易做出 MVP、后续也能商业化扩展”** 的方案来设计。
 
 我不会把它设计成一开始就很重的“全栈 AIOps 巨无霸”，而是设计成：
 

@@ -1,6 +1,6 @@
 ---
 title: Scenario 01 - Zabbix Host & Service Incident Diagnosis
-type: scenario
+type: design
 status: accepted
 phase: z0
 owner: platform-team
@@ -8,6 +8,8 @@ created: 2026-06-21
 updated: 2026-06-21
 related: docs/architecture/phase-z0-module-boundaries.md
 ---
+# Scenario 01 - Zabbix Host & Service Incident Diagnosis
+
 
 # Scenario 01: Zabbix Host & Service Incident Diagnosis
 

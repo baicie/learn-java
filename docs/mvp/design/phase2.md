@@ -1,3 +1,16 @@
+---
+title: Phase2：Incident 聚合与事故中心
+type: design
+status: accepted
+phase: global
+owner: ai
+created: 2026-06-30
+updated: 2026-06-30
+related: []
+---
+
+# Phase2：Incident 聚合与事故中心
+
 下面按你要求：**不提供压缩包、不提供 patch 文件，直接用 Markdown 给出 Phase2 的详细设计与完整代码**。
 
 基于当前 `mvp` 分支，`incident / incident_event / incident_timeline` 表已经在 Phase0 建好，`alert_event` 也已经具备 `fingerprint / asset_id / starts_at / severity / status` 等字段，Phase1 又把 Zabbix Problem 同步成了 `alert_event`，所以 Phase2 可以直接围绕 **AlertEvent → Incident 聚合 → 时间线 → 详情页** 实现，不需要推翻现有结构。 当前 `aiops-incident` 模块还只有一个简单列表接口，因此 Phase2 主要补聚合服务、详情接口、状态流转、前端展示和测试。
@@ -1819,258 +1832,273 @@ class IncidentServiceTest {
 
 ```ts
 export type ApiResponse<T> = {
-  success: boolean
-  data: T
-  errorCode?: string
-  message?: string
-  timestamp: string
-}
+  success: boolean;
+  data: T;
+  errorCode?: string;
+  message?: string;
+  timestamp: string;
+};
 
 export type LoginResponse = {
-  token: string
-  user: Me
-}
+  token: string;
+  user: Me;
+};
 
 export type Me = {
-  id: string
-  tenantId: string
-  username: string
-  displayName: string
-  roles: string[]
-}
+  id: string;
+  tenantId: string;
+  username: string;
+  displayName: string;
+  roles: string[];
+};
 
 export type DataSourceRecord = {
-  id: string
-  tenantId: string
-  type: string
-  name: string
-  status: string
-  createdAt: string
-  updatedAt: string
-  lastSyncAt?: string
-}
+  id: string;
+  tenantId: string;
+  type: string;
+  name: string;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+  lastSyncAt?: string;
+};
 
 export type CreateZabbixDataSourcePayload = {
-  type: 'zabbix'
-  name: string
+  type: "zabbix";
+  name: string;
   zabbix: {
-    endpoint: string
-    username?: string
-    password?: string
-    apiToken?: string
-    connectTimeoutSeconds?: number
-    readTimeoutSeconds?: number
-  }
-}
+    endpoint: string;
+    username?: string;
+    password?: string;
+    apiToken?: string;
+    connectTimeoutSeconds?: number;
+    readTimeoutSeconds?: number;
+  };
+};
 
 export type TestDataSourceResponse = {
-  ok: boolean
-  message: string
-  version?: string
-}
+  ok: boolean;
+  message: string;
+  version?: string;
+};
 
 export type SyncDataSourceResponse = {
-  runId: string
-  status: string
-  hostsCreated: number
-  hostsUpdated: number
-  alertsCreated: number
-  alertsUpdated: number
-  message: string
-}
+  runId: string;
+  status: string;
+  hostsCreated: number;
+  hostsUpdated: number;
+  alertsCreated: number;
+  alertsUpdated: number;
+  message: string;
+};
 
 export type AssetRecord = {
-  id: string
-  tenantId: string
-  assetType: string
-  name: string
-  displayName?: string
-  source: string
-  status: string
-  createdAt: string
-}
+  id: string;
+  tenantId: string;
+  assetType: string;
+  name: string;
+  displayName?: string;
+  source: string;
+  status: string;
+  createdAt: string;
+};
 
 export type AlertEventRecord = {
-  id: string
-  tenantId: string
-  source: string
-  severity: string
-  title: string
-  status: string
-  startsAt: string
-  createdAt: string
-}
+  id: string;
+  tenantId: string;
+  source: string;
+  severity: string;
+  title: string;
+  status: string;
+  startsAt: string;
+  createdAt: string;
+};
 
 export type IncidentRecord = {
-  id: string
-  tenantId: string
-  title: string
-  summary?: string
-  severity: string
-  status: string
-  source: string
-  primaryAssetId?: string
-  aggregationKey?: string
-  alertCount: number
-  startedAt: string
-  detectedAt: string
-  lastSeenAt?: string
-  resolvedAt?: string
-  createdAt: string
-  updatedAt: string
-}
+  id: string;
+  tenantId: string;
+  title: string;
+  summary?: string;
+  severity: string;
+  status: string;
+  source: string;
+  primaryAssetId?: string;
+  aggregationKey?: string;
+  alertCount: number;
+  startedAt: string;
+  detectedAt: string;
+  lastSeenAt?: string;
+  resolvedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+};
 
 export type IncidentAlertRecord = {
-  id: string
-  source: string
-  sourceEventId?: string
-  severity: string
-  title: string
-  status: string
-  assetId?: string
-  entityName?: string
-  fingerprint: string
-  startsAt: string
-  relationType: string
-}
+  id: string;
+  source: string;
+  sourceEventId?: string;
+  severity: string;
+  title: string;
+  status: string;
+  assetId?: string;
+  entityName?: string;
+  fingerprint: string;
+  startsAt: string;
+  relationType: string;
+};
 
 export type IncidentTimelineRecord = {
-  id: string
-  eventTime: string
-  eventType: string
-  title: string
-  description?: string
-  source: string
-  payloadJson: string
-}
+  id: string;
+  eventTime: string;
+  eventType: string;
+  title: string;
+  description?: string;
+  source: string;
+  payloadJson: string;
+};
 
 export type IncidentDetailRecord = {
-  incident: IncidentRecord
-  alerts: IncidentAlertRecord[]
-  timeline: IncidentTimelineRecord[]
-}
+  incident: IncidentRecord;
+  alerts: IncidentAlertRecord[];
+  timeline: IncidentTimelineRecord[];
+};
 
 export type IncidentAggregationResponse = {
-  scannedAlerts: number
-  groups: number
-  incidentsCreated: number
-  incidentsUpdated: number
-  alertsLinked: number
-}
+  scannedAlerts: number;
+  groups: number;
+  incidentsCreated: number;
+  incidentsUpdated: number;
+  alertsLinked: number;
+};
 
-const TOKEN_KEY = 'aegisops_token'
+const TOKEN_KEY = "aegisops_token";
 
 export function getToken() {
-  return localStorage.getItem(TOKEN_KEY)
+  return localStorage.getItem(TOKEN_KEY);
 }
 
 export function setToken(token: string) {
-  localStorage.setItem(TOKEN_KEY, token)
+  localStorage.setItem(TOKEN_KEY, token);
 }
 
 export function clearToken() {
-  localStorage.removeItem(TOKEN_KEY)
+  localStorage.removeItem(TOKEN_KEY);
 }
 
-export async function apiRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const token = getToken()
+export async function apiRequest<T>(
+  path: string,
+  init: RequestInit = {},
+): Promise<T> {
+  const token = getToken();
   const resp = await fetch(path, {
     ...init,
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(init.headers || {})
-    }
-  })
+      ...(init.headers || {}),
+    },
+  });
 
-  const payload = await parseApiResponse<T>(resp)
+  const payload = await parseApiResponse<T>(resp);
   if (!resp.ok || !payload.success) {
-    throw new Error(payload.message || payload.errorCode || `Request failed with status ${resp.status}`)
+    throw new Error(
+      payload.message ||
+        payload.errorCode ||
+        `Request failed with status ${resp.status}`,
+    );
   }
-  return payload.data
+  return payload.data;
 }
 
 async function parseApiResponse<T>(resp: Response): Promise<ApiResponse<T>> {
-  const contentType = resp.headers.get('content-type') || ''
-  if (!contentType.includes('application/json')) {
-    const text = await resp.text()
+  const contentType = resp.headers.get("content-type") || "";
+  if (!contentType.includes("application/json")) {
+    const text = await resp.text();
     return {
       success: false,
       data: undefined as T,
       errorCode: `HTTP_${resp.status}`,
-      message: text || resp.statusText || 'Non-JSON response',
-      timestamp: new Date().toISOString()
-    }
+      message: text || resp.statusText || "Non-JSON response",
+      timestamp: new Date().toISOString(),
+    };
   }
-  return (await resp.json()) as ApiResponse<T>
+  return (await resp.json()) as ApiResponse<T>;
 }
 
 export function login(username: string, password: string) {
-  return apiRequest<LoginResponse>('/api/auth/login', {
-    method: 'POST',
-    body: JSON.stringify({ username, password })
-  })
+  return apiRequest<LoginResponse>("/api/auth/login", {
+    method: "POST",
+    body: JSON.stringify({ username, password }),
+  });
 }
 
 export function me() {
-  return apiRequest<Me>('/api/auth/me')
+  return apiRequest<Me>("/api/auth/me");
 }
 
 export function overview() {
-  return apiRequest<Record<string, number | string>>('/api/system/overview')
+  return apiRequest<Record<string, number | string>>("/api/system/overview");
 }
 
 export function listDataSources() {
-  return apiRequest<DataSourceRecord[]>('/api/datasources')
+  return apiRequest<DataSourceRecord[]>("/api/datasources");
 }
 
 export function createZabbixDataSource(payload: CreateZabbixDataSourcePayload) {
-  return apiRequest<DataSourceRecord>('/api/datasources', {
-    method: 'POST',
-    body: JSON.stringify(payload)
-  })
+  return apiRequest<DataSourceRecord>("/api/datasources", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
 }
 
 export function testDataSource(id: string) {
-  return apiRequest<TestDataSourceResponse>(`/api/datasources/${id}/test`, { method: 'POST' })
+  return apiRequest<TestDataSourceResponse>(`/api/datasources/${id}/test`, {
+    method: "POST",
+  });
 }
 
 export function syncDataSource(id: string) {
-  return apiRequest<SyncDataSourceResponse>(`/api/datasources/${id}/sync`, { method: 'POST' })
+  return apiRequest<SyncDataSourceResponse>(`/api/datasources/${id}/sync`, {
+    method: "POST",
+  });
 }
 
 export function listAssets() {
-  return apiRequest<AssetRecord[]>('/api/assets')
+  return apiRequest<AssetRecord[]>("/api/assets");
 }
 
 export function listAlerts() {
-  return apiRequest<AlertEventRecord[]>('/api/alerts')
+  return apiRequest<AlertEventRecord[]>("/api/alerts");
 }
 
 export function listIncidents() {
-  return apiRequest<IncidentRecord[]>('/api/incidents')
+  return apiRequest<IncidentRecord[]>("/api/incidents");
 }
 
 export function aggregateIncidents() {
-  return apiRequest<IncidentAggregationResponse>('/api/incidents/aggregate', {
-    method: 'POST',
+  return apiRequest<IncidentAggregationResponse>("/api/incidents/aggregate", {
+    method: "POST",
     body: JSON.stringify({
       windowMinutes: 1440,
-      limit: 1000
-    })
-  })
+      limit: 1000,
+    }),
+  });
 }
 
 export function getIncident(id: string) {
-  return apiRequest<IncidentDetailRecord>(`/api/incidents/${id}`)
+  return apiRequest<IncidentDetailRecord>(`/api/incidents/${id}`);
 }
 
 export function resolveIncident(id: string) {
-  return apiRequest<IncidentRecord>(`/api/incidents/${id}/resolve`, { method: 'POST' })
+  return apiRequest<IncidentRecord>(`/api/incidents/${id}/resolve`, {
+    method: "POST",
+  });
 }
 
 export function closeIncident(id: string) {
-  return apiRequest<IncidentRecord>(`/api/incidents/${id}/close`, { method: 'POST' })
+  return apiRequest<IncidentRecord>(`/api/incidents/${id}/close`, {
+    method: "POST",
+  });
 }
 ```
 
@@ -2081,8 +2109,8 @@ export function closeIncident(id: string) {
 替换原文件。名字暂时不改，避免影响现有引用；Phase3 时可以统一改成 `useConsoleQueries`。
 
 ```ts
-import { useCallback } from 'react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useCallback } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AlertEventRecord,
   AssetRecord,
@@ -2092,51 +2120,54 @@ import {
   listAssets,
   listDataSources,
   listIncidents,
-  overview
-} from '../api/client'
+  overview,
+} from "../api/client";
 
-type Overview = Record<string, number | string>
+type Overview = Record<string, number | string>;
 
-const CONSOLE_QUERY_KEYS = ['overview', 'datasources', 'assets', 'alerts', 'incidents'] as const
+const CONSOLE_QUERY_KEYS = [
+  "overview",
+  "datasources",
+  "assets",
+  "alerts",
+  "incidents",
+] as const;
 
 export function usePhase1Queries() {
-  const queryClient = useQueryClient()
+  const queryClient = useQueryClient();
 
   const overviewQuery = useQuery<Overview>({
-    queryKey: ['overview'],
-    queryFn: overview
-  })
+    queryKey: ["overview"],
+    queryFn: overview,
+  });
 
   const datasourceQuery = useQuery<DataSourceRecord[]>({
-    queryKey: ['datasources'],
-    queryFn: listDataSources
-  })
+    queryKey: ["datasources"],
+    queryFn: listDataSources,
+  });
 
   const assetQuery = useQuery<AssetRecord[]>({
-    queryKey: ['assets'],
-    queryFn: listAssets
-  })
+    queryKey: ["assets"],
+    queryFn: listAssets,
+  });
 
   const alertQuery = useQuery<AlertEventRecord[]>({
-    queryKey: ['alerts'],
-    queryFn: listAlerts
-  })
+    queryKey: ["alerts"],
+    queryFn: listAlerts,
+  });
 
   const incidentQuery = useQuery<IncidentRecord[]>({
-    queryKey: ['incidents'],
-    queryFn: listIncidents
-  })
+    queryKey: ["incidents"],
+    queryFn: listIncidents,
+  });
 
-  const invalidateAll = useCallback(
-    async () => {
-      await Promise.all(
-        CONSOLE_QUERY_KEYS.map((key) =>
-          queryClient.invalidateQueries({ queryKey: [key] })
-        )
-      )
-    },
-    [queryClient]
-  )
+  const invalidateAll = useCallback(async () => {
+    await Promise.all(
+      CONSOLE_QUERY_KEYS.map((key) =>
+        queryClient.invalidateQueries({ queryKey: [key] }),
+      ),
+    );
+  }, [queryClient]);
 
   return {
     overviewQuery,
@@ -2144,8 +2175,8 @@ export function usePhase1Queries() {
     assetQuery,
     alertQuery,
     incidentQuery,
-    invalidateAll
-  } as const
+    invalidateAll,
+  } as const;
 }
 ```
 
@@ -2156,39 +2187,41 @@ export function usePhase1Queries() {
 替换原文件。
 
 ```tsx
-import { FormEvent, useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { FormEvent, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   aggregateIncidents,
   createZabbixDataSource,
   getIncident,
   resolveIncident,
   syncDataSource,
-  testDataSource
-} from '../api/client'
-import { useAuth } from '../auth/AuthContext'
-import { usePhase1Queries } from '../hooks/usePhase1Queries'
+  testDataSource,
+} from "../api/client";
+import { useAuth } from "../auth/AuthContext";
+import { usePhase1Queries } from "../hooks/usePhase1Queries";
 
 const cards = [
-  ['tenants', 'Tenants'],
-  ['users', 'Users'],
-  ['assets', 'Assets'],
-  ['alerts', 'Alerts'],
-  ['incidents', 'Incidents']
-]
+  ["tenants", "Tenants"],
+  ["users", "Users"],
+  ["assets", "Assets"],
+  ["alerts", "Alerts"],
+  ["incidents", "Incidents"],
+];
 
 export function DashboardPage() {
-  const auth = useAuth()
-  const queryClient = useQueryClient()
-  const [message, setMessage] = useState('')
-  const [selectedIncidentId, setSelectedIncidentId] = useState<string | null>(null)
+  const auth = useAuth();
+  const queryClient = useQueryClient();
+  const [message, setMessage] = useState("");
+  const [selectedIncidentId, setSelectedIncidentId] = useState<string | null>(
+    null,
+  );
   const [form, setForm] = useState({
-    name: 'Local Zabbix',
-    endpoint: 'http://localhost:8081/api_jsonrpc.php',
-    username: 'Admin',
-    password: '',
-    apiToken: ''
-  })
+    name: "Local Zabbix",
+    endpoint: "http://localhost:8081/api_jsonrpc.php",
+    username: "Admin",
+    password: "",
+    apiToken: "",
+  });
 
   const {
     overviewQuery,
@@ -2196,67 +2229,75 @@ export function DashboardPage() {
     assetQuery,
     alertQuery,
     incidentQuery,
-    invalidateAll
-  } = usePhase1Queries()
+    invalidateAll,
+  } = usePhase1Queries();
 
   const incidentDetailQuery = useQuery({
-    queryKey: ['incident', selectedIncidentId],
+    queryKey: ["incident", selectedIncidentId],
     queryFn: () => getIncident(selectedIncidentId!),
-    enabled: Boolean(selectedIncidentId)
-  })
+    enabled: Boolean(selectedIncidentId),
+  });
 
   const createMutation = useMutation({
     mutationFn: createZabbixDataSource,
     onSuccess: async (created) => {
-      setMessage(`Datasource created: ${created.name}`)
-      await invalidateAll()
+      setMessage(`Datasource created: ${created.name}`);
+      await invalidateAll();
     },
-    onError: (error) => setMessage(String(error))
-  })
+    onError: (error) => setMessage(String(error)),
+  });
 
   const testMutation = useMutation({
     mutationFn: testDataSource,
     onSuccess: (result) => {
-      setMessage(result.ok ? `Zabbix connected, version ${result.version}` : result.message)
-      invalidateAll()
+      setMessage(
+        result.ok
+          ? `Zabbix connected, version ${result.version}`
+          : result.message,
+      );
+      invalidateAll();
     },
-    onError: (error) => setMessage(String(error))
-  })
+    onError: (error) => setMessage(String(error)),
+  });
 
   const syncMutation = useMutation({
     mutationFn: syncDataSource,
     onSuccess: async (result) => {
-      setMessage(`Sync ${result.status}: +${result.hostsCreated} hosts, +${result.alertsCreated} alerts`)
-      await invalidateAll()
+      setMessage(
+        `Sync ${result.status}: +${result.hostsCreated} hosts, +${result.alertsCreated} alerts`,
+      );
+      await invalidateAll();
     },
-    onError: (error) => setMessage(String(error))
-  })
+    onError: (error) => setMessage(String(error)),
+  });
 
   const aggregateMutation = useMutation({
     mutationFn: aggregateIncidents,
     onSuccess: async (result) => {
       setMessage(
-        `Aggregated ${result.scannedAlerts} alerts, created ${result.incidentsCreated}, updated ${result.incidentsUpdated}, linked ${result.alertsLinked}`
-      )
-      await invalidateAll()
+        `Aggregated ${result.scannedAlerts} alerts, created ${result.incidentsCreated}, updated ${result.incidentsUpdated}, linked ${result.alertsLinked}`,
+      );
+      await invalidateAll();
     },
-    onError: (error) => setMessage(String(error))
-  })
+    onError: (error) => setMessage(String(error)),
+  });
 
   const resolveMutation = useMutation({
     mutationFn: resolveIncident,
     onSuccess: async () => {
-      setMessage('Incident resolved')
-      await invalidateAll()
-      await queryClient.invalidateQueries({ queryKey: ['incident', selectedIncidentId] })
+      setMessage("Incident resolved");
+      await invalidateAll();
+      await queryClient.invalidateQueries({
+        queryKey: ["incident", selectedIncidentId],
+      });
     },
-    onError: (error) => setMessage(String(error))
-  })
+    onError: (error) => setMessage(String(error)),
+  });
 
   function submit(event: FormEvent) {
-    event.preventDefault()
+    event.preventDefault();
     createMutation.mutate({
-      type: 'zabbix',
+      type: "zabbix",
       name: form.name,
       zabbix: {
         endpoint: form.endpoint,
@@ -2264,9 +2305,9 @@ export function DashboardPage() {
         password: form.password || undefined,
         apiToken: form.apiToken || undefined,
         connectTimeoutSeconds: 5,
-        readTimeoutSeconds: 20
-      }
-    })
+        readTimeoutSeconds: 20,
+      },
+    });
   }
 
   return (
@@ -2275,11 +2316,20 @@ export function DashboardPage() {
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
           <div>
             <h1 className="text-xl font-bold">AegisOps Console</h1>
-            <p className="text-sm text-slate-500">Phase2 Incident aggregation center</p>
+            <p className="text-sm text-slate-500">
+              Phase2 Incident aggregation center
+            </p>
           </div>
           <div className="flex items-center gap-4">
-            <span className="text-sm text-slate-600">{auth.user?.displayName || 'Admin'}</span>
-            <button className="rounded-lg border px-3 py-1.5 text-sm" onClick={auth.logout}>Logout</button>
+            <span className="text-sm text-slate-600">
+              {auth.user?.displayName || "Admin"}
+            </span>
+            <button
+              className="rounded-lg border px-3 py-1.5 text-sm"
+              onClick={auth.logout}
+            >
+              Logout
+            </button>
           </div>
         </div>
       </header>
@@ -2290,7 +2340,8 @@ export function DashboardPage() {
             <div>
               <h2 className="text-lg font-semibold">System Overview</h2>
               <p className="mt-1 text-sm text-slate-500">
-                Phase2 已支持 Zabbix 告警同步、AlertEvent 聚合、Incident 详情与时间线。
+                Phase2 已支持 Zabbix 告警同步、AlertEvent 聚合、Incident
+                详情与时间线。
               </p>
             </div>
             <button
@@ -2298,21 +2349,35 @@ export function DashboardPage() {
               disabled={aggregateMutation.isPending}
               onClick={() => aggregateMutation.mutate()}
             >
-              {aggregateMutation.isPending ? 'Aggregating...' : 'Aggregate Incidents'}
+              {aggregateMutation.isPending
+                ? "Aggregating..."
+                : "Aggregate Incidents"}
             </button>
           </div>
 
-          {message && <div className="mt-4 rounded-lg bg-slate-100 px-4 py-3 text-sm text-slate-700">{message}</div>}
+          {message && (
+            <div className="mt-4 rounded-lg bg-slate-100 px-4 py-3 text-sm text-slate-700">
+              {message}
+            </div>
+          )}
         </div>
 
-        {overviewQuery.isLoading && <div className="rounded-xl bg-white p-6">Loading...</div>}
-        {overviewQuery.error && <div className="rounded-xl bg-red-50 p-6 text-red-700">{String(overviewQuery.error)}</div>}
+        {overviewQuery.isLoading && (
+          <div className="rounded-xl bg-white p-6">Loading...</div>
+        )}
+        {overviewQuery.error && (
+          <div className="rounded-xl bg-red-50 p-6 text-red-700">
+            {String(overviewQuery.error)}
+          </div>
+        )}
         {overviewQuery.data && (
           <div className="grid gap-4 md:grid-cols-5">
             {cards.map(([key, label]) => (
               <div className="rounded-2xl bg-white p-5 shadow-sm" key={key}>
                 <div className="text-sm text-slate-500">{label}</div>
-                <div className="mt-3 text-3xl font-bold">{String(overviewQuery.data[key] ?? 0)}</div>
+                <div className="mt-3 text-3xl font-bold">
+                  {String(overviewQuery.data[key] ?? 0)}
+                </div>
               </div>
             ))}
           </div>
@@ -2322,16 +2387,38 @@ export function DashboardPage() {
           <section className="rounded-2xl bg-white p-6 shadow-sm">
             <h2 className="text-lg font-semibold">Add Zabbix Datasource</h2>
             <form className="mt-4 space-y-3" onSubmit={submit}>
-              <Field label="Name" value={form.name} onChange={(name) => setForm({ ...form, name })} />
-              <Field label="API Endpoint" value={form.endpoint} onChange={(endpoint) => setForm({ ...form, endpoint })} />
-              <Field label="Username" value={form.username} onChange={(username) => setForm({ ...form, username })} />
-              <Field label="Password" type="password" value={form.password} onChange={(password) => setForm({ ...form, password })} />
-              <Field label="API Token" type="password" value={form.apiToken} onChange={(apiToken) => setForm({ ...form, apiToken })} />
+              <Field
+                label="Name"
+                value={form.name}
+                onChange={(name) => setForm({ ...form, name })}
+              />
+              <Field
+                label="API Endpoint"
+                value={form.endpoint}
+                onChange={(endpoint) => setForm({ ...form, endpoint })}
+              />
+              <Field
+                label="Username"
+                value={form.username}
+                onChange={(username) => setForm({ ...form, username })}
+              />
+              <Field
+                label="Password"
+                type="password"
+                value={form.password}
+                onChange={(password) => setForm({ ...form, password })}
+              />
+              <Field
+                label="API Token"
+                type="password"
+                value={form.apiToken}
+                onChange={(apiToken) => setForm({ ...form, apiToken })}
+              />
               <button
                 className="w-full rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
                 disabled={createMutation.isPending}
               >
-                {createMutation.isPending ? 'Creating...' : 'Create Datasource'}
+                {createMutation.isPending ? "Creating..." : "Create Datasource"}
               </button>
             </form>
           </section>
@@ -2340,23 +2427,40 @@ export function DashboardPage() {
             <h2 className="text-lg font-semibold">Datasources</h2>
             <div className="mt-4 space-y-3">
               {datasourceQuery.data?.map((ds) => (
-                <div className="rounded-xl border border-slate-200 p-4" key={ds.id}>
+                <div
+                  className="rounded-xl border border-slate-200 p-4"
+                  key={ds.id}
+                >
                   <div className="flex items-center justify-between gap-4">
                     <div>
                       <div className="flex items-center gap-2 font-medium">
                         <span>{ds.name}</span>
                         <StatusChip status={ds.status} />
                       </div>
-                      <div className="text-sm text-slate-500">{ds.type} · last sync {ds.lastSyncAt || '-'}</div>
+                      <div className="text-sm text-slate-500">
+                        {ds.type} · last sync {ds.lastSyncAt || "-"}
+                      </div>
                     </div>
                     <div className="flex gap-2">
-                      <button className="rounded-lg border px-3 py-1.5 text-sm" onClick={() => testMutation.mutate(ds.id)}>Test</button>
-                      <button className="rounded-lg bg-slate-900 px-3 py-1.5 text-sm text-white" onClick={() => syncMutation.mutate(ds.id)}>Sync</button>
+                      <button
+                        className="rounded-lg border px-3 py-1.5 text-sm"
+                        onClick={() => testMutation.mutate(ds.id)}
+                      >
+                        Test
+                      </button>
+                      <button
+                        className="rounded-lg bg-slate-900 px-3 py-1.5 text-sm text-white"
+                        onClick={() => syncMutation.mutate(ds.id)}
+                      >
+                        Sync
+                      </button>
                     </div>
                   </div>
                 </div>
               ))}
-              {!datasourceQuery.data?.length && <div className="text-sm text-slate-500">No datasource yet.</div>}
+              {!datasourceQuery.data?.length && (
+                <div className="text-sm text-slate-500">No datasource yet.</div>
+              )}
             </div>
           </section>
         </div>
@@ -2366,12 +2470,23 @@ export function DashboardPage() {
             <h2 className="text-lg font-semibold">Assets</h2>
             <div className="mt-4 overflow-hidden rounded-xl border border-slate-200">
               {assetQuery.data?.slice(0, 8).map((asset) => (
-                <div className="border-b border-slate-100 px-4 py-3 text-sm last:border-0" key={asset.id}>
-                  <div className="font-medium">{asset.displayName || asset.name}</div>
-                  <div className="text-slate-500">{asset.assetType} · {asset.source} · {asset.status}</div>
+                <div
+                  className="border-b border-slate-100 px-4 py-3 text-sm last:border-0"
+                  key={asset.id}
+                >
+                  <div className="font-medium">
+                    {asset.displayName || asset.name}
+                  </div>
+                  <div className="text-slate-500">
+                    {asset.assetType} · {asset.source} · {asset.status}
+                  </div>
                 </div>
               ))}
-              {!assetQuery.data?.length && <div className="px-4 py-6 text-sm text-slate-500">No assets synced.</div>}
+              {!assetQuery.data?.length && (
+                <div className="px-4 py-6 text-sm text-slate-500">
+                  No assets synced.
+                </div>
+              )}
             </div>
           </section>
 
@@ -2379,12 +2494,21 @@ export function DashboardPage() {
             <h2 className="text-lg font-semibold">Alerts</h2>
             <div className="mt-4 overflow-hidden rounded-xl border border-slate-200">
               {alertQuery.data?.slice(0, 8).map((alert) => (
-                <div className="border-b border-slate-100 px-4 py-3 text-sm last:border-0" key={alert.id}>
+                <div
+                  className="border-b border-slate-100 px-4 py-3 text-sm last:border-0"
+                  key={alert.id}
+                >
                   <div className="font-medium">{alert.title}</div>
-                  <div className="text-slate-500">{alert.severity} · {alert.status} · {alert.startsAt}</div>
+                  <div className="text-slate-500">
+                    {alert.severity} · {alert.status} · {alert.startsAt}
+                  </div>
                 </div>
               ))}
-              {!alertQuery.data?.length && <div className="px-4 py-6 text-sm text-slate-500">No alerts synced.</div>}
+              {!alertQuery.data?.length && (
+                <div className="px-4 py-6 text-sm text-slate-500">
+                  No alerts synced.
+                </div>
+              )}
             </div>
           </section>
         </div>
@@ -2396,7 +2520,9 @@ export function DashboardPage() {
               {incidentQuery.data?.map((incident) => (
                 <button
                   className={`block w-full border-b border-slate-100 px-4 py-3 text-left text-sm last:border-0 ${
-                    selectedIncidentId === incident.id ? 'bg-indigo-50' : 'bg-white hover:bg-slate-50'
+                    selectedIncidentId === incident.id
+                      ? "bg-indigo-50"
+                      : "bg-white hover:bg-slate-50"
                   }`}
                   key={incident.id}
                   onClick={() => setSelectedIncidentId(incident.id)}
@@ -2406,33 +2532,60 @@ export function DashboardPage() {
                     <StatusChip status={incident.status} />
                   </div>
                   <div className="mt-1 text-slate-500">
-                    {incident.severity} · alerts {incident.alertCount} · {incident.startedAt}
+                    {incident.severity} · alerts {incident.alertCount} ·{" "}
+                    {incident.startedAt}
                   </div>
                 </button>
               ))}
-              {!incidentQuery.data?.length && <div className="px-4 py-6 text-sm text-slate-500">No incidents yet. Click Aggregate Incidents after syncing alerts.</div>}
+              {!incidentQuery.data?.length && (
+                <div className="px-4 py-6 text-sm text-slate-500">
+                  No incidents yet. Click Aggregate Incidents after syncing
+                  alerts.
+                </div>
+              )}
             </div>
           </section>
 
           <section className="rounded-2xl bg-white p-6 shadow-sm">
             <h2 className="text-lg font-semibold">Incident Detail</h2>
-            {!selectedIncidentId && <div className="mt-4 text-sm text-slate-500">Select an incident.</div>}
+            {!selectedIncidentId && (
+              <div className="mt-4 text-sm text-slate-500">
+                Select an incident.
+              </div>
+            )}
 
-            {incidentDetailQuery.isLoading && <div className="mt-4 text-sm text-slate-500">Loading incident...</div>}
-            {incidentDetailQuery.error && <div className="mt-4 text-sm text-red-600">{String(incidentDetailQuery.error)}</div>}
+            {incidentDetailQuery.isLoading && (
+              <div className="mt-4 text-sm text-slate-500">
+                Loading incident...
+              </div>
+            )}
+            {incidentDetailQuery.error && (
+              <div className="mt-4 text-sm text-red-600">
+                {String(incidentDetailQuery.error)}
+              </div>
+            )}
 
             {incidentDetailQuery.data && (
               <div className="mt-4 space-y-5">
                 <div>
-                  <div className="text-base font-semibold">{incidentDetailQuery.data.incident.title}</div>
-                  <div className="mt-1 text-sm text-slate-500">
-                    {incidentDetailQuery.data.incident.severity} · {incidentDetailQuery.data.incident.status}
+                  <div className="text-base font-semibold">
+                    {incidentDetailQuery.data.incident.title}
                   </div>
-                  <p className="mt-3 text-sm text-slate-600">{incidentDetailQuery.data.incident.summary}</p>
+                  <div className="mt-1 text-sm text-slate-500">
+                    {incidentDetailQuery.data.incident.severity} ·{" "}
+                    {incidentDetailQuery.data.incident.status}
+                  </div>
+                  <p className="mt-3 text-sm text-slate-600">
+                    {incidentDetailQuery.data.incident.summary}
+                  </p>
                   <button
                     className="mt-3 rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-60"
                     disabled={resolveMutation.isPending}
-                    onClick={() => resolveMutation.mutate(incidentDetailQuery.data!.incident.id)}
+                    onClick={() =>
+                      resolveMutation.mutate(
+                        incidentDetailQuery.data!.incident.id,
+                      )
+                    }
                   >
                     Resolve
                   </button>
@@ -2442,9 +2595,15 @@ export function DashboardPage() {
                   <h3 className="text-sm font-semibold">Linked Alerts</h3>
                   <div className="mt-2 space-y-2">
                     {incidentDetailQuery.data.alerts.map((alert) => (
-                      <div className="rounded-lg border border-slate-200 p-3 text-sm" key={alert.id}>
+                      <div
+                        className="rounded-lg border border-slate-200 p-3 text-sm"
+                        key={alert.id}
+                      >
                         <div className="font-medium">{alert.title}</div>
-                        <div className="text-slate-500">{alert.relationType} · {alert.severity} · {alert.startsAt}</div>
+                        <div className="text-slate-500">
+                          {alert.relationType} · {alert.severity} ·{" "}
+                          {alert.startsAt}
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -2454,10 +2613,19 @@ export function DashboardPage() {
                   <h3 className="text-sm font-semibold">Timeline</h3>
                   <div className="mt-2 space-y-2">
                     {incidentDetailQuery.data.timeline.map((item) => (
-                      <div className="rounded-lg border border-slate-200 p-3 text-sm" key={item.id}>
+                      <div
+                        className="rounded-lg border border-slate-200 p-3 text-sm"
+                        key={item.id}
+                      >
                         <div className="font-medium">{item.title}</div>
-                        <div className="text-slate-500">{item.eventType} · {item.eventTime}</div>
-                        {item.description && <div className="mt-1 text-slate-600">{item.description}</div>}
+                        <div className="text-slate-500">
+                          {item.eventType} · {item.eventTime}
+                        </div>
+                        {item.description && (
+                          <div className="mt-1 text-slate-600">
+                            {item.description}
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -2468,19 +2636,19 @@ export function DashboardPage() {
         </div>
       </section>
     </main>
-  )
+  );
 }
 
 function Field({
   label,
   value,
   onChange,
-  type = 'text'
+  type = "text",
 }: {
-  label: string
-  value: string
-  onChange: (value: string) => void
-  type?: string
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  type?: string;
 }) {
   return (
     <label className="block">
@@ -2492,28 +2660,30 @@ function Field({
         onChange={(event) => onChange(event.target.value)}
       />
     </label>
-  )
+  );
 }
 
 const STATUS_STYLES: Record<string, string> = {
-  active: 'bg-emerald-100 text-emerald-800 border-emerald-200',
-  error: 'bg-rose-100 text-rose-800 border-rose-200',
-  inactive: 'bg-slate-100 text-slate-700 border-slate-200',
-  open: 'bg-rose-100 text-rose-800 border-rose-200',
-  investigating: 'bg-amber-100 text-amber-800 border-amber-200',
-  mitigating: 'bg-blue-100 text-blue-800 border-blue-200',
-  resolved: 'bg-emerald-100 text-emerald-800 border-emerald-200',
-  closed: 'bg-slate-100 text-slate-700 border-slate-200',
-  ignored: 'bg-slate-100 text-slate-700 border-slate-200'
-}
+  active: "bg-emerald-100 text-emerald-800 border-emerald-200",
+  error: "bg-rose-100 text-rose-800 border-rose-200",
+  inactive: "bg-slate-100 text-slate-700 border-slate-200",
+  open: "bg-rose-100 text-rose-800 border-rose-200",
+  investigating: "bg-amber-100 text-amber-800 border-amber-200",
+  mitigating: "bg-blue-100 text-blue-800 border-blue-200",
+  resolved: "bg-emerald-100 text-emerald-800 border-emerald-200",
+  closed: "bg-slate-100 text-slate-700 border-slate-200",
+  ignored: "bg-slate-100 text-slate-700 border-slate-200",
+};
 
 function StatusChip({ status }: { status: string }) {
-  const tone = STATUS_STYLES[status] ?? STATUS_STYLES.inactive
+  const tone = STATUS_STYLES[status] ?? STATUS_STYLES.inactive;
   return (
-    <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${tone}`}>
+    <span
+      className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${tone}`}
+    >
       {status}
     </span>
-  )
+  );
 }
 ```
 

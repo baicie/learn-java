@@ -1,3 +1,13 @@
+---
+title: Phase7.3 Agent Memory
+type: design
+status: accepted
+phase: global
+owner: ai
+created: 2026-06-30
+updated: 2026-06-30
+related: []
+---
 # Phase7.3 Agent Memory
 
 ## 目标

@@ -1,3 +1,13 @@
+---
+title: Production Security Checklist
+type: design
+status: accepted
+phase: global
+owner: ai
+created: 2026-06-30
+updated: 2026-06-30
+related: []
+---
 # Production Security Checklist
 
 ## 必须修改

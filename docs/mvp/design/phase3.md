@@ -1,3 +1,14 @@
+---
+title: Phase3：RCA 规则引擎与证据链
+type: design
+status: accepted
+phase: global
+owner: ai
+created: 2026-06-30
+updated: 2026-06-30
+related: []
+---
+
 # Phase3：RCA 规则引擎与证据链
 
 当前仓库已经具备 Phase0/Phase1/Phase2 的基础：根 `pom.xml` 已经是 Maven 多模块，并包含 `aiops-incident`，server 也已经依赖 `aiops-incident`；`incident` 表里也已经预留了 `suspected_root_cause` 与 `confidence` 字段。

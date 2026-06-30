@@ -1,3 +1,14 @@
+---
+title: Phase4：Python LangGraph OSS Diagnosis Agent + Java Agent Client
+type: design
+status: accepted
+phase: global
+owner: ai
+created: 2026-06-30
+updated: 2026-06-30
+related: []
+---
+
 # Phase4：Python LangGraph OSS Diagnosis Agent + Java Agent Client
 
 这版基于前面选型讨论重做：**不使用 Google ADK，不把 Agent 写进 Java**。Phase4 采用 **LangGraph OSS Python** 作为 Agent 编排底座，Java 只负责产品后端职责：鉴权、租户隔离、读取 Incident/RCA/Alert、调用 Python Agent、保存诊断结果、写 Timeline。

@@ -1,3 +1,13 @@
+---
+title: Phase Z5: Evidence-aware RCA Rules
+type: design
+status: accepted
+phase: global
+owner: ai
+created: 2026-06-30
+updated: 2026-06-30
+related: []
+---
 # Phase Z5: Evidence-aware RCA Rules
 
 ## Goal

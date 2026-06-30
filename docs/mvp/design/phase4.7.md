@@ -1,3 +1,13 @@
+---
+title: Phase4.7：迁移 AI / RCA Repository 到 generated Tables
+type: design
+status: accepted
+phase: global
+owner: ai
+created: 2026-06-30
+updated: 2026-06-30
+related: []
+---
 # Phase4.7：迁移 AI / RCA Repository 到 generated Tables
 
 基于当前 `a08b348` 后的状态，Phase4.7 的目标很明确：**把 Phase4.5 里还在使用 `AegisTables` 过渡层的 `aiops-ai-client` 和 `aiops-rca` 迁移到 jOOQ generated Tables**。

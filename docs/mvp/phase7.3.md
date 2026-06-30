@@ -1,3 +1,14 @@
+---
+title: Phase7.3：Agent Memory
+type: design
+status: accepted
+phase: global
+owner: ai
+created: 2026-06-30
+updated: 2026-06-30
+related: []
+---
+
 # Phase7.3：Agent Memory
 
 > Phase7.3 目标：给 Agent 增加 **受控、可审计、可检索的记忆能力**。

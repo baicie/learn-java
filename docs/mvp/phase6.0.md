@@ -1,3 +1,13 @@
+---
+title: Phase6.0：Postmortem Report
+type: design
+status: accepted
+phase: global
+owner: ai
+created: 2026-06-30
+updated: 2026-06-30
+related: []
+---
 # Phase6.0：Postmortem Report
 
 > Phase6.0 目标：把前面阶段沉淀的 **Incident / Alert / RCA / Evidence / AI Diagnosis / Execution / Rollback / Execution Report / Timeline** 汇总为一份结构化事故复盘报告。

@@ -1,3 +1,13 @@
+---
+title: Phase5.0 Runbook Recommendation and AutomationPlan
+type: design
+status: accepted
+phase: global
+owner: ai
+created: 2026-06-30
+updated: 2026-06-30
+related: []
+---
 # Phase5.0 Runbook Recommendation and AutomationPlan
 
 ## 目标

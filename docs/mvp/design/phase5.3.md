@@ -1,3 +1,14 @@
+---
+title: Phase5.3：Runner Lease / Heartbeat / Timeout / Retry / Artifact
+type: design
+status: accepted
+phase: global
+owner: ai
+created: 2026-06-30
+updated: 2026-06-30
+related: []
+---
+
 # Phase5.3：Runner Lease / Heartbeat / Timeout / Retry / Artifact
 
 > Phase5.3 目标：补齐 Phase5.2 执行器的可靠性能力。

@@ -1,3 +1,13 @@
+---
+title: Phase Z3: Zabbix Alert Aggregation Strategy
+type: design
+status: accepted
+phase: global
+owner: ai
+created: 2026-06-30
+updated: 2026-06-30
+related: []
+---
 # Phase Z3: Zabbix Alert Aggregation Strategy
 
 ## Goal

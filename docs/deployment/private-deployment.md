@@ -1,3 +1,13 @@
+---
+title: AegisOps Private Deployment
+type: design
+status: accepted
+phase: global
+owner: ai
+created: 2026-06-30
+updated: 2026-06-30
+related: []
+---
 # AegisOps Private Deployment
 
 ## 部署方式

@@ -1,3 +1,13 @@
+---
+title: Phase4.4：Agent Run Trace + Eval 可观测层
+type: design
+status: accepted
+phase: global
+owner: ai
+created: 2026-06-30
+updated: 2026-06-30
+related: []
+---
 # Phase4.4：Agent Run Trace + Eval 可观测层
 
 基于当前 `mvp` 最新实现，Phase4.4 不继续增强诊断逻辑，而是给 Agent 增加 **运行追踪、节点耗时、工具证据、LLM/fallback、安全结果、基础评测**。

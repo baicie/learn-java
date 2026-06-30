@@ -1,3 +1,13 @@
+---
+title: Phase8.0：SaaS Multi-tenant Hardening
+type: design
+status: accepted
+phase: global
+owner: ai
+created: 2026-06-30
+updated: 2026-06-30
+related: []
+---
 # Phase8.0：SaaS Multi-tenant Hardening
 
 > Phase8.0 目标：把 AegisOps 从“功能型 MVP”推进到“可 SaaS 化 / 可多租户隔离 / 可私有化安全部署”的基础安全阶段。

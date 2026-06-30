@@ -1,3 +1,13 @@
+---
+title: Phase Z7: Markdown Incident Report
+type: design
+status: accepted
+phase: global
+owner: ai
+created: 2026-06-30
+updated: 2026-06-30
+related: []
+---
 # Phase Z7: Markdown Incident Report
 
 ## Goal

@@ -1,3 +1,14 @@
+---
+title: Phase7.0：Agent Graph Modularization
+type: design
+status: accepted
+phase: global
+owner: ai
+created: 2026-06-30
+updated: 2026-06-30
+related: []
+---
+
 # Phase7.0：Agent Graph Modularization
 
 > Phase7.0 目标：把 Phase4.x 已经可运行的单体诊断 Agent 拆成清晰的 Graph 子模块。

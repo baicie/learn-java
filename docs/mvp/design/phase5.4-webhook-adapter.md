@@ -1,3 +1,14 @@
+---
+title: Phase5.4 Webhook Adapter
+type: design
+status: accepted
+phase: global
+owner: ai
+created: 2026-06-30
+updated: 2026-06-30
+related: []
+---
+
 # Phase5.4 Webhook Adapter
 
 ## 目标

@@ -1,3 +1,14 @@
+---
+title: Phase4.5：jOOQ 持久层改造
+type: design
+status: accepted
+phase: global
+owner: ai
+created: 2026-06-30
+updated: 2026-06-30
+related: []
+---
+
 # Phase4.5：jOOQ 持久层改造
 
 默认前提：**Phase4 已经完成**，也就是现在已经有：

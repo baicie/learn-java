@@ -1,15 +1,22 @@
 ---
-title: Phase Z0 Module Boundaries
+title: Phase Z0 Module Boundaries (Historical)
 type: architecture
-status: accepted
+status: deprecated
 phase: z0
 owner: platform-team
 created: 2026-06-21
-updated: 2026-06-21
-related: docs/scenarios/zabbix-host-service-incident.md
+updated: 2026-06-30
+related:
+  - docs/architecture.md
+  - docs/scenarios/zabbix-host-service-incident.md
 ---
+# Phase Z0 Module Boundaries (Historical)
 
-# Phase Z0 Module Boundaries
+
+# Phase Z0 Module Boundaries（历史版本）
+
+> **此文件已 deprecated。** 事实源入口：`docs/architecture.md`（指向 SKILL §3 + §5）。
+> 内容仅作历史查阅；新增/修订请改 `docs/architecture.md`。
 
 Phase Z0 freezes the current AegisOps MVP baseline around one scenario:
 

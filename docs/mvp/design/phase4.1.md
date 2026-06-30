@@ -1,3 +1,14 @@
+---
+title: Phase4.1：Agent Context Contract & Safety Boundary
+type: design
+status: accepted
+phase: global
+owner: ai
+created: 2026-06-30
+updated: 2026-06-30
+related: []
+---
+
 # Phase4.1：Agent Context Contract & Safety Boundary
 
 默认前提：**Phase4.0 已经完成**，也就是现在已经有：

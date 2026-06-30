@@ -1,3 +1,13 @@
+---
+title: Phase5.7：Ansible Live Execution with Approval Guard
+type: design
+status: accepted
+phase: global
+owner: ai
+created: 2026-06-30
+updated: 2026-06-30
+related: []
+---
 # Phase5.7：Ansible Live Execution with Approval Guard
 
 > Phase5.7 目标：在 Phase5.6 `ansible-playbook --check` sandbox 基础上，**受控开放 Ansible live execution**。

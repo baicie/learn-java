@@ -1,3 +1,14 @@
+---
+title: Phase6.1：Incident Case Library
+type: design
+status: accepted
+phase: global
+owner: ai
+created: 2026-06-30
+updated: 2026-06-30
+related: []
+---
+
 # Phase6.1：Incident Case Library
 
 > Phase6.1 目标：把 **reviewed / generated Postmortem** 沉淀为可复用的事故案例库。

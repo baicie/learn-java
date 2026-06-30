@@ -1,3 +1,13 @@
+---
+title: Phase Z9：Zabbix MVP 端到端验收
+type: design
+status: accepted
+phase: global
+owner: ai
+created: 2026-06-30
+updated: 2026-06-30
+related: []
+---
 # Phase Z9：Zabbix MVP 端到端验收
 
 ## 目标

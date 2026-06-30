@@ -1,3 +1,13 @@
+---
+title: Phase8.2：Private Deployment / Helm / Offline Package
+type: design
+status: accepted
+phase: global
+owner: ai
+created: 2026-06-30
+updated: 2026-06-30
+related: []
+---
 # Phase8.2：Private Deployment / Helm / Offline Package
 
 > Phase8.2 目标：把 AegisOps 做成可私有化交付的部署形态。

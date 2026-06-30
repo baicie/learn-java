@@ -1,3 +1,14 @@
+---
+title: Phase5.4：Webhook Adapter
+type: design
+status: accepted
+phase: global
+owner: ai
+created: 2026-06-30
+updated: 2026-06-30
+related: []
+---
+
 # Phase5.4：Webhook Adapter
 
 > 前提：Phase5.3 已完成并修复 `retry` 只能重试最新 failed/timeout execution 的边界问题。

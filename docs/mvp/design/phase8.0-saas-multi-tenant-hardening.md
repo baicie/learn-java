@@ -1,3 +1,13 @@
+---
+title: Phase8.0 SaaS Multi-tenant Hardening
+type: design
+status: accepted
+phase: global
+owner: ai
+created: 2026-06-30
+updated: 2026-06-30
+related: []
+---
 # Phase8.0 SaaS Multi-tenant Hardening
 
 ## 目标

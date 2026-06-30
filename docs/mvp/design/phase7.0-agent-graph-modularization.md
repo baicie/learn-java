@@ -1,3 +1,13 @@
+---
+title: Phase7.0 Agent Graph Modularization
+type: design
+status: accepted
+phase: global
+owner: ai
+created: 2026-06-30
+updated: 2026-06-30
+related: []
+---
 # Phase7.0 Agent Graph Modularization
 
 ## 目标

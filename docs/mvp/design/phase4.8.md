@@ -1,3 +1,13 @@
+---
+title: Phase4.8：持久层收口与 Repository 命名治理
+type: design
+status: accepted
+phase: global
+owner: ai
+created: 2026-06-30
+updated: 2026-06-30
+related: []
+---
 # Phase4.8：持久层收口与 Repository 命名治理
 
 > 默认前提：Phase4.6 已接入 jOOQ codegen；Phase4.7 已将 `aiops-evidence / aiops-ai-client / aiops-rca` 三个核心 Repository 迁移到 `io.aegisops.persistence.jooq.Tables` generated Tables。

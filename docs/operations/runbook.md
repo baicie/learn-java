@@ -1,3 +1,13 @@
+---
+title: AegisOps Production Runbook
+type: design
+status: accepted
+phase: global
+owner: ai
+created: 2026-06-30
+updated: 2026-06-30
+related: []
+---
 # AegisOps Production Runbook
 
 ## 1. Pod Not Ready

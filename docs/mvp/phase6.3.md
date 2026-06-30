@@ -1,3 +1,13 @@
+---
+title: Phase6.3：Agent Eval & Prompt Regression
+type: design
+status: accepted
+phase: global
+owner: ai
+created: 2026-06-30
+updated: 2026-06-30
+related: []
+---
 # Phase6.3：Agent Eval & Prompt Regression
 
 > Phase6.3 目标：把前面沉淀的 **Incident Case Library / Postmortem / AI Diagnosis** 转成可重复运行的 Agent 评测集，用来做 **Prompt 回归测试、模型切换回归、诊断质量评分**。

@@ -1,3 +1,13 @@
+---
+title: AegisOps Offline Package
+type: design
+status: accepted
+phase: global
+owner: ai
+created: 2026-06-30
+updated: 2026-06-30
+related: []
+---
 # AegisOps Offline Package
 
 ## 制作离线包

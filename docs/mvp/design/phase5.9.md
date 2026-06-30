@@ -1,3 +1,13 @@
+---
+title: Phase5.8：Rollback Plan
+type: design
+status: accepted
+phase: global
+owner: ai
+created: 2026-06-30
+updated: 2026-06-30
+related: []
+---
 # Phase5.8：Rollback Plan
 
 > Phase5.8 目标：在已经开放 Ansible live execution 后，补上 **回滚计划、回滚审批、回滚执行绑定、回滚审计 artifact**。

@@ -1,3 +1,14 @@
+---
+title: Phase8.1：Plugin System
+type: design
+status: accepted
+phase: global
+owner: ai
+created: 2026-06-30
+updated: 2026-06-30
+related: []
+---
+
 # Phase8.1：Plugin System
 
 > Phase8.1 目标：给 AegisOps 增加 **安全插件系统 MVP**。

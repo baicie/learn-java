@@ -1,3 +1,13 @@
+---
+title: Phase5.8 Rollback Plan 实现说明
+type: design
+status: accepted
+phase: global
+owner: ai
+created: 2026-06-30
+updated: 2026-06-30
+related: []
+---
 # Phase5.8 Rollback Plan 实现说明
 
 > 本文档与 `docs/mvp/design/phase5.9.md` 设计稿配套,记录 Phase5.8 Rollback Plan 的最终实现落点,以及与设计稿的差异说明。
