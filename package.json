@@ -14,6 +14,15 @@
     "ci:frontend": "bash scripts/ci/frontend.sh",
     "postinstall": "simple-git-hooks"
   },
+  "_scriptBoundaries": {
+    "_comment": "本字段为注释性元数据，pnpm/npm 不会作为脚本执行；指向 scripts/README-start.md / scripts/README-docs.md 了解详情",
+    "dev": "本地前端 dev server（web/console 独立）",
+    "build": "前端构建；后端构建走 scripts/start.ts backend（mvn package）",
+    "ci": "本地五件套守门（lint + typecheck + test + build）",
+    "ci:docs": "调用 scripts/docs.ts check（frontmatter 校验 + INDEX.md 生成）",
+    "ci:backend": "Java 五件套",
+    "ci:frontend": "前端五件套"
+  },
   "devDependencies": {
     "@baicie/scripts": "^0.1.2",
     "eslint": "^10.5.0",

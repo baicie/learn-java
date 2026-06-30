@@ -539,32 +539,43 @@ public Map<String, Object> health() {
 
 ```txt
 1. 各自添加 README.md：
-   scripts/docs.ts/README.md   # 描述 init / new / check / index 四个子命令
-   scripts/start.ts/README.md  # 描述启动流程与超时
+   scripts/README-docs.md   # 描述 init / new / check / index 四个子命令
+   scripts/README-start.md  # 描述启动流程与超时
+   (注：scripts/docs.ts 与 scripts/start.ts 是 .ts 文件，不能同名子目录;
+    改为同级 .md 文档以保留与 README 同等的索引可见性)
 2. 在根 package.json scripts 注释每个 script 的边界
 3. 不允许两边互相 import，独立维护
 ```
 
 ### 状态
 
-- **PR10 待办**
+- **PR10 已完成**
+  - `scripts/README-docs.md`：docs.ts 4 子命令（init/new/check/index）+ frontmatter
+    校验规则 + 边界声明
+  - `scripts/README-start.md`：start.ts 9 子命令（all/infra/backend/frontend/
+    stop/infra-stop/clean/status/logs）+ 启动顺序 + 与 scripts/ci/\* 的关系
+  - `package.json`：新增 `_scriptBoundaries` 元数据字段，注释各 script 边界
+    （用下划线前缀避免 pnpm 执行）
+  - 校正 §11 原方案：scripts/docs.ts/README.md 不可达（与 .ts 文件同名冲突），
+    改为同级 scripts/README-docs.md
+  - 互不 import 校验：docs.ts 不引 start.ts / start.ts 不引 docs.ts（grep 验证）
 
 ---
 
 ## 12. PR 推进顺序
 
-| PR        | 标题                                                              | 工作量   | 依赖                                             | 状态                                                                      |
-| --------- | ----------------------------------------------------------------- | -------- | ------------------------------------------------ | ------------------------------------------------------------------------- |
-| PR-mega-1 | AGENTS.md 全文重写（1733 → 441 行，与 SKILL.md 合并文档源头约定） | ~30 分钟 | 无                                               | **已完成（commit `f9fbe21`，L1）**                                        |
-| PR2       | RuntimePhase + health phase 标签 + Phase Discipline 守门          | 1.5 小时 | 无                                               | **已完成（commits `acf856e` + `02896d6` + 本 PR，L2）**                   |
-| PR3       | Flyway V1 拆 5 个 V0001..V0005（clean slate）                     | 半天     | PR2 共享 RuntimePhase（不强依赖）                | **已完成（commit `4a36a3c`，L3）**                                        |
-| PR4       | runner → Application Service + ArchUnit 守门                      | 1~2 天   | 无                                               | **已完成（L2 refactor + L3 ArchUnit guard）**                             |
-| PR5       | worker 骨架（4 job + OutboxPoller + 调度链重构）                  | 2~3 天   | PR2（共享 RuntimePhase）、PR3（共享 V0006 迁移） | **已完成（L3 schema + L3 调度链重构）**                                   |
-| PR6       | demo-order-service ADR + profile                                  | 2 小时   | 无                                               | **已完成（ADR + Spring profile + Maven profile）**                        |
-| PR7       | docs 收敛 + roadmap 指向 SKILL.md                                 | 半天     | PR6（共享 ADR 目录）                             | **已完成（6 个事实源 + 53 个 frontmatter + check 全绿）**                 |
-| PR8       | web/console Phase A（最小骨架）                                   | 2~3 天   | 无（独立仓库或子目录）                           | **已完成（9 页面 + 13 shadcn 组件 + 14 测试全绿 + tsbuildinfo untrack）** |
-| PR9       | aiops-agent ADR                                                   | 1 小时   | 无                                               | **已完成（L1 纯文档，ADR 0003 + 校正 §10 错误描述）**                     |
-| PR10      | scripts 拆分                                                      | 1 小时   | 无                                               | 待办                                                                      |
+| PR        | 标题                                                              | 工作量   | 依赖                                             | 状态                                                                            |
+| --------- | ----------------------------------------------------------------- | -------- | ------------------------------------------------ | ------------------------------------------------------------------------------- |
+| PR-mega-1 | AGENTS.md 全文重写（1733 → 441 行，与 SKILL.md 合并文档源头约定） | ~30 分钟 | 无                                               | **已完成（commit `f9fbe21`，L1）**                                              |
+| PR2       | RuntimePhase + health phase 标签 + Phase Discipline 守门          | 1.5 小时 | 无                                               | **已完成（commits `acf856e` + `02896d6` + 本 PR，L2）**                         |
+| PR3       | Flyway V1 拆 5 个 V0001..V0005（clean slate）                     | 半天     | PR2 共享 RuntimePhase（不强依赖）                | **已完成（commit `4a36a3c`，L3）**                                              |
+| PR4       | runner → Application Service + ArchUnit 守门                      | 1~2 天   | 无                                               | **已完成（L2 refactor + L3 ArchUnit guard）**                                   |
+| PR5       | worker 骨架（4 job + OutboxPoller + 调度链重构）                  | 2~3 天   | PR2（共享 RuntimePhase）、PR3（共享 V0006 迁移） | **已完成（L3 schema + L3 调度链重构）**                                         |
+| PR6       | demo-order-service ADR + profile                                  | 2 小时   | 无                                               | **已完成（ADR + Spring profile + Maven profile）**                              |
+| PR7       | docs 收敛 + roadmap 指向 SKILL.md                                 | 半天     | PR6（共享 ADR 目录）                             | **已完成（6 个事实源 + 53 个 frontmatter + check 全绿）**                       |
+| PR8       | web/console Phase A（最小骨架）                                   | 2~3 天   | 无（独立仓库或子目录）                           | **已完成（9 页面 + 13 shadcn 组件 + 14 测试全绿 + tsbuildinfo untrack）**       |
+| PR9       | aiops-agent ADR                                                   | 1 小时   | 无                                               | **已完成（L1 纯文档，ADR 0003 + 校正 §10 错误描述）**                           |
+| PR10      | scripts 拆分                                                      | 1 小时   | 无                                               | **已完成（L1 纯文档：scripts/README-{docs,start}.md + package.json 边界注释）** |
 
 ## 13. 推进纪律
 
@@ -610,7 +621,7 @@ public Map<String, Object> health() {
 | 缺 web/console                                        | §8         | P1     | **PR8 已完成（9 页面 + 13 shadcn 组件 + 五件套绿）** |
 | 文档分散                                              | §9         | P1     | **PR7 已完成（6 个事实源 + check 全绿）**            |
 | aiops-agent 未声明                                    | §10        | P2     | **PR9 已完成（L1 纯文档 ADR，校正 §10 错误描述）**   |
-| scripts 职责混淆                                      | §11        | P2     | PR10                                                 |
+| scripts 职责混淆                                      | §11        | P2     | **PR10 已完成（scripts/README-{docs,start}.md）**    |
 
 ## 15. 验收
 
