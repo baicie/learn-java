@@ -136,11 +136,22 @@ class PhaseZ9ZabbixMvpFlowTest {
 
   @Test
   void shouldRunZabbixMvpFromWebhookToMarkdownReport() throws Exception {
+    seedAlerts();
+    String incidentId = aggregateAndRequireIncident();
+    collectZabbixEvidence(incidentId);
+    analyzeRca(incidentId);
+    diagnoseWithAi(incidentId);
+    generateReportAndAssert(incidentId);
+  }
+
+  private void seedAlerts() throws Exception {
     ingestWebhook("20001", "30001", "CPU High", "High");
     ingestWebhook("20002", "30002", "API Slow", "Average");
     ingestWebhook("20003", "30003", "Health Check Failed", "Disaster");
     ingestWebhook("20004", "30004", "Error Log Increased", "Warning");
+  }
 
+  private String aggregateAndRequireIncident() throws Exception {
     mvc.perform(
             post("/api/incidents/aggregate")
                 .header("X-Tenant-Id", TENANT_ID)
@@ -165,9 +176,11 @@ class PhaseZ9ZabbixMvpFlowTest {
             """,
             String.class,
             TENANT_ID);
-
     assertThat(incidentId).isNotBlank();
+    return incidentId;
+  }
 
+  private void collectZabbixEvidence(String incidentId) throws Exception {
     mvc.perform(
             post("/api/incidents/{incidentId}/evidence/zabbix/collect", incidentId)
                 .header("X-Tenant-Id", TENANT_ID)
@@ -188,7 +201,9 @@ class PhaseZ9ZabbixMvpFlowTest {
             incidentId);
     assertThat(evidenceCount).isNotNull();
     assertThat(evidenceCount).isGreaterThanOrEqualTo(3);
+  }
 
+  private void analyzeRca(String incidentId) throws Exception {
     mvc.perform(
             post("/api/incidents/{incidentId}/rca/analyze", incidentId)
                 .header("X-Tenant-Id", TENANT_ID)
@@ -202,7 +217,9 @@ class PhaseZ9ZabbixMvpFlowTest {
         .andExpect(jsonPath("$.data.suspectedRootCause").isNotEmpty())
         .andExpect(jsonPath("$.data.matchedRules").isArray())
         .andExpect(jsonPath("$.data.evidenceRefs").isArray());
+  }
 
+  private void diagnoseWithAi(String incidentId) throws Exception {
     mvc.perform(
             post("/api/incidents/{incidentId}/ai/diagnose", incidentId)
                 .header("X-Tenant-Id", TENANT_ID)
@@ -217,7 +234,9 @@ class PhaseZ9ZabbixMvpFlowTest {
         .andExpect(jsonPath("$.data.summary").isNotEmpty())
         .andExpect(jsonPath("$.data.evidenceRefs").isArray())
         .andExpect(jsonPath("$.data.matchedRules").isArray());
+  }
 
+  private void generateReportAndAssert(String incidentId) throws Exception {
     mvc.perform(
             post("/api/incidents/{incidentId}/reports", incidentId)
                 .header("X-Tenant-Id", TENANT_ID)
