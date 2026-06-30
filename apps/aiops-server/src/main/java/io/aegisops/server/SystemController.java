@@ -1,7 +1,9 @@
 package io.aegisops.server;
 
 import io.aegisops.common.api.ApiResponse;
+import io.aegisops.common.runtime.RuntimeProperties;
 import io.aegisops.common.tenant.TenantContext;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -14,10 +16,27 @@ import org.springframework.web.bind.annotation.RestController;
 public class SystemController {
   private final JdbcTemplate jdbc;
   private final String appName;
+  private final RuntimeProperties runtimeProperties;
 
-  public SystemController(JdbcTemplate jdbc, @Value("${spring.application.name}") String appName) {
+  public SystemController(
+      JdbcTemplate jdbc,
+      RuntimeProperties runtimeProperties,
+      @Value("${spring.application.name}") String appName) {
     this.jdbc = jdbc;
+    this.runtimeProperties = runtimeProperties;
     this.appName = appName;
+  }
+
+  /**
+   * Reports the runtime MVP phase and the app name. Unauthenticated by design so that health probes
+   * and external monitors can identify the running build without a tenant context.
+   */
+  @GetMapping("/status")
+  public ApiResponse<Map<String, String>> status() {
+    Map<String, String> body = new LinkedHashMap<>();
+    body.put("app", appName);
+    body.put("phase", runtimeProperties.phase().propertyName());
+    return ApiResponse.ok(body);
   }
 
   @GetMapping("/overview")

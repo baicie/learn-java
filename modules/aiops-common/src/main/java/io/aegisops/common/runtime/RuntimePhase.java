@@ -5,16 +5,16 @@ import java.util.Locale;
 /**
  * Declares the runtime MVP phase of an AegisOps application process.
  *
- * <p>The value drives {@code /internal/<app>/status} responses and, in subsequent phases,
- * will gate {@code @ConditionalOnProperty(prefix = "aiops.runtime", name = "phase")} beans so
- * that services outside the current MVP phase are not registered in the application context.
+ * <p>The value drives {@code /internal/<app>/status} responses and, in subsequent phases, will gate
+ * {@code @ConditionalOnProperty(prefix = "aiops.runtime", name = "phase")} beans so that services
+ * outside the current MVP phase are not registered in the application context.
  *
- * <p>Phase enumeration maps one-to-one to MVP Phases defined in
- * {@code .agents/skills/aegisops/SKILL.md §14}.
+ * <p>Phase enumeration maps one-to-one to MVP Phases defined in {@code
+ * .agents/skills/aegisops/SKILL.md §14}.
  *
- * <p>The default phase is {@link #PHASE_0}; applications must explicitly declare a phase in
- * their {@code application.yml} (via env var {@code AIOPS_RUNTIME_PHASE}) to opt into a later
- * phase. Conservative default avoids accidentally enabling Phase 5 services on a fresh boot.
+ * <p>The default phase is {@link #PHASE_0}; applications must explicitly declare a phase in their
+ * {@code application.yml} (via env var {@code AIOPS_RUNTIME_PHASE}) to opt into a later phase.
+ * Conservative default avoids accidentally enabling Phase 5 services on a fresh boot.
  */
 public enum RuntimePhase {
   PHASE_0,
@@ -51,7 +51,8 @@ public enum RuntimePhase {
     }
     String upper = value.trim().toUpperCase(Locale.ROOT);
     for (RuntimePhase phase : values()) {
-      if (phase.name().equals(upper) || phase.propertyName().toUpperCase(Locale.ROOT).equals(upper)) {
+      if (phase.name().equals(upper)
+          || phase.propertyName().toUpperCase(Locale.ROOT).equals(upper)) {
         return phase;
       }
     }

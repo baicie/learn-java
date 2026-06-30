@@ -12,8 +12,8 @@ import org.springframework.web.bind.annotation.RestController;
  * Worker internal status endpoint.
  *
  * <p>Returns the current runtime MVP phase as configured in {@code application.yml}. Phase
- * discovery tests live next to the enum and properties class; controller-level wiring is
- * exercised by integration smoke tests of the {@code /internal/worker/status} route.
+ * discovery tests live next to the enum and properties class; controller-level wiring is exercised
+ * by integration smoke tests of the {@code /internal/worker/status} route.
  */
 @RestController
 @RequestMapping("/internal/worker")
