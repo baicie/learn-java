@@ -18,6 +18,17 @@ export default defineConfig({
       '/actuator': 'http://localhost:8080',
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-app': ['@tanstack/react-query', 'react-router-dom'],
+          'vendor-markdown': ['react-markdown'],
+          'vendor-ui': ['@base-ui/react', 'lucide-react', 'sonner'],
+        },
+      },
+    },
+  },
   test: {
     environment: 'jsdom',
     globals: true,

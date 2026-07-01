@@ -10,6 +10,7 @@ import io.aegisops.plugin.dto.TenantFrontendManifestResponse;
 import io.aegisops.plugin.dto.TenantPluginResponse;
 import io.aegisops.plugin.dto.TenantPluginToolPolicyResponse;
 import java.util.List;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -48,12 +49,14 @@ public class PluginController {
   }
 
   @PostMapping("/api/plugins/{pluginId}/enable")
+  @PreAuthorize("hasAuthority('admin:manage')")
   public ApiResponse<TenantPluginResponse> enable(
       @PathVariable String pluginId, @RequestBody(required = false) PluginEnableRequest request) {
     return ApiResponse.ok(service.enablePlugin(TenantContext.requireTenantId(), pluginId, request));
   }
 
   @PostMapping("/api/tenant/plugins/{tenantPluginId}/disable")
+  @PreAuthorize("hasAuthority('admin:manage')")
   public ApiResponse<TenantPluginResponse> disable(
       @PathVariable String tenantPluginId,
       @RequestBody(required = false) PluginDisableRequest request) {
@@ -72,6 +75,7 @@ public class PluginController {
   }
 
   @PostMapping("/api/tenant/plugins/{tenantPluginId}/tools/{toolKey}/allow")
+  @PreAuthorize("hasAuthority('admin:manage')")
   public ApiResponse<TenantPluginToolPolicyResponse> allowTool(
       @PathVariable String tenantPluginId,
       @PathVariable String toolKey,
@@ -81,6 +85,7 @@ public class PluginController {
   }
 
   @PostMapping("/api/tenant/plugins/{tenantPluginId}/tools/{toolKey}/deny")
+  @PreAuthorize("hasAuthority('admin:manage')")
   public ApiResponse<TenantPluginToolPolicyResponse> denyTool(
       @PathVariable String tenantPluginId,
       @PathVariable String toolKey,

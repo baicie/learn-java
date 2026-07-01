@@ -5,13 +5,17 @@
   "type": "module",
   "scripts": {
     "dev": "pnpm -r --parallel -C web/console dev",
-    "build": "pnpm -r -C web/console build",
+    "build": "pnpm -C web/console run build && mvn -B -ntp -DskipTests package",
     "preview": "pnpm -r -C web/console preview",
-    "lint": "pnpm -r -C web/console lint",
+    "lint": "pnpm -C web/console run lint",
+    "format": "pnpm -C web/console run format:check && mvn -B -ntp spotless:check",
+    "typecheck": "pnpm -C web/console run typecheck && mvn -B -ntp -DskipTests compile",
+    "test": "pnpm -C web/console run test && mvn -B -ntp test && bash scripts/ci/agent.sh",
     "ci": "bash scripts/ci/verify-local.sh",
     "ci:docs": "bash scripts/ci/docs.sh",
     "ci:backend": "bash scripts/ci/backend.sh",
     "ci:frontend": "bash scripts/ci/frontend.sh",
+    "ci:agent": "bash scripts/ci/agent.sh",
     "postinstall": "simple-git-hooks"
   },
   "_scriptBoundaries": {
@@ -29,6 +33,7 @@
     "lint-staged": "^17.0.7",
     "prettier": "^3.8.4",
     "simple-git-hooks": "^2.13.1",
+    "tailwindcss": "^4.3.1",
     "tsx": "^4.22.4",
     "typescript": "^5.9.0"
   },

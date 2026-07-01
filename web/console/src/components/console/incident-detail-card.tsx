@@ -88,7 +88,7 @@ export function IncidentDetailCard({
           <>
             <section className="flex flex-col gap-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <h3 className="font-heading text-base font-semibold leading-snug">
+                <h3 className="font-heading text-base leading-snug font-semibold">
                   {detail.incident.title}
                 </h3>
                 <div className="flex items-center gap-2">

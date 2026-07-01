@@ -36,7 +36,7 @@ export function DatasourcesPage() {
       <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-3">
           <div>
-            <h1 className="text-base font-semibold leading-none">Datasources</h1>
+            <h1 className="text-base leading-none font-semibold">Datasources</h1>
             <p className="mt-1 text-xs text-muted-foreground">
               管理 Zabbix 数据源，并触发 Demo 同步。
             </p>

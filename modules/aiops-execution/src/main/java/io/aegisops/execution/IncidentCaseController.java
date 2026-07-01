@@ -6,6 +6,7 @@ import io.aegisops.execution.dto.IncidentCaseCreateFromPostmortemRequest;
 import io.aegisops.execution.dto.IncidentCasePublishRequest;
 import io.aegisops.execution.dto.IncidentCaseResponse;
 import java.util.List;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@PreAuthorize("hasAuthority('incident:write')")
 public class IncidentCaseController {
   private final IncidentCaseService service;
 

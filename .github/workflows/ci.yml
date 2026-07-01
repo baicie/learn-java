@@ -49,6 +49,7 @@ defaults:
 env:
   JAVA_VERSION: "21"
   NODE_VERSION: "22"
+  PYTHON_VERSION: "3.12"
   MAVEN_OPTS: "-Dmaven.repo.local=.m2/repository"
 
 jobs:
@@ -122,10 +123,29 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
 
+  agent:
+    name: AI Agent
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: apps/aiops-agent/pyproject.toml
+
+      - name: Verify AI agent
+        run: bash scripts/ci/agent.sh
+
   summary:
     name: CI Summary
     runs-on: ubuntu-latest
-    needs: [docs, backend, frontend]
+    needs: [docs, backend, frontend, agent]
     if: always()
 
     steps:
@@ -133,11 +153,13 @@ jobs:
         run: |
           if [ "${{ needs.docs.result }}" != "success" ] \
             || [ "${{ needs.backend.result }}" != "success" ] \
-            || [ "${{ needs.frontend.result }}" != "success" ]; then
+            || [ "${{ needs.frontend.result }}" != "success" ] \
+            || [ "${{ needs.agent.result }}" != "success" ]; then
             echo "::error::One or more CI jobs failed. See:"
             echo "::error::  docs=${{ needs.docs.result }}"
             echo "::error::  backend=${{ needs.backend.result }}"
             echo "::error::  frontend=${{ needs.frontend.result }}"
+            echo "::error::  agent=${{ needs.agent.result }}"
             exit 1
           fi
           echo "All CI jobs passed."

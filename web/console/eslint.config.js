@@ -5,6 +5,10 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 import importX from 'eslint-plugin-import-x'
 import tailwind from 'eslint-plugin-tailwindcss'
 import prettier from 'eslint-config-prettier'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const __dirname = dirname(fileURLToPath(import.meta.url))
 
 export default tseslint.config(
   {
@@ -37,6 +41,9 @@ export default tseslint.config(
       },
     },
     settings: {
+      tailwindcss: {
+        config: resolve(__dirname, 'src/styles.css'),
+      },
       'import-x': {
         typescript: { project: './tsconfig.json' },
       },
@@ -63,8 +70,36 @@ export default tseslint.config(
         },
       ],
       'import-x/no-duplicates': 'error',
-      'tailwindcss/classnames-order': 'off',
-      'tailwindcss/no-custom-classname': 'off',
+      'tailwindcss/classnames-order': 'warn',
+      'tailwindcss/no-custom-classname': [
+        'error',
+        {
+          whitelist: [
+            'bg-background',
+            'bg-card',
+            'bg-destructive',
+            'bg-muted',
+            'bg-popover',
+            'bg-primary',
+            'bg-secondary',
+            'bg-sidebar',
+            'border-border',
+            'border-destructive',
+            'border-input',
+            'border-primary',
+            'text-background',
+            'text-card-foreground',
+            'text-destructive',
+            'text-foreground',
+            'text-muted-foreground',
+            'text-popover-foreground',
+            'text-primary-foreground',
+            'text-secondary-foreground',
+            'ring-ring',
+            'data-icon',
+          ],
+        },
+      ],
       'no-console': ['warn', { allow: ['warn', 'error', 'info'] }],
     },
   },

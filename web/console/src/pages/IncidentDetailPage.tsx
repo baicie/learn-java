@@ -319,7 +319,7 @@ export function IncidentDetailPage() {
             >
               ← Incidents
             </button>
-            <h1 className="text-base font-semibold leading-none">
+            <h1 className="text-base leading-none font-semibold">
               {query.data?.incident.title || 'Loading...'}
             </h1>
           </div>
@@ -374,7 +374,7 @@ export function IncidentDetailPage() {
 
             {/* Incident header */}
             <Card>
-              <CardContent className="pb-3 pt-4">
+              <CardContent className="pt-4 pb-3">
                 <h2 className="text-lg font-semibold">
                   {query.data.incident.title || query.data.incident.id}
                 </h2>

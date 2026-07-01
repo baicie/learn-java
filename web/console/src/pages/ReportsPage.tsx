@@ -8,7 +8,7 @@ export function ReportsPage() {
       <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-3">
           <div>
-            <h1 className="text-base font-semibold leading-none">Reports</h1>
+            <h1 className="text-base leading-none font-semibold">Reports</h1>
             <p className="mt-1 text-xs text-muted-foreground">
               Markdown 报告按 Incident 生成并保存版本。
             </p>

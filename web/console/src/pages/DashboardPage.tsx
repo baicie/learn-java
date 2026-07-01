@@ -41,7 +41,7 @@ export function DashboardPage() {
               <Wand2Icon className="size-4" />
             </div>
             <div>
-              <h1 className="text-base font-semibold leading-none">AegisOps</h1>
+              <h1 className="text-base leading-none font-semibold">AegisOps</h1>
               <p className="mt-1 text-xs text-muted-foreground">AI Ops Demo</p>
             </div>
           </div>

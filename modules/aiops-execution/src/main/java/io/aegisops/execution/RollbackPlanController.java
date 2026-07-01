@@ -8,6 +8,7 @@ import io.aegisops.execution.dto.RollbackExecutionCreateRequest;
 import io.aegisops.execution.dto.RollbackPlanCreateRequest;
 import io.aegisops.execution.dto.RollbackPlanResponse;
 import io.aegisops.execution.dto.RollbackPlanSubmitRequest;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -30,6 +31,7 @@ public class RollbackPlanController {
   }
 
   @PostMapping("/api/executions/{executionId}/rollback-plans")
+  @PreAuthorize("hasAuthority('automation:execute')")
   public ApiResponse<RollbackPlanResponse> create(
       @PathVariable String executionId, @RequestBody RollbackPlanCreateRequest request) {
     return ApiResponse.ok(
@@ -37,17 +39,20 @@ public class RollbackPlanController {
   }
 
   @GetMapping("/api/executions/{executionId}/rollback-plans/latest")
+  @PreAuthorize("hasAuthority('automation:read')")
   public ApiResponse<RollbackPlanResponse> latest(@PathVariable String executionId) {
     return ApiResponse.ok(
         planService.latestBySourceExecution(TenantContext.requireTenantId(), executionId));
   }
 
   @GetMapping("/api/rollback-plans/{rollbackPlanId}")
+  @PreAuthorize("hasAuthority('automation:read')")
   public ApiResponse<RollbackPlanResponse> get(@PathVariable String rollbackPlanId) {
     return ApiResponse.ok(planService.get(TenantContext.requireTenantId(), rollbackPlanId));
   }
 
   @PostMapping("/api/rollback-plans/{rollbackPlanId}/submit")
+  @PreAuthorize("hasAuthority('automation:execute')")
   public ApiResponse<RollbackPlanResponse> submit(
       @PathVariable String rollbackPlanId, @RequestBody RollbackPlanSubmitRequest request) {
     return ApiResponse.ok(
@@ -55,6 +60,7 @@ public class RollbackPlanController {
   }
 
   @PostMapping("/api/rollback-plans/{rollbackPlanId}/approve")
+  @PreAuthorize("hasAuthority('automation:approve')")
   public ApiResponse<RollbackPlanResponse> approve(
       @PathVariable String rollbackPlanId, @RequestBody RollbackDecisionRequest request) {
     return ApiResponse.ok(
@@ -62,6 +68,7 @@ public class RollbackPlanController {
   }
 
   @PostMapping("/api/rollback-plans/{rollbackPlanId}/reject")
+  @PreAuthorize("hasAuthority('automation:approve')")
   public ApiResponse<RollbackPlanResponse> reject(
       @PathVariable String rollbackPlanId, @RequestBody RollbackDecisionRequest request) {
     return ApiResponse.ok(
@@ -69,11 +76,13 @@ public class RollbackPlanController {
   }
 
   @PostMapping("/api/rollback-plans/{rollbackPlanId}/cancel")
+  @PreAuthorize("hasAuthority('automation:execute')")
   public ApiResponse<RollbackPlanResponse> cancel(@PathVariable String rollbackPlanId) {
     return ApiResponse.ok(planService.cancel(TenantContext.requireTenantId(), rollbackPlanId));
   }
 
   @PostMapping("/api/rollback-plans/{rollbackPlanId}/executions")
+  @PreAuthorize("hasAuthority('automation:execute')")
   public ApiResponse<ExecutionRunResponse> createExecution(
       @PathVariable String rollbackPlanId, @RequestBody RollbackExecutionCreateRequest request) {
     return ApiResponse.ok(

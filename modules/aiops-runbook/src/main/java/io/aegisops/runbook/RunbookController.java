@@ -5,6 +5,7 @@ import io.aegisops.common.tenant.TenantContext;
 import io.aegisops.runbook.dto.CreateRunbookRequest;
 import io.aegisops.runbook.dto.RunbookResponse;
 import java.util.List;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -24,28 +25,33 @@ public class RunbookController {
   }
 
   @GetMapping
+  @PreAuthorize("hasAuthority('runbook:read')")
   public ApiResponse<List<RunbookResponse>> list(
       @RequestParam(defaultValue = "false") boolean includeDisabled) {
     return ApiResponse.ok(service.listRunbooks(TenantContext.requireTenantId(), includeDisabled));
   }
 
   @PostMapping
+  @PreAuthorize("hasAuthority('runbook:write')")
   public ApiResponse<RunbookResponse> create(@RequestBody CreateRunbookRequest request) {
     return ApiResponse.ok(service.createRunbook(TenantContext.requireTenantId(), request));
   }
 
   @GetMapping("/{runbookId}")
+  @PreAuthorize("hasAuthority('runbook:read')")
   public ApiResponse<RunbookResponse> get(@PathVariable String runbookId) {
     return ApiResponse.ok(service.getRunbook(TenantContext.requireTenantId(), runbookId));
   }
 
   @PostMapping("/{runbookId}/enable")
+  @PreAuthorize("hasAuthority('runbook:write')")
   public ApiResponse<RunbookResponse> enable(@PathVariable String runbookId) {
     return ApiResponse.ok(
         service.setRunbookEnabled(TenantContext.requireTenantId(), runbookId, true));
   }
 
   @PostMapping("/{runbookId}/disable")
+  @PreAuthorize("hasAuthority('runbook:write')")
   public ApiResponse<RunbookResponse> disable(@PathVariable String runbookId) {
     return ApiResponse.ok(
         service.setRunbookEnabled(TenantContext.requireTenantId(), runbookId, false));

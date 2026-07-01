@@ -5,6 +5,7 @@ import io.aegisops.common.tenant.TenantContext;
 import io.aegisops.execution.dto.AnsibleCredentialCreateRequest;
 import io.aegisops.execution.dto.AnsibleCredentialResponse;
 import java.util.List;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -21,6 +22,7 @@ public class AnsibleCredentialController {
   }
 
   @GetMapping("/api/ansible-credentials")
+  @PreAuthorize("hasAuthority('automation:read')")
   public ApiResponse<List<AnsibleCredentialResponse>> list(
       @RequestParam(defaultValue = "false") boolean includeDisabled) {
     return ApiResponse.ok(
@@ -28,23 +30,27 @@ public class AnsibleCredentialController {
   }
 
   @PostMapping("/api/ansible-credentials")
+  @PreAuthorize("hasAuthority('admin:manage')")
   public ApiResponse<AnsibleCredentialResponse> create(
       @RequestBody AnsibleCredentialCreateRequest request) {
     return ApiResponse.ok(service.createCredential(TenantContext.requireTenantId(), request));
   }
 
   @GetMapping("/api/ansible-credentials/{credentialId}")
+  @PreAuthorize("hasAuthority('automation:read')")
   public ApiResponse<AnsibleCredentialResponse> get(@PathVariable String credentialId) {
     return ApiResponse.ok(service.getCredential(TenantContext.requireTenantId(), credentialId));
   }
 
   @PostMapping("/api/ansible-credentials/{credentialId}/enable")
+  @PreAuthorize("hasAuthority('admin:manage')")
   public ApiResponse<AnsibleCredentialResponse> enable(@PathVariable String credentialId) {
     return ApiResponse.ok(
         service.setCredentialEnabled(TenantContext.requireTenantId(), credentialId, true));
   }
 
   @PostMapping("/api/ansible-credentials/{credentialId}/disable")
+  @PreAuthorize("hasAuthority('admin:manage')")
   public ApiResponse<AnsibleCredentialResponse> disable(@PathVariable String credentialId) {
     return ApiResponse.ok(
         service.setCredentialEnabled(TenantContext.requireTenantId(), credentialId, false));

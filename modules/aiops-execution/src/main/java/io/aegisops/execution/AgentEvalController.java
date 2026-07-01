@@ -13,6 +13,7 @@ import io.aegisops.execution.dto.AgentEvalRunResponse;
 import io.aegisops.execution.dto.AgentPromptProfileCreateRequest;
 import io.aegisops.execution.dto.AgentPromptProfileResponse;
 import java.util.List;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -21,6 +22,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@PreAuthorize("hasAuthority('admin:manage')")
 public class AgentEvalController {
   private final AgentEvalService service;
 

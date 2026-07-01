@@ -7,7 +7,6 @@ import io.aegisops.common.runtime.RuntimePhase;
 import io.aegisops.common.runtime.RuntimeProperties;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
-import org.springframework.jdbc.core.JdbcTemplate;
 
 /**
  * Endpoint contract guard for PR2.
@@ -22,7 +21,7 @@ class SystemControllerPhaseTest {
   @Test
   void statusEndpointReportsConfiguredPhase5() {
     RuntimeProperties properties = new RuntimeProperties(RuntimePhase.PHASE_5);
-    SystemController controller = new SystemController(mockJdbc(), properties, "aiops-server");
+    SystemController controller = new SystemController(mockOverview(), properties, "aiops-server");
 
     ApiResponse<Map<String, String>> response = controller.status();
 
@@ -34,7 +33,7 @@ class SystemControllerPhaseTest {
   @Test
   void statusEndpointReportsConfiguredPhase0WhenExplicitlyDefaulted() {
     RuntimeProperties properties = new RuntimeProperties(RuntimePhase.PHASE_0);
-    SystemController controller = new SystemController(mockJdbc(), properties, "aiops-server");
+    SystemController controller = new SystemController(mockOverview(), properties, "aiops-server");
 
     ApiResponse<Map<String, String>> response = controller.status();
 
@@ -44,7 +43,7 @@ class SystemControllerPhaseTest {
   @Test
   void statusEndpointFallsBackToPhase0WhenPropertiesDeclaresNullPhase() {
     RuntimeProperties properties = new RuntimeProperties(null);
-    SystemController controller = new SystemController(mockJdbc(), properties, "aiops-server");
+    SystemController controller = new SystemController(mockOverview(), properties, "aiops-server");
 
     ApiResponse<Map<String, String>> response = controller.status();
 
@@ -52,10 +51,11 @@ class SystemControllerPhaseTest {
   }
 
   /**
-   * {@link SystemController#status()} does not touch the {@link JdbcTemplate}, so a Mockito mock is
-   * the cheapest way to satisfy the constructor without standing up a Spring context.
+   * {@link SystemController#status()} does not touch the {@link SystemOverviewService}, so a
+   * Mockito mock is the cheapest way to satisfy the constructor without standing up a Spring
+   * context.
    */
-  private static JdbcTemplate mockJdbc() {
-    return org.mockito.Mockito.mock(JdbcTemplate.class);
+  private static SystemOverviewService mockOverview() {
+    return org.mockito.Mockito.mock(SystemOverviewService.class);
   }
 }

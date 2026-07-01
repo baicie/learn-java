@@ -7,6 +7,7 @@ import io.aegisops.execution.dto.ExecutionRetryRequest;
 import io.aegisops.execution.dto.ExecutionRunResponse;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -28,6 +29,7 @@ public class ExecutionController {
   }
 
   @PostMapping("/api/automation-plans/{planId}/executions")
+  @PreAuthorize("hasAuthority('automation:execute')")
   public ApiResponse<ExecutionRunResponse> create(
       @PathVariable String planId, @RequestBody(required = false) ExecutionCreateRequest request) {
     return ApiResponse.ok(
@@ -35,6 +37,7 @@ public class ExecutionController {
   }
 
   @PostMapping("/api/executions/{executionId}/retry")
+  @PreAuthorize("hasAuthority('automation:execute')")
   public ApiResponse<ExecutionRunResponse> retry(
       @PathVariable String executionId,
       @RequestBody(required = false) ExecutionRetryRequest request) {
@@ -42,16 +45,19 @@ public class ExecutionController {
   }
 
   @GetMapping("/api/executions/{executionId}")
+  @PreAuthorize("hasAuthority('automation:read')")
   public ApiResponse<ExecutionRunResponse> get(@PathVariable String executionId) {
     return ApiResponse.ok(service.getExecution(TenantContext.requireTenantId(), executionId));
   }
 
   @GetMapping("/api/automation-plans/{planId}/executions/latest")
+  @PreAuthorize("hasAuthority('automation:read')")
   public ApiResponse<ExecutionRunResponse> latestByPlan(@PathVariable String planId) {
     return ApiResponse.ok(service.latestByPlan(TenantContext.requireTenantId(), planId));
   }
 
   @PostMapping("/api/executions/{executionId}/cancel")
+  @PreAuthorize("hasAuthority('automation:execute')")
   public ApiResponse<ExecutionRunResponse> cancel(@PathVariable String executionId) {
     return ApiResponse.ok(service.cancel(TenantContext.requireTenantId(), executionId));
   }

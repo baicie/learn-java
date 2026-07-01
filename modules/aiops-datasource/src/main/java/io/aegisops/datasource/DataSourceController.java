@@ -9,6 +9,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -32,24 +33,28 @@ public class DataSourceController {
   }
 
   @GetMapping
+  @PreAuthorize("hasAuthority('datasource:read')")
   public ApiResponse<List<DataSourceRecord>> list() {
     String tenantId = TenantContext.requireTenantId();
     return ApiResponse.ok(service.list(tenantId));
   }
 
   @PostMapping
+  @PreAuthorize("hasAuthority('datasource:write')")
   public ApiResponse<DataSourceRecord> create(@Valid @RequestBody CreateDataSourceRequest request) {
     String tenantId = TenantContext.requireTenantId();
     return ApiResponse.ok(service.create(tenantId, request));
   }
 
   @PostMapping("/{id}/test")
+  @PreAuthorize("hasAuthority('datasource:write')")
   public ApiResponse<TestDataSourceResponse> test(@PathVariable("id") String id) {
     String tenantId = TenantContext.requireTenantId();
     return ApiResponse.ok(service.test(tenantId, id));
   }
 
   @PostMapping("/{id}/sync")
+  @PreAuthorize("hasAuthority('datasource:write')")
   public ApiResponse<SyncDataSourceResponse> sync(@PathVariable("id") String id) {
     String tenantId = TenantContext.requireTenantId();
     try {
@@ -78,6 +83,7 @@ public class DataSourceController {
   }
 
   @GetMapping("/{id}/sync-runs")
+  @PreAuthorize("hasAuthority('datasource:read')")
   public ApiResponse<List<SyncRunRecord>> syncRuns(@PathVariable("id") String id) {
     String tenantId = TenantContext.requireTenantId();
     return ApiResponse.ok(service.syncRuns(tenantId, id));

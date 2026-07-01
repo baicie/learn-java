@@ -1649,6 +1649,92 @@ Next similar Incident can reference previous incidents.
 
 ---
 
+### Phase 7: AI Agent workflow hardening
+
+Goal:
+
+```txt
+Harden the AI diagnosis workflow without allowing AI to execute production actions directly.
+```
+
+Deliverables:
+
+```txt
+LangGraph workflow modularization
+multi-agent collaboration for evidence / RCA / runbook review
+agent memory and checkpoint support
+agent evaluation datasets and prompt profiles
+internal tool policy checks
+observability for agent runs
+```
+
+Acceptance:
+
+```txt
+AI diagnosis remains evidence-based.
+AI tools can fetch evidence and historical cases through internal guarded APIs.
+AI output can recommend runbooks but cannot execute automation.
+Agent runs are traceable, evaluable, and tenant-scoped.
+```
+
+---
+
+### Phase 8: Production hardening
+
+Goal:
+
+```txt
+Prepare the MVP for SaaS-style tenant isolation, plugin policy, and private deployment.
+```
+
+Deliverables:
+
+```txt
+SaaS multi-tenant hardening
+plugin descriptor and tenant plugin policy
+private deployment manifests
+offline package workflow
+production security checklist
+CI and local quality gates
+```
+
+Acceptance:
+
+```txt
+Tenant boundaries are guarded in API, persistence, internal agent tools, and plugin policy.
+Private deployment artifacts can be built and verified.
+Quality gates run consistently in local and CI environments.
+```
+
+---
+
+### Phase Z9: Zabbix MVP end-to-end acceptance
+
+Goal:
+
+```txt
+Freeze a demo acceptance scenario for the full Zabbix incident loop.
+```
+
+Scope:
+
+```txt
+Phase Z9 is a scenario gate, not a product phase.
+It may use demo-order-service and mock fault injection to prove the MVP path.
+It must not redefine production topology or bypass runner / approval safety.
+```
+
+Acceptance:
+
+```txt
+Fault injection triggers Zabbix.
+Zabbix sends an alert into AegisOps.
+AegisOps creates AlertEvent and Incident.
+Evidence, RCA, AI diagnosis, runbook recommendation, execution result, and postmortem are visible.
+```
+
+---
+
 ## 15. What Not To Build In MVP
 
 Do not build these unless explicitly asked:
@@ -1875,6 +1961,9 @@ Phase 3: RCA engine
 Phase 4: AI diagnosis
 Phase 5: Runbook and Ansible
 Phase 6: postmortem and knowledge
+Phase 7: AI Agent workflow hardening
+Phase 8: production hardening
+Phase Z9: Zabbix MVP end-to-end acceptance scenario, not a product phase
 ```
 
 ---
@@ -1993,4 +2082,3 @@ Reference docs for agents:
 .skills/aegisops/references/architecture-boundaries.md  # module and app boundaries
 .skills/aegisops/references/automation-safety.md     # risk levels and safety rules
 ```
-

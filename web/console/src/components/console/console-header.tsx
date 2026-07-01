@@ -28,7 +28,7 @@ export function ConsoleHeader({
             <Wand2Icon className="size-4" />
           </div>
           <div>
-            <h1 className="text-base font-semibold leading-none">AegisOps Console</h1>
+            <h1 className="text-base leading-none font-semibold">AegisOps Console</h1>
             <p className="mt-1 text-xs text-muted-foreground">
               Phase 2 Incident aggregation center
             </p>
@@ -46,7 +46,7 @@ export function ConsoleHeader({
               <AvatarFallback>{initials}</AvatarFallback>
             </Avatar>
             <div className="hidden text-right sm:block">
-              <p className="text-sm font-medium leading-none">{displayName}</p>
+              <p className="text-sm leading-none font-medium">{displayName}</p>
               <p className="mt-1 flex items-center justify-end gap-1 text-xs text-muted-foreground">
                 <UserIcon className="size-3" />
                 {user?.roles?.[0] || 'viewer'}

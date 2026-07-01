@@ -33,7 +33,7 @@ class PluginPolicyClient:
             "toolKey": tool_key,
         }
 
-        async with httpx.AsyncClient(timeout=self.timeout) as client:
+        async with httpx.AsyncClient(timeout=self.timeout, trust_env=False) as client:
             response = await client.post(
                 url,
                 json=body,

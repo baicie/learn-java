@@ -4,6 +4,7 @@ import io.aegisops.common.api.ApiResponse;
 import io.aegisops.common.tenant.TenantContext;
 import io.aegisops.runbook.dto.AutomationPlanResponse;
 import io.aegisops.runbook.dto.RecommendPlanRequest;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -20,6 +21,7 @@ public class AutomationPlanController {
   }
 
   @PostMapping("/api/incidents/{incidentId}/automation-plans/recommend")
+  @PreAuthorize("hasAuthority('automation:execute')")
   public ApiResponse<AutomationPlanResponse> recommend(
       @PathVariable String incidentId,
       @RequestBody(required = false) RecommendPlanRequest request) {
@@ -27,11 +29,13 @@ public class AutomationPlanController {
   }
 
   @GetMapping("/api/incidents/{incidentId}/automation-plans/latest")
+  @PreAuthorize("hasAuthority('automation:read')")
   public ApiResponse<AutomationPlanResponse> latest(@PathVariable String incidentId) {
     return ApiResponse.ok(service.latestPlan(TenantContext.requireTenantId(), incidentId));
   }
 
   @GetMapping("/api/automation-plans/{planId}")
+  @PreAuthorize("hasAuthority('automation:read')")
   public ApiResponse<AutomationPlanResponse> get(@PathVariable String planId) {
     return ApiResponse.ok(service.getPlan(TenantContext.requireTenantId(), planId));
   }

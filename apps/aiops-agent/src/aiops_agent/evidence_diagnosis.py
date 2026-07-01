@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Iterable
 
 from aiops_agent.schemas import DiagnoseRequest, DiagnoseResponse, EvidenceContext
+from aiops_agent.settings import settings
 
 
 @dataclass(frozen=True)
@@ -179,7 +180,10 @@ def build_next_steps(flags: EvidenceFlags) -> list[str]:
     return list(dict.fromkeys(steps))
 
 
-def deterministic_diagnose(request: DiagnoseRequest, generation_mode: str = "deterministic-evidence") -> DiagnoseResponse:
+def deterministic_diagnose(
+    request: DiagnoseRequest,
+    generation_mode: str = "deterministic-evidence",
+) -> DiagnoseResponse:
     flags = flags_from_request(request)
     refs = evidence_refs(request.evidence)
 
@@ -190,7 +194,13 @@ def deterministic_diagnose(request: DiagnoseRequest, generation_mode: str = "det
     timeline = build_timeline(request)
 
     raw = {
+        "graph": "aegisops_diagnosis_graph",
+        "contractVersion": request.contractVersion,
+        "traceId": request.traceId,
         "generationMode": generation_mode,
+        "workflow": {
+            "graphVersion": settings.workflow_graph_version,
+        },
         "evidenceRefs": refs,
         "matchedRules": rules,
         "timeline": timeline,

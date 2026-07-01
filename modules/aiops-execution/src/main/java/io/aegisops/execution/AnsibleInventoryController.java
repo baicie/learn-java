@@ -5,6 +5,7 @@ import io.aegisops.common.tenant.TenantContext;
 import io.aegisops.execution.dto.AnsibleInventoryCreateRequest;
 import io.aegisops.execution.dto.AnsibleInventoryResponse;
 import java.util.List;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -21,6 +22,7 @@ public class AnsibleInventoryController {
   }
 
   @GetMapping("/api/ansible-inventories")
+  @PreAuthorize("hasAuthority('automation:read')")
   public ApiResponse<List<AnsibleInventoryResponse>> list(
       @RequestParam(defaultValue = "false") boolean includeDisabled) {
     return ApiResponse.ok(
@@ -28,23 +30,27 @@ public class AnsibleInventoryController {
   }
 
   @PostMapping("/api/ansible-inventories")
+  @PreAuthorize("hasAuthority('automation:execute')")
   public ApiResponse<AnsibleInventoryResponse> create(
       @RequestBody AnsibleInventoryCreateRequest request) {
     return ApiResponse.ok(service.createInventory(TenantContext.requireTenantId(), request));
   }
 
   @GetMapping("/api/ansible-inventories/{inventoryId}")
+  @PreAuthorize("hasAuthority('automation:read')")
   public ApiResponse<AnsibleInventoryResponse> get(@PathVariable String inventoryId) {
     return ApiResponse.ok(service.getInventory(TenantContext.requireTenantId(), inventoryId));
   }
 
   @PostMapping("/api/ansible-inventories/{inventoryId}/enable")
+  @PreAuthorize("hasAuthority('automation:execute')")
   public ApiResponse<AnsibleInventoryResponse> enable(@PathVariable String inventoryId) {
     return ApiResponse.ok(
         service.setInventoryEnabled(TenantContext.requireTenantId(), inventoryId, true));
   }
 
   @PostMapping("/api/ansible-inventories/{inventoryId}/disable")
+  @PreAuthorize("hasAuthority('automation:execute')")
   public ApiResponse<AnsibleInventoryResponse> disable(@PathVariable String inventoryId) {
     return ApiResponse.ok(
         service.setInventoryEnabled(TenantContext.requireTenantId(), inventoryId, false));

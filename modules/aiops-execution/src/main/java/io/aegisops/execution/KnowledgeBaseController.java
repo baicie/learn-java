@@ -5,6 +5,7 @@ import io.aegisops.common.tenant.TenantContext;
 import io.aegisops.execution.dto.KnowledgeBaseIndexResponse;
 import io.aegisops.execution.dto.KnowledgeBaseSearchRequest;
 import io.aegisops.execution.dto.KnowledgeBaseSearchResponse;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@PreAuthorize("hasAuthority('incident:read')")
 public class KnowledgeBaseController {
   private final KnowledgeBaseIndexService indexService;
   private final KnowledgeBaseSearchService searchService;

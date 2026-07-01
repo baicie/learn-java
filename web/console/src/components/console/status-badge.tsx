@@ -5,13 +5,13 @@ import { cn } from '@/lib/utils'
 const statusBadgeVariants = cva('', {
   variants: {
     tone: {
-      neutral: 'bg-muted text-muted-foreground border-transparent',
-      info: 'bg-secondary text-secondary-foreground border-transparent',
-      success: 'bg-primary/10 text-primary border-transparent',
+      neutral: 'border-transparent bg-muted text-muted-foreground',
+      info: 'border-transparent bg-secondary text-secondary-foreground',
+      success: 'border-transparent bg-primary/10 text-primary',
       warning:
-        'bg-amber-100 text-amber-900 border-transparent dark:bg-amber-400/20 dark:text-amber-200',
-      danger: 'bg-destructive/10 text-destructive border-transparent',
-      muted: 'bg-muted text-muted-foreground border-transparent',
+        'border-transparent bg-amber-100 text-amber-900 dark:bg-amber-400/20 dark:text-amber-200',
+      danger: 'border-transparent bg-destructive/10 text-destructive',
+      muted: 'border-transparent bg-muted text-muted-foreground',
     },
   },
   defaultVariants: {

@@ -19,7 +19,7 @@ export function IncidentsPage() {
       <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-3">
           <div>
-            <h1 className="text-base font-semibold leading-none">Incidents</h1>
+            <h1 className="text-base leading-none font-semibold">Incidents</h1>
             <p className="mt-1 text-xs text-muted-foreground">
               故障列表。点击进入详情完成证据、RCA、AI 诊断和报告。
             </p>

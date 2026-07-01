@@ -6,10 +6,7 @@ import pytest
 import respx
 from httpx import Response
 
-from aiops_agent.workflow.tools.internal_auth import (
-    HEADER_INTERNAL_AGENT_TOKEN,
-    HEADER_TENANT_ID,
-)
+from aiops_agent.workflow.tools.internal_auth import HEADER_TENANT_ID
 from aiops_agent.workflow.tools.plugin_policy_client import (
     PluginPolicyClient,
     PluginToolDeniedError,

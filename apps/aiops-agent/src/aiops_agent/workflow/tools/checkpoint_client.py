@@ -58,7 +58,7 @@ class CheckpointClient:
         }
 
         try:
-            async with httpx.AsyncClient(timeout=self.timeout) as client:
+            async with httpx.AsyncClient(timeout=self.timeout, trust_env=False) as client:
                 response = await client.post(
                     url,
                     json=body,
@@ -98,7 +98,7 @@ class CheckpointClient:
             )
 
         try:
-            async with httpx.AsyncClient(timeout=self.timeout) as client:
+            async with httpx.AsyncClient(timeout=self.timeout, trust_env=False) as client:
                 response = await client.get(url, headers=internal_tool_headers(tenant_id))
                 response.raise_for_status()
                 payload = response.json()

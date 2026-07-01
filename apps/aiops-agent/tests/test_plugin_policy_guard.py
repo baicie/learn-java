@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import pytest
 
-from aiops_agent.workflow.tools.plugin_policy_guard import PluginToolPolicyGuard
 from aiops_agent.workflow.tools.plugin_policy_client import PluginToolDeniedError
+from aiops_agent.workflow.tools.plugin_policy_guard import PluginToolPolicyGuard
 
 
 class FakePolicyClient:

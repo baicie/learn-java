@@ -4,8 +4,8 @@ type: operation
 status: accepted
 phase: global
 owner: script
-created: 2026-06-30
-updated: 2026-06-30
+created: 2026-07-01
+updated: 2026-07-01
 related: []
 ---
 
@@ -24,6 +24,7 @@ Do not edit it manually.
 | Title                                                | Status   | Phase   | Updated    | Path                                                                                      |
 | ---------------------------------------------------- | -------- | ------- | ---------- | ----------------------------------------------------------------------------------------- |
 | MVP 第四个后端应用 demo-order-service 的边界与可见性 | accepted | phase-5 | 2026-06-30 | [docs/adr/0002-mvp-fourth-app-justification.md](adr/0002-mvp-fourth-app-justification.md) |
+| aiops-agent（Python LangGraph 运行时）的边界与可见性 | accepted | global  | 2026-06-30 | [docs/adr/0003-aiops-agent-boundary.md](adr/0003-aiops-agent-boundary.md)                 |
 
 ## ai
 
@@ -125,3 +126,9 @@ Do not edit it manually.
 | MVP Roadmap (Historical Draft)   | deprecated | global | 2026-06-30 | [docs/mvp/roadmap.md](mvp/roadmap.md)   |
 | MVP Roadmap 2 (Historical Draft) | deprecated | global | 2026-06-30 | [docs/mvp/roadmap2.md](mvp/roadmap2.md) |
 | MVP Roadmap 3 (Historical Draft) | deprecated | global | 2026-06-30 | [docs/mvp/roadmap3.md](mvp/roadmap3.md) |
+
+## review
+
+| Title                  | Status | Phase   | Updated    | Path                                                                                                                                          |
+| ---------------------- | ------ | ------- | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| 当前项目质量与架构审查 | draft  | phase-8 | 2026-07-01 | [docs/reviews/phase-8/2026-07-01-current-project-quality-architecture.md](reviews/phase-8/2026-07-01-current-project-quality-architecture.md) |

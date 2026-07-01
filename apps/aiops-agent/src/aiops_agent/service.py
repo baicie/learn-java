@@ -40,7 +40,7 @@ class DiagnosisService:
     async def diagnose(self, request: DiagnoseRequest) -> DiagnoseResponse:
         mode = self.settings.normalized_generation_mode()
         if mode in {"deterministic", "mock", "deterministic-evidence"}:
-            response = deterministic_diagnose(request, generation_mode=mode)
+            response = apply_safety_boundary(deterministic_diagnose(request, generation_mode=mode))
             raw = dict(response.raw)
             if self.settings.eval_enabled:
                 raw["agentEval"] = evaluate_diagnosis(response)
@@ -138,7 +138,9 @@ class _RequestEvidenceClient:
                     "id": item.id,
                     "confidence": item.confidence,
                     "payloadJson": item.payloadJson,
-                    "timeRangeStart": item.timeRangeStart.isoformat() if item.timeRangeStart else None,
+                    "timeRangeStart": (
+                        item.timeRangeStart.isoformat() if item.timeRangeStart else None
+                    ),
                     "timeRangeEnd": item.timeRangeEnd.isoformat() if item.timeRangeEnd else None,
                 },
             )
