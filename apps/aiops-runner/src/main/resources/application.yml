@@ -1,6 +1,12 @@
 spring:
   application:
     name: aiops-runner
+  datasource:
+    url: ${AIOPS_DB_URL:jdbc:postgresql://localhost:5432/aegisops}
+    username: ${AIOPS_DB_USERNAME:aegisops}
+    password: ${AIOPS_DB_PASSWORD:aegisops}
+    hikari:
+      maximum-pool-size: 10
 server:
   port: ${AIOPS_RUNNER_PORT:8092}
 management:
