@@ -5,8 +5,16 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 
+interface PlatformUserSummary {
+  id: string
+  username: string
+  displayName: string
+  status: string
+  roles: string[]
+}
+
 export function UserListPage() {
-  const query = useQuery({
+  const query = useQuery<PlatformUserSummary[]>({
     queryKey: ['platform-users'],
     queryFn: () =>
       fetch('/api/platform/users')
