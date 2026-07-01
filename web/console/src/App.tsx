@@ -15,9 +15,9 @@ import { IncidentsPage } from './pages/IncidentsPage'
 import { LoginPage } from './pages/LoginPage'
 import { ModuleListPage } from './pages/modules/ModuleListPage'
 import { NotFoundPage } from './pages/NotFoundPage'
-import { ReportsPage } from './pages/ReportsPage'
 import { RolePermissionPage } from './pages/platform/RolePermissionPage'
 import { UserListPage } from './pages/platform/UserListPage'
+import { ReportsPage } from './pages/ReportsPage'
 
 function AuthLoader({ children }: { children: React.ReactNode }) {
   const auth = useAuth()

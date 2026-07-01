@@ -42,7 +42,7 @@ export default tseslint.config(
     },
     settings: {
       tailwindcss: {
-        config: resolve(__dirname, 'src/styles.css'),
+        cssConfigPath: resolve(__dirname, 'src/styles.css'),
       },
       'import-x': {
         typescript: { project: './tsconfig.json' },
@@ -97,6 +97,18 @@ export default tseslint.config(
             'text-secondary-foreground',
             'ring-ring',
             'data-icon',
+            // MarkdownPreview：自定义 typography 渲染样式，等正式接 @tailwindcss/typography 后再清理。
+            'prose',
+            'prose-sm',
+            'prose-base',
+            'prose-lg',
+            'prose-xl',
+            'max-w-none',
+            // styles.css 里通过 @layer 定义的工具类，eslint-plugin-tailwindcss 默认不会扫到。
+            'glass',
+            'glass-card',
+            'glass-card-active',
+            'glass-header',
           ],
         },
       ],

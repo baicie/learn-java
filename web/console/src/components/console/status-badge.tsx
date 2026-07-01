@@ -69,7 +69,7 @@ export function SeverityBadge({ severity }: { severity: string }) {
       data-slot="severity-badge"
       data-tone={tone}
       className={cn(
-        'inline-flex h-5 items-center rounded-4xl border px-2 text-xs font-medium uppercase tracking-wide',
+        'inline-flex h-5 items-center rounded-4xl border px-2 text-xs font-medium tracking-wide uppercase',
         statusBadgeVariants({ tone }),
       )}
     >
