@@ -46,7 +46,7 @@ export function OverviewSection({
       {isLoading && (
         <div className="grid gap-4 md:grid-cols-5">
           {cards.map((card) => (
-            <Card key={card.key} size="sm">
+            <Card key={card.key}>
               <CardHeader>
                 <CardTitle className="text-muted-foreground">{card.label}</CardTitle>
               </CardHeader>
@@ -61,7 +61,7 @@ export function OverviewSection({
       {data && !isLoading && (
         <div className="grid gap-4 md:grid-cols-5">
           {cards.map((card) => (
-            <Card key={card.key} size="sm">
+            <Card key={card.key}>
               <CardHeader>
                 <CardTitle className="text-xs font-normal text-muted-foreground">
                   {card.label}
