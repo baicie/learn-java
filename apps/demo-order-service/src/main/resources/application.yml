@@ -1,9 +1,0 @@
-spring:
-  application:
-    name: demo-order-service
-  profiles:
-    # 默认不启用任何 profile。DemoOrderServiceApplication 启动时检测到 active 中
-    # 没有 demo profile 会直接 System.exit(1)（详见 ADR 0002）。
-    # 启动命令：--spring.profiles.active=demo
-    default: none
-    active: none

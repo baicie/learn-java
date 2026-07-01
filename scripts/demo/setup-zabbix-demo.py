@@ -270,11 +270,6 @@ def main():
     parser.add_argument("--password", default="zabbix")
     parser.add_argument("--host", default="aiops-demo-host")
     parser.add_argument("--group", default="AegisOps Demo")
-    parser.add_argument(
-        "--demo-base-url",
-        default="http://demo-order-service:8088",
-        help="URL reachable from Zabbix server container",
-    )
     args = parser.parse_args()
 
     api = ZabbixApi(args.zabbix_url, args.username, args.password)

@@ -69,4 +69,3 @@ related:
 ## 5. 相关 ADR
 
 - ADR 0001 — Java Spring Boot 选型（待写）
-- ADR 0002 — MVP 第四个后端应用 demo-order-service 边界与可见性（`docs/adr/0002-mvp-fourth-app-justification.md`）

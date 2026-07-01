@@ -1720,7 +1720,7 @@ Scope:
 
 ```txt
 Phase Z9 is a scenario gate, not a product phase.
-It may use demo-order-service and mock fault injection to prove the MVP path.
+It may use mock fault injection to prove the MVP path.
 It must not redefine production topology or bypass runner / approval safety.
 ```
 

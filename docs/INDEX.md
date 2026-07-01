@@ -21,10 +21,9 @@ Do not edit it manually.
 
 ## adr
 
-| Title                                                | Status   | Phase   | Updated    | Path                                                                                      |
-| ---------------------------------------------------- | -------- | ------- | ---------- | ----------------------------------------------------------------------------------------- |
-| MVP 第四个后端应用 demo-order-service 的边界与可见性 | accepted | phase-5 | 2026-06-30 | [docs/adr/0002-mvp-fourth-app-justification.md](adr/0002-mvp-fourth-app-justification.md) |
-| aiops-agent（Python LangGraph 运行时）的边界与可见性 | accepted | global  | 2026-06-30 | [docs/adr/0003-aiops-agent-boundary.md](adr/0003-aiops-agent-boundary.md)                 |
+| Title                                                | Status   | Phase  | Updated    | Path                                                                      |
+| ---------------------------------------------------- | -------- | ------ | ---------- | ------------------------------------------------------------------------- |
+| aiops-agent（Python LangGraph 运行时）的边界与可见性 | accepted | global | 2026-06-30 | [docs/adr/0003-aiops-agent-boundary.md](adr/0003-aiops-agent-boundary.md) |
 
 ## ai
 

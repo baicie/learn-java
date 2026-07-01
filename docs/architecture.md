@@ -40,7 +40,6 @@ aegisops/
 │  ├─ aiops-server/            # SKILL §3.2 三 app 之一
 │  ├─ aiops-worker/            # SKILL §3.2 三 app 之一
 │  ├─ aiops-runner/            # SKILL §3.2 三 app 之一
-│  └─ demo-order-service/      # ADR 0002 demo-only（-Pdemo）
 │
 ├─ modules/                    # 业务模块化单体
 │  ├─ aiops-common / web / persistence / security / tenant / user

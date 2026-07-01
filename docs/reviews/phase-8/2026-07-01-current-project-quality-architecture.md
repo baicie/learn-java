@@ -26,7 +26,7 @@ related: []
 当前阶段判断：
 
 - SKILL.md §14 仍以 Phase 0 ~ Phase 6 为主线。
-- 当前仓库文档和代码已出现 Phase 7 / Phase 8 / Phase Z9，并已有 ADR 解释 `aiops-agent` 与 `demo-order-service` 的边界。
+- 当前仓库文档和代码已出现 Phase 7 / Phase 8 / Phase Z9，并已有 ADR 解释 `aiops-agent` 的边界（`demo-order-service` 已在 2026-07-01 从仓库中移除）。
 - 因此本次按 `phase-8` 归档，但报告结论之一是：阶段定义与实际推进需要重新对齐。
 
 ## Summary
@@ -404,7 +404,7 @@ Scope:
 Scope:
 
 - Zabbix end-to-end demo scenario
-- demo-order-service and mock fault injection
+- mock fault injection
 ```
 
 #### P1-5 `apps/aiops-agent/.venv` 出现在工作树扫描范围内
