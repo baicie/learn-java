@@ -2,7 +2,6 @@ import { useQuery, useMutation } from '@tanstack/react-query'
 import {
   ActivitySquareIcon,
   AlertCircleIcon,
-  DatabaseIcon,
   SettingsIcon,
   ShieldCheckIcon,
   Wand2Icon,

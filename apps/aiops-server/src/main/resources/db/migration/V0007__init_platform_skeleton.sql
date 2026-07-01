@@ -17,22 +17,9 @@ create table if not exists sys_workspace (
   created_at timestamptz not null default now()
 );
 
-create table if not exists sys_audit_log (
-  id varchar(64) primary key,
-  actor varchar(128) not null,
-  action varchar(128) not null,
-  resource_type varchar(64) not null,
-  resource_id varchar(128),
-  detail_json text not null default '{}',
-  created_at timestamptz not null default now()
-);
-
 create index if not exists idx_platform_module_module_id on platform_module(module_id);
 create index if not exists idx_platform_module_health_status on platform_module(health_status);
 create index if not exists idx_sys_workspace_code on sys_workspace(code);
-create index if not exists idx_sys_audit_log_actor on sys_audit_log(actor);
-create index if not exists idx_sys_audit_log_action on sys_audit_log(action);
-create index if not exists idx_sys_audit_log_created on sys_audit_log(created_at desc);
 
 insert into sys_workspace (id, code, name, enabled, created_at)
 select 'wksp-default', 'default', '默认空间', true, now()

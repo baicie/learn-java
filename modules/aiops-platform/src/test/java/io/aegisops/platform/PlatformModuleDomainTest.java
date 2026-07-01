@@ -8,7 +8,8 @@ import org.junit.jupiter.api.Test;
 class PlatformModuleDomainTest {
   @Test
   void markHealthy_shouldReturnHealthyStatus() {
-    PlatformModule module = new PlatformModule("1", "platform", "平台底座", "1.0.0", true, "UNKNOWN", "{}", null);
+    PlatformModule module =
+        new PlatformModule("1", "platform", "平台底座", "1.0.0", true, "UNKNOWN", "{}", null);
 
     PlatformModule healthy = module.markHealthy();
 
@@ -17,7 +18,8 @@ class PlatformModuleDomainTest {
 
   @Test
   void markUnhealthy_shouldReturnUnhealthyStatus() {
-    PlatformModule module = new PlatformModule("1", "platform", "平台底座", "1.0.0", true, "UNKNOWN", "{}", null);
+    PlatformModule module =
+        new PlatformModule("1", "platform", "平台底座", "1.0.0", true, "UNKNOWN", "{}", null);
 
     PlatformModule unhealthy = module.markUnhealthy();
 
@@ -26,15 +28,25 @@ class PlatformModuleDomainTest {
 
   @Test
   void enabledModule_shouldBeEnabled() {
-    PlatformModule module = new PlatformModule("1", "platform", "平台底座", "1.0.0", true, "HEALTHY", "{}", null);
+    PlatformModule module =
+        new PlatformModule("1", "platform", "平台底座", "1.0.0", true, "HEALTHY", "{}", null);
 
     assertThat(module.enabled()).isTrue();
   }
 
   @Test
   void disabledModule_shouldNotBeEnabled() {
-    PlatformModule module = new PlatformModule("1", "platform", "平台底座", "1.0.0", false, "HEALTHY", "{}", null);
+    PlatformModule module =
+        new PlatformModule("1", "platform", "平台底座", "1.0.0", false, "HEALTHY", "{}", null);
 
     assertThat(module.enabled()).isFalse();
+  }
+
+  @Test
+  void blankModuleId_shouldBeRejected() {
+    assertThatThrownBy(
+            () -> new PlatformModule("1", "", "坏模块", "1.0.0", true, "UNKNOWN", "{}", null))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("moduleId");
   }
 }

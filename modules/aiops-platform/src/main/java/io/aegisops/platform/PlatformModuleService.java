@@ -18,9 +18,6 @@ public class PlatformModuleService {
   public PlatformModule getOrCreatePlatform() {
     return repository
         .findByModuleId("platform")
-        .orElseGet(
-            () ->
-                repository.create(
-                    "platform", "平台底座", "1.0.0"));
+        .orElseGet(() -> repository.create("platform", "平台底座", "1.0.0"));
   }
 }
