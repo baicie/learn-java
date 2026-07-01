@@ -417,6 +417,53 @@ export function generateReport(incidentId: string) {
   })
 }
 
+// --- Phase 1: Workbench ---
+export type WorkbenchSummary = {
+  activeIncidents: number
+  criticalAlerts: number
+  todayNewAlerts: number
+  datasourceErrors: number
+  pendingTasks: number
+  moduleHealth: string
+}
+
+export function workbenchSummary() {
+  return apiRequest<WorkbenchSummary>('/api/workbench/summary')
+}
+
+// --- Phase 1: Platform Modules ---
+export type PlatformModuleRecord = {
+  id: string
+  moduleId: string
+  name: string
+  version: string
+  enabled: boolean
+  healthStatus: string
+  configJson: string
+  createdAt: string
+}
+
+export function listPlatformModules() {
+  return apiRequest<PlatformModuleRecord[]>('/api/modules')
+}
+
+// --- Phase 1: Platform Users ---
+export type PlatformUserRecord = {
+  id: string
+  tenantId: string
+  username: string
+  displayName: string
+  email: string | null
+  status: string
+  roles: string[]
+  createdAt: string
+  updatedAt: string
+}
+
+export function listPlatformUsers() {
+  return apiRequest<PlatformUserRecord[]>('/api/platform/users')
+}
+
 export async function getIncidentBundle(incidentId: string): Promise<IncidentDetailBundle> {
   const [detail, evidence, rca, aiDiagnosis, report] = await Promise.all([
     getIncident(incidentId),

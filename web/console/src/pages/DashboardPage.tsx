@@ -1,5 +1,12 @@
 import { useQuery, useMutation } from '@tanstack/react-query'
-import { Wand2Icon } from 'lucide-react'
+import {
+  ActivitySquareIcon,
+  AlertCircleIcon,
+  DatabaseIcon,
+  SettingsIcon,
+  ShieldCheckIcon,
+  Wand2Icon,
+} from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 
@@ -178,6 +185,28 @@ export function DashboardPage() {
             </pre>
           </CardContent>
         </Card>
+
+        {/* Phase 1: Platform Management */}
+        <div>
+          <h2 className="mb-3 text-sm font-semibold">平台管理</h2>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
+            {[
+              { label: '用户管理', to: '/platform/users', Icon: SettingsIcon },
+              { label: '角色权限', to: '/platform/roles', Icon: ShieldCheckIcon },
+              { label: '模块管理', to: '/modules', Icon: ActivitySquareIcon },
+              { label: '审计日志', to: '/audit', Icon: AlertCircleIcon },
+            ].map(({ label, to, Icon }) => (
+              <Link
+                key={to}
+                to={to}
+                className="flex items-center gap-3 rounded-lg border bg-background p-4 transition-colors hover:border-foreground"
+              >
+                <Icon className="size-5 text-muted-foreground" />
+                <span className="text-sm font-medium">{label}</span>
+              </Link>
+            ))}
+          </div>
+        </div>
       </main>
     </div>
   )

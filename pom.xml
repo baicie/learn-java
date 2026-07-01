@@ -35,6 +35,7 @@
     <module>apps/aiops-worker</module>
     <module>apps/aiops-runner</module>
     <module>modules/aiops-observability</module>
+    <module>modules/aiops-platform</module>
   </modules>
 
   <properties>

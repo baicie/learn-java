@@ -1,5 +1,112 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 
+describe('aiopsApi Phase 1 endpoints', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('calls workbenchSummary with correct path', async () => {
+    const mockResponse = {
+      data: {
+        activeIncidents: 2,
+        criticalAlerts: 3,
+        todayNewAlerts: 5,
+        datasourceErrors: 0,
+        pendingTasks: 1,
+        moduleHealth: 'HEALTHY',
+      },
+      success: true,
+      timestamp: new Date().toISOString(),
+    }
+
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify(mockResponse), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    )
+
+    const { workbenchSummary } = await import('../api/client')
+    const result = await workbenchSummary()
+
+    expect(result.moduleHealth).toBe('HEALTHY')
+    expect(fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/api/workbench/summary'),
+      expect.any(Object),
+    )
+  })
+
+  it('calls listPlatformModules with correct path', async () => {
+    const mockResponse = {
+      data: [
+        {
+          id: 'mod-1',
+          moduleId: 'platform',
+          name: '平台底座',
+          version: '1.0.0',
+          enabled: true,
+          healthStatus: 'HEALTHY',
+          configJson: '{}',
+          createdAt: '2026-01-01T00:00:00Z',
+        },
+      ],
+      success: true,
+      timestamp: new Date().toISOString(),
+    }
+
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify(mockResponse), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    )
+
+    const { listPlatformModules } = await import('../api/client')
+    const result = await listPlatformModules()
+
+    expect(result).toHaveLength(1)
+    expect(result[0].moduleId).toBe('platform')
+    expect(fetch).toHaveBeenCalledWith(expect.stringContaining('/api/modules'), expect.any(Object))
+  })
+
+  it('calls listPlatformUsers with correct path', async () => {
+    const mockResponse = {
+      data: [
+        {
+          id: 'user-1',
+          tenantId: 'tenant-1',
+          username: 'admin',
+          displayName: 'Administrator',
+          email: 'admin@local',
+          status: 'active',
+          roles: ['admin'],
+          createdAt: '2026-01-01T00:00:00Z',
+          updatedAt: '2026-01-01T00:00:00Z',
+        },
+      ],
+      success: true,
+      timestamp: new Date().toISOString(),
+    }
+
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify(mockResponse), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    )
+
+    const { listPlatformUsers } = await import('../api/client')
+    const result = await listPlatformUsers()
+
+    expect(result).toHaveLength(1)
+    expect(result[0].username).toBe('admin')
+    expect(fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/api/platform/users'),
+      expect.any(Object),
+    )
+  })
+})
+
 describe('aiopsApi Z8 endpoints', () => {
   beforeEach(() => {
     vi.restoreAllMocks()
