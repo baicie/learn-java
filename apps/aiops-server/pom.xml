@@ -67,12 +67,12 @@
     </dependency>
     <dependency>
       <groupId>io.aegisops</groupId>
-      <artifactId>aiops-plugin</artifactId>
+      <artifactId>aiops-platform</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>io.aegisops</groupId>
-      <artifactId>aiops-platform</artifactId>
+      <artifactId>aiops-plugin</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>

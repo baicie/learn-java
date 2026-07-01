@@ -35,6 +35,9 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
@@ -90,6 +93,22 @@ class PhaseZ9ZabbixMvpFlowTest {
   void setUp() {
     t0 = Instant.now();
     TenantContext.setTenantId(TENANT_ID);
+    SecurityContextHolder.getContext()
+        .setAuthentication(
+            new UsernamePasswordAuthenticationToken(
+                "phase-z9-user",
+                "n/a",
+                List.of(
+                    new SimpleGrantedAuthority("incident:read"),
+                    new SimpleGrantedAuthority("incident:write"),
+                    new SimpleGrantedAuthority("incident:diagnose"),
+                    new SimpleGrantedAuthority("datasource:read"),
+                    new SimpleGrantedAuthority("evidence:read"),
+                    new SimpleGrantedAuthority("evidence:write"),
+                    new SimpleGrantedAuthority("rca:read"),
+                    new SimpleGrantedAuthority("rca:write"),
+                    new SimpleGrantedAuthority("report:read"),
+                    new SimpleGrantedAuthority("report:write"))));
 
     when(tokenVerifier.verify(any())).thenReturn(true);
 
@@ -141,6 +160,7 @@ class PhaseZ9ZabbixMvpFlowTest {
 
   @AfterEach
   void tearDown() {
+    SecurityContextHolder.clearContext();
     TenantContext.clear();
   }
 
