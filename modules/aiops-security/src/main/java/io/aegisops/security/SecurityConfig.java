@@ -47,6 +47,10 @@ public class SecurityConfig {
                         "/swagger-ui.html",
                         "/internal/agent/**")
                     .permitAll()
+                    .requestMatchers("/api/**")
+                    .authenticated()
+                    .requestMatchers(ConsolePaths::isConsoleRequest)
+                    .permitAll()
                     .anyRequest()
                     .authenticated())
         .addFilterBefore(

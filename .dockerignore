@@ -1,0 +1,16 @@
+.git
+.idea
+.vscode
+
+**/target
+**/node_modules
+**/dist
+**/coverage
+
+.env
+.env.*
+infra/.env
+infra/.env.*
+
+.DS_Store
+*.log
