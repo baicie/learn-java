@@ -464,6 +464,24 @@ export function listPlatformUsers() {
   return apiRequest<PlatformUserRecord[]>('/api/platform/users')
 }
 
+// --- Phase 01: Platform Navigation ---
+export type PlatformMenuItem = {
+  id: string
+  moduleId: string
+  parentId?: string | null
+  path: string
+  title: string
+  icon?: string | null
+  permissionCode?: string | null
+  sortOrder: number
+  enabled: boolean
+  createdAt: string
+}
+
+export function listPlatformMenus() {
+  return apiRequest<PlatformMenuItem[]>('/api/platform/navigation/menus')
+}
+
 export async function getIncidentBundle(incidentId: string): Promise<IncidentDetailBundle> {
   const [detail, evidence, rca, aiDiagnosis, report] = await Promise.all([
     getIncident(incidentId),

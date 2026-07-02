@@ -3,6 +3,7 @@ import { useEffect } from 'react'
 import { Route, Routes } from 'react-router-dom'
 
 import { me } from './api/client'
+import { AppLayout } from './layout/AppLayout'
 import { useAuth } from './auth/AuthContext'
 import { AiDiagnosisPage } from './pages/AiDiagnosisPage'
 import { AlertsPage } from './pages/AlertsPage'
@@ -46,24 +47,43 @@ function AuthLoader({ children }: { children: React.ReactNode }) {
   return <>{children}</>
 }
 
+function ConsoleRoutes() {
+  return (
+    <AppLayout>
+      <Routes>
+        <Route path="/" element={<DashboardPage />} />
+        <Route path="/app/workbench" element={<DashboardPage />} />
+        <Route path="/datasources" element={<DatasourcesPage />} />
+        <Route path="/app/datasources" element={<DatasourcesPage />} />
+        <Route path="/alerts" element={<AlertsPage />} />
+        <Route path="/app/alerts" element={<AlertsPage />} />
+        <Route path="/incidents" element={<IncidentsPage />} />
+        <Route path="/app/incidents" element={<IncidentsPage />} />
+        <Route path="/incidents/:incidentId" element={<IncidentDetailPage />} />
+        <Route path="/app/incidents/:incidentId" element={<IncidentDetailPage />} />
+        <Route path="/evidence" element={<EvidencePage />} />
+        <Route path="/app/evidence" element={<EvidencePage />} />
+        <Route path="/ai-diagnosis" element={<AiDiagnosisPage />} />
+        <Route path="/reports" element={<ReportsPage />} />
+        <Route path="/app/reports" element={<ReportsPage />} />
+        <Route path="/platform/users" element={<UserListPage />} />
+        <Route path="/app/platform/users" element={<UserListPage />} />
+        <Route path="/platform/roles" element={<RolePermissionPage />} />
+        <Route path="/app/platform/roles" element={<RolePermissionPage />} />
+        <Route path="/modules" element={<ModuleListPage />} />
+        <Route path="/app/modules" element={<ModuleListPage />} />
+        <Route path="/audit" element={<AuditLogPage />} />
+        <Route path="/app/audit" element={<AuditLogPage />} />
+        <Route path="*" element={<NotFoundPage />} />
+      </Routes>
+    </AppLayout>
+  )
+}
+
 export function App() {
   return (
     <AuthLoader>
-      <Routes>
-        <Route path="/" element={<DashboardPage />} />
-        <Route path="/datasources" element={<DatasourcesPage />} />
-        <Route path="/alerts" element={<AlertsPage />} />
-        <Route path="/incidents" element={<IncidentsPage />} />
-        <Route path="/incidents/:incidentId" element={<IncidentDetailPage />} />
-        <Route path="/evidence" element={<EvidencePage />} />
-        <Route path="/ai-diagnosis" element={<AiDiagnosisPage />} />
-        <Route path="/reports" element={<ReportsPage />} />
-        <Route path="/platform/users" element={<UserListPage />} />
-        <Route path="/platform/roles" element={<RolePermissionPage />} />
-        <Route path="/modules" element={<ModuleListPage />} />
-        <Route path="/audit" element={<AuditLogPage />} />
-        <Route path="*" element={<NotFoundPage />} />
-      </Routes>
+      <ConsoleRoutes />
     </AuthLoader>
   )
 }

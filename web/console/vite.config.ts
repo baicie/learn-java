@@ -21,10 +21,18 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: {
-          'vendor-app': ['@tanstack/react-query', 'react-router-dom'],
-          'vendor-markdown': ['react-markdown'],
-          'vendor-ui': ['@base-ui/react', 'lucide-react', 'sonner'],
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('@tanstack/react-query') || id.includes('react-router-dom')) {
+              return 'vendor-app'
+            }
+            if (id.includes('react-markdown')) {
+              return 'vendor-markdown'
+            }
+            if (id.includes('@base-ui') || id.includes('lucide-react') || id.includes('sonner')) {
+              return 'vendor-ui'
+            }
+          }
         },
       },
     },
