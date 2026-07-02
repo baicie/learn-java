@@ -28,7 +28,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-public class ZabbixEvidenceCollectorService {
+public class ZabbixEvidenceCollectorService implements EvidenceCollector {
   private final ZabbixEvidenceDao dao;
   private final ZabbixClientFactory zabbixClientFactory;
   private final ZabbixEvidenceAnalyzer analyzer = new ZabbixEvidenceAnalyzer();
@@ -37,6 +37,19 @@ public class ZabbixEvidenceCollectorService {
       ZabbixEvidenceDao dao, ZabbixClientFactory zabbixClientFactory) {
     this.dao = dao;
     this.zabbixClientFactory = zabbixClientFactory;
+  }
+
+  @Override
+  public String collectorKey() {
+    return "zabbix.metric-event";
+  }
+
+  @Override
+  public boolean supports(EvidenceCollectRequest request) {
+    return request == null
+        || request.collectorKey() == null
+        || request.collectorKey().isBlank()
+        || collectorKey().equals(request.collectorKey());
   }
 
   @Transactional
@@ -89,6 +102,14 @@ public class ZabbixEvidenceCollectorService {
 
     UpsertStats stats = persistDrafts(tenantId, incidentId, drafts);
 
+    String message = "evidence collected: items=" + matchedItems.size()
+        + ", history=" + drafts.historyPointCount
+        + ", trends=" + drafts.trendPointCount
+        + ", events=" + events.size()
+        + ", triggers=" + triggers.size()
+        + ", created=" + stats.created
+        + ", updated=" + stats.updated;
+
     return new EvidenceCollectResponse(
         incidentId,
         matchedItems.size(),
@@ -97,7 +118,8 @@ public class ZabbixEvidenceCollectorService {
         events.size(),
         triggers.size(),
         stats.created,
-        stats.updated);
+        stats.updated,
+        message);
   }
 
   public List<DiagnosisEvidenceRecord> list(String tenantId, String incidentId) {
@@ -316,7 +338,7 @@ public class ZabbixEvidenceCollectorService {
   private TimeRange timeRange(
       ZabbixEvidenceDao.IncidentContext incident, EvidenceCollectRequest request) {
     EvidenceCollectRequest safeRequest =
-        request == null ? new EvidenceCollectRequest(null, null, null) : request;
+        request == null ? new EvidenceCollectRequest(null, null, null, null) : request;
 
     OffsetDateTime to =
         safeRequest.timeTo() != null

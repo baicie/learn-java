@@ -527,3 +527,32 @@ export function ingestAlertWebhook(payload: AlertIngestPayload) {
     body: JSON.stringify(payload),
   })
 }
+
+// --- Phase 3: Evidence Collection ---
+export type EvidenceCollectionTaskRecord = {
+  id: string
+  tenantId: string
+  incidentId: string
+  collectorKey: string
+  status: string
+  requestJson: string
+  resultJson: string
+  errorMessage?: string | null
+  startedAt?: string | null
+  finishedAt?: string | null
+  createdAt: string
+}
+
+export function collectIncidentEvidenceByCollector(
+  incidentId: string,
+  collectorKey = 'zabbix.metric-event',
+) {
+  return apiRequest<EvidenceCollectResponse>(`/api/incidents/${incidentId}/evidence/collect`, {
+    method: 'POST',
+    body: JSON.stringify({ collectorKey, lookbackMinutes: 30 }),
+  })
+}
+
+export function listEvidenceCollectionTasks(incidentId: string) {
+  return apiRequest<EvidenceCollectionTaskRecord[]>(`/api/incidents/${incidentId}/evidence/tasks`)
+}

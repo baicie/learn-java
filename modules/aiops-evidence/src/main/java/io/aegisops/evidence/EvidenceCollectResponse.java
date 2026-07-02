@@ -8,4 +8,5 @@ public record EvidenceCollectResponse(
     int events,
     int triggers,
     int evidenceCreated,
-    int evidenceUpdated) {}
+    int evidenceUpdated,
+    String message) {}
