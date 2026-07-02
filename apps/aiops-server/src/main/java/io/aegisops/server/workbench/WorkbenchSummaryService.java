@@ -47,7 +47,12 @@ public class WorkbenchSummaryService {
             : "HEALTHY";
 
     return new WorkbenchSummary(
-        activeIncidents, criticalAlerts, todayNewAlerts, datasourceErrors, pendingTasks, moduleHealth);
+        activeIncidents,
+        criticalAlerts,
+        todayNewAlerts,
+        datasourceErrors,
+        pendingTasks,
+        moduleHealth);
   }
 
   private long count(String table, String tenantId, String where) {
@@ -59,10 +64,8 @@ public class WorkbenchSummaryService {
     return value == null ? 0L : value;
   }
 
-  private long countSince(
-      String table, String tenantId, String dateCol, OffsetDateTime since) {
-    String sql =
-        "select count(*) from " + table + " where tenant_id = ? and " + dateCol + " >= ?";
+  private long countSince(String table, String tenantId, String dateCol, OffsetDateTime since) {
+    String sql = "select count(*) from " + table + " where tenant_id = ? and " + dateCol + " >= ?";
     Long value = jdbc.queryForObject(sql, Long.class, tenantId, since);
     return value == null ? 0L : value;
   }
