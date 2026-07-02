@@ -461,7 +461,7 @@ export type PlatformUserRecord = {
 }
 
 export function listPlatformUsers() {
-  return apiRequest<PlatformUserRecord[]>('/api/platform/users')
+  return apiRequest<PlatformUserRecord[]>('/api/users')
 }
 
 // --- Phase 01: Platform Navigation ---

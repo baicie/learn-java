@@ -1,11 +1,15 @@
 package io.aegisops.alert;
 
 import io.aegisops.common.id.Ids;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.OffsetDateTime;
+import java.util.HexFormat;
+import java.util.Locale;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
-/** Repository for alert event upsert with idempotent handling. */
 @Repository
 public class AlertIngestRepository {
   private final JdbcTemplate jdbc;
@@ -22,9 +26,10 @@ public class AlertIngestRepository {
       String labelsJson,
       String rawJson) {
     String id = Ids.newId();
-    String source = normalize(request.source(), "webhook");
+    String source = normalizeText(request.source(), "webhook");
+    String sourceEventId = effectiveSourceEventId(request.sourceEventId(), fingerprint);
     String status = normalizeStatus(request.status());
-    String severity = normalize(request.severity(), "info");
+    String severity = normalizeSeverity(request.severity());
     OffsetDateTime startsAt = request.startsAt() == null ? OffsetDateTime.now() : request.startsAt();
 
     String sql =
@@ -39,8 +44,11 @@ public class AlertIngestRepository {
               severity = excluded.severity,
               title = excluded.title,
               description = excluded.description,
+              asset_id = excluded.asset_id,
+              entity_type = excluded.entity_type,
+              entity_name = excluded.entity_name,
               labels = excluded.labels,
-              starts_at = excluded.starts_at,
+              starts_at = least(alert_event.starts_at, excluded.starts_at),
               ends_at = excluded.ends_at,
               status = excluded.status,
               raw_payload = excluded.raw_payload,
@@ -58,13 +66,13 @@ public class AlertIngestRepository {
         id,
         tenantId,
         source,
-        request.sourceEventId(),
+        sourceEventId,
         severity,
-        request.title(),
-        request.description(),
-        request.assetId(),
-        request.entityType(),
-        request.entityName(),
+        request.title().trim(),
+        blankToNull(request.description()),
+        blankToNull(request.assetId()),
+        blankToNull(request.entityType()),
+        blankToNull(request.entityName()),
         labelsJson,
         startsAt,
         request.endsAt(),
@@ -74,14 +82,51 @@ public class AlertIngestRepository {
         aggregationKey);
   }
 
-  private String normalize(String value, String fallback) {
-    return value == null || value.isBlank() ? fallback : value.trim().toLowerCase();
+  private String effectiveSourceEventId(String sourceEventId, String fingerprint) {
+    if (sourceEventId != null && !sourceEventId.isBlank()) {
+      return sourceEventId.trim();
+    }
+    return "fingerprint:" + sha256(fingerprint);
+  }
+
+  private String normalizeText(String value, String fallback) {
+    return value == null || value.isBlank() ? fallback : value.trim().toLowerCase(Locale.ROOT);
+  }
+
+  private String blankToNull(String value) {
+    return value == null || value.isBlank() ? null : value.trim();
+  }
+
+  private String normalizeSeverity(String severity) {
+    if (severity == null || severity.isBlank()) {
+      return "info";
+    }
+    String normalized = severity.trim().toLowerCase(Locale.ROOT);
+    return switch (normalized) {
+      case "info", "low", "warning", "critical", "disaster" -> normalized;
+      case "high" -> "critical";
+      default -> "info";
+    };
   }
 
   private String normalizeStatus(String status) {
     if (status == null || status.isBlank()) {
       return "open";
     }
-    return "resolved".equalsIgnoreCase(status) ? "resolved" : "open";
+    String normalized = status.trim().toLowerCase(Locale.ROOT);
+    return switch (normalized) {
+      case "resolved", "closed", "ok" -> "resolved";
+      default -> "open";
+    };
+  }
+
+  private String sha256(String value) {
+    try {
+      MessageDigest digest = MessageDigest.getInstance("SHA-256");
+      byte[] bytes = digest.digest(value.getBytes(StandardCharsets.UTF_8));
+      return HexFormat.of().formatHex(bytes);
+    } catch (NoSuchAlgorithmException e) {
+      throw new IllegalStateException("SHA-256 is not available", e);
+    }
   }
 }

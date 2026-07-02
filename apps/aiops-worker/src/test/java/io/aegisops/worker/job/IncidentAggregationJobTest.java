@@ -1,5 +1,6 @@
 package io.aegisops.worker.job;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
@@ -23,8 +24,20 @@ class IncidentAggregationJobTest {
     AutomationOutboxRecord row = new AutomationOutboxRecord();
     row.setTenantId("t1");
 
-    job.handle(row);
+    JobResult result = job.handle(row);
 
     verify(service).aggregateOpenAlerts(eq("t1"), any(IncidentAggregateRequest.class));
+    assertThat(result.isSuccess()).isTrue();
+  }
+
+  @Test
+  void handle_shouldReturnFailureWhenTenantMissing() {
+    IncidentService service = org.mockito.Mockito.mock(IncidentService.class);
+    IncidentAggregationJob job = new IncidentAggregationJob(service);
+    AutomationOutboxRecord row = new AutomationOutboxRecord();
+
+    JobResult result = job.handle(row);
+
+    assertThat(result.isSuccess()).isFalse();
   }
 }

@@ -33,19 +33,38 @@ public class OutboxWriter {
 
   @Transactional(propagation = Propagation.REQUIRED)
   public String enqueue(String targetApp, String jobName, Map<String, Object> payload) {
+    String tenantId = resolveTenantId(payload);
+    return enqueue(targetApp, jobName, tenantId, payload);
+  }
+
+  @Transactional(propagation = Propagation.REQUIRED)
+  public String enqueue(String targetApp, String jobName, String tenantId, Map<String, Object> payload) {
     String id = "outbox_" + UUID.randomUUID().toString().replace("-", "");
     String payloadJson = serialize(payload);
     jdbc.update(
         """
-        insert into automation_outbox(id, target_app, job_name, payload, status, retry_count, max_retries,
-                                      created_at, updated_at)
-        values (?, ?, ?, ?::jsonb, 'pending', 0, 3, now(), now())
+        insert into automation_outbox(id, tenant_id, target_app, job_name, payload, status,
+                                      retry_count, max_retries, created_at, updated_at)
+        values (?, ?, ?, ?, ?::jsonb, 'pending', 0, 3, now(), now())
         """,
         id,
+        tenantId,
         targetApp,
         jobName,
         payloadJson);
     return id;
+  }
+
+  private String resolveTenantId(Map<String, Object> payload) {
+    if (payload == null) {
+      return null;
+    }
+    Object value = payload.get("tenantId");
+    if (value == null) {
+      return null;
+    }
+    String tenantId = String.valueOf(value).trim();
+    return tenantId.isBlank() ? null : tenantId;
   }
 
   private String serialize(Map<String, Object> payload) {

@@ -15,7 +15,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class ZabbixWebhookService {
   private static final String OUTBOX_TARGET_APP = "worker";
-  private static final String OUTBOX_JOB_NAME = "zabbix-sync";
+  private static final String OUTBOX_JOB_NAME = "incident-aggregate";
 
   private final JdbcTemplate jdbc;
   private final ObjectMapper objectMapper;

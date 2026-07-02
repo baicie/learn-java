@@ -1,3 +1,7 @@
+create unique index if not exists uq_alert_event_tenant_source_event_id
+  on alert_event(tenant_id, source, source_event_id)
+  where source_event_id is not null;
+
 create table if not exists alert_ingest_rule (
   id varchar(64) primary key,
   tenant_id varchar(64) not null references tenant(id) on delete cascade,
@@ -22,5 +26,8 @@ create table if not exists alert_dedup_rule (
   updated_at timestamptz not null default now()
 );
 
-create index if not exists idx_alert_ingest_rule_tenant_source on alert_ingest_rule(tenant_id, source, enabled);
-create index if not exists idx_alert_dedup_rule_tenant_source on alert_dedup_rule(tenant_id, source, enabled);
+create index if not exists idx_alert_ingest_rule_tenant_source
+  on alert_ingest_rule(tenant_id, source, enabled);
+
+create index if not exists idx_alert_dedup_rule_tenant_source
+  on alert_dedup_rule(tenant_id, source, enabled);

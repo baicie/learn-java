@@ -26,6 +26,10 @@ public class IncidentAggregationJob implements OutboxJob {
   @Override
   public JobResult handle(AutomationOutboxRecord row) {
     String tenantId = row.getTenantId();
+    if (tenantId == null || tenantId.isBlank()) {
+      return JobResult.failure("TENANT_REQUIRED");
+    }
+
     log.info("Running incident aggregation for tenant={}", tenantId);
 
     try {
