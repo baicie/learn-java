@@ -1,77 +1,105 @@
-# Document Governance
+# 文档治理
 
-## Rule
+## 规则
 
-All project documents must be placed under `docs/`.
+所有项目文档必须放在 `docs/` 下。
 
-Do not create random markdown files in the repository root, except:
+不要在仓库根目录随意创建 markdown 文件, 以下白名单除外:
 
-- `README.md`
-- `AGENTS.md`
-- `CHANGELOG.md`
-- `LICENSE`
+```txt
+- README.md
+- AGENTS.md
+- CHANGELOG.md
+- LICENSE
+```
 
-## Document Locations
+## 文档位置
 
-Stable architecture documents:
+稳定架构文档:
 
-- `docs/architecture/`
+```txt
+- docs/architecture/
+```
 
-Architecture decisions:
+架构决策记录:
 
-- `docs/adr/`
+```txt
+- docs/adr/
+```
 
-Phase plans and acceptance:
+Phase 计划与验收:
 
-- `docs/phases/<phase>/`
+```txt
+- docs/phases/<phase>/
+```
 
-Feature designs:
+特性设计:
 
-- `docs/designs/<phase>/`
+```txt
+- docs/designs/<phase>/
+```
 
-Reviews:
+评审:
 
-- `docs/reviews/<phase>/`
+```txt
+- docs/reviews/<phase>/
+```
 
-Fix plans:
+修复计划:
 
-- `docs/fixes/<phase>/`
+```txt
+- docs/fixes/<phase>/
+```
 
-API docs:
+API 文档:
 
-- `docs/api/`
+```txt
+- docs/api/
+```
 
-Database docs:
+数据库文档:
 
-- `docs/database/`
+```txt
+- docs/database/
+```
 
-Integration docs:
+集成文档:
 
-- `docs/integrations/`
+```txt
+- docs/integrations/
+```
 
-AI / RCA docs:
+AI / RCA 文档:
 
-- `docs/ai/`
+```txt
+- docs/ai/
+```
 
-Operations docs:
+运维文档:
 
-- `docs/operations/`
+```txt
+- docs/operations/
+```
 
-Runbook docs:
+Runbook 文档:
 
-- `docs/runbooks/`
+```txt
+- docs/runbooks/
+```
 
-Research docs:
+调研文档:
 
-- `docs/research/`
+```txt
+- docs/research/
+```
 
-## Required Frontmatter
+## 必备 frontmatter
 
-Every document under `docs/` must have:
+`docs/` 下每篇文档都必须有:
 
 ```yaml
 ---
-title: Example Title
+title: 示例标题
 type: design
 status: draft
 phase: phase-0
@@ -82,40 +110,44 @@ related: []
 ---
 ```
 
-## Status
+## status 取值
 
-Allowed status values:
+允许的状态值:
 
-- `draft` — work in progress
-- `review` — under review
-- `accepted` — approved and stable
-- `deprecated` — superseded by a newer decision
+```txt
+- draft        进行中
+- review       评审中
+- accepted     已批准并稳定
+- deprecated   已被新决策替代
+```
 
-## Type
+## type 取值
 
-Allowed type values:
+允许的 type 值:
 
-- `architecture` — stable architecture docs
-- `adr` — architecture decision records
-- `phase` — phase plan and acceptance
-- `design` — feature design documents
-- `review` — design or code reviews
-- `fix` — bugfix and repair plans
-- `api` — API specifications
-- `database` — schema and migration docs
-- `integration` — external system integration
-- `ai` — AI, RCA, and prompt docs
-- `operation` — deployment,运维, troubleshooting
-- `runbook` — built-in product runbooks
-- `research` — product and technical research
+```txt
+- architecture     稳定架构文档
+- adr              架构决策记录
+- phase            Phase 计划与验收
+- design           特性设计文档
+- review           设计或代码评审
+- fix              Bug 修复与维修计划
+- api              API 规范
+- database         Schema 与 migration 文档
+- integration      外部系统集成
+- ai               AI、RCA、Prompt 文档
+- operation        部署、运维、排障
+- runbook          内置产品 Runbook
+- research         产品与技术调研
+```
 
-## Naming
+## 命名
 
-Use lowercase filenames.
+统一小写文件名。
 
-Use kebab-case.
+使用 kebab-case (短横线命名)。
 
-Use date prefix for process documents:
+流程文档需带日期前缀:
 
 ```txt
 docs/designs/phase-0/2026-06-12-project-foundation.md
@@ -123,53 +155,53 @@ docs/reviews/phase-1/2026-06-12-zabbix-adapter-review.md
 docs/fixes/phase-1/2026-06-12-zabbix-auth-failed.md
 ```
 
-Use numbered filenames for ADR:
+ADR 使用编号文件名:
 
 ```txt
 docs/adr/0001-use-java-spring-boot.md
 docs/adr/0002-use-modular-monolith.md
 ```
 
-## Script Usage
+## 脚本用法
 
-Initialize docs:
+初始化目录:
 
 ```bash
 npx tsx scripts/docs.ts init
 ```
 
-Create a new document:
+新建文档:
 
 ```bash
-npx tsx scripts/docs.ts new design project-foundation --title "Project Foundation Design" --phase phase-0
-npx tsx scripts/docs.ts new adr use-java-spring-boot --title "Use Java Spring Boot"
-npx tsx scripts/docs.ts new fix zabbix-auth-failed --title "Fix Zabbix Auth Failed" --phase phase-1
-npx tsx scripts/docs.ts new review phase-0-review --title "Phase 0 Implementation Review" --phase phase-0
-npx tsx scripts/docs.ts new phase phase-1 --title "Phase 1 Zabbix Ingestion" --phase phase-1
+npx tsx scripts/docs.ts new design project-foundation --title "项目基础设计" --phase phase-0
+npx tsx scripts/docs.ts new adr use-java-spring-boot --title "采用 Java Spring Boot"
+npx tsx scripts/docs.ts new fix zabbix-auth-failed --title "修复 Zabbix 鉴权失败" --phase phase-1
+npx tsx scripts/docs.ts new review phase-0-review --title "Phase 0 实施评审" --phase phase-0
+npx tsx scripts/docs.ts new phase phase-1 --title "Phase 1 Zabbix 数据接入" --phase phase-1
 ```
 
-Check all documents for frontmatter and naming issues:
+校验所有文档的 frontmatter 与命名:
 
 ```bash
 npx tsx scripts/docs.ts check
 ```
 
-Regenerate the index:
+重新生成索引:
 
 ```bash
 npx tsx scripts/docs.ts index
 ```
 
-## Agent Rules
+## Agent 规则
 
-When asked to create a new design, review, fix, ADR, or phase document, use the docs script if possible.
+在用户要求新建 design、review、fix、ADR 或 phase 文档时, 优先使用 docs 脚本。
 
-Do not create documents outside the expected directory.
+不要在目录约定之外的路径创建文档。
 
-Do not edit `docs/INDEX.md` manually. It is generated by `docs:index`.
+不要手工编辑 `docs/INDEX.md`, 该文件由 `docs:index` 生成。
 
-Accepted ADRs should not be rewritten. Create a new ADR if the decision changes.
+已接受的 ADR 不得修改; 若决策变更, 新建一份 ADR。
 
-Phase-scoped documents (designs, reviews, fixes) must be placed under the correct phase subdirectory.
+按 Phase 分目录的文档 (designs, reviews, fixes) 必须落到对应 Phase 的子目录下。
 
-Stable documents (architecture, api, database, integrations, ai, operations, runbooks, research) go at the top level of their respective directory.
+稳定文档 (architecture, api, database, integrations, ai, operations, runbooks, research) 直接放在对应目录顶层。

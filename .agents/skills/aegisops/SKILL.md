@@ -1,119 +1,115 @@
 ---
 name: aegisops
-description: Use this skill when working on the AegisOps/FaultLens AI Ops project. It guides agents to implement a Java Spring Boot based AIOps platform with Zabbix ingestion, Incident aggregation, RCA evidence chains, AI diagnosis, Runbook recommendation, Ansible automation, audit logging, and MVP phase discipline. Use for architecture, code generation, refactoring, review, tests, database schema, frontend console, backend modules, worker jobs, runner safety, and roadmap execution.
+description: 在 AegisOps/FaultLens AI Ops 项目中工作时使用本 Skill。它指导 Agent 实现一个基于 Java Spring Boot 的 AIOps 平台,涵盖 Zabbix 数据接入、Incident 聚合、RCA 证据链、AI 诊断、Runbook 推荐、Ansible 自动化、审计日志以及 MVP 阶段的纪律。适用于架构设计、代码生成、重构、评审、测试、数据库设计、前端控制台、后端模块、Worker 任务、Runner 安全以及路线图执行。
 ---
 
-# AegisOps / FaultLens Project Skill
+# AegisOps / FaultLens 项目 Skill
 
-This skill defines the product direction, architecture rules, coding boundaries, MVP roadmap, and safety requirements for the AegisOps / FaultLens project.
+本 Skill 定义 AegisOps / FaultLens 项目的产品方向、架构规则、代码边界、MVP 路线图与安全要求。
 
-Use this skill whenever the user asks to:
-
-- design architecture
-- write backend code
-- write frontend code
-- generate database schema
-- implement Zabbix integration
-- implement Incident aggregation
-- implement RCA logic
-- implement AI diagnosis
-- implement Runbook / Ansible automation
-- review project code
-- plan MVP phases
-- generate tests
-- refactor modules
-- write docs
-- create tasks for Codex / Cursor / Claude Code
-
----
-
-## 1. Product Identity
-
-Project names:
+在以下场景使用本 Skill:
 
 ```txt
-Platform name: AegisOps
-MVP / focused product name: FaultLens
+- 设计架构
+- 编写后端代码
+- 编写前端代码
+- 设计数据库 Schema
+- 接入 Zabbix
+- 实现 Incident 聚合
+- 实现 RCA 逻辑
+- 实现 AI 诊断
+- 实现 Runbook / Ansible 自动化
+- 评审项目代码
+- 规划 MVP Phase
+- 生成测试
+- 重构模块
+- 编写文档
+- 为 Codex / Cursor / Claude Code 拆分任务
 ```
-
-Product positioning:
-
-```txt
-AI-powered observability, incident diagnosis, and controlled automation platform.
-```
-
-Chinese positioning:
-
-```txt
-面向可观测、智能排障和自动化处置的 AI Ops 平台。
-```
-
-The MVP must focus on this closed loop:
-
-```txt
-Zabbix alert
-  ↓
-AlertEvent normalization
-  ↓
-Incident aggregation
-  ↓
-Metric / log / asset / timeline context collection
-  ↓
-RCA evidence chain
-  ↓
-AI diagnosis
-  ↓
-Runbook recommendation
-  ↓
-Human-approved Ansible execution
-  ↓
-Execution result written back
-  ↓
-Postmortem report
-  ↓
-Historical knowledge reuse
-```
-
-Do not turn the product into a generic dashboard or a generic AI chat app.
 
 ---
 
-## 2. Highest-Level Rule
+## 1. 产品定位
 
-Always design around `Incident`.
+项目名称:
 
-The core domain model is:
+```txt
+平台名称: AegisOps
+MVP / 聚焦产品名称: FaultLens
+```
+
+产品定位:
+
+```txt
+AI 驱动的可观测、智能排障与受控自动化平台。
+```
+
+MVP 必须聚焦以下闭环:
+
+```txt
+Zabbix 告警
+  ↓
+AlertEvent 归一
+  ↓
+Incident 聚合
+  ↓
+指标 / 日志 / 资产 / 时间线上下文采集
+  ↓
+RCA 证据链
+  ↓
+AI 诊断
+  ↓
+Runbook 推荐
+  ↓
+人工审批后的 Ansible 执行
+  ↓
+执行结果回写
+  ↓
+复盘报告
+  ↓
+历史知识复用
+```
+
+不要把产品做成通用大屏或通用 AI 聊天应用。
+
+---
+
+## 2. 最高级原则
+
+始终围绕 `Incident` 进行设计。
+
+核心领域模型是:
 
 ```txt
 Incident
 ```
 
-Not:
+而不是:
 
 ```txt
-LLM chat
-single alert
-single metric
-dashboard widget
-raw Zabbix problem
-Ansible script
+LLM 聊天
+单条告警
+单条指标
+大屏组件
+原始 Zabbix 问题
+Ansible 脚本
 ```
 
-Before adding any feature, ask:
+在新增任何功能之前先问:
 
 ```txt
-Does this help detect, understand, resolve, or review an Incident?
+这能帮助检测、理解、处置或复盘 Incident 吗?
 ```
 
-If the answer is no, defer it.
+如果答案是否, 延后实现。
 
 ---
 
-## 3. Architecture Principles
+## 3. 架构原则
 
-### 3.1 Start as modular monolith
+### 3.1 以模块化单体起步
 
-MVP must use:
+MVP 必须使用:
 
 ```txt
 apps/
@@ -122,9 +118,9 @@ apps/
   aiops-runner
 ```
 
-Do not split into microservices during MVP.
+MVP 阶段不要拆分为微服务。
 
-Avoid this too early:
+也要避免过早出现:
 
 ```txt
 auth-service
@@ -135,96 +131,96 @@ ai-service
 automation-service
 ```
 
-Modular monolith first, service extraction later.
+先模块化单体, 后续再拆服务。
 
 ---
 
-### 3.2 Three backend applications
+### 3.2 三个后端应用
 
 #### aiops-server
 
-Responsibilities:
+职责:
 
 ```txt
 REST API
-SSE streaming
-authentication
-authorization
-tenant management
-user management
-datasource management
-asset query
-alert query
-incident query
-AI diagnosis trigger
-Runbook management
-AutomationJob approval
-audit query
-frontend-facing APIs
+SSE 流式响应
+认证
+鉴权
+租户管理
+用户管理
+数据源管理
+资产查询
+告警查询
+Incident 查询
+AI 诊断触发
+Runbook 管理
+AutomationJob 审批
+审计查询
+面向前端 API
 ```
 
-Forbidden:
+禁止:
 
 ```txt
-direct shell execution
-direct Ansible execution
-direct SSH execution
-direct high-risk automation
-long-running data synchronization
-large batch analysis
+直接执行 Shell
+直接执行 Ansible
+直接执行 SSH
+直接执行高危自动化
+长时间数据同步
+大批量分析
 ```
 
 ---
 
 #### aiops-worker
 
-Responsibilities:
+职责:
 
 ```txt
-Zabbix host synchronization
-Zabbix problem/event synchronization
-AlertEvent normalization
-AlertEvent fingerprinting
-alert deduplication
-Incident aggregation
-Incident timeline generation
-metric context collection
-log/event context collection
-RCA rule execution
-AI diagnosis task execution
-postmortem draft generation
-notification dispatch
+Zabbix 主机同步
+Zabbix 问题/事件同步
+AlertEvent 归一
+AlertEvent 指纹
+告警去重
+Incident 聚合
+Incident 时间线生成
+指标上下文采集
+日志/事件上下文采集
+RCA 规则执行
+AI 诊断任务执行
+复盘初稿生成
+通知下发
 ```
 
 ---
 
 #### aiops-runner
 
-Responsibilities:
+职责:
 
 ```txt
-Ansible execution
-SSH runner execution
-Webhook runner execution
-Kubernetes runner execution, later
-automation log streaming
-job timeout control
-execution status update
-execution audit
-post-execution health check
+Ansible 执行
+SSH Runner 执行
+Webhook Runner 执行
+Kubernetes Runner 执行 (后续)
+自动化日志流式推送
+任务超时控制
+执行状态更新
+执行审计
+执行后健康检查
 ```
 
-`aiops-runner` must be isolated from `aiops-server`.
+`aiops-runner` 必须与 `aiops-server` 隔离。
 
-The server may create and approve jobs, but only runner executes them.
+Server 可以创建与审批任务, 但只有 Runner 才能执行。
 
 ---
 
-## 4. Technology Stack
+## 4. 技术栈
 
-### 4.1 Frontend
+### 4.1 前端
 
-Use:
+使用:
 
 ```txt
 React
@@ -237,53 +233,55 @@ TanStack Table
 ECharts
 React Flow
 Monaco Editor
-SSE for streaming
-WebSocket only when SSE is insufficient
+SSE 用于流式
+WebSocket 仅在 SSE 不够用时
 ```
 
-Frontend pages in MVP priority order:
+MVP 前端页面优先级:
 
 ```txt
-1. Login
-2. Empty dashboard
-3. Datasource management
-4. Asset list
-5. Alert list
-6. Incident list
-7. Incident detail
-8. Incident timeline
-9. AI diagnosis panel
-10. Runbook list
-11. Automation approval
-12. Automation logs
-13. Audit logs
+1. 登录
+2. 空 Dashboard
+3. 数据源管理
+4. 资产列表
+5. 告警列表
+6. Incident 列表
+7. Incident 详情
+8. Incident 时间线
+9. AI 诊断面板
+10. Runbook 列表
+11. 自动化审批
+12. 自动化日志
+13. 审计日志
 ```
 
-Rules:
+规则:
 
 ```txt
-Do not put complex data transformation in React pages.
-Do not overuse global state.
-Use TanStack Query for server state.
-Use route-level pages and feature-level components.
-Use typed API clients.
-Avoid any unless absolutely necessary.
+不要在 React 页面里堆复杂的数据转换。
+不要过度使用全局状态。
+用 TanStack Query 管理服务端状态。
+按路由组织页面, 按特性组织组件。
+使用带类型的 API 客户端。
+除非绝对必要, 不要使用 any。
 ```
+
+详见 `references/frontend-conventions.md`。
 
 ---
 
-### 4.2 Backend
+### 4.2 后端
 
-Use:
+使用:
 
 ```txt
 Java 21
-Spring Boot 3.x or 4.x
+Spring Boot 3.x 或 4.x
 Spring MVC
 Spring Security
 JWT
 RBAC
-MyBatis-Flex or jOOQ
+MyBatis-Flex 或 jOOQ
 PostgreSQL
 Redis
 ClickHouse JDBC
@@ -294,7 +292,7 @@ Micrometer
 OpenTelemetry Java Agent
 ```
 
-Preferred MVP backend stack:
+MVP 推荐后端技术栈:
 
 ```txt
 Java 21
@@ -310,23 +308,23 @@ MinIO
 Flyway
 ```
 
-Rules:
+规则:
 
 ```txt
-Controllers must not contain business logic.
-Services must not directly call external systems.
-External systems must be accessed through adapters or clients.
-Do not return raw Map<String, Object> for main API responses.
-Use DTO / VO / Entity / Domain models clearly.
-Every tenant-scoped query must include tenantId.
-Every security-sensitive action must generate audit logs.
+Controller 不允许包含业务逻辑。
+Service 不允许直接调用外部系统。
+外部系统访问必须通过 Adapter 或 Client。
+主 API 响应禁止直接返回 raw Map<String, Object>。
+DTO / VO / Entity / Domain 模型分层要清晰。
+所有租户维度查询必须包含 tenantId。
+所有安全敏感操作必须生成审计日志。
 ```
 
 ---
 
-### 4.3 Storage Responsibilities
+### 4.3 存储职责
 
-Use storage systems by responsibility, not randomly.
+按职责选择存储系统, 不要随机分配。
 
 ```txt
 PostgreSQL:
@@ -337,7 +335,7 @@ PostgreSQL:
   datasources
   assets
   asset_relations
-  alert current index
+  alert 索引当前态
   incidents
   incident events
   diagnoses
@@ -348,56 +346,56 @@ PostgreSQL:
   knowledge metadata
 
 Redis:
-  cache
-  queues
-  distributed locks
-  rate limits
-  temporary AI context
-  SSE session state
+  缓存
+  队列
+  分布式锁
+  限流
+  临时 AI 上下文
+  SSE 会话状态
 
 VictoriaMetrics:
-  host metrics
-  service metrics
-  API metrics
-  resource metrics
-  time series data
+  主机指标
+  服务指标
+  API 指标
+  资源指标
+  时序数据
 
 ClickHouse:
-  raw alert events
-  Zabbix event details
-  logs
-  RUM events
-  timeline event details
-  high-volume analytic events
+  原始告警事件
+  Zabbix 事件明细
+  日志
+  RUM 事件
+  时间线事件明细
+  海量分析事件
 
 MinIO:
-  reports
-  attachments
+  报告
+  附件
   sourcemaps
-  session replay files
-  Ansible artifacts
-  uploaded diagnostics
+  session replay 文件
+  Ansible 产物
+  上传的诊断文件
 
 pgvector:
-  MVP vector search for:
-    historical incidents
-    runbooks
-    knowledge documents
-    postmortem reports
+  MVP 向量检索:
+    历史 Incident
+    Runbook
+    知识文档
+    复盘报告
 
 Milvus:
-  Introduce only after vector data volume becomes large.
+  仅在向量数据规模膨胀后才引入。
 ```
 
-Do not introduce Milvus in Phase 0 unless explicitly requested.
+Phase 0 不要引入 Milvus, 除非显式要求。
 
-Do not introduce Kafka in Phase 0 unless the user explicitly asks for high-throughput ingestion.
+Phase 0 不要引入 Kafka, 除非用户明确要求高吞吐接入。
 
 ---
 
-## 5. Recommended Repository Structure
+## 5. 推荐仓库结构
 
-Target structure:
+目标结构:
 
 ```txt
 aegisops/
@@ -454,19 +452,19 @@ aegisops/
       └─ SKILL.md
 ```
 
-Do not flatten all backend code into one module.
+不要把所有后端代码压平到一个模块。
 
-Do not put Zabbix, ClickHouse, VictoriaMetrics, AI provider, and automation logic inside the same service package.
+不要把 Zabbix、ClickHouse、VictoriaMetrics、AI Provider、自动化逻辑放到同一个 service 包内。
 
 ---
 
-## 6. Core Domain Models
+## 6. 核心领域模型
 
 ### 6.1 Tenant
 
-Every business object must be tenant-scoped unless explicitly global.
+所有业务对象必须是租户维度隔离, 除非显式声明为全局。
 
-Core fields:
+核心字段:
 
 ```txt
 id
@@ -480,7 +478,7 @@ updated_at
 
 ### 6.2 User
 
-Core fields:
+核心字段:
 
 ```txt
 id
@@ -494,15 +492,15 @@ created_at
 updated_at
 ```
 
-Never store plain text passwords.
+严禁明文存储密码。
 
 ---
 
 ### 6.3 Role / Permission
 
-Use RBAC.
+使用 RBAC。
 
-Permissions should support resources like:
+权限应支持以下资源维度:
 
 ```txt
 datasource:read
@@ -525,9 +523,9 @@ admin:manage
 
 ### 6.4 DataSource
 
-Represents external systems.
+代表外部系统。
 
-Types:
+类型:
 
 ```txt
 zabbix
@@ -542,7 +540,7 @@ gitlab
 jenkins
 ```
 
-Core fields:
+核心字段:
 
 ```txt
 id
@@ -558,15 +556,15 @@ created_at
 updated_at
 ```
 
-Secrets must be encrypted or handled by secret storage.
+敏感信息必须加密, 或交由 Secret 存储管理。
 
-Do not store raw tokens in plain columns.
+不要在明文字段保存 token。
 
 ---
 
 ### 6.5 Asset
 
-Asset types:
+资产类型:
 
 ```txt
 host
@@ -583,7 +581,7 @@ k8s_namespace
 k8s_pod
 ```
 
-Core fields:
+核心字段:
 
 ```txt
 id
@@ -605,7 +603,7 @@ updated_at
 
 ### 6.6 AssetRelation
 
-Relationship types:
+关系类型:
 
 ```txt
 depends_on
@@ -616,7 +614,7 @@ owns
 related_to
 ```
 
-Core fields:
+核心字段:
 
 ```txt
 id
@@ -634,9 +632,9 @@ updated_at
 
 ### 6.7 AlertEvent
 
-Unified alert event.
+统一告警事件。
 
-Sources:
+来源:
 
 ```txt
 zabbix
@@ -647,7 +645,7 @@ webhook
 manual
 ```
 
-Core fields:
+核心字段:
 
 ```txt
 id
@@ -669,7 +667,7 @@ fingerprint
 created_at
 ```
 
-Severity values:
+严重程度值:
 
 ```txt
 info
@@ -679,7 +677,7 @@ high
 disaster
 ```
 
-Status values:
+状态值:
 
 ```txt
 open
@@ -688,7 +686,7 @@ ignored
 suppressed
 ```
 
-Fingerprint rule:
+指纹规则:
 
 ```txt
 source + asset_id + source_trigger_id + normalized_title
@@ -698,9 +696,9 @@ source + asset_id + source_trigger_id + normalized_title
 
 ### 6.8 Incident
 
-The central aggregate root.
+核心聚合根。
 
-Core fields:
+核心字段:
 
 ```txt
 id
@@ -722,7 +720,7 @@ created_at
 updated_at
 ```
 
-Status values:
+状态值:
 
 ```txt
 open
@@ -733,23 +731,23 @@ closed
 ignored
 ```
 
-Rules:
+规则:
 
 ```txt
-An Incident can contain many AlertEvents.
-An Incident can contain timeline events.
-An Incident can contain AI diagnoses.
-An Incident can contain AutomationJobs.
-An Incident can generate one postmortem.
+一个 Incident 可包含多条 AlertEvent。
+一个 Incident 可包含多条时间线事件。
+一个 Incident 可包含多条 AI 诊断。
+一个 Incident 可包含多个 AutomationJob。
+一个 Incident 可生成一份 Postmortem。
 ```
 
 ---
 
 ### 6.9 IncidentEvent
 
-Links Incident with events.
+用于关联 Incident 与事件。
 
-Event types:
+事件类型:
 
 ```txt
 alert
@@ -762,7 +760,7 @@ manual_note
 recovery
 ```
 
-Relation types:
+关联类型:
 
 ```txt
 primary
@@ -777,9 +775,9 @@ noise
 
 ### 6.10 IncidentTimeline
 
-Used for detail page display.
+用于详情页展示。
 
-Timeline event types:
+时间线事件类型:
 
 ```txt
 alert_triggered
@@ -795,15 +793,15 @@ incident_resolved
 incident_closed
 ```
 
-The Incident detail page should be organized around timeline.
+Incident 详情页应围绕时间线组织。
 
 ---
 
 ### 6.11 DiagnosisResult
 
-AI diagnosis must be structured.
+AI 诊断必须是结构化的。
 
-Shape:
+结构:
 
 ```json
 {
@@ -837,21 +835,21 @@ Shape:
 }
 ```
 
-Rules:
+规则:
 
 ```txt
-AI output must be parsed and validated.
-If parsing fails, return a safe fallback result.
-AI must not invent data outside provided context.
-Confidence must be explicit.
-Evidence must reference actual collected data.
+AI 输出必须解析与校验。
+解析失败时返回安全的兜底结果。
+AI 不得在提供上下文之外编造数据。
+置信度必须显式给出。
+证据必须引用实际采集到的数据。
 ```
 
 ---
 
 ### 6.12 Runbook
 
-Core fields:
+核心字段:
 
 ```txt
 id
@@ -866,7 +864,7 @@ created_at
 updated_at
 ```
 
-Step types:
+步骤类型:
 
 ```txt
 manual
@@ -884,7 +882,7 @@ health_check
 
 ### 6.13 AutomationJob
 
-Core fields:
+核心字段:
 
 ```txt
 id
@@ -904,7 +902,7 @@ created_at
 updated_at
 ```
 
-Status values:
+状态值:
 
 ```txt
 pending
@@ -917,7 +915,7 @@ cancelled
 timeout
 ```
 
-Automation logs:
+自动化日志:
 
 ```txt
 id
@@ -932,9 +930,9 @@ content
 
 ### 6.14 AuditLog
 
-Every sensitive operation must create audit logs.
+所有敏感操作都必须生成审计日志。
 
-Must include:
+必须包含:
 
 ```txt
 id
@@ -950,7 +948,7 @@ payload
 created_at
 ```
 
-Audit must cover:
+审计必须覆盖:
 
 ```txt
 login
@@ -967,11 +965,11 @@ secret change
 
 ---
 
-## 7. Zabbix Integration Rules
+## 7. Zabbix 集成规则
 
-Zabbix is a data source, not the platform core.
+Zabbix 是数据源, 不是平台核心。
 
-Correct flow:
+正确流程:
 
 ```txt
 Zabbix Server
@@ -980,20 +978,22 @@ Zabbix Adapter
   ↓
 Asset / AlertEvent
   ↓
-Incident aggregation
+Incident 聚合
 ```
 
-Do not make Ansible call Zabbix directly.
+不要让 Ansible 直接调用 Zabbix。
 
-Do not make AI call Zabbix directly.
+不要让 AI 直接调用 Zabbix。
 
-All Zabbix API operations must be inside:
+所有 Zabbix API 操作都必须在:
 
 ```txt
 aiops-zabbix-adapter
 ```
 
-Required adapter features:
+中完成。
+
+必备 Adapter 能力:
 
 ```txt
 test connection
@@ -1002,14 +1002,14 @@ sync hosts
 sync triggers
 sync problems
 sync events
-convert host to Asset
-convert problem/event to AlertEvent
-preserve raw payload
-normalize severity
-generate fingerprint
+host -> Asset 转换
+problem/event -> AlertEvent 转换
+保留 raw payload
+归一 severity
+生成 fingerprint
 ```
 
-Expected client interface:
+期望 Client 接口:
 
 ```java
 public interface ZabbixClient {
@@ -1027,7 +1027,7 @@ public interface ZabbixClient {
 }
 ```
 
-Expected adapter interface:
+期望 Adapter 接口:
 
 ```java
 public interface ZabbixAdapter {
@@ -1039,13 +1039,13 @@ public interface ZabbixAdapter {
 
 ---
 
-## 8. Metrics Integration Rules
+## 8. 指标集成规则
 
-VictoriaMetrics should be accessed through an adapter.
+VictoriaMetrics 必须通过 Adapter 访问。
 
-Do not call VictoriaMetrics directly from controllers.
+不要让 Controller 直接调用 VictoriaMetrics。
 
-Expected interface:
+期望接口:
 
 ```java
 public interface MetricQueryClient {
@@ -1055,92 +1055,92 @@ public interface MetricQueryClient {
 }
 ```
 
-MVP metric queries:
+MVP 指标查询项:
 
 ```txt
-CPU usage
-memory usage
-disk usage
-network IO
-host availability
-trigger-related metric history
+CPU 使用率
+内存使用率
+磁盘使用率
+网络 IO
+主机可用性
+触发器相关指标历史
 ```
 
-Incident RCA should query metrics in this default window:
+Incident RCA 默认查询区间:
 
 ```txt
-incident.started_at - 30 minutes
-incident.started_at + 30 minutes
+incident.started_at - 30 分钟
+incident.started_at + 30 分钟
 ```
 
-Allow the user to adjust this later.
+允许用户后续调整。
 
 ---
 
-## 9. ClickHouse Integration Rules
+## 9. ClickHouse 集成规则
 
-ClickHouse stores high-volume event details.
+ClickHouse 存储高吞吐事件明细。
 
-Do not use ClickHouse as the primary metadata database.
+不要把 ClickHouse 作为主元数据库。
 
-Use ClickHouse for:
+ClickHouse 用于:
 
 ```txt
-raw alert event payloads
-Zabbix event details
-logs
-timeline event details
-RUM events, later
+原始告警事件 payload
+Zabbix 事件明细
+日志
+时间线事件明细
+RUM 事件 (后续)
 ```
 
-Rules:
+规则:
 
 ```txt
-Parameterized queries only.
-No string-concatenated SQL from user input.
-Large result sets must be paginated.
-Long-running queries must have timeout.
-```
-
----
-
-## 10. AI Agent Rules
-
-### 10.1 AI responsibilities
-
-AI can:
-
-```txt
-summarize Incident
-explain evidence
-generate investigation steps
-recommend Runbook
-match historical incidents
-generate postmortem draft
-generate safe query suggestions
-explain risk
-```
-
-AI cannot directly:
-
-```txt
-execute SSH
-execute Ansible
-delete files
-rollback production
-modify config
-restart database
-stop core middleware
-close incidents without user confirmation
+只允许参数化查询。
+禁止把用户输入拼接到 SQL。
+大批量结果必须分页。
+长时间查询必须设置超时。
 ```
 
 ---
 
-### 10.2 LLM provider abstraction
+## 10. AI Agent 规则
 
-Use provider abstraction.
+### 10.1 AI 职责
 
-Required interface:
+AI 可以:
+
+```txt
+汇总 Incident
+解释证据
+生成排障步骤
+推荐 Runbook
+匹配历史 Incident
+生成 Postmortem 草稿
+生成安全查询建议
+解释风险
+```
+
+AI 不得直接:
+
+```txt
+执行 SSH
+执行 Ansible
+删除文件
+回滚生产
+修改配置
+重启数据库
+停止核心中间件
+未经用户确认关闭 Incident
+```
+
+---
+
+### 10.2 LLM Provider 抽象
+
+使用 Provider 抽象。
+
+必备接口:
 
 ```java
 public interface LlmProvider {
@@ -1150,7 +1150,7 @@ public interface LlmProvider {
 }
 ```
 
-Possible implementations:
+可能实现:
 
 ```txt
 OpenAiProvider
@@ -1159,13 +1159,13 @@ QwenProvider
 OllamaProvider
 ```
 
-Do not hard-code a specific LLM vendor in business logic.
+不要在业务逻辑里硬编码 LLM 厂商。
 
 ---
 
-### 10.3 AI tool registry
+### 10.3 AI 工具注册表
 
-Allowed tools:
+允许的工具:
 
 ```txt
 queryMetrics
@@ -1181,7 +1181,7 @@ recommendRunbook
 proposeAutomation
 ```
 
-Forbidden tools:
+禁止工具:
 
 ```txt
 executeCommand
@@ -1191,7 +1191,7 @@ deleteFileDirectly
 modifyProductionConfigDirectly
 ```
 
-Execution must go through:
+执行必须走:
 
 ```txt
 proposeAutomation
@@ -1205,23 +1205,23 @@ aiops-runner
 
 ---
 
-### 10.4 Diagnosis prompt rules
+### 10.4 诊断 Prompt 规则
 
-When generating diagnosis, include:
+生成诊断时必须包含:
 
 ```txt
-Incident basic info
-related alerts
-asset info
-metric context
-timeline events
-RCA rule evidence
-historical similar incidents
-available runbooks
-automation policy constraints
+Incident 基础信息
+相关告警
+资产信息
+指标上下文
+时间线事件
+RCA 规则证据
+历史相似 Incident
+可用 Runbook
+自动化策略约束
 ```
 
-The AI must output:
+AI 必须输出:
 
 ```txt
 summary
@@ -1234,9 +1234,9 @@ recommended runbooks
 automation risk warning
 ```
 
-The AI must not claim certainty if evidence is weak.
+证据不足时 AI 不得断言确定。
 
-Use language like:
+使用类似:
 
 ```txt
 疑似
@@ -1245,36 +1245,36 @@ Use language like:
 需要进一步确认
 ```
 
-when confidence is low.
+的语气, 当 confidence 偏低时。
 
 ---
 
-## 11. RCA Engine Rules
+## 11. RCA 引擎规则
 
-MVP uses:
-
-```txt
-rule-based RCA + evidence chain + AI summarization
-```
-
-Do not train a model in MVP.
-
-Do not implement complex graph algorithms before basic RCA rules work.
-
-First RCA rules:
+MVP 使用:
 
 ```txt
-R1: recent change exists within ±30 minutes
-R2: same asset has multiple alerts
-R3: upstream asset alert appears before downstream alert
-R4: issue concentrated on one host / service / version
-R5: metric anomaly time overlaps with log errors
-R6: historical similar incident exists
-R7: existing Runbook matches current incident
-R8: alert storm duplicate detected
+规则式 RCA + 证据链 + AI 总结
 ```
 
-Every RCA rule must output:
+MVP 不训练模型。
+
+在基础 RCA 规则稳定之前, 不实现复杂图算法。
+
+首批 RCA 规则:
+
+```txt
+R1: ±30 分钟内有变更
+R2: 同一资产有多个告警
+R3: 上游资产告警早于下游
+R4: 问题集中在单主机 / 服务 / 版本
+R5: 指标异常时间与日志错误重叠
+R6: 存在历史相似 Incident
+R7: 现有 Runbook 与当前 Incident 匹配
+R8: 检测到告警风暴重复
+```
+
+每条 RCA 规则必须输出:
 
 ```txt
 rule_id
@@ -1285,88 +1285,88 @@ related_event_id
 explanation
 ```
 
-Never return only a score.
+不得仅返回分数。
 
-RCA result must be explainable.
-
----
-
-## 12. Alert Aggregation Rules
-
-MVP aggregation rules:
-
-```txt
-same tenant
-same fingerprint
-close time window
-same primary asset
-```
-
-Default aggregation window:
-
-```txt
-10 minutes
-```
-
-Additional grouping rules:
-
-```txt
-same host + multiple resource alerts → host-level Incident
-same host group + many alerts → host-group Incident
-same datasource + alert storm → storm Incident
-```
-
-Do not overfit early.
-
-Keep aggregation rules configurable later.
+RCA 结果必须可解释。
 
 ---
 
-## 13. Automation Safety Rules
+## 12. 告警聚合规则
 
-Automation is dangerous. Always prioritize safety.
-
-### 13.1 Risk levels
-
-Low risk:
+MVP 聚合规则:
 
 ```txt
-query logs
-query metrics
-run inspection
-create ticket
-send notification
-read process list
-read disk usage
-read service status
+同租户
+同 fingerprint
+相近时间窗口
+同主资产
 ```
 
-Can run without approval if policy allows, but must be audited.
-
-Medium risk:
+默认聚合窗口:
 
 ```txt
-restart stateless service
-clear temp files
-refresh cache
-scale replicas
+10 分钟
 ```
 
-Requires approval by default.
-
-High risk:
+附加分组规则:
 
 ```txt
-rollback deployment
-modify config
-traffic switch
-restart database
-delete files
+同主机 + 多种资源告警 -> 主机级 Incident
+同主机组 + 大量告警 -> 主机组 Incident
+同数据源 + 告警风暴 -> 风暴 Incident
 ```
 
-Requires approval, rollback plan, and audit.
+不要过早过拟合。
 
-Forbidden by default:
+聚合规则后续要可配置。
+
+---
+
+## 13. 自动化安全规则
+
+自动化是危险的, 永远把安全放在第一位。
+
+### 13.1 风险等级
+
+低风险:
+
+```txt
+查日志
+查指标
+运行巡检脚本
+创建工单
+发送通知
+读取进程列表
+读取磁盘使用
+读取服务状态
+```
+
+如果策略允许, 可免审批执行, 但必须留痕。
+
+中风险:
+
+```txt
+重启无状态服务
+清理临时文件
+刷新缓存
+调整副本数
+```
+
+默认需要审批。
+
+高风险:
+
+```txt
+回滚发布
+修改配置
+流量切换
+重启数据库
+删除文件
+```
+
+必须审批 + 回滚预案 + 审计。
+
+默认禁止:
 
 ```txt
 rm -rf
@@ -1379,395 +1379,397 @@ flush Redis
 format disk
 ```
 
-Never generate code that enables forbidden actions without explicit user request and safety design.
+未经用户明确需求与完整安全设计, 不得生成允许上述行为的代码。
 
 ---
 
-### 13.2 Execution flow
+### 13.2 执行流
 
-All automation must follow:
+所有自动化必须遵循:
 
 ```txt
-AI suggestion
+AI 建议
   ↓
-Policy check
+策略检查
   ↓
-AutomationJob created
+AutomationJob 创建 (status: pending)
   ↓
-approval if required
+按需审批 (status: waiting_approval)
   ↓
-runner execution
+Runner 接收审批通过的任务 (status: approved -> running)
   ↓
-stream logs
+日志流回 server
   ↓
-post-execution health check
+执行后健康检查
   ↓
-audit log
+更新任务状态 (success / failed / timeout)
   ↓
-Incident timeline update
+审计日志
+  ↓
+Incident 时间线追加 AutomationEvent
 ```
 
 ---
 
-## 14. MVP Phases
+## 14. MVP Phase
 
 ### Phase 0: Foundation
 
-Goal:
+目标:
 
 ```txt
-Project skeleton, infrastructure, authentication, database migration.
+项目骨架、基础设施、认证、数据库迁移。
 ```
 
-Deliverables:
+交付物:
 
 ```txt
-Maven multi-module project
+Maven 多模块工程
 apps/aiops-server
 apps/aiops-worker
 apps/aiops-runner
-React console
+React 控制台
 Docker Compose
 PostgreSQL
 Redis
 ClickHouse
 VictoriaMetrics
 MinIO
-Flyway migrations
+Flyway 迁移
 Spring Security + JWT
-basic RBAC
+基础 RBAC
 OpenAPI
-health checks
+健康检查
 ```
 
-Acceptance:
+验收:
 
 ```txt
-docker compose starts successfully
-server starts successfully
-user can log in
-OpenAPI is accessible
-tenant/user/role can be created
-empty dashboard renders
+docker compose 成功启动
+server 成功启动
+用户能登录
+OpenAPI 可访问
+租户/用户/角色可创建
+空 Dashboard 渲染
 ```
 
-Do not implement Zabbix before Phase 0 foundation is stable.
+Phase 0 基础未稳定前不实现 Zabbix。
 
 ---
 
-### Phase 1: Zabbix ingestion
+### Phase 1: Zabbix 数据接入
 
-Goal:
+目标:
 
 ```txt
-Use Zabbix as the first datasource.
+使用 Zabbix 作为首个数据源。
 ```
 
-Deliverables:
+交付物:
 
 ```txt
-datasource management page
-Zabbix datasource config
+数据源管理页
+Zabbix 数据源配置
 test connection
-sync host groups
-sync hosts
-sync triggers
-sync problems/events
-convert to Asset
-convert to AlertEvent
-asset list
-alert list
+同步主机组
+同步主机
+同步触发器
+同步问题/事件
+转换为 Asset
+转换为 AlertEvent
+资产列表
+告警列表
 ```
 
-Acceptance:
+验收:
 
 ```txt
-After configuring Zabbix, hosts and alerts are visible in AegisOps.
-A Zabbix problem becomes an AlertEvent.
-Raw payload is preserved.
-Fingerprint is generated.
-```
-
----
-
-### Phase 2: Incident center
-
-Goal:
-
-```txt
-Turn alert list into Incident center.
-```
-
-Deliverables:
-
-```txt
-AlertEvent deduplication
-Incident creation
-Incident aggregation
-Incident list
-Incident detail
-Incident timeline
-status transition
-severity calculation
-```
-
-Acceptance:
-
-```txt
-Repeated Zabbix alerts are grouped into one Incident.
-Incident detail shows related alerts, assets, and timeline.
+配置 Zabbix 后, 主机与告警在 AegisOps 内可见。
+Zabbix 问题转为 AlertEvent。
+Raw payload 保留。
+Fingerprint 生成。
 ```
 
 ---
 
-### Phase 3: RCA engine
+### Phase 2: Incident Center
 
-Goal:
+目标:
 
 ```txt
-Generate evidence chain from metrics, assets, and events.
+将告警列表升级为 Incident Center。
 ```
 
-Deliverables:
+交付物:
 
 ```txt
-VictoriaMetrics adapter
-metric context query
-Incident metric panel
-RCA rule engine
-evidence model
-root cause scoring
-RCA result display
+AlertEvent 去重
+Incident 创建
+Incident 聚合
+Incident 列表
+Incident 详情
+Incident 时间线
+状态流转
+严重度计算
 ```
 
-Acceptance:
+验收:
 
 ```txt
-Incident detail can show metrics around the event window.
-RCA engine outputs evidence, not just text.
-```
-
----
-
-### Phase 4: AI diagnosis
-
-Goal:
-
-```txt
-Use AI to summarize RCA evidence into human-readable diagnosis.
-```
-
-Deliverables:
-
-```txt
-LLM provider abstraction
-one provider implementation
-AI tool registry
-diagnosis prompt
-structured DiagnosisResult
-SSE streaming
-diagnosis persistence
-AI diagnosis panel
-```
-
-Acceptance:
-
-```txt
-Clicking AI Diagnose produces a report with summary, suspected root cause, evidence, confidence, and suggestions.
+重复 Zabbix 告警聚合到同一 Incident。
+Incident 详情展示相关告警、资产与时间线。
 ```
 
 ---
 
-### Phase 5: Runbook and Ansible
+### Phase 3: RCA 引擎
 
-Goal:
+目标:
 
 ```txt
-Move from diagnosis to controlled action.
+基于指标、资产、事件生成证据链。
 ```
 
-Deliverables:
+交付物:
 
 ```txt
-Runbook model
-Runbook steps
+VictoriaMetrics Adapter
+指标上下文查询
+Incident 指标面板
+RCA 规则引擎
+证据模型
+根因打分
+RCA 结果展示
+```
+
+验收:
+
+```txt
+Incident 详情可展示事件窗口附近的指标。
+RCA 引擎输出证据, 而不仅是文本。
+```
+
+---
+
+### Phase 4: AI 诊断
+
+目标:
+
+```txt
+使用 AI 把 RCA 证据汇总为可读诊断。
+```
+
+交付物:
+
+```txt
+LLM Provider 抽象
+任一 Provider 实现
+AI 工具注册表
+诊断 Prompt
+结构化 DiagnosisResult
+SSE 流式
+诊断持久化
+AI 诊断面板
+```
+
+验收:
+
+```txt
+点击 AI Diagnose 生成包含 summary、suspected root cause、evidence、confidence、suggestions 的报告。
+```
+
+---
+
+### Phase 5: Runbook 与 Ansible
+
+目标:
+
+```txt
+从诊断到受控执行。
+```
+
+交付物:
+
+```txt
+Runbook 模型
+Runbook 步骤
 Ansible Runner
-AutomationJob model
-approval flow
-execution logs
-result write-back
-Incident timeline integration
+AutomationJob 模型
+审批流
+执行日志
+结果回写
+Incident 时间线集成
 ```
 
-Built-in Runbooks:
+内置 Runbook:
 
 ```txt
-host inspection
-disk check
-Nginx status check
-Java process check
-service restart, approval required
+主机巡检
+磁盘检查
+Nginx 状态检查
+Java 进程检查
+服务重启 (需审批)
 ```
 
-Acceptance:
+验收:
 
 ```txt
-Incident can recommend a Runbook.
-User can approve execution.
-Runner executes inspection Playbook.
-Logs stream back.
-Result is written to Incident timeline.
+Incident 可推荐 Runbook。
+用户可审批执行。
+Runner 执行巡检 Playbook。
+日志流回。
+结果写入 Incident 时间线。
 ```
 
 ---
 
-### Phase 6: Postmortem and knowledge
+### Phase 6: Postmortem 与知识库
 
-Goal:
+目标:
 
 ```txt
-Turn every incident into reusable knowledge.
+每个 Incident 都沉淀为可复用知识。
 ```
 
-Deliverables:
+交付物:
 
 ```txt
-postmortem draft generation
-historical incident library
-Runbook-to-Incident linkage
-pgvector search
-similar incident search
-AI diagnosis enhanced by historical incidents
+Postmortem 草稿
+历史 Incident 库
+Runbook 与 Incident 关联
+pgvector 检索
+相似 Incident 检索
+AI 诊断基于历史增强
 ```
 
-Acceptance:
+验收:
 
 ```txt
-Closing an Incident generates a postmortem draft.
-Next similar Incident can reference previous incidents.
-```
-
----
-
-### Phase 7: AI Agent workflow hardening
-
-Goal:
-
-```txt
-Harden the AI diagnosis workflow without allowing AI to execute production actions directly.
-```
-
-Deliverables:
-
-```txt
-LangGraph workflow modularization
-multi-agent collaboration for evidence / RCA / runbook review
-agent memory and checkpoint support
-agent evaluation datasets and prompt profiles
-internal tool policy checks
-observability for agent runs
-```
-
-Acceptance:
-
-```txt
-AI diagnosis remains evidence-based.
-AI tools can fetch evidence and historical cases through internal guarded APIs.
-AI output can recommend runbooks but cannot execute automation.
-Agent runs are traceable, evaluable, and tenant-scoped.
+关闭 Incident 时生成 Postmortem 草稿。
+下一个相似 Incident 可引用历史。
 ```
 
 ---
 
-### Phase 8: Production hardening
+### Phase 7: AI Agent 工作流加固
 
-Goal:
+目标:
 
 ```txt
-Prepare the MVP for SaaS-style tenant isolation, plugin policy, and private deployment.
+在不绕过 Runner / 审批安全的前提下加固 AI 诊断工作流。
 ```
 
-Deliverables:
+交付物:
 
 ```txt
-SaaS multi-tenant hardening
-plugin descriptor and tenant plugin policy
-private deployment manifests
-offline package workflow
-production security checklist
-CI and local quality gates
+LangGraph 工作流模块化
+多 Agent 协作 (证据 / RCA / Runbook 审查)
+Agent 记忆与 checkpoint 支持
+Agent 评测数据集与 Prompt Profile
+内部工具策略校验
+Agent 运行可观测性
 ```
 
-Acceptance:
+验收:
 
 ```txt
-Tenant boundaries are guarded in API, persistence, internal agent tools, and plugin policy.
-Private deployment artifacts can be built and verified.
-Quality gates run consistently in local and CI environments.
-```
-
----
-
-### Phase Z9: Zabbix MVP end-to-end acceptance
-
-Goal:
-
-```txt
-Freeze a demo acceptance scenario for the full Zabbix incident loop.
-```
-
-Scope:
-
-```txt
-Phase Z9 is a scenario gate, not a product phase.
-It may use mock fault injection to prove the MVP path.
-It must not redefine production topology or bypass runner / approval safety.
-```
-
-Acceptance:
-
-```txt
-Fault injection triggers Zabbix.
-Zabbix sends an alert into AegisOps.
-AegisOps creates AlertEvent and Incident.
-Evidence, RCA, AI diagnosis, runbook recommendation, execution result, and postmortem are visible.
+AI 诊断保持证据驱动。
+AI 工具只能通过内部受控 API 取证据与历史案例。
+AI 输出能推荐 Runbook 但不能直接执行自动化。
+Agent 运行可追溯、可评测、按租户隔离。
 ```
 
 ---
 
-## 15. What Not To Build In MVP
+### Phase 8: 生产加固
 
-Do not build these unless explicitly asked:
+目标:
 
 ```txt
-full Prometheus replacement
-full log platform
-full tracing platform
-complex Kubernetes Operator
-multi-region HA
-complex CMDB
-large wall-screen dashboard
-fully autonomous self-healing
-custom model training
-full Milvus deployment
-full Kafka pipeline
-premature microservices
-complex license system
+为 MVP 的 SaaS 多租户隔离、插件策略、私有化部署做准备。
 ```
 
-Avoid platform bloat.
+交付物:
+
+```txt
+SaaS 多租户加固
+插件描述符与租户插件策略
+私有化部署清单
+离线包流程
+生产安全检查清单
+CI 与本地质量门禁
+```
+
+验收:
+
+```txt
+API、持久化、内部 Agent 工具、插件策略都守护租户边界。
+可构建并验证私有化部署产物。
+本地与 CI 环境下质量门禁一致运行。
+```
 
 ---
 
-## 16. API Design Rules
+### Phase Z9: Zabbix MVP 端到端验收
 
-Use REST first.
+目标:
 
-Use SSE for streaming AI output and runner logs.
+```txt
+冻结一次面向完整 Zabbix Incident 闭环的演示验收场景。
+```
 
-Use WebSocket only when two-way real-time communication is required.
+范围:
 
-Base API groups:
+```txt
+Phase Z9 是一个场景关卡, 不是产品 Phase。
+可以使用 mock 故障注入验证 MVP 路径。
+不得借此重定义生产拓扑或绕过 Runner / 审批安全。
+```
+
+验收:
+
+```txt
+故障注入触发 Zabbix。
+Zabbix 将告警送入 AegisOps。
+AegisOps 创建 AlertEvent 与 Incident。
+证据、RCA、AI 诊断、Runbook 推荐、执行结果、Postmortem 均可见。
+```
+
+---
+
+## 15. MVP 不要做的事
+
+除非显式要求, 不要做以下事情:
+
+```txt
+完整替代 Prometheus
+完整日志平台
+完整 Tracing 平台
+复杂 Kubernetes Operator
+多区域 HA
+复杂 CMDB
+巨型大屏
+完全自治自愈
+自训练模型
+完整 Milvus 部署
+完整 Kafka 流水线
+过早微服务
+复杂 License 系统
+```
+
+避免平台臃肿。
+
+---
+
+## 16. API 设计规则
+
+优先 REST。
+
+AI 输出与 Runner 日志的流式场景使用 SSE。
+
+只有在双向实时通信必要时才使用 WebSocket。
+
+基础 API 分组:
 
 ```txt
 /api/auth
@@ -1784,7 +1786,7 @@ Base API groups:
 /api/audit
 ```
 
-Required endpoints:
+必备端点:
 
 ```txt
 POST /api/auth/login
@@ -1828,23 +1830,23 @@ GET  /api/audit/logs
 
 ---
 
-## 17. Database Migration Rules
+## 17. 数据库迁移规则
 
-Use Flyway.
+使用 Flyway。
 
-Rules:
+规则:
 
 ```txt
-Every schema change must add a migration file.
-Do not edit old migrations after they are merged.
-Use tenant_id where applicable.
-Create indexes for tenant-scoped queries.
-Create indexes for status and time range filters.
-Use JSONB for flexible metadata in PostgreSQL.
-Do not store secrets in plain text.
+任何 Schema 变更都必须新增 migration。
+不要修改已经合并的旧 migration。
+适用处使用 tenant_id。
+为租户维度查询创建索引。
+为状态与时间范围查询创建索引。
+元数据类灵活字段使用 JSONB。
+敏感信息不得明文存储。
 ```
 
-Naming:
+命名:
 
 ```txt
 V0001__init_tenant_user_rbac.sql
@@ -1856,102 +1858,102 @@ V0005__init_audit.sql
 
 ---
 
-## 18. Testing Rules
+## 18. 测试规则
 
-Every phase must include tests.
+每个 Phase 必须包含测试。
 
-Backend tests:
-
-```txt
-unit tests for domain logic
-service tests for aggregation
-adapter tests with mocked external systems
-controller tests for API contracts
-migration validation
-```
-
-Frontend tests:
+后端测试:
 
 ```txt
-component smoke tests
-API mock tests
-critical page rendering tests
-Playwright E2E later
+领域逻辑单元测试
+聚合 Service 测试
+外部系统 Adapter 测试 (mock)
+Controller API 契约测试
+迁移校验
 ```
 
-High-priority backend tests:
+前端测试:
 
 ```txt
-Alert fingerprint generation
-AlertEvent deduplication
-Alert to Incident aggregation
-Incident status transition
-RCA rule scoring
-DiagnosisResult parsing
-AutomationJob state machine
-RBAC permission checks
-Audit log creation
+组件冒烟测试
+API Mock 测试
+关键页面渲染测试
+Playwright E2E (后续)
 ```
 
-Never claim complete without running the relevant tests or clearly saying tests were not run.
+高优后端测试:
+
+```txt
+告警指纹生成
+AlertEvent 去重
+告警 -> Incident 聚合
+Incident 状态流转
+RCA 规则打分
+DiagnosisResult 解析
+AutomationJob 状态机
+RBAC 权限校验
+审计日志生成
+```
+
+未真正运行相关测试时, 不要声称完成。
 
 ---
 
-## 19. Review Checklist
+## 19. 评审清单
 
-When reviewing code, check:
+代码评审时检查:
 
 ```txt
-Does this preserve Incident as the central model?
-Does this follow current MVP phase?
-Does this avoid premature microservices?
-Does this keep external systems behind adapters?
-Does this protect tenant isolation?
-Does this avoid AI direct execution?
-Does this require approval for risky actions?
-Does this create audit logs?
-Does this include tests?
-Does this update migration files?
-Does this update OpenAPI or docs if API changed?
-Does this avoid overengineering?
+是否保持 Incident 为核心模型?
+是否遵循当前 MVP Phase?
+是否避免过早微服务?
+是否通过 Adapter 访问外部系统?
+是否守护租户隔离?
+是否避免 AI 直接执行?
+是否对高危动作设置审批?
+是否生成审计日志?
+是否包含测试?
+是否更新 migration?
+API 变更是否同步 OpenAPI 与 docs?
+是否避免过度设计?
 ```
 
 ---
 
-## 20. Output Style for Agent Responses
+## 20. Agent 响应风格
 
-When proposing implementation, use this structure:
+提出实现方案时使用以下结构:
 
 ```txt
-1. Scope
-2. Files to add/change
-3. Data model changes
-4. Backend changes
-5. Frontend changes
-6. Tests
-7. Verification commands
-8. Risks / follow-up
+1. 范围
+2. 需新增/修改的文件
+3. 数据模型变更
+4. 后端变更
+5. 前端变更
+6. 测试
+7. 验证命令
+8. 风险 / 后续
 ```
 
-When giving code, prefer complete file contents or precise patches.
+给出代码时, 优先提供完整文件内容或精确补丁。
 
-When something is not implemented, say so clearly.
+未实现的功能请明确说明。
 
-Do not say "done" unless verification was actually run.
+未真正完成验证前, 不要说“完成”。
 
 ---
 
-## 21. Phase Discipline
+## 21. Phase 纪律
 
-Always identify current phase.
+始终先识别当前 Phase。
 
-If the user asks for Phase 0, do not implement Phase 3 AI diagnosis.
+如果用户要求 Phase 0, 不要实现 Phase 3 的 AI 诊断。
 
-If the user asks for Phase 1, do not implement Ansible Runner.
+如果用户要求 Phase 1, 不要实现 Ansible Runner。
 
-If the user asks for Phase 5, verify Phase 0-4 assumptions.
+如果用户要求 Phase 5, 复核 Phase 0–4 的前提是否仍成立。
 
-Default phase order:
+默认 Phase 顺序:
 
 ```txt
 Phase 0: foundation
@@ -1963,122 +1965,123 @@ Phase 5: Runbook and Ansible
 Phase 6: postmortem and knowledge
 Phase 7: AI Agent workflow hardening
 Phase 8: production hardening
-Phase Z9: Zabbix MVP end-to-end acceptance scenario, not a product phase
+Phase Z9: Zabbix MVP 端到端验收场景 (非产品 Phase)
 ```
 
 ---
 
-## 22. Default Implementation Priorities
+## 22. 默认实现优先级
 
-Prefer:
+优先:
 
 ```txt
-simple domain model
-clear adapter boundaries
-explainable RCA
-safe automation
-testable services
-typed API responses
-migration-first database changes
+简单的领域模型
+清晰的 Adapter 边界
+可解释的 RCA
+安全的自动化
+可测试的 Service
+带类型的 API 响应
+迁移优先的数据库变更
 ```
 
-Avoid:
+避免:
 
 ```txt
-fancy dashboard before data correctness
-AI prompt complexity before evidence model
-automation before approval flow
-graph topology before asset basics
-microservices before MVP
-Kafka before Redis Stream is insufficient
-Milvus before pgvector is insufficient
-```
-
----
-
-## 23. Final MVP Demo Requirement
-
-A successful MVP must demonstrate:
-
-```txt
-1. User logs in.
-2. User adds Zabbix datasource.
-3. Platform syncs hosts and alerts.
-4. Zabbix triggers a CPU alert.
-5. Platform creates AlertEvent.
-6. Platform aggregates Incident.
-7. Incident detail shows related asset, alert, timeline, and metrics.
-8. User clicks AI Diagnose.
-9. AI outputs evidence-based diagnosis.
-10. System recommends inspection Runbook.
-11. User approves execution.
-12. aiops-runner executes Ansible inspection.
-13. Logs stream back.
-14. Result is written to Incident timeline.
-15. User closes Incident.
-16. Platform generates postmortem draft.
-```
-
-If the implementation does not support this path, it is not MVP-complete.
-
----
-
-## 24. Strongest Reminder
-
-The product value is not:
-
-```txt
-more dashboards
-more charts
-more data sources
-more AI chat
-more microservices
-```
-
-The product value is:
-
-```txt
-turning raw alerts into explainable incidents,
-turning incidents into safe actions,
-turning actions into reusable knowledge.
+数据正确性之前先做大屏
+证据模型之前先堆 AI Prompt 复杂度
+审批流之前先做自动化
+资产基础之前先做图拓扑
+MVP 之前先拆微服务
+Redis Stream 不够之前先上 Kafka
+pgvector 不够之前先上 Milvus
 ```
 
 ---
 
-## 25. Document Governance
+## 23. 最终 MVP 演示要求
 
-All project documents must follow the governance rules in:
+成功的 MVP 必须能够演示:
+
+```txt
+1. 用户登录。
+2. 用户新增 Zabbix 数据源。
+3. 平台同步主机与告警。
+4. Zabbix 触发 CPU 告警。
+5. 平台创建 AlertEvent。
+6. 平台聚合 Incident。
+7. Incident 详情展示相关资产、告警、时间线与指标。
+8. 用户点击 AI Diagnose。
+9. AI 输出证据驱动的诊断。
+10. 系统推荐巡检 Runbook。
+11. 用户审批执行。
+12. aiops-runner 执行 Ansible 巡检。
+13. 日志流回。
+14. 结果写入 Incident 时间线。
+15. 用户关闭 Incident。
+16. 平台生成 Postmortem 草稿。
+```
+
+实现不支持这条路径, 就不是 MVP-complete。
+
+---
+
+## 24. 最强提醒
+
+产品价值不是:
+
+```txt
+更多大屏
+更多图表
+更多数据源
+更多 AI 聊天
+更多微服务
+```
+
+产品价值是:
+
+```txt
+把原始告警变成可解释的 Incident,
+把 Incident 变成安全的动作,
+把动作变成可复用的知识。
+```
+
+---
+
+## 25. 文档治理
+
+所有项目文档必须遵循:
 
 ```txt
 .skills/aegisops/references/doc-governance.md
 ```
 
-Key rules:
+关键规则:
 
 ```txt
-- All documents go under docs/
-- Every document requires YAML frontmatter (title, type, status, phase, owner, created, updated, related)
-- Process documents (design, review, fix) are phase-scoped: docs/designs/<phase>/, docs/reviews/<phase>/, docs/fixes/<phase>/
-- ADR uses numbered filenames: docs/adr/NNNN-slug.md
-- Process documents use date prefix: YYYY-MM-DD-slug.md
-- Accepted ADRs are never edited; create a new one to change a decision
-- docs/INDEX.md is auto-generated; never edit it manually
+- 所有文档放入 docs/
+- 每篇文档必须有 YAML frontmatter (title, type, status, phase, owner, created, updated, related)
+- 流程文档 (design, review, fix) 按 Phase 分目录: docs/designs/<phase>/, docs/reviews/<phase>/, docs/fixes/<phase>/
+- ADR 使用编号文件名: docs/adr/NNNN-slug.md
+- 流程文档使用日期前缀: YYYY-MM-DD-slug.md
+- 接受的 ADR 一律不得修改; 若要变更决策, 新建一份
+- docs/INDEX.md 自动生成, 不允许手工编辑
 ```
 
-Use the docs script to create and manage documents:
+使用 docs 脚本创建和管理文档:
 
 ```txt
-npx tsx scripts/docs.ts init    # initialize directory structure
+npx tsx scripts/docs.ts init    # 初始化目录结构
 npx tsx scripts/docs.ts new <type> <slug> --title "Title" --phase phase-0
-npx tsx scripts/docs.ts check    # validate frontmatter and naming
-npx tsx scripts/docs.ts index     # regenerate docs/INDEX.md
+npx tsx scripts/docs.ts check    # 校验 frontmatter 与命名
+npx tsx scripts/docs.ts index     # 重新生成 docs/INDEX.md
 ```
 
-Reference docs for agents:
+Agent 参考文档:
 
 ```txt
-.skills/aegisops/references/doc-governance.md       # document rules
-.skills/aegisops/references/phase-checklist.md     # phase start/close checklist
-.skills/aegisops/references/architecture-boundaries.md  # module and app boundaries
-.skills/aegisops/references/automation-safety.md     # risk levels and safety rules
+.skills/aegisops/references/doc-governance.md           # 文档规则
+.skills/aegisops/references/phase-checklist.md          # Phase 启动/收尾清单
+.skills/aegisops/references/architecture-boundaries.md  # 模块与应用边界
+.skills/aegisops/references/automation-safety.md        # 风险等级与安全规则
+.skills/aegisops/references/frontend-conventions.md     # web/console 主题、组件、样式与代码组织规范
 ```
