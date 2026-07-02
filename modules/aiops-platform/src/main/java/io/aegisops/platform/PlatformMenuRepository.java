@@ -2,7 +2,9 @@ package io.aegisops.platform;
 
 import java.time.OffsetDateTime;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
@@ -15,8 +17,42 @@ public class PlatformMenuRepository {
   }
 
   public List<PlatformMenuItem> listEnabled(Collection<String> authorities) {
-    List<String> permissions = authorities == null ? List.of() : authorities.stream().toList();
-    return jdbc.query(
+    List<String> permissions =
+        authorities == null
+            ? List.of()
+            : authorities.stream()
+                .filter(Objects::nonNull)
+                .map(String::trim)
+                .filter(value -> !value.isBlank())
+                .distinct()
+                .toList();
+
+    if (permissions.isEmpty()) {
+      return jdbc.query(
+          """
+              select id, module_id, parent_id, path, title, icon,
+                     permission_code, sort_order, enabled, created_at
+              from platform_menu_item
+              where enabled = true
+                and (permission_code is null or permission_code = '')
+              order by sort_order asc, created_at asc
+              """,
+          (rs, rowNum) ->
+              new PlatformMenuItem(
+                  rs.getString("id"),
+                  rs.getString("module_id"),
+                  rs.getString("parent_id"),
+                  rs.getString("path"),
+                  rs.getString("title"),
+                  rs.getString("icon"),
+                  rs.getString("permission_code"),
+                  rs.getInt("sort_order"),
+                  rs.getBoolean("enabled"),
+                  rs.getObject("created_at", OffsetDateTime.class)));
+    }
+
+    String placeholders = String.join(", ", Collections.nCopies(permissions.size(), "?"));
+    String sql =
         """
             select id, module_id, parent_id, path, title, icon,
                    permission_code, sort_order, enabled, created_at
@@ -25,10 +61,17 @@ public class PlatformMenuRepository {
               and (
                 permission_code is null
                 or permission_code = ''
-                or permission_code = any (?::varchar[])
+                or permission_code in (
+            """
+            + placeholders
+            + """
+                )
               )
             order by sort_order asc, created_at asc
-            """,
+            """;
+
+    return jdbc.query(
+        sql,
         (rs, rowNum) ->
             new PlatformMenuItem(
                 rs.getString("id"),
@@ -41,6 +84,6 @@ public class PlatformMenuRepository {
                 rs.getInt("sort_order"),
                 rs.getBoolean("enabled"),
                 rs.getObject("created_at", OffsetDateTime.class)),
-        permissions.toArray(String[]::new));
+        permissions.toArray());
   }
 }

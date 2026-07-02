@@ -1,24 +1,15 @@
 import { useQuery } from '@tanstack/react-query'
 
+import { listPlatformUsers } from '@/api/client'
+import type { PlatformUserRecord } from '@/api/client'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 
-interface PlatformUserSummary {
-  id: string
-  username: string
-  displayName: string
-  status: string
-  roles: string[]
-}
-
 export function UserListPage() {
-  const query = useQuery<PlatformUserSummary[]>({
+  const query = useQuery<PlatformUserRecord[]>({
     queryKey: ['platform-users'],
-    queryFn: () =>
-      fetch('/api/platform/users')
-        .then((r) => r.json())
-        .then((body) => body.data ?? []),
+    queryFn: listPlatformUsers,
   })
 
   return (
@@ -36,6 +27,14 @@ export function UserListPage() {
             <Skeleton key={i} className="h-16 w-full rounded-lg" />
           ))}
         </div>
+      )}
+
+      {query.isError && (
+        <Card>
+          <CardContent className="py-8 text-center text-destructive">
+            加载失败：{String(query.error)}
+          </CardContent>
+        </Card>
       )}
 
       {query.data?.length === 0 && (
