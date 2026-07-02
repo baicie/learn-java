@@ -24,7 +24,7 @@
         <!-- Match Flyway migration ordering. -->
         <property>
           <key>sort</key>
-          <value>flyway</value>
+          <value>alphabetic</value>
         </property>
 
         <!-- PostgreSQL lower-case unquoted identifiers. -->
