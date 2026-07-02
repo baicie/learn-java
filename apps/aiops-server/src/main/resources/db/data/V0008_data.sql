@@ -11,6 +11,7 @@ values
 ('menu-incidents', 'incident', '/app/incidents', '故障中心', 'siren', 'incident:read', 30),
 ('menu-evidence', 'evidence', '/app/evidence', '证据中心', 'database', 'incident:read', 40),
 ('menu-reports', 'report', '/app/reports', '报告中心', 'file-text', 'incident:read', 50),
+('menu-inspections', 'inspection', '/app/inspections/tasks', '巡检中心', 'search-check', 'incident:read', 52),
 ('menu-datasources', 'datasource', '/app/datasources', '数据源中心', 'plug', 'datasource:read', 60),
 ('menu-users', 'platform', '/app/platform/users', '用户管理', 'users', 'admin:manage', 900),
 ('menu-roles', 'platform', '/app/platform/roles', '角色权限', 'shield', 'admin:manage', 910),
