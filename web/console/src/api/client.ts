@@ -374,6 +374,7 @@ export type IncidentDetailBundle = {
   alerts: IncidentAlertRecord[]
   timeline: IncidentTimelineRecord[]
   evidence: DiagnosisEvidenceRecord[]
+  evidenceTasks: EvidenceCollectionTaskRecord[]
   rca?: RcaAnalysisResponse | null
   aiDiagnosis?: AiDiagnosisResponse | null
   report?: IncidentReportRecord | null
@@ -483,9 +484,10 @@ export function listPlatformMenus() {
 }
 
 export async function getIncidentBundle(incidentId: string): Promise<IncidentDetailBundle> {
-  const [detail, evidence, rca, aiDiagnosis, report] = await Promise.all([
+  const [detail, evidence, evidenceTasks, rca, aiDiagnosis, report] = await Promise.all([
     getIncident(incidentId),
     listIncidentEvidence(incidentId).catch(() => []),
+    listEvidenceCollectionTasks(incidentId).catch(() => []),
     getLatestIncidentRca(incidentId).catch(() => null),
     getIncidentAiDiagnosis(incidentId).catch(() => null),
     getLatestReport(incidentId).catch(() => null),
@@ -493,6 +495,7 @@ export async function getIncidentBundle(incidentId: string): Promise<IncidentDet
   return {
     ...detail,
     evidence,
+    evidenceTasks,
     rca,
     aiDiagnosis,
     report,

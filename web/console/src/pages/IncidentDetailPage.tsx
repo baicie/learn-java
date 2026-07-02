@@ -4,12 +4,13 @@ import { useParams, useNavigate } from 'react-router-dom'
 
 import {
   getIncidentBundle,
-  collectIncidentEvidence,
+  collectIncidentEvidenceByCollector,
   analyzeIncidentRca,
   runIncidentAiDiagnosis,
   generateReport,
   type IncidentDetailBundle,
   type DiagnosisEvidenceRecord,
+  type EvidenceCollectionTaskRecord,
   type RcaAnalysisResponse,
   type AiDiagnosisResponse,
   type IncidentReportRecord,
@@ -111,24 +112,71 @@ function AlertsTab({ bundle }: { bundle: IncidentDetailBundle }) {
   )
 }
 
-function EvidenceTab({ evidence }: { evidence: DiagnosisEvidenceRecord[] }) {
-  if (evidence.length === 0) {
-    return <p className="text-sm text-muted-foreground">暂无 Evidence。</p>
-  }
+function EvidenceTab({
+  evidence,
+  tasks,
+}: {
+  evidence: DiagnosisEvidenceRecord[]
+  tasks: EvidenceCollectionTaskRecord[]
+}) {
   return (
-    <div className="space-y-3">
-      {evidence.map((item) => (
-        <div key={item.id} className="rounded-lg border p-4">
-          <div className="flex items-start justify-between gap-2">
-            <h4 className="font-medium">{item.title || item.evidenceType}</h4>
-            <Badge variant="outline" className="shrink-0">
-              {item.evidenceType}
-            </Badge>
+    <div className="space-y-4">
+      <div>
+        <h4 className="mb-2 text-sm font-semibold">采集任务</h4>
+        {tasks.length === 0 ? (
+          <p className="text-sm text-muted-foreground">暂无采集任务。</p>
+        ) : (
+          <div className="space-y-2">
+            {tasks.map((task) => (
+              <div key={task.id} className="rounded-lg border p-3 text-sm">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="font-medium">{task.collectorKey}</p>
+                    <p className="text-xs text-muted-foreground">{task.createdAt}</p>
+                  </div>
+                  <Badge
+                    variant={
+                      task.status === 'completed'
+                        ? 'default'
+                        : task.status === 'failed'
+                          ? 'destructive'
+                          : 'outline'
+                    }
+                  >
+                    {task.status}
+                  </Badge>
+                </div>
+
+                {task.errorMessage && (
+                  <p className="mt-2 text-xs text-destructive">{task.errorMessage}</p>
+                )}
+              </div>
+            ))}
           </div>
-          <p className="mt-1 text-sm text-muted-foreground">{item.summary || '-'}</p>
-          <code className="mt-1 block text-xs text-muted-foreground">{item.evidenceKey}</code>
-        </div>
-      ))}
+        )}
+      </div>
+
+      <div>
+        <h4 className="mb-2 text-sm font-semibold">证据列表</h4>
+        {evidence.length === 0 ? (
+          <p className="text-sm text-muted-foreground">暂无 Evidence。</p>
+        ) : (
+          <div className="space-y-3">
+            {evidence.map((item) => (
+              <div key={item.id} className="rounded-lg border p-4">
+                <div className="flex items-start justify-between gap-2">
+                  <h4 className="font-medium">{item.title || item.evidenceType}</h4>
+                  <Badge variant="outline" className="shrink-0">
+                    {item.evidenceType}
+                  </Badge>
+                </div>
+                <p className="mt-1 text-sm text-muted-foreground">{item.summary || '-'}</p>
+                <code className="mt-1 block text-xs text-muted-foreground">{item.evidenceKey}</code>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
@@ -263,9 +311,9 @@ export function IncidentDetailPage() {
   })
 
   const collectMut = useMutation({
-    mutationFn: () => collectIncidentEvidence(incidentId!),
-    onSuccess: () => {
-      setBanner({ tone: 'success', text: 'Evidence 采集完成。' })
+    mutationFn: () => collectIncidentEvidenceByCollector(incidentId!),
+    onSuccess: (result) => {
+      setBanner({ tone: 'success', text: result.message || 'Evidence 采集完成。' })
       void queryClient.invalidateQueries({ queryKey: ['incident-bundle', incidentId] })
     },
     onError: (err) => setBanner({ tone: 'warning', text: String(err) }),
@@ -428,7 +476,10 @@ export function IncidentDetailPage() {
               <TabsContent value="evidence">
                 <Card>
                   <CardContent className="pt-4">
-                    <EvidenceTab evidence={query.data.evidence} />
+                    <EvidenceTab
+                      evidence={query.data.evidence}
+                      tasks={query.data.evidenceTasks ?? []}
+                    />
                   </CardContent>
                 </Card>
               </TabsContent>

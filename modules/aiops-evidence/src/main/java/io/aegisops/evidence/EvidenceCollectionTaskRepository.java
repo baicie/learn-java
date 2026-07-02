@@ -1,5 +1,6 @@
 package io.aegisops.evidence;
 
+import io.aegisops.common.exception.AppException;
 import io.aegisops.common.id.Ids;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -31,27 +32,36 @@ public class EvidenceCollectionTaskRepository {
   }
 
   public void complete(String tenantId, String taskId, String resultJson) {
-    jdbc.update(
-        """
-            update evidence_collection_task
-            set status = 'completed', result_json = ?::jsonb, finished_at = now()
-            where tenant_id = ? and id = ?
-            """,
-        blankJson(resultJson),
-        tenantId,
-        taskId);
+    int updated =
+        jdbc.update(
+            """
+                update evidence_collection_task
+                set status = 'completed',
+                    result_json = ?::jsonb,
+                    error_message = null,
+                    finished_at = now()
+                where tenant_id = ? and id = ?
+                """,
+            blankJson(resultJson),
+            tenantId,
+            taskId);
+    ensureUpdated(updated, taskId);
   }
 
   public void fail(String tenantId, String taskId, String errorMessage) {
-    jdbc.update(
-        """
-            update evidence_collection_task
-            set status = 'failed', error_message = ?, finished_at = now()
-            where tenant_id = ? and id = ?
-            """,
-        errorMessage,
-        tenantId,
-        taskId);
+    int updated =
+        jdbc.update(
+            """
+                update evidence_collection_task
+                set status = 'failed',
+                    error_message = ?,
+                    finished_at = now()
+                where tenant_id = ? and id = ?
+                """,
+            errorMessage,
+            tenantId,
+            taskId);
+    ensureUpdated(updated, taskId);
   }
 
   public List<EvidenceCollectionTaskRecord> listByIncident(String tenantId, String incidentId) {
@@ -79,6 +89,13 @@ public class EvidenceCollectionTaskRepository {
                 rs.getObject(11, OffsetDateTime.class)),
         tenantId,
         incidentId);
+  }
+
+  private void ensureUpdated(int updated, String taskId) {
+    if (updated != 1) {
+      throw new AppException(
+          "EVIDENCE_TASK_NOT_FOUND", "Evidence collection task not found: " + taskId);
+    }
   }
 
   private String blankJson(String value) {

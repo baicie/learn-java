@@ -42,9 +42,33 @@ public class EvidenceController {
         orchestrationService.collect(TenantContext.requireTenantId(), incidentId, request));
   }
 
+  /**
+   * Backward-compatible endpoint for Phase 2/old console buttons.
+   *
+   * <p>New code should call /collect with collectorKey=zabbix.metric-event.
+   */
+  @PostMapping("/zabbix/collect")
+  @PreAuthorize("hasAuthority('incident:diagnose')")
+  public ApiResponse<EvidenceCollectResponse> collectZabbix(
+      @PathVariable String incidentId,
+      @RequestBody(required = false) EvidenceCollectRequest request) {
+    EvidenceCollectRequest normalized =
+        request == null
+            ? new EvidenceCollectRequest(null, null, null, "zabbix.metric-event")
+            : new EvidenceCollectRequest(
+                request.lookbackMinutes(),
+                request.timeFrom(),
+                request.timeTo(),
+                "zabbix.metric-event");
+
+    return ApiResponse.ok(
+        orchestrationService.collect(TenantContext.requireTenantId(), incidentId, normalized));
+  }
+
   @GetMapping("/tasks")
   @PreAuthorize("hasAuthority('incident:read')")
   public ApiResponse<List<EvidenceCollectionTaskRecord>> tasks(@PathVariable String incidentId) {
-    return ApiResponse.ok(taskRepository.listByIncident(TenantContext.requireTenantId(), incidentId));
+    return ApiResponse.ok(
+        taskRepository.listByIncident(TenantContext.requireTenantId(), incidentId));
   }
 }
