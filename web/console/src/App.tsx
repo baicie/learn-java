@@ -13,6 +13,7 @@ import { DatasourcesPage } from './pages/DatasourcesPage'
 import { EvidencePage } from './pages/EvidencePage'
 import { IncidentDetailPage } from './pages/IncidentDetailPage'
 import { IncidentsPage } from './pages/IncidentsPage'
+import { InspectionTasksPage } from './pages/inspections/InspectionTasksPage'
 import { LoginPage } from './pages/LoginPage'
 import { ModuleListPage } from './pages/modules/ModuleListPage'
 import { NotFoundPage } from './pages/NotFoundPage'
@@ -66,6 +67,8 @@ function ConsoleRoutes() {
         <Route path="/ai-diagnosis" element={<AiDiagnosisPage />} />
         <Route path="/reports" element={<ReportsPage />} />
         <Route path="/app/reports" element={<ReportsPage />} />
+        <Route path="/inspections/tasks" element={<InspectionTasksPage />} />
+        <Route path="/app/inspections/tasks" element={<InspectionTasksPage />} />
         <Route path="/platform/users" element={<UserListPage />} />
         <Route path="/app/platform/users" element={<UserListPage />} />
         <Route path="/platform/roles" element={<RolePermissionPage />} />

@@ -28,6 +28,7 @@
     <module>modules/aiops-evidence</module>
     <module>modules/aiops-ai-client</module>
     <module>modules/aiops-report</module>
+    <module>modules/aiops-inspection</module>
     <module>modules/aiops-runbook</module>
     <module>modules/aiops-execution</module>
     <module>modules/aiops-plugin</module>

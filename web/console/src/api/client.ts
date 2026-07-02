@@ -559,3 +559,21 @@ export function collectIncidentEvidenceByCollector(
 export function listEvidenceCollectionTasks(incidentId: string) {
   return apiRequest<EvidenceCollectionTaskRecord[]>(`/api/incidents/${incidentId}/evidence/tasks`)
 }
+
+// --- Phase 4: Inspection ---
+export type InspectionTaskRecord = {
+  id: string
+  tenantId: string
+  name: string
+  targetType: string
+  targetQueryJson: string
+  templateKey: string
+  enabled: boolean
+  createdBy: string
+  createdAt: string
+  updatedAt: string
+}
+
+export function listInspectionTasks() {
+  return apiRequest<InspectionTaskRecord[]>('/api/inspections/tasks')
+}
