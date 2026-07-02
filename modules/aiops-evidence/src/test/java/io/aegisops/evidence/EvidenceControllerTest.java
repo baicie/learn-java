@@ -32,6 +32,11 @@ class EvidenceControllerTest {
   @Test
   void shouldListEvidence() throws Exception {
     ZabbixEvidenceCollectorService service = Mockito.mock(ZabbixEvidenceCollectorService.class);
+    EvidenceOrchestrationService orchestrationService =
+        Mockito.mock(EvidenceOrchestrationService.class);
+    EvidenceCollectionTaskRepository taskRepository =
+        Mockito.mock(EvidenceCollectionTaskRepository.class);
+
     Mockito.when(service.list(eq("tenant_1"), eq("inc_1")))
         .thenReturn(
             List.of(
@@ -53,7 +58,8 @@ class EvidenceControllerTest {
 
     TenantContext.setTenantId("tenant_1");
     MockMvc mvc =
-        standaloneSetup(new EvidenceController(service))
+        standaloneSetup(
+                new EvidenceController(service, orchestrationService, taskRepository))
             .setMessageConverters(jsonConverter())
             .build();
 
@@ -65,12 +71,20 @@ class EvidenceControllerTest {
   @Test
   void shouldCollectZabbixEvidence() throws Exception {
     ZabbixEvidenceCollectorService service = Mockito.mock(ZabbixEvidenceCollectorService.class);
-    Mockito.when(service.collect(eq("tenant_1"), eq("inc_1"), any()))
-        .thenReturn(new EvidenceCollectResponse("inc_1", 6, 30, 0, 4, 4, 4, 0));
+    EvidenceOrchestrationService orchestrationService =
+        Mockito.mock(EvidenceOrchestrationService.class);
+    EvidenceCollectionTaskRepository taskRepository =
+        Mockito.mock(EvidenceCollectionTaskRepository.class);
+
+    Mockito.when(orchestrationService.collect(eq("tenant_1"), eq("inc_1"), any()))
+        .thenReturn(
+            new EvidenceCollectResponse(
+                "inc_1", 6, 30, 0, 4, 4, 4, 0, "Collected"));
 
     TenantContext.setTenantId("tenant_1");
     MockMvc mvc =
-        standaloneSetup(new EvidenceController(service))
+        standaloneSetup(
+                new EvidenceController(service, orchestrationService, taskRepository))
             .setMessageConverters(jsonConverter())
             .build();
 
