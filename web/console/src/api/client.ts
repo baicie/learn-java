@@ -491,12 +491,39 @@ export async function getIncidentBundle(incidentId: string): Promise<IncidentDet
     getLatestReport(incidentId).catch(() => null),
   ])
   return {
-    incident: detail.incident,
-    alerts: detail.alerts ?? [],
-    timeline: detail.timeline ?? [],
+    ...detail,
     evidence,
     rca,
     aiDiagnosis,
     report,
   }
+}
+
+// --- Phase 2: Alert Ingest ---
+export type AlertIngestPayload = {
+  source: string
+  sourceEventId?: string
+  severity?: string
+  title: string
+  description?: string
+  assetId?: string
+  entityType?: string
+  entityName?: string
+  labels?: Record<string, unknown>
+  status?: 'open' | 'resolved'
+  rawPayload?: Record<string, unknown>
+}
+
+export type AlertIngestResult = {
+  alertId: string
+  created: boolean
+  fingerprint: string
+  aggregationKey: string
+}
+
+export function ingestAlertWebhook(payload: AlertIngestPayload) {
+  return apiRequest<AlertIngestResult>('/api/alerts/ingest/webhook', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
 }
