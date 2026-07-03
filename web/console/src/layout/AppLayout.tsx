@@ -1,15 +1,79 @@
 import { useQuery } from '@tanstack/react-query'
-import { LanguagesIcon } from 'lucide-react'
+import { LanguagesIcon, MenuIcon } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { NavLink } from 'react-router-dom'
 
 import { listPlatformMenus } from '../api/client'
 import { Button } from '../components/ui/button'
+import {
+  NavigationMenu,
+  NavigationMenuContent,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+  NavigationMenuTrigger,
+  navigationMenuTriggerStyle,
+} from '../components/ui/navigation-menu'
 import { setLanguage, SUPPORTED_LANGUAGES, type SupportedLanguage } from '../i18n'
+import { buildMenuTree, resolveMenuIcon, type MenuNode } from '../lib/menu'
 
 const LANGUAGE_LABEL: Record<SupportedLanguage, string> = {
   'zh-CN': '中文',
   'en-US': 'English',
+}
+
+function LeafLink({ node }: { node: MenuNode }) {
+  const Icon = resolveMenuIcon(node.icon)
+  return (
+    <NavigationMenuItem>
+      <NavigationMenuLink
+        href={node.path}
+        className={`${navigationMenuTriggerStyle()} w-full justify-start`}
+      >
+        {Icon ? <Icon className="size-4" /> : <span className="size-4" aria-hidden />}
+        <span className="truncate">{node.title}</span>
+      </NavigationMenuLink>
+    </NavigationMenuItem>
+  )
+}
+
+function Branch({ node }: { node: MenuNode }) {
+  const Icon = resolveMenuIcon(node.icon)
+  return (
+    <NavigationMenuItem value={node.id}>
+      <NavigationMenuTrigger className={`${navigationMenuTriggerStyle()} w-full justify-start`}>
+        {Icon ? <Icon className="size-4" /> : <span className="size-4" aria-hidden />}
+        <span className="truncate">{node.title}</span>
+      </NavigationMenuTrigger>
+      <NavigationMenuContent className="min-w-48 p-1">
+        <ul className="flex w-full flex-col gap-1">
+          {node.children.map((child) => (
+            <li key={child.id}>
+              <NavigationMenuLink
+                href={child.path}
+                className="flex items-center gap-2 rounded-md px-3 py-2 text-sm"
+              >
+                <ChildIcon name={child.icon} />
+                <span className="truncate">{child.title}</span>
+              </NavigationMenuLink>
+            </li>
+          ))}
+        </ul>
+      </NavigationMenuContent>
+    </NavigationMenuItem>
+  )
+}
+
+function ChildIcon({ name }: { name: string | null | undefined }) {
+  const Icon = resolveMenuIcon(name)
+  if (!Icon) return <span className="size-4" aria-hidden />
+  return <Icon className="size-4" />
+}
+
+function MenuRow({ node }: { node: MenuNode }) {
+  if (node.children.length === 0) {
+    return <LeafLink node={node} />
+  }
+  return <Branch node={node} />
 }
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
@@ -21,25 +85,26 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     : SUPPORTED_LANGUAGES[0]
   const nextLang: SupportedLanguage = currentLang === 'zh-CN' ? 'en-US' : 'zh-CN'
 
+  const tree = buildMenuTree({ nodes: menus.data ?? [] })
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <aside className="fixed inset-y-0 left-0 flex w-60 flex-col border-r bg-card">
-        <div className="p-4">
+        <div className="flex items-center justify-between p-4">
           <div className="text-lg font-semibold">{t('nav.title')}</div>
+          <Button variant="ghost" size="icon-sm" aria-label="菜单">
+            <MenuIcon />
+          </Button>
         </div>
-        <nav className="flex-1 space-y-1 px-2">
-          {(menus.data ?? []).map((item) => (
-            <NavLink
-              key={item.id}
-              to={item.path}
-              className={({ isActive }) =>
-                `block rounded-md px-3 py-2 text-sm ${isActive ? 'bg-muted font-medium' : 'hover:bg-muted'}`
-              }
-            >
-              {item.title}
-            </NavLink>
-          ))}
-        </nav>
+        <div className="flex-1 overflow-y-auto p-2">
+          <NavigationMenu align="start" className="flex-col items-stretch justify-start gap-1">
+            <NavigationMenuList className="flex-col items-stretch justify-start gap-1">
+              {tree.map((node) => (
+                <MenuRow key={node.id} node={node} />
+              ))}
+            </NavigationMenuList>
+          </NavigationMenu>
+        </div>
         <div className="border-t p-3">
           <Button
             variant="ghost"
