@@ -25,18 +25,21 @@ services:
     volumes:
       - redis_data:/data
 
-  clickhouse:
-    image: clickhouse/clickhouse-server:24.12
-    container_name: aegisops-clickhouse
-    ports:
-      - "8123:8123"
-      - "9000:9000"
-    environment:
-      CLICKHOUSE_DB: aegisops
-      CLICKHOUSE_USER: aegisops
-      CLICKHOUSE_PASSWORD: aegisops
-    volumes:
-      - clickhouse_data:/var/lib/clickhouse
+  # ClickHouse 是规划中的 OLAP 存储，当前 MVP 后端没有 Java/前端代码连接它。
+  # 为避免本地 docker 内存压力（约 800MB+）并保持一键启动轻量，先整体注释。
+  # 启用方法：取消下方注释并同步在 deploy/helm/aegisops/values.yaml 注入 external.clickhouse。
+  # clickhouse:
+  #   image: clickhouse/clickhouse-server:24.12
+  #   container_name: aegisops-clickhouse
+  #   ports:
+  #     - "8123:8123"
+  #     - "9000:9000"
+  #   environment:
+  #     CLICKHOUSE_DB: aegisops
+  #     CLICKHOUSE_USER: aegisops
+  #     CLICKHOUSE_PASSWORD: aegisops
+  #   volumes:
+  #     - clickhouse_data:/var/lib/clickhouse
 
   victoriametrics:
     image: victoriametrics/victoria-metrics:v1.109.1
@@ -175,7 +178,7 @@ services:
 volumes:
   postgres_data:
   redis_data:
-  clickhouse_data:
+  # clickhouse_data:  # 点击上方注释块解除注释后同步打开
   vm_data:
   minio_data:
   zabbix_postgres_data:
