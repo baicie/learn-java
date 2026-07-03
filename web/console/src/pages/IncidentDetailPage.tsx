@@ -49,8 +49,8 @@ function FieldGrid({ items }: { items: Array<[string, React.ReactNode]> }) {
     <div className="grid grid-cols-3 gap-3">
       {items.map(([label, value]) => (
         <div key={label} className="rounded-lg bg-muted/40 p-3">
-          <p className="text-xs text-muted-foreground">{label}</p>
-          <p className="mt-1 text-sm font-medium">{value || '-'}</p>
+          <div className="text-xs text-muted-foreground">{label}</div>
+          <div className="mt-1 text-sm font-medium">{value || '-'}</div>
         </div>
       ))}
     </div>

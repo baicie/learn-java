@@ -67,6 +67,7 @@ const { mockGetIncidentBundle } = vi.hoisted(() => {
 vi.mock('../api/client', () => ({
   getIncidentBundle: mockGetIncidentBundle,
   collectIncidentEvidence: vi.fn().mockResolvedValue({ collected: 3, message: 'ok' }),
+  collectIncidentEvidenceByCollector: vi.fn().mockResolvedValue({ collected: 3, message: 'ok' }),
   analyzeIncidentRca: vi.fn().mockResolvedValue({
     id: 'rca_2',
     incidentId: 'inc_1',

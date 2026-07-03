@@ -13,7 +13,18 @@ vi.mock('../api/client', () => ({
       moduleId: 'platform',
       path: '/app/workbench',
       title: '工作台',
+      icon: 'layout-dashboard',
       sortOrder: 10,
+      enabled: true,
+      createdAt: '2026-07-02T00:00:00Z',
+    },
+    {
+      id: 'menu-alerts',
+      moduleId: 'alert',
+      path: '/app/alerts',
+      title: '告警中心',
+      icon: 'bell',
+      sortOrder: 20,
       enabled: true,
       createdAt: '2026-07-02T00:00:00Z',
     },
@@ -21,7 +32,7 @@ vi.mock('../api/client', () => ({
 }))
 
 describe('AppLayout', () => {
-  it('renders platform menu and page content', async () => {
+  it('renders platform menu and page content with icons', async () => {
     renderWithRouter(
       <Routes>
         <Route
@@ -37,6 +48,7 @@ describe('AppLayout', () => {
     )
 
     expect(await screen.findByText('工作台')).toBeInTheDocument()
+    expect(screen.getByText('告警中心')).toBeInTheDocument()
     expect(screen.getByText('content')).toBeInTheDocument()
   })
 })

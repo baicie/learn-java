@@ -100,10 +100,7 @@ describe('aiopsApi Phase 1 endpoints', () => {
 
     expect(result).toHaveLength(1)
     expect(result[0].username).toBe('admin')
-    expect(fetch).toHaveBeenCalledWith(
-      expect.stringContaining('/api/platform/users'),
-      expect.any(Object),
-    )
+    expect(fetch).toHaveBeenCalledWith(expect.stringContaining('/api/users'), expect.any(Object))
   })
 })
 

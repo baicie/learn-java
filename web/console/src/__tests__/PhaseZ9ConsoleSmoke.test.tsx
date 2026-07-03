@@ -92,6 +92,9 @@ const { mockGetIncidentBundle } = vi.hoisted(() => ({
 vi.mock('../api/client', () => ({
   getIncidentBundle: mockGetIncidentBundle,
   collectIncidentEvidence: vi.fn().mockResolvedValue({ evidenceCreated: 3, message: 'ok' }),
+  collectIncidentEvidenceByCollector: vi
+    .fn()
+    .mockResolvedValue({ evidenceCreated: 3, message: 'ok' }),
   analyzeIncidentRca: vi.fn().mockResolvedValue({
     id: 'rca_2',
     suspectedRootCause: 'CPU high',
@@ -143,7 +146,9 @@ describe('Phase Z9 console smoke', () => {
     expect(await screen.findByText('故障报告：order-service 主机与服务异常')).toBeInTheDocument()
 
     await userEvent.click(screen.getByRole('button', { name: 'Collect Evidence' }))
-    await waitFor(() => expect(api.collectIncidentEvidence).toHaveBeenCalledWith('inc_z9'))
+    await waitFor(() =>
+      expect(api.collectIncidentEvidenceByCollector).toHaveBeenCalledWith('inc_z9'),
+    )
 
     await userEvent.click(screen.getByRole('button', { name: 'Run RCA' }))
     await waitFor(() => expect(api.analyzeIncidentRca).toHaveBeenCalledWith('inc_z9', true))
