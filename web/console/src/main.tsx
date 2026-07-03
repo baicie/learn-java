@@ -7,6 +7,7 @@ import { App } from './App'
 import { AuthProvider } from './auth/AuthContext'
 import { Toaster } from './components/ui/sonner'
 import { TooltipProvider } from './components/ui/tooltip'
+import './i18n'
 import { ThemeInit } from './lib/theme/ThemeProvider'
 import './styles.css'
 

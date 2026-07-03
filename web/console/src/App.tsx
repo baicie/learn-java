@@ -1,10 +1,11 @@
 import { useQuery } from '@tanstack/react-query'
 import { useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Route, Routes } from 'react-router-dom'
 
 import { me } from './api/client'
-import { AppLayout } from './layout/AppLayout'
 import { useAuth } from './auth/AuthContext'
+import { AppLayout } from './layout/AppLayout'
 import { AiDiagnosisPage } from './pages/AiDiagnosisPage'
 import { AlertsPage } from './pages/AlertsPage'
 import { AuditLogPage } from './pages/audit/AuditLogPage'
@@ -23,6 +24,7 @@ import { ReportsPage } from './pages/ReportsPage'
 
 function AuthLoader({ children }: { children: React.ReactNode }) {
   const auth = useAuth()
+  const { t } = useTranslation()
   const query = useQuery({
     queryKey: ['me', auth.token],
     queryFn: me,
@@ -43,7 +45,7 @@ function AuthLoader({ children }: { children: React.ReactNode }) {
   }, [auth, query.error])
 
   if (!auth.token) return <LoginPage />
-  if (query.isLoading) return <div className="p-6">Loading session...</div>
+  if (query.isLoading) return <div className="p-6">{t('common.loadingSession')}</div>
   if (query.error) return <LoginPage />
   return <>{children}</>
 }

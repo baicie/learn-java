@@ -1,5 +1,6 @@
 import { ShieldCheckIcon, TriangleAlertIcon } from 'lucide-react'
 import { type FormEvent, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import { login } from '@/api/client'
 import { useAuth } from '@/auth/AuthContext'
@@ -11,6 +12,7 @@ import { Input } from '@/components/ui/input'
 import { Spinner } from '@/components/ui/spinner'
 
 export function LoginPage() {
+  const { t } = useTranslation()
   const auth = useAuth()
   const [username, setUsername] = useState('admin')
   const [password, setPassword] = useState('admin123')
@@ -25,7 +27,7 @@ export function LoginPage() {
       const result = await login(username, password)
       auth.setSession(result.token, result.user)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed')
+      setError(err instanceof Error ? err.message : t('auth.login.errorNetwork'))
     } finally {
       setLoading(false)
     }
@@ -37,16 +39,16 @@ export function LoginPage() {
         <CardHeader>
           <div className="mb-2 flex items-center gap-2 text-primary">
             <ShieldCheckIcon className="size-5" data-icon="inline-start" />
-            <span className="text-sm font-semibold tracking-wide uppercase">AegisOps</span>
+            <span className="text-sm font-semibold tracking-wide uppercase">{t('app.name')}</span>
           </div>
-          <CardTitle className="text-2xl">Sign in</CardTitle>
-          <CardDescription>AI Ops incident diagnosis platform</CardDescription>
+          <CardTitle className="text-2xl">{t('auth.login.title')}</CardTitle>
+          <CardDescription>{t('auth.login.subtitle')}</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={onSubmit} className="flex flex-col gap-5">
             <FieldGroup>
               <Field>
-                <FieldLabel htmlFor="login-username">Username</FieldLabel>
+                <FieldLabel htmlFor="login-username">{t('auth.login.username')}</FieldLabel>
                 <Input
                   id="login-username"
                   autoComplete="username"
@@ -56,7 +58,7 @@ export function LoginPage() {
                 />
               </Field>
               <Field>
-                <FieldLabel htmlFor="login-password">Password</FieldLabel>
+                <FieldLabel htmlFor="login-password">{t('auth.login.password')}</FieldLabel>
                 <Input
                   id="login-password"
                   type="password"
@@ -65,16 +67,14 @@ export function LoginPage() {
                   onChange={(event) => setPassword(event.target.value)}
                   required
                 />
-                <FieldDescription>
-                  Default credentials are pre-filled for the local Phase 1 environment.
-                </FieldDescription>
+                <FieldDescription>{t('auth.login.demoHint')}</FieldDescription>
               </Field>
             </FieldGroup>
 
             {error && (
               <Alert variant="destructive">
                 <TriangleAlertIcon data-icon="inline-start" />
-                <AlertTitle>Sign in failed</AlertTitle>
+                <AlertTitle>{t('auth.login.errorInvalid')}</AlertTitle>
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
@@ -83,10 +83,10 @@ export function LoginPage() {
               {loading ? (
                 <>
                   <Spinner data-icon="inline-start" />
-                  Signing in
+                  {t('auth.login.submitting')}
                 </>
               ) : (
-                'Sign in'
+                t('auth.login.submit')
               )}
             </Button>
           </form>
