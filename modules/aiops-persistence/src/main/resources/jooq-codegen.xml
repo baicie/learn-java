@@ -47,7 +47,7 @@
         <!-- Exclude data-only migrations (no schema changes, contain ON CONFLICT / DO $$ / etc). -->
         <property>
           <key>parseIgnoreFileName</key>
-          <value>V0008_data</value>
+          <value>V0008_data.sql</value>
         </property>
       </properties>
 
