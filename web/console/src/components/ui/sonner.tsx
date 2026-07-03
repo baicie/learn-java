@@ -1,4 +1,4 @@
-import { useTheme } from '@/lib/theme/ThemeProvider'
+import { useTheme } from 'next-themes'
 import { Toaster as Sonner, type ToasterProps } from 'sonner'
 import {
   CircleCheckIcon,
