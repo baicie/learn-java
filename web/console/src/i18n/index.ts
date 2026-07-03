@@ -1,8 +1,8 @@
 import i18n from 'i18next'
 import { initReactI18next } from 'react-i18next'
 
-import enUS from './locales/en-US.json'
-import zhCN from './locales/zh-CN.json'
+import { enUS } from './locales/en-US'
+import { zhCN, type Translation } from './locales/zh-CN'
 
 export const SUPPORTED_LANGUAGES = ['zh-CN', 'en-US'] as const
 export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number]
@@ -10,6 +10,8 @@ export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number]
 export const DEFAULT_LANGUAGE: SupportedLanguage = 'zh-CN'
 
 export const LANGUAGE_STORAGE_KEY = 'aegisops.language'
+
+export type { Translation }
 
 const STORED_LANGUAGE =
   typeof window !== 'undefined' ? window.localStorage.getItem(LANGUAGE_STORAGE_KEY) : null

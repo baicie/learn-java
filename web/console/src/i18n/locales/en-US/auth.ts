@@ -1,0 +1,14 @@
+export const auth = {
+  login: {
+    title: 'Sign in to AegisOps',
+    subtitle: 'Multi-tenant AI Ops console',
+    username: 'Username',
+    password: 'Password',
+    submit: 'Sign in',
+    submitting: 'Signing in...',
+    errorInvalid: 'Invalid username or password',
+    errorNetwork: 'Cannot reach the server. Please try again.',
+    demoHint: 'Default account: admin / admin123',
+  },
+  logout: 'Sign out',
+} as const
