@@ -197,6 +197,39 @@ export async function apiRequest<T>(path: string, init: RequestInit = {}): Promi
   return payload.data
 }
 
+/**
+ * 下载二进制文件（如 CSV 导出）：始终通过 Authorization header 携带 token，
+ * 绝不把 token 放入 URL（避免进入浏览器历史、代理日志）。
+ */
+export async function downloadFile(path: string, filename: string): Promise<void> {
+  const token = getToken()
+  const resp = await fetch(path, {
+    method: 'GET',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  })
+  if (!resp.ok) {
+    let detail = resp.statusText
+    try {
+      detail = (await resp.text()) || detail
+    } catch {
+      // ignore
+    }
+    throw new Error(`Download failed: ${resp.status} ${detail}`)
+  }
+  const blob = await resp.blob()
+  const url = URL.createObjectURL(blob)
+  try {
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+  } finally {
+    URL.revokeObjectURL(url)
+  }
+}
+
 async function parseApiResponse<T>(resp: Response): Promise<ApiResponse<T>> {
   const contentType = resp.headers.get('content-type') || ''
   if (!contentType.includes('application/json')) {
