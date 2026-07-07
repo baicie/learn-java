@@ -18,9 +18,13 @@ import { InspectionTasksPage } from './pages/inspections/InspectionTasksPage'
 import { LoginPage } from './pages/LoginPage'
 import { ModuleListPage } from './pages/modules/ModuleListPage'
 import { NotFoundPage } from './pages/NotFoundPage'
+import { DictionaryPage } from './pages/platform/DictionaryPage'
 import { RolePermissionPage } from './pages/platform/RolePermissionPage'
 import { UserListPage } from './pages/platform/UserListPage'
 import { ReportsPage } from './pages/ReportsPage'
+import { WorkRecordEditPage } from './pages/work-record/WorkRecordEditPage'
+import { WorkRecordListPage } from './pages/work-record/WorkRecordListPage'
+import { WorkRecordTemplateDesignerPage } from './pages/work-record/WorkRecordTemplateDesignerPage'
 
 function AuthLoader({ children }: { children: React.ReactNode }) {
   const auth = useAuth()
@@ -79,6 +83,11 @@ function ConsoleRoutes() {
         <Route path="/app/modules" element={<ModuleListPage />} />
         <Route path="/audit" element={<AuditLogPage />} />
         <Route path="/app/audit" element={<AuditLogPage />} />
+        <Route path="/app/platform/dictionaries" element={<DictionaryPage />} />
+        <Route path="/app/work-records" element={<WorkRecordListPage />} />
+        <Route path="/app/work-records/create" element={<WorkRecordEditPage />} />
+        <Route path="/app/work-records/:recordId/edit" element={<WorkRecordEditPage />} />
+        <Route path="/app/work-records/designer" element={<WorkRecordTemplateDesignerPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </AppLayout>

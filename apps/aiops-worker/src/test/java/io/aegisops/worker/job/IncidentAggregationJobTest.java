@@ -3,12 +3,12 @@ package io.aegisops.worker.job;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import io.aegisops.incident.IncidentAggregateRequest;
-import io.aegisops.incident.IncidentService;
 import io.aegisops.incident.IncidentAggregationResponse;
+import io.aegisops.incident.IncidentService;
 import io.aegisops.persistence.jooq.tables.records.AutomationOutboxRecord;
 import org.junit.jupiter.api.Test;
 

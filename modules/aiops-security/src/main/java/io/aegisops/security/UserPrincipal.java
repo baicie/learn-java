@@ -39,7 +39,15 @@ public record UserPrincipal(
           "automation:approve",
           "automation:execute",
           "audit:read",
-          "admin:manage");
+          "admin:manage",
+          "platform:dict:read",
+          "platform:dict:write",
+          "work-record:read:self",
+          "work-record:read:all",
+          "work-record:write",
+          "work-record:template:read",
+          "work-record:template:write",
+          "work-record:export");
     }
     if ("operator".equals(role)) {
       return Set.of(
@@ -53,7 +61,11 @@ public record UserPrincipal(
           "runbook:read",
           "automation:read",
           "automation:execute",
-          "audit:read");
+          "audit:read",
+          "platform:dict:read",
+          "work-record:read:self",
+          "work-record:write",
+          "work-record:template:read");
     }
     return Set.of();
   }

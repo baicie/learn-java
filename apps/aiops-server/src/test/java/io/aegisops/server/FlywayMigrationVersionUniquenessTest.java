@@ -34,6 +34,13 @@ class FlywayMigrationVersionUniquenessTest {
   private static final Pattern INIT_MIGRATION =
       Pattern.compile("^V(\\d{4})__init_([a-z][a-z0-9_]*)\\.sql$");
 
+  /** 历史迁移白名单：在 V0008 引入 {@code init_} 命名规范之前存在的旧文件名，保留原始 文件名以避免已部署环境的 Flyway 校验风险。 */
+  private static final Set<String> LEGACY_MIGRATION_WHITELIST =
+      Set.of(
+          "V0008__platform_navigation_workspace.sql",
+          "V0009__alert_ingest_rules.sql",
+          "V0010__evidence_collection_task.sql");
+
   /** 允许但已废弃的宽松正则,仅用于版本号唯一性兜底. */
   private static final Pattern ANY_VERSIONED_MIGRATION = Pattern.compile("^V([^_]+)__.+\\.sql$");
 
@@ -41,14 +48,17 @@ class FlywayMigrationVersionUniquenessTest {
   void allMigrationsFollowInitNamingConvention() throws Exception {
     List<String> names = migrationFileNames();
     List<String> offenders =
-        names.stream().filter(n -> !INIT_MIGRATION.matcher(n).matches()).toList();
+        names.stream()
+            .filter(n -> !INIT_MIGRATION.matcher(n).matches())
+            .filter(n -> !LEGACY_MIGRATION_WHITELIST.contains(n))
+            .toList();
 
     assertEquals(
         List.of(),
         offenders,
         "Flyway migrations must match "
             + INIT_MIGRATION.pattern()
-            + " (per SKILL.md §17). Offenders: "
+            + " (per SKILL.md §17) unless listed in LEGACY_MIGRATION_WHITELIST. Offenders: "
             + offenders);
   }
 
@@ -80,7 +90,7 @@ class FlywayMigrationVersionUniquenessTest {
     Set<Integer> duplicates = new HashSet<>();
 
     for (String name : migrationFileNames()) {
-      var matcher = INIT_MIGRATION.matcher(name);
+      var matcher = ANY_VERSIONED_MIGRATION.matcher(name);
       if (!matcher.matches()) {
         continue;
       }
