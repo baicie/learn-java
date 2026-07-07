@@ -230,30 +230,30 @@ animation: --animate-fade-in / slide-up / slide-down / slide-in-right / pulse-sl
 
 ### 5.1 内置组件速查
 
-| 需求                | 必须使用                                    | 禁止                                               |
-| ------------------- | ------------------------------------------- | -------------------------------------------------- |
-| 按钮                | `<Button variant="..." size="...">`         | `<button className="bg-...">`                      |
-| 表单输入            | `<Field> + <FieldLabel> + <Input>`          | 裸 `<div>` + `<label>` + `<input>`                 |
-| 表单校验            | `<Field data-invalid>` + `aria-invalid`     | 手写红色边框与提示文案                             |
-| 2~7 选              | `<ToggleGroup>`                             | 循环 `<Button>` + 自己维护 active                  |
-| 多个相关复选框      | `<FieldSet> + <FieldLegend>`                | `<div>` + `<h3>`                                   |
-| 输入框内嵌图标/按钮 | `<InputGroup> + <InputGroupAddon>`          | 手写 `<div className="relative">`                  |
-| 调用提示            | `<Alert>`                                   | 自制带颜色的 div                                   |
-| 空状态              | `<Empty>`                                   | 自制 SVG + 文案                                    |
-| Toast               | `toast()` from sonner                       | alert() / 自制悬浮层                               |
-| 分割线              | `<Separator>`                               | `<hr>` 或 `<div className="border-t">`             |
-| 加载占位            | `<Skeleton>`                                | `<div className="animate-pulse ...">`              |
-| 徽标                | `<Badge variant="...">`                     | 自制 `<span className="bg-...">`                   |
-| 弹窗标题            | 必须有 `<DialogTitle>` 等                   | 仅放内容, 漏掉 Title                               |
-| 模态确认            | `<AlertDialog>`                             | 普通 `<Dialog>`                                    |
-| 数据更新按钮        | `<Button disabled>` + `<Spinner data-icon>` | `<Button isLoading>` (本项目 Button 不存在该 prop) |
-| AI 对话流容器       | shadcn `MessageScroller`                    | 自造滚动容器 / `overflow-y-auto` div              |
-| AI 消息气泡         | shadcn `Message` + `Bubble`                 | 自造 `<div className="rounded p-3">`              |
-| 工具调用展示        | AI Elements `Tool`                          | 手写 JSON <pre>                                   |
-| AI 审批卡片         | AI Elements `Confirmation`                  | 普通 `Dialog` / `<button onClick={approve}>`     |
-| AI 思考链           | AI Elements `Reasoning` 或 prompt-kit `Reasoning` / `ChainOfThought` | 手写折叠面板 |
-| 流式终端            | AI Elements `Terminal`                      | 自己接 xterm.js                                    |
-| 文件树              | AI Elements `FileTree`                      | 手写嵌套 `<ul>`                                    |
+| 需求                | 必须使用                                                             | 禁止                                               |
+| ------------------- | -------------------------------------------------------------------- | -------------------------------------------------- |
+| 按钮                | `<Button variant="..." size="...">`                                  | `<button className="bg-...">`                      |
+| 表单输入            | `<Field> + <FieldLabel> + <Input>`                                   | 裸 `<div>` + `<label>` + `<input>`                 |
+| 表单校验            | `<Field data-invalid>` + `aria-invalid`                              | 手写红色边框与提示文案                             |
+| 2~7 选              | `<ToggleGroup>`                                                      | 循环 `<Button>` + 自己维护 active                  |
+| 多个相关复选框      | `<FieldSet> + <FieldLegend>`                                         | `<div>` + `<h3>`                                   |
+| 输入框内嵌图标/按钮 | `<InputGroup> + <InputGroupAddon>`                                   | 手写 `<div className="relative">`                  |
+| 调用提示            | `<Alert>`                                                            | 自制带颜色的 div                                   |
+| 空状态              | `<Empty>`                                                            | 自制 SVG + 文案                                    |
+| Toast               | `toast()` from sonner                                                | alert() / 自制悬浮层                               |
+| 分割线              | `<Separator>`                                                        | `<hr>` 或 `<div className="border-t">`             |
+| 加载占位            | `<Skeleton>`                                                         | `<div className="animate-pulse ...">`              |
+| 徽标                | `<Badge variant="...">`                                              | 自制 `<span className="bg-...">`                   |
+| 弹窗标题            | 必须有 `<DialogTitle>` 等                                            | 仅放内容, 漏掉 Title                               |
+| 模态确认            | `<AlertDialog>`                                                      | 普通 `<Dialog>`                                    |
+| 数据更新按钮        | `<Button disabled>` + `<Spinner data-icon>`                          | `<Button isLoading>` (本项目 Button 不存在该 prop) |
+| AI 对话流容器       | shadcn `MessageScroller`                                             | 自造滚动容器 / `overflow-y-auto` div               |
+| AI 消息气泡         | shadcn `Message` + `Bubble`                                          | 自造 `<div className="rounded p-3">`               |
+| 工具调用展示        | AI Elements `Tool`                                                   | 手写 JSON <pre>                                    |
+| AI 审批卡片         | AI Elements `Confirmation`                                           | 普通 `Dialog` / `<button onClick={approve}>`       |
+| AI 思考链           | AI Elements `Reasoning` 或 prompt-kit `Reasoning` / `ChainOfThought` | 手写折叠面板                                       |
+| 流式终端            | AI Elements `Terminal`                                               | 自己接 xterm.js                                    |
+| 文件树              | AI Elements `FileTree`                                               | 手写嵌套 `<ul>`                                    |
 
 AI 工作台完整组件栈与命令见 `references/ai-agent-frontend-stack.md`。
 

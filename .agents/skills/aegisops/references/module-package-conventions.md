@@ -78,14 +78,14 @@ modules/<name>/src/main/java/io/aegisops/<name>/
 
 ## 3. 当前模块偏差清单 (Phase Z9 后整改)
 
-| 模块 | 当前偏差 | 整改建议 |
-| --- | --- | --- |
-| aiops-evidence | domain 与 Controller 同包根目录; 引入 `spring-boot-starter-web` | 把 `EvidenceController` 等迁入 `api/`; `application.yml` 中 starter-web 仅留 actuator 必要, 改为 starter-webflux 或保持但只在 api 包用 |
-| aiops-ai-client | 同上 | 拆 `api/HttpAiAgentController` + `application/AiAgentOrchestrator`, 但 starter-web 仅给 api 包用 |
-| aiops-execution | 224 个 Java 类, Controller 与 Repository 同包根目录 | 拆 `api/` (ExecutionController 等) + `infrastructure/persistence/` (Jooq*) + `service/` 保持 facade |
-| aiops-incident | Controller 与 Jdbc* 同包根目录 | 拆 `api/IncidentController` + `infrastructure/persistence/JdbcIncidentRepository` |
-| aiops-runner (app) | Starter-web 仅用于 `/internal/runner/status`, 合理 | 维持现状, 但要保证 executor 包内禁止直接依赖 ExecutionRepository (ArchUnit 已覆盖) |
-| aiops-worker (app) | Starter-web 仅用于 `/internal/worker/status`, 合理 | 维持现状, 后续可在 api 包统一 /internal/* 入口 |
+| 模块               | 当前偏差                                                        | 整改建议                                                                                                                               |
+| ------------------ | --------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| aiops-evidence     | domain 与 Controller 同包根目录; 引入 `spring-boot-starter-web` | 把 `EvidenceController` 等迁入 `api/`; `application.yml` 中 starter-web 仅留 actuator 必要, 改为 starter-webflux 或保持但只在 api 包用 |
+| aiops-ai-client    | 同上                                                            | 拆 `api/HttpAiAgentController` + `application/AiAgentOrchestrator`, 但 starter-web 仅给 api 包用                                       |
+| aiops-execution    | 224 个 Java 类, Controller 与 Repository 同包根目录             | 拆 `api/` (ExecutionController 等) + `infrastructure/persistence/` (Jooq*) + `service/` 保持 facade                                    |
+| aiops-incident     | Controller 与 Jdbc* 同包根目录                                  | 拆 `api/IncidentController` + `infrastructure/persistence/JdbcIncidentRepository`                                                      |
+| aiops-runner (app) | Starter-web 仅用于 `/internal/runner/status`, 合理              | 维持现状, 但要保证 executor 包内禁止直接依赖 ExecutionRepository (ArchUnit 已覆盖)                                                     |
+| aiops-worker (app) | Starter-web 仅用于 `/internal/worker/status`, 合理              | 维持现状, 后续可在 api 包统一 /internal/* 入口                                                                                         |
 
 ## 4. ArchUnit 推荐测试
 

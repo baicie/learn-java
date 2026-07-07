@@ -73,15 +73,15 @@ Web Preview / Workflow Canvas
 
 最相关的组件:
 
-| 组件 | 用在 AegisOps 哪 |
-| --- | --- |
-| `Agent` | 显示 AI Agent 配置 (model / instructions / tools / output schema) |
-| `Tool` | 显示工具调用详情 (pending / running / completed / error / denied / awaiting approval) |
-| `Confirmation` | Runbook 执行前的审批卡片, 关联 automation:approve 权限 |
-| `Task` / `Plan` | Incident 处理步骤与建议动作 |
-| `Terminal` | 执行流式日志 (替代自造 ANSI viewer) |
-| `File Tree` | Ansible Playbook 目录浏览 |
-| `Stack Trace` / `Test Results` | 错误诊断面板 |
+| 组件                           | 用在 AegisOps 哪                                                                      |
+| ------------------------------ | ------------------------------------------------------------------------------------- |
+| `Agent`                        | 显示 AI Agent 配置 (model / instructions / tools / output schema)                     |
+| `Tool`                         | 显示工具调用详情 (pending / running / completed / error / denied / awaiting approval) |
+| `Confirmation`                 | Runbook 执行前的审批卡片, 关联 automation:approve 权限                                |
+| `Task` / `Plan`                | Incident 处理步骤与建议动作                                                           |
+| `Terminal`                     | 执行流式日志 (替代自造 ANSI viewer)                                                   |
+| `File Tree`                    | Ansible Playbook 目录浏览                                                             |
+| `Stack Trace` / `Test Results` | 错误诊断面板                                                                          |
 
 安装:
 

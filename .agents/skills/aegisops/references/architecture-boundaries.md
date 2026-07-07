@@ -4,13 +4,13 @@
 
 所有本地进程端口必须登记, 避免和 docker-compose / 其它本地服务撞端口。
 
-| 进程 | 默认端口 | 来源环境变量 | 备注 |
-| --- | --- | --- | --- |
-| aiops-server | 8080 | `AIOPS_SERVER_PORT` | 主 API + SSE, 默认前端访问入口 |
-| aiops-worker | 8081 | `AIOPS_WORKER_PORT` | 仅 actuator / `/internal/worker/status`, 不暴露业务 API |
-| aiops-runner | 8092 | `AIOPS_RUNNER_PORT` | actuator + `/internal/runner/status`, 不接收外部业务调用 |
-| aiops-agent (Python) | 9008 | `AIOPS_AGENT_PORT` | FastAPI, 与 Java 通过 internal token 解耦 |
-| zabbix-web (docker) | 8081 → 容器 8080 | docker-compose | ⚠️ 与 aiops-worker 默认端口冲突 |
+| 进程                 | 默认端口         | 来源环境变量        | 备注                                                     |
+| -------------------- | ---------------- | ------------------- | -------------------------------------------------------- |
+| aiops-server         | 8080             | `AIOPS_SERVER_PORT` | 主 API + SSE, 默认前端访问入口                           |
+| aiops-worker         | 8081             | `AIOPS_WORKER_PORT` | 仅 actuator / `/internal/worker/status`, 不暴露业务 API  |
+| aiops-runner         | 8092             | `AIOPS_RUNNER_PORT` | actuator + `/internal/runner/status`, 不接收外部业务调用 |
+| aiops-agent (Python) | 9008             | `AIOPS_AGENT_PORT`  | FastAPI, 与 Java 通过 internal token 解耦                |
+| zabbix-web (docker)  | 8081 → 容器 8080 | docker-compose      | ⚠️ 与 aiops-worker 默认端口冲突                          |
 
 冲突处理:
 
@@ -261,7 +261,6 @@ infra/ (docker-compose, external systems)
 | runner | —       | —               | —          | read    | write        | read       | executor |
 
 一律通过对应 Adapter / Client, 不允许直连。
-
 
 ## 6. ArchUnit 守卫
 
