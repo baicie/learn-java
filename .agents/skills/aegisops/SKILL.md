@@ -113,10 +113,22 @@ MVP 必须使用:
 
 ```txt
 apps/
-  aiops-server
-  aiops-worker
-  aiops-runner
+  aiops-server        # 控制面 / REST API / SSE / 权限
+  aiops-worker        # 异步消费 / Outbox / 后台分析
+  aiops-runner        # 执行隔离层 / Ansible / SSH / Webhook
+
+apps/aiops-agent      # Python LangGraph 诊断运行时, 与 Java 通过 HTTP + internal token 解耦
 ```
+
+后端架构定性为:
+
+```txt
+模块化单体 (Java) + 外挂 Python Agent + 独立 Runner
+```
+
+不是微服务。任何把 server/worker/runner 描述为"独立服务"或"分布式系统"的设计评审视为不通过。
+
+三 app 与 agent 共享同一份数据库 schema (Flyway), 但运行时独立部署、独立进程、独立端口 (端口表见 `references/architecture-boundaries.md` §1)。
 
 MVP 阶段不要拆分为微服务。
 
@@ -216,6 +228,109 @@ Server 可以创建与审批任务, 但只有 Runner 才能执行。
 
 ---
 
+### 3.3 模块四分类
+
+`modules/` 下每个 Maven 模块必须明确属于下面四类之一。新增模块前先确认归类, 不要无限膨胀:
+
+```txt
+基础底座 (foundation):
+  aiops-common
+  aiops-persistence
+  aiops-web
+  aiops-security
+  aiops-tenant
+  aiops-user
+  aiops-audit
+  aiops-observability
+  aiops-platform
+
+运维领域 (operations-domain):
+  aiops-datasource
+  aiops-zabbix-adapter        # 外部系统适配器, 即使名字带 -adapter 也归入领域
+  aiops-asset
+  aiops-alert
+  aiops-incident
+  aiops-evidence
+  aiops-rca
+  aiops-report
+  aiops-inspection
+  aiops-runbook
+  aiops-integration
+
+执行体系 (execution):
+  aiops-execution
+  aiops-plugin
+  apps/aiops-runner
+  apps/aiops-worker           # 异步消费, 自身也是执行侧
+  aiops-work-record           # 轻量记录, 与执行松耦合
+
+AI 体系 (ai):
+  aiops-ai-client             # Java 客户端
+  apps/aiops-agent            # Python LangGraph 运行时
+```
+
+判断一个模块属于哪一类, 顺序:
+
+```txt
+1. 是否被 server/worker/runner 任一方复用?
+2. 是否对外部系统做 IO?    -> 通常是 -adapter / -datasource / -ai-client
+3. 是否承载 Incident 核心模型或证据链? -> operations-domain
+4. 其它都按命名直观归类, 不要重复造平行的 "xxx-core" / "xxx-facade"。
+```
+
+详细包结构与依赖方向见 `references/module-package-conventions.md`。
+
+---
+
+### 3.4 依赖方向 (强制)
+
+```txt
+api        -> application
+application -> domain
+domain     -> (禁止任何 -adapter / -client / -web / -persistence)
+infrastructure -> persistence + adapter + ai-client
+```
+
+跨模块调用必须经过 facade:
+
+```txt
+rca      -> EvidenceQueryService        (不允许直接 @Autowired EvidenceRepository)
+report   -> IncidentReadService         (不允许直接查 incident 表)
+agent    -> InternalAgentEvidenceApi    (不允许直接调 Zabbix / 数据库)
+plugin   -> PlatformPluginRegistry      (不允许反射业务模块私有类)
+```
+
+禁止的反向依赖:
+
+```txt
+domain 依赖 -adapter / -client / -web / -persistence
+server / worker / runner 互相直接调用 (允许通过 aiops-execution 的 ApplicationService)
+runner 注入 ExecutionRepository / RollbackRepository (ArchUnit 守卫: RunnerArchUnitGuardTest)
+领域模块把 spring-boot-starter-web 当成业务职责, 而非只用于 actuator endpoint
+```
+
+模块依赖若违反方向, 评审直接 fail, 修复方式: 新建 `service/*ApplicationService` facade, 让调用方只看到 DTO。
+
+---
+
+### 3.5 Spring 扫描范围
+
+```txt
+aiops-server      @SpringBootApplication(scanBasePackages = "io.aegisops")
+aiops-worker      @SpringBootApplication(scanBasePackages = "io.aegisops")
+aiops-runner      @SpringBootApplication(scanBasePackages = "io.aegisops")
+```
+
+后果: 只要模块里放了 Spring Bean, 它就会进入所有三 app 的容器。规则:
+
+```txt
+任何 RestController / @Configuration / @Service 必须明确归类到基础底座 / 领域模块的 api 包, 不要放进 domain 包
+AI 诊断上下文相关的轻量 controller (如 InternalAgentEvidenceController) 放在 modules 下, 不放进 apps/aiops-server, 避免污染 server 主入口
+Runner 内部执行器 (ansible / ssh / webhook) 全部放进 io.aegisops.runner.executor.* 包, 与 aiops-execution 的 dto/service 分开
+```
+
+---
+
 ## 4. 技术栈
 
 ### 4.1 前端
@@ -223,11 +338,10 @@ Server 可以创建与审批任务, 但只有 Runner 才能执行。
 使用:
 
 ```txt
-React
+React 19
 Vite
 TypeScript
-shadcn/ui
-Tailwind CSS
+Tailwind CSS v4
 TanStack Query
 TanStack Table
 ECharts
@@ -235,6 +349,15 @@ React Flow
 Monaco Editor
 SSE 用于流式
 WebSocket 仅在 SSE 不够用时
+```
+
+组件栈分三层, 按需组合 (详见 `references/ai-agent-frontend-stack.md`):
+
+```txt
+后台壳子:        shadcn/ui (sidebar / dashboard / card / table)
+AI Chat 基础:    shadcn/ui (message / bubble / message-scroller / attachment / marker)
+Agent 工作台:    AI Elements (agent / tool / confirmation / task / plan / terminal / file-tree / stack-trace / test-results)
+                    或 prompt-kit (chain-of-thought / reasoning / source / steps)
 ```
 
 MVP 前端页面优先级:
@@ -246,7 +369,7 @@ MVP 前端页面优先级:
 4. 资产列表
 5. 告警列表
 6. Incident 列表
-7. Incident 详情
+7. Incident 详情 (左侧时间线 + 中间 Agent 对话 + 右侧证据链)
 8. Incident 时间线
 9. AI 诊断面板
 10. Runbook 列表
@@ -254,6 +377,8 @@ MVP 前端页面优先级:
 12. 自动化日志
 13. 审计日志
 ```
+
+Incident 详情页布局强制使用三栏, 详见 `references/ai-agent-frontend-stack.md` §3。
 
 规则:
 
@@ -264,9 +389,11 @@ MVP 前端页面优先级:
 按路由组织页面, 按特性组织组件。
 使用带类型的 API 客户端。
 除非绝对必要, 不要使用 any。
+shadcn/ui 组件优先于自己造组件; AI Elements / prompt-kit 在 shadcn 没有合适原语时再引入。
+shadcn 组件不要手改 src/components/ui/ 下文件, 升级走 pnpm dlx shadcn@latest add --diff。
 ```
 
-详见 `references/frontend-conventions.md`。
+详见 `references/frontend-conventions.md` 与 `references/ai-agent-frontend-stack.md`。
 
 ---
 
@@ -2278,6 +2405,9 @@ RBAC 权限校验
 是否更新 migration?
 API 变更是否同步 OpenAPI 与 docs?
 是否避免过度设计?
+新增模块是否归入基础底座 / 运维领域 / 执行体系 / AI 体系 四类之一?
+跨模块调用是否经过 facade (service/*ApplicationService), 而非直接注入 Repository?
+端口是否与 references/architecture-boundaries.md §1 端口表冲突?
 ```
 
 ---
@@ -2443,7 +2573,9 @@ Agent 参考文档:
 ```txt
 .skills/aegisops/references/doc-governance.md           # 文档规则
 .skills/aegisops/references/phase-checklist.md          # Phase 启动/收尾清单
-.skills/aegisops/references/architecture-boundaries.md  # 模块与应用边界
+.skills/aegisops/references/architecture-boundaries.md  # 模块与应用边界, 端口表
+.skills/aegisops/references/module-package-conventions.md # 业务模块的 domain/application/infrastructure/api 包结构
 .skills/aegisops/references/automation-safety.md        # 风险等级与安全规则
 .skills/aegisops/references/frontend-conventions.md     # web/console 主题、组件、样式与代码组织规范
+.skills/aegisops/references/ai-agent-frontend-stack.md  # shadcn/ui + AI Elements + prompt-kit 选型与 AI 页面骨架
 ```

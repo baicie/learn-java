@@ -247,6 +247,15 @@ animation: --animate-fade-in / slide-up / slide-down / slide-in-right / pulse-sl
 | 弹窗标题            | 必须有 `<DialogTitle>` 等                   | 仅放内容, 漏掉 Title                               |
 | 模态确认            | `<AlertDialog>`                             | 普通 `<Dialog>`                                    |
 | 数据更新按钮        | `<Button disabled>` + `<Spinner data-icon>` | `<Button isLoading>` (本项目 Button 不存在该 prop) |
+| AI 对话流容器       | shadcn `MessageScroller`                    | 自造滚动容器 / `overflow-y-auto` div              |
+| AI 消息气泡         | shadcn `Message` + `Bubble`                 | 自造 `<div className="rounded p-3">`              |
+| 工具调用展示        | AI Elements `Tool`                          | 手写 JSON <pre>                                   |
+| AI 审批卡片         | AI Elements `Confirmation`                  | 普通 `Dialog` / `<button onClick={approve}>`     |
+| AI 思考链           | AI Elements `Reasoning` 或 prompt-kit `Reasoning` / `ChainOfThought` | 手写折叠面板 |
+| 流式终端            | AI Elements `Terminal`                      | 自己接 xterm.js                                    |
+| 文件树              | AI Elements `FileTree`                      | 手写嵌套 `<ul>`                                    |
+
+AI 工作台完整组件栈与命令见 `references/ai-agent-frontend-stack.md`。
 
 ### 5.2 Form 写法示例
 
@@ -592,3 +601,19 @@ Playwright E2E 当前不强制, Phase 2 引入 Incident Detail 后追加。
 - 数据模型变更: 先 Flyway migration (SKILL.md §17), 再前端类型同步
 - 主题或色板新增: 必须在本文件 + `web/console/src/styles.css` 双更新, 并在 PR 描述里说明
 - shadcn 升级: 用 `pnpm dlx shadcn@latest add <name> --diff`, 不可 `--overwrite`
+- AI 组件新增: 必须读 `references/ai-agent-frontend-stack.md` 后再 `add`, PR 必须说明 registry 来源
+- 新增前端模块依赖: 按 §2.2 决策矩阵, 默默改 `package.json` 一律视为评审 fail
+
+## 13. AI 工作台页面骨架 (与 SKILL §4.1 联动)
+
+Incident 详情页必须三栏布局, 组件映射:
+
+```text
+PageHeader: <Incident 标题> <StatusBadge> <SeverityBadge> 顶部 actions
+顶部 Tabs: 概览 / 时间线 / AI 诊断 / Runbook / 自动化日志 / 复盘
+左侧:    事件信息 / 关联资产 / 关联告警 / 状态机 Stepper / 影响范围
+中间:    Conversation + MessageScroller + Message + Reasoning + Tool + Confirmation
+右侧:    证据链 Tabs (指标 / 日志 / 变更 / RCA)
+```
+
+详见 `references/ai-agent-frontend-stack.md` §2 §3。
