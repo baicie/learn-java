@@ -14,7 +14,8 @@ public class InspectionRepository {
     this.jdbc = jdbc;
   }
 
-  public InspectionTaskRecord create(String tenantId, CreateInspectionTaskRequest request, String createdBy) {
+  public InspectionTaskRecord create(
+      String tenantId, CreateInspectionTaskRequest request, String createdBy) {
     String id = Ids.newId();
     jdbc.update(
         """

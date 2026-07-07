@@ -38,7 +38,8 @@ public class OutboxWriter {
   }
 
   @Transactional(propagation = Propagation.REQUIRED)
-  public String enqueue(String targetApp, String jobName, String tenantId, Map<String, Object> payload) {
+  public String enqueue(
+      String targetApp, String jobName, String tenantId, Map<String, Object> payload) {
     String id = "outbox_" + UUID.randomUUID().toString().replace("-", "");
     String payloadJson = serialize(payload);
     jdbc.update(

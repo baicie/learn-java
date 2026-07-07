@@ -12,9 +12,7 @@ class InspectionServiceTest {
     assertThatThrownBy(
             () ->
                 service.create(
-                    "t1",
-                    new CreateInspectionTaskRequest("", "HOST", "{}", "host-basic"),
-                    "u1"))
+                    "t1", new CreateInspectionTaskRequest("", "HOST", "{}", "host-basic"), "u1"))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("name");
   }
@@ -38,9 +36,7 @@ class InspectionServiceTest {
     assertThatThrownBy(
             () ->
                 service.create(
-                    "t1",
-                    new CreateInspectionTaskRequest("Host Check", "HOST", "{}", ""),
-                    "u1"))
+                    "t1", new CreateInspectionTaskRequest("Host Check", "HOST", "{}", ""), "u1"))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("templateKey");
   }

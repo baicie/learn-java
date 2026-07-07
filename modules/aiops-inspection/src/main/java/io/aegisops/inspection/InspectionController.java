@@ -33,6 +33,7 @@ public class InspectionController {
       @RequestBody CreateInspectionTaskRequest request,
       @AuthenticationPrincipal UserPrincipal user) {
     return ApiResponse.ok(
-        service.create(TenantContext.requireTenantId(), request, user == null ? "system" : user.id()));
+        service.create(
+            TenantContext.requireTenantId(), request, user == null ? "system" : user.id()));
   }
 }
