@@ -6,5 +6,6 @@ public interface EvidenceCollector {
 
   boolean supports(EvidenceCollectRequest request);
 
-  EvidenceCollectResponse collect(String tenantId, String incidentId, EvidenceCollectRequest request);
+  EvidenceCollectResponse collect(
+      String tenantId, String incidentId, EvidenceCollectRequest request);
 }

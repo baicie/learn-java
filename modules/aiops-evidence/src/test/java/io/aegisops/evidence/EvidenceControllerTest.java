@@ -58,8 +58,7 @@ class EvidenceControllerTest {
 
     TenantContext.setTenantId("tenant_1");
     MockMvc mvc =
-        standaloneSetup(
-                new EvidenceController(service, orchestrationService, taskRepository))
+        standaloneSetup(new EvidenceController(service, orchestrationService, taskRepository))
             .setMessageConverters(jsonConverter())
             .build();
 
@@ -77,14 +76,11 @@ class EvidenceControllerTest {
         Mockito.mock(EvidenceCollectionTaskRepository.class);
 
     Mockito.when(orchestrationService.collect(eq("tenant_1"), eq("inc_1"), any()))
-        .thenReturn(
-            new EvidenceCollectResponse(
-                "inc_1", 6, 30, 0, 4, 4, 4, 0, "Collected"));
+        .thenReturn(new EvidenceCollectResponse("inc_1", 6, 30, 0, 4, 4, 4, 0, "Collected"));
 
     TenantContext.setTenantId("tenant_1");
     MockMvc mvc =
-        standaloneSetup(
-                new EvidenceController(service, orchestrationService, taskRepository))
+        standaloneSetup(new EvidenceController(service, orchestrationService, taskRepository))
             .setMessageConverters(jsonConverter())
             .build();
 

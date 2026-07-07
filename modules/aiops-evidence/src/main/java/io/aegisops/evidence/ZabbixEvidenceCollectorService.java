@@ -102,13 +102,21 @@ public class ZabbixEvidenceCollectorService implements EvidenceCollector {
 
     UpsertStats stats = persistDrafts(tenantId, incidentId, drafts);
 
-    String message = "evidence collected: items=" + matchedItems.size()
-        + ", history=" + drafts.historyPointCount
-        + ", trends=" + drafts.trendPointCount
-        + ", events=" + events.size()
-        + ", triggers=" + triggers.size()
-        + ", created=" + stats.created
-        + ", updated=" + stats.updated;
+    String message =
+        "evidence collected: items="
+            + matchedItems.size()
+            + ", history="
+            + drafts.historyPointCount
+            + ", trends="
+            + drafts.trendPointCount
+            + ", events="
+            + events.size()
+            + ", triggers="
+            + triggers.size()
+            + ", created="
+            + stats.created
+            + ", updated="
+            + stats.updated;
 
     return new EvidenceCollectResponse(
         incidentId,

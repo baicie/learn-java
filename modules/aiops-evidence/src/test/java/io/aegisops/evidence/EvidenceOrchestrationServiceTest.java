@@ -1,6 +1,5 @@
 package io.aegisops.evidence;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
@@ -26,9 +25,7 @@ class EvidenceOrchestrationServiceTest {
 
     EvidenceOrchestrationService service =
         new EvidenceOrchestrationService(
-            new EvidenceCollectorRegistry(List.of(collector)),
-            repository,
-            new ObjectMapper());
+            new EvidenceCollectorRegistry(List.of(collector)), repository, new ObjectMapper());
 
     service.collect("t1", "inc-1", null);
 
@@ -38,7 +35,8 @@ class EvidenceOrchestrationServiceTest {
             org.mockito.Mockito.eq("inc-1"),
             org.mockito.Mockito.eq("zabbix.metric-event"),
             any());
-    verify(repository).complete(org.mockito.Mockito.eq("t1"), org.mockito.Mockito.eq("task-1"), any());
+    verify(repository)
+        .complete(org.mockito.Mockito.eq("t1"), org.mockito.Mockito.eq("task-1"), any());
   }
 
   @Test
@@ -54,9 +52,7 @@ class EvidenceOrchestrationServiceTest {
 
     EvidenceOrchestrationService service =
         new EvidenceOrchestrationService(
-            new EvidenceCollectorRegistry(List.of(collector)),
-            repository,
-            new ObjectMapper());
+            new EvidenceCollectorRegistry(List.of(collector)), repository, new ObjectMapper());
 
     assertThatThrownBy(() -> service.collect("t1", "inc-1", null))
         .isInstanceOf(RuntimeException.class)

@@ -31,10 +31,8 @@ public class EvidenceOrchestrationService {
         taskRepository.start(tenantId, incidentId, collectorKey, write(normalizedRequest));
 
     try {
-      EvidenceCollector collector =
-          registry.getSupported(collectorKey, normalizedRequest);
-      EvidenceCollectResponse response =
-          collector.collect(tenantId, incidentId, normalizedRequest);
+      EvidenceCollector collector = registry.getSupported(collectorKey, normalizedRequest);
+      EvidenceCollectResponse response = collector.collect(tenantId, incidentId, normalizedRequest);
       taskRepository.complete(tenantId, taskId, write(response));
       return response;
     } catch (RuntimeException error) {
