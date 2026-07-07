@@ -965,6 +965,368 @@ secret change
 
 ---
 
+## 6.15 工作记录模块规则
+
+工作记录是 AegisOps 的轻量可配置记录能力, 不是工单系统、流程引擎或低代码平台。
+
+第一版只做最小闭环:
+
+```txt
+用户 / 角色复用
+平台字典
+管理员配置模板与字段
+用户填写记录
+列表筛选
+受限导出
+```
+
+第一版不要做:
+
+```txt
+微服务
+微前端
+完整 LowCodeEngine
+审批流
+SLA
+复杂统计
+Excel 导入
+评论
+附件
+告警联动
+巡检联动
+AI 总结
+字段级权限
+模板版本管理
+流程引擎
+```
+
+### 6.15.1 模块边界
+
+后端工作记录必须放在:
+
+```txt
+modules/aiops-work-record
+```
+
+平台字典必须放在:
+
+```txt
+modules/aiops-platform/.../dictionary
+```
+
+不要把工作记录代码塞进:
+
+```txt
+aiops-incident
+aiops-inspection
+aiops-alert
+aiops-platform 根目录
+```
+
+用户、角色、权限复用 `aiops-user` 与 `aiops-security`, 不重新实现一套用户系统。
+
+### 6.15.2 前端边界
+
+第一版直接放在现有 console 应用:
+
+```txt
+web/console/src/pages/work-record
+web/console/src/features/work-record
+```
+
+不要引入:
+
+```txt
+qiankun
+module federation
+iframe
+独立子应用
+```
+
+工作记录 API 与类型放在 feature 内, 底层复用公共 `apiRequest`; 不要继续把所有工作记录 API 堆进 `web/console/src/api/client.ts`。
+
+平台字典若被多个 feature 复用, 前端应拆为平台字典 feature, 不要让平台页依赖 work-record 私有 API 文件。
+
+### 6.15.3 数据库边界
+
+第一版使用同一个 PostgreSQL, 工作记录使用独立 schema:
+
+```sql
+create schema if not exists work_record;
+```
+
+工作记录表使用:
+
+```txt
+work_record.wr_template
+work_record.wr_template_field
+work_record.wr_record
+```
+
+平台字典表使用:
+
+```txt
+platform_dict_type
+platform_dict_item
+```
+
+不要第一版就多数据库、多 DataSource 或多事务管理。
+
+命名规则:
+
+```txt
+工作记录表: wr_ 前缀
+平台字典表: platform_dict_ 前缀
+主键: uuid / varchar id, 与项目现有 ID 风格保持一致
+租户字段: tenant_id
+时间字段: created_at / updated_at / deleted_at
+逻辑删除: deleted_at
+启用禁用: enabled
+```
+
+Flyway migration 要拆清楚, 不要把建表、默认字典、默认模板、菜单种子全部塞进一个几百行 migration。已发布 migration 不得重命名或修改内容, 修复必须新增版本。
+
+### 6.15.4 字典规则
+
+通用枚举走平台字典, 临时枚举走字段 `options_json`。
+
+第一批默认字典:
+
+```txt
+record_type
+record_status
+record_priority
+env_type
+yes_no
+process_result
+```
+
+字典项不要物理删除, 只做 `enabled = false`, 因为历史记录可能仍引用旧 value。
+
+记录保存时存 value, 不存 label:
+
+```json
+{
+  "priority": "P2"
+}
+```
+
+展示时再通过字典把 value 显示成 label。字典查询必须能支持展示历史值, 必要时包含已禁用项。
+
+### 6.15.5 模板与字段规则
+
+字段选项来源必须区分:
+
+```txt
+static: 字段自己维护 options_json
+dict: 引用平台字典 dict_code
+```
+
+字段编码是动态表单稳定性的核心:
+
+```txt
+field_code 创建后不可随便修改
+field_type 创建后尽量不可修改
+字段删除只禁用, 不物理删除
+```
+
+必须拒绝以下保留 `field_code`:
+
+```txt
+id
+tenant_id
+template_id
+title
+status
+owner_id
+creator_id
+record_time
+created_at
+updated_at
+deleted_at
+custom_data_json
+builtin_data_json
+```
+
+自定义字段值类型必须统一:
+
+```txt
+text: string
+textarea: string
+number: number
+date: YYYY-MM-DD
+datetime: ISO string
+select: string
+multi_select: string[]
+user: userId string
+switch/boolean: boolean
+```
+
+第一版字段类型只做:
+
+```txt
+单行文本
+多行文本
+数字
+日期
+日期时间
+单选
+多选
+人员
+开关
+```
+
+先不要做:
+
+```txt
+级联选择
+子表单
+公式字段
+联动显示
+条件必填
+复杂布局
+远程接口字段
+```
+
+表单设计器第一版只解决添加字段、字段排序、属性编辑、禁用字段、保存模板与预览表单。不要把它做成页面级低代码平台。Formily / Designable 可作为后续复杂度上升后的选型评估, 不是第一版默认依赖; 完整 LowCodeEngine 第一版禁止引入。
+
+### 6.15.6 记录数据规则
+
+内置字段放主表:
+
+```txt
+title
+status
+owner_id
+creator_id
+record_time
+created_at
+updated_at
+deleted_at
+```
+
+自定义字段放:
+
+```txt
+custom_data_json
+```
+
+不要把所有字段都塞进 JSON, 否则列表、权限、分页和排序都会变复杂。
+
+创建记录时不要信任前端传:
+
+```txt
+tenant_id
+creator_id
+created_at
+```
+
+这些值必须由后端从登录上下文或服务端时间生成。
+
+记录详情页必须按模板渲染历史记录:
+
+```txt
+读取 record.template_id
+读取 template fields
+按字段顺序渲染 custom_data_json
+字典字段显示 label
+禁用字段也要能显示历史值
+```
+
+### 6.15.7 查询、权限与导出
+
+工作记录列表必须分页:
+
+```txt
+page 默认 1
+size 默认 20
+max size 100
+```
+
+普通用户只能查看自己的记录:
+
+```txt
+creator_id = 当前用户
+or owner_id = 当前用户
+```
+
+记录管理员与系统管理员才能查看全部。权限必须由后端强制, 不允许只靠前端参数控制。
+
+自定义字段筛选必须走白名单:
+
+```txt
+1. 根据 template_id 查询字段定义
+2. 校验 field_code 存在
+3. 校验 filterable = true
+4. 根据 field_type 构造 JSONB 查询
+```
+
+禁止直接把前端传来的 `fieldCode` 拼进 SQL。
+
+导出必须限制最大行数, 第一版建议最多 5000 或 10000 行。导出当前筛选结果即可, 后续再做异步导出。导出不能把登录 JWT 放进 URL。
+
+### 6.15.8 后端校验、审计与测试
+
+后端保存记录时必须校验:
+
+```txt
+必填字段
+字段类型
+数字格式
+日期格式
+单选值是否合法
+多选值是否合法
+字段是否属于当前模板
+禁用字段不能写入
+JSON 字段格式
+```
+
+所有模板、字段、字典、记录删除都优先禁用或软删除。涉及配置变更、记录删除、导出等敏感操作必须写审计日志。
+
+动态字段相关测试至少覆盖:
+
+```txt
+字典 CRUD
+禁用字典项后历史记录仍可展示
+字段 required 校验
+select 字段非法值拒绝
+multi_select 字段非法值拒绝
+filterable=false 字段不能筛选
+普通用户不能查看别人记录
+管理员可以查看全部记录
+导出行数限制生效
+```
+
+建议增加 ArchUnit 规则:
+
+```txt
+workrecord domain/application 不能依赖 Spring Web
+workrecord api 不能直接访问 JDBC
+workrecord 不能依赖 alert/incident/inspection 的 repository 包
+dictionary 不能反向依赖 workrecord
+```
+
+### 6.15.9 AI 实现纪律
+
+AI 开发工作记录模块时必须小步推进, 不要一次实现完整系统。
+
+推荐顺序:
+
+```txt
+1. 菜单 + 空页面
+2. 字典表 + 字典 API + 字典页面
+3. work-record 模块骨架
+4. 模板表 + 字段表 + API
+5. 表单设计器
+6. 记录表 + 动态表单填写
+7. 记录列表 + 筛选
+8. 导出
+```
+
+每一步都必须有测试, 每次提交只做一个能力, 不要大范围重构现有系统。关键设计必须写进文档, 不要只存在聊天里。
+
+---
+
 ## 7. Zabbix 集成规则
 
 Zabbix 是数据源, 不是平台核心。

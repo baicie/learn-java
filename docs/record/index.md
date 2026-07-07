@@ -1,3 +1,17 @@
+---
+title: 可配置工作记录模块（终版设计）
+type: design
+status: draft
+phase: work-record
+owner: platform-team
+created: 2026-07-06
+updated: 2026-07-06
+related:
+  - docs/record/work-record-phases-design-code.md
+---
+
+# 可配置工作记录模块（终版设计）
+
 下面是结合前面所有讨论后的 **终版设计**。我建议这个模块不要做成“大工单系统”，而是定为：
 
 ```text id="x3vcuo"
