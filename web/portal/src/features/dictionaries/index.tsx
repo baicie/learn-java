@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { t } from '@/i18n'
+import { useTranslation } from 'react-i18next'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ConfigDrawer } from '@/components/config-drawer'
 import { Header } from '@/components/layout/header'
@@ -12,6 +12,7 @@ import { DictionaryTypeList } from './components/dictionary-type-list'
 import { useDictItems, useDictTypes } from './hooks/use-dictionaries'
 
 export function Dictionaries() {
+  const { t } = useTranslation()
   const dictTypes = useDictTypes()
   const [selectedCode, setSelectedCode] = useState<string>()
   const effectiveCode = selectedCode ?? dictTypes.data?.[0]?.dictCode

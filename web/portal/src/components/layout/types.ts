@@ -12,8 +12,19 @@ type Team = {
   plan: string
 }
 
+/**
+ * 标题既可以是静态字符串（硬编码英文等历史内容），
+ * 也可以是延迟到渲染期再求值的函数（用于 i18n 等需要在组件生命周期内解析的来源）。
+ * 消费方通过 `resolveTitle` 统一收敛。
+ */
+type NavTitle = string | (() => string)
+
+function resolveTitle(title: NavTitle): string {
+  return typeof title === 'function' ? title() : title
+}
+
 type BaseNavItem = {
-  title: string
+  title: NavTitle
   badge?: string
   icon?: React.ElementType
 }
@@ -41,4 +52,12 @@ type SidebarData = {
   navGroups: NavGroup[]
 }
 
-export type { SidebarData, NavGroup, NavItem, NavCollapsible, NavLink }
+export {
+  resolveTitle,
+  type SidebarData,
+  type NavGroup,
+  type NavItem,
+  type NavCollapsible,
+  type NavLink,
+  type NavTitle,
+}

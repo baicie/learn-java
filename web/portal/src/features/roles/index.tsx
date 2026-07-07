@@ -1,4 +1,4 @@
-import { t } from '@/i18n'
+import { useTranslation } from 'react-i18next'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { ConfigDrawer } from '@/components/config-drawer'
@@ -20,6 +20,7 @@ const permissions = [
 ]
 
 export function Roles() {
+  const { t } = useTranslation()
   return (
     <>
       <Header fixed>

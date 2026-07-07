@@ -258,6 +258,9 @@ importers:
       date-fns:
         specifier: ^4.4.0
         version: 4.4.0
+      i18next:
+        specifier: ^26.3.4
+        version: 26.3.4(typescript@6.0.3)
       input-otp:
         specifier: ^1.4.2
         version: 1.4.2(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
@@ -276,6 +279,9 @@ importers:
       react-hook-form:
         specifier: ^7.81.0
         version: 7.81.0(react@19.2.7)
+      react-i18next:
+        specifier: ^17.0.8
+        version: 17.0.8(i18next@26.3.4(typescript@6.0.3))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(typescript@6.0.3)
       react-top-loading-bar:
         specifier: ^3.0.2
         version: 3.0.2(react@19.2.7)

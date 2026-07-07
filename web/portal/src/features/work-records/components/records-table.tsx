@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   flexRender,
   getCoreRowModel,
@@ -11,6 +11,7 @@ import {
   type SortingState,
   type VisibilityState,
 } from '@tanstack/react-table'
+import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 import { type NavigateFn, useTableUrlState } from '@/hooks/use-table-url-state'
 import {
@@ -23,7 +24,7 @@ import {
 } from '@/components/ui/table'
 import { DataTablePagination, DataTableToolbar } from '@/components/data-table'
 import { type WorkRecord } from '../data/schema'
-import { recordStatusOptions, recordsColumns } from './records-columns'
+import { recordStatusValues, recordsColumns } from './records-columns'
 
 type RecordsTableProps = {
   data: WorkRecord[]
@@ -32,6 +33,15 @@ type RecordsTableProps = {
 }
 
 export function RecordsTable({ data, search, navigate }: RecordsTableProps) {
+  const { t } = useTranslation()
+  const statusOptions = useMemo(
+    () =>
+      recordStatusValues.map((value) => ({
+        value,
+        label: t(`workRecords.status.${value}`),
+      })),
+    [t]
+  )
   const [rowSelection, setRowSelection] = useState({})
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
   const [sorting, setSorting] = useState<SortingState>([])
@@ -92,7 +102,7 @@ export function RecordsTable({ data, search, navigate }: RecordsTableProps) {
           {
             columnId: 'status',
             title: '状态',
-            options: recordStatusOptions,
+            options: statusOptions,
           },
         ]}
       />

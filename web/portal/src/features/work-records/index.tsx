@@ -1,5 +1,5 @@
 import { Link, getRouteApi } from '@tanstack/react-router'
-import { t } from '@/i18n'
+import { useTranslation } from 'react-i18next'
 import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -11,6 +11,7 @@ import { useRecords } from './hooks/use-records'
 const route = getRouteApi('/_authenticated/work-records/')
 
 export function WorkRecords() {
+  const { t } = useTranslation()
   const search = route.useSearch()
   const navigate = route.useNavigate()
   const records = useRecords({

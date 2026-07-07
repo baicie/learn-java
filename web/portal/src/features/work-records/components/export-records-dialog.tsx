@@ -1,4 +1,4 @@
-import { t } from '@/i18n'
+import { useTranslation } from 'react-i18next'
 import { Download } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -9,6 +9,7 @@ type ExportRecordsButtonProps = {
 }
 
 export function ExportRecordsButton({ status }: ExportRecordsButtonProps) {
+  const { t } = useTranslation()
   async function handleExport() {
     const blob = await exportWorkRecords({ status })
     const url = URL.createObjectURL(blob)
@@ -17,7 +18,7 @@ export function ExportRecordsButton({ status }: ExportRecordsButtonProps) {
     link.download = 'work-records.csv'
     link.click()
     URL.revokeObjectURL(url)
-    toast.success('导出已开始')
+    toast.success(t('workRecords.list.exportStarted'))
   }
 
   return (

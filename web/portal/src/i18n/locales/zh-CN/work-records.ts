@@ -15,4 +15,11 @@ export const workRecords = {
   'workRecords.field.creator': '创建人',
   'workRecords.field.recordTime': '记录时间',
   'workRecords.field.template': '模板',
+  'workRecords.status.draft': '草稿',
+  'workRecords.status.processing': '处理中',
+  'workRecords.status.done': '完成',
+  'workRecords.status.archived': '归档',
+  'workRecords.list.detail': '详情',
+  'workRecords.list.edit': '编辑',
+  'workRecords.list.exportStarted': '导出已开始',
 } as const

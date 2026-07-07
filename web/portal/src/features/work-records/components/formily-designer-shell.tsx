@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { t } from '@/i18n'
+import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
@@ -41,6 +41,7 @@ const defaultSchema = JSON.stringify(
 )
 
 export function FormilyDesignerShell() {
+  const { t } = useTranslation()
   const templates = useTemplates()
   const queryClient = useQueryClient()
   const [templateId, setTemplateId] = useState('')

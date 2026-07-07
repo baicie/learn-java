@@ -15,7 +15,7 @@ const APPS = {
   runner: { name: "aiops-runner", port: 8082, dir: "apps/aiops-runner" },
 };
 
-const FRONTEND_DIR = join(root, "web", "console");
+const FRONTEND_DIR = join(root, "web", "portal");
 const INFRA_DIR = join(root, "infra");
 const MIN_JAVA_MAJOR = 21;
 
@@ -186,7 +186,7 @@ function printStatus(): void {
   }
 
   printHeader("Frontend");
-  console.log("  Console: http://localhost:5173");
+  console.log("  Portal:  http://localhost:5173");
 }
 
 function findJavaRoot(start: string): string | null {
@@ -337,18 +337,72 @@ async function startBackendOnly(): Promise<void> {
 
 async function startFrontend(): Promise<void> {
   if (!existsSync(FRONTEND_DIR)) {
-    console.error("  Frontend not found at web/console/");
+    console.error("  Frontend not found at web/portal/");
     return;
   }
-  console.log("\n  Frontend dev server: http://localhost:5173");
-  console.log("  (Frontend starts independently via its own npm scripts)");
-  const npmCmd = isWin ? "npm.cmd run dev" : "npm run dev";
-  spawn(npmCmd, [], {
+  const FRONTEND_PORT = 5173;
+  const occupant = await findPortOccupant(FRONTEND_PORT);
+  if (occupant) {
+    console.warn(
+      `\n  Port ${FRONTEND_PORT} is already in use by ${occupant.name} (PID=${occupant.pid}).`,
+    );
+    console.warn(
+      `  Vite will fall back to the next free port, so http://localhost:${FRONTEND_PORT} will keep serving the older app.`,
+    );
+    console.warn(
+      `  If you want ${FRONTEND_PORT} to serve the new frontend, stop the existing process first:`,
+    );
+    console.warn(`    Stop-Process -Id ${occupant.pid} -Force`);
+    console.warn(
+      `  Then re-run: pnpm dev (or pnpm dev:frontend). The script will not auto-kill user processes.`,
+    );
+  }
+  console.log(`\n  Frontend dev server: http://localhost:${FRONTEND_PORT}`);
+  console.log("  (Frontend starts independently via its own package manager scripts)");
+  const pkgCmd = isWin ? "pnpm.cmd dev" : "pnpm dev";
+  spawn(pkgCmd, [], {
     cwd: FRONTEND_DIR,
     stdio: "inherit",
     detached: true,
     shell: true,
   }).unref();
+}
+
+async function findPortOccupant(
+  port: number,
+): Promise<{ pid: number; name: string } | null> {
+  const psCmd = isWin
+    ? `Get-NetTCPConnection -State Listen -LocalPort ${port} -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty OwningProcess`
+    : `lsof -iTCP:${port} -sTCP:LISTEN -t 2>/dev/null | head -n 1`;
+  try {
+    const stdout = await runCapture(psCmd);
+    const pidText = stdout.trim().split(/\s+/)[0];
+    if (!pidText || !/^\d+$/.test(pidText)) return null;
+    const pid = Number(pidText);
+    if (pid <= 0) return null;
+    const nameCmd = isWin
+      ? `(Get-Process -Id ${pid} -ErrorAction SilentlyContinue).ProcessName`
+      : `ps -p ${pid} -o comm= 2>/dev/null | tr -d '\\n'`;
+    const name = (await runCapture(nameCmd)).trim() || "unknown";
+    return { pid, name };
+  } catch {
+    return null;
+  }
+}
+
+function runCapture(cmd: string): Promise<string> {
+  return new Promise((resolve) => {
+    const child = spawn(sh, [...shArg, cmd], {
+      cwd: root,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    let out = "";
+    child.stdout.on("data", (chunk: Buffer) => {
+      out += chunk.toString("utf8");
+    });
+    child.on("error", () => resolve(""));
+    child.on("close", () => resolve(out));
+  });
 }
 
 async function stopApp(key: keyof typeof APPS): Promise<void> {
@@ -430,7 +484,7 @@ async function main(): Promise<void> {
       }
       printHeader("All Services Started");
       console.log("  Frontend (manual):");
-      console.log(`    cd web/console && npm install && npm run dev`);
+      console.log(`    cd web/portal && npm install && npm run dev`);
       console.log();
       console.log("  URLs:");
       console.log("    Server:  http://localhost:8080");
@@ -470,7 +524,7 @@ async function main(): Promise<void> {
       printHeader("Dev Stack Ready");
       console.log("  Server:    http://localhost:8080");
       console.log("  Swagger:   http://localhost:8080/swagger-ui.html");
-      console.log("  Frontend:  http://localhost:5173");
+      console.log("  Frontend:  http://localhost:5173 (Portal)");
       console.log();
       console.log("  To stop: pnpm stop (or tsx scripts/start.ts stop)");
       break;

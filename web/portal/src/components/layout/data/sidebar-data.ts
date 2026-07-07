@@ -1,4 +1,3 @@
-import { t } from '@/i18n'
 import {
   Construction,
   LayoutDashboard,
@@ -26,6 +25,7 @@ import {
   GalleryVerticalEnd,
 } from 'lucide-react'
 import { ClerkLogo } from '@/assets/clerk-logo'
+import { t } from '@/i18n'
 import { type SidebarData } from '../types'
 
 export const sidebarData: SidebarData = {
@@ -56,35 +56,35 @@ export const sidebarData: SidebarData = {
       title: 'General',
       items: [
         {
-          title: t('workRecords.nav.root'),
+          title: () => t('workRecords.nav.root'),
           icon: ClipboardList,
           items: [
             {
-              title: t('workRecords.nav.list'),
+              title: () => t('workRecords.nav.list'),
               url: '/work-records',
             },
             {
-              title: t('workRecords.nav.designer'),
+              title: () => t('workRecords.nav.designer'),
               url: '/work-records/designer',
             },
           ],
         },
         {
-          title: t('platform.nav.root'),
+          title: () => t('platform.nav.root'),
           icon: ShieldCheck,
           items: [
             {
-              title: t('platform.nav.users'),
+              title: () => t('platform.nav.users'),
               url: '/users',
               icon: Users,
             },
             {
-              title: t('platform.nav.roles'),
+              title: () => t('platform.nav.roles'),
               url: '/platform/roles',
               icon: ShieldCheck,
             },
             {
-              title: t('platform.nav.dictionaries'),
+              title: () => t('platform.nav.dictionaries'),
               url: '/platform/dictionaries',
               icon: BookOpen,
             },

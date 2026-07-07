@@ -1,10 +1,11 @@
-import { t, type MessageKey } from '@/i18n'
+import { useTranslation } from 'react-i18next'
 import { ConfigDrawer } from '@/components/config-drawer'
 import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
 import { ProfileDropdown } from '@/components/profile-dropdown'
 import { Search } from '@/components/search'
 import { ThemeSwitch } from '@/components/theme-switch'
+import type { MessageKey } from '@/i18n'
 
 type WorkRecordsLayoutProps = {
   titleKey: MessageKey
@@ -19,6 +20,7 @@ export function WorkRecordsLayout({
   actions,
   children,
 }: WorkRecordsLayoutProps) {
+  const { t } = useTranslation()
   return (
     <>
       <Header fixed>

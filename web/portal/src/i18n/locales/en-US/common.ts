@@ -1,0 +1,15 @@
+export const common = {
+  'common.loading': 'Loading',
+  'common.empty': 'No data',
+  'common.create': 'New',
+  'common.edit': 'Edit',
+  'common.save': 'Save',
+  'common.cancel': 'Cancel',
+  'common.delete': 'Delete',
+  'common.export': 'Export',
+  'common.search': 'Search',
+  'common.refresh': 'Refresh',
+  'common.preview': 'Preview',
+  'common.enabled': 'Enabled',
+  'common.disabled': 'Disabled',
+} as const

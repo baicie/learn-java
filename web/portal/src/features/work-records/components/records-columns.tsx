@@ -1,19 +1,15 @@
 import { Link } from '@tanstack/react-router'
 import { type ColumnDef } from '@tanstack/react-table'
-import { t } from '@/i18n'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { DataTableColumnHeader } from '@/components/data-table'
 import { LongText } from '@/components/long-text'
+import { i18n } from '@/i18n'
 import { type WorkRecord } from '../data/schema'
 
-export const recordStatusOptions = [
-  { label: '草稿', value: 'draft' },
-  { label: '处理中', value: 'processing' },
-  { label: '完成', value: 'done' },
-  { label: '归档', value: 'archived' },
-]
+export const recordStatusValues = ['draft', 'processing', 'done', 'archived'] as const
+export type RecordStatusValue = (typeof recordStatusValues)[number]
 
 export const recordsColumns: ColumnDef<WorkRecord>[] = [
   {
@@ -45,7 +41,7 @@ export const recordsColumns: ColumnDef<WorkRecord>[] = [
     header: ({ column }) => (
       <DataTableColumnHeader
         column={column}
-        title={t('workRecords.field.title')}
+        title={i18n.t('workRecords.field.title')}
       />
     ),
     cell: ({ row }) => (
@@ -60,13 +56,12 @@ export const recordsColumns: ColumnDef<WorkRecord>[] = [
     header: ({ column }) => (
       <DataTableColumnHeader
         column={column}
-        title={t('workRecords.field.status')}
+        title={i18n.t('workRecords.field.status')}
       />
     ),
     cell: ({ row }) => {
       const status = row.getValue<string>('status')
-      const option = recordStatusOptions.find((item) => item.value === status)
-      return <Badge variant='outline'>{option?.label ?? status}</Badge>
+      return <Badge variant='outline'>{i18n.t(`workRecords.status.${status}`)}</Badge>
     },
     filterFn: (row, id, value) => value.includes(row.getValue(id)),
     enableSorting: false,
@@ -77,7 +72,7 @@ export const recordsColumns: ColumnDef<WorkRecord>[] = [
     header: ({ column }) => (
       <DataTableColumnHeader
         column={column}
-        title={t('workRecords.field.owner')}
+        title={i18n.t('workRecords.field.owner')}
       />
     ),
     cell: ({ row }) => (
@@ -92,7 +87,7 @@ export const recordsColumns: ColumnDef<WorkRecord>[] = [
     header: ({ column }) => (
       <DataTableColumnHeader
         column={column}
-        title={t('workRecords.field.recordTime')}
+        title={i18n.t('workRecords.field.recordTime')}
       />
     ),
     cell: ({ row }) => (
@@ -110,7 +105,7 @@ export const recordsColumns: ColumnDef<WorkRecord>[] = [
             to='/work-records/$recordId'
             params={{ recordId: row.original.id }}
           >
-            详情
+            {i18n.t('workRecords.list.detail')}
           </Link>
         </Button>
         <Button asChild variant='outline' size='sm'>
@@ -118,7 +113,7 @@ export const recordsColumns: ColumnDef<WorkRecord>[] = [
             to='/work-records/$recordId/edit'
             params={{ recordId: row.original.id }}
           >
-            编辑
+            {i18n.t('workRecords.list.edit')}
           </Link>
         </Button>
       </div>
