@@ -52,30 +52,15 @@ class AlertIngestServiceTest {
   @Test
   void ingest_shouldRejectMissingTitle() {
     AlertIngestService service =
-        new AlertIngestService(
-            new AlertFingerprintPolicy(),
-            null,
-            new ObjectMapper(),
-            null);
+        new AlertIngestService(new AlertFingerprintPolicy(), null, new ObjectMapper(), null);
 
     assertThatThrownBy(
             () ->
                 service.ingest(
                     "t1",
                     new AlertIngestRequest(
-                        "zabbix",
-                        null,
-                        null,
-                        "",
-                        null,
-                        null,
-                        null,
-                        null,
-                        Map.of(),
-                        null,
-                        null,
-                        null,
-                        Map.of())))
+                        "zabbix", null, null, "", null, null, null, null, Map.of(), null, null,
+                        null, Map.of())))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("title");
   }
@@ -83,30 +68,15 @@ class AlertIngestServiceTest {
   @Test
   void ingest_shouldRejectMissingSource() {
     AlertIngestService service =
-        new AlertIngestService(
-            new AlertFingerprintPolicy(),
-            null,
-            new ObjectMapper(),
-            null);
+        new AlertIngestService(new AlertFingerprintPolicy(), null, new ObjectMapper(), null);
 
     assertThatThrownBy(
             () ->
                 service.ingest(
                     "t1",
                     new AlertIngestRequest(
-                        "",
-                        "10001",
-                        "high",
-                        "CPU",
-                        null,
-                        null,
-                        null,
-                        null,
-                        Map.of(),
-                        null,
-                        null,
-                        null,
-                        Map.of())))
+                        "", "10001", "high", "CPU", null, null, null, null, Map.of(), null, null,
+                        null, Map.of())))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("source");
   }
@@ -114,11 +84,7 @@ class AlertIngestServiceTest {
   @Test
   void ingest_shouldRejectNullRequest() {
     AlertIngestService service =
-        new AlertIngestService(
-            new AlertFingerprintPolicy(),
-            null,
-            new ObjectMapper(),
-            null);
+        new AlertIngestService(new AlertFingerprintPolicy(), null, new ObjectMapper(), null);
 
     assertThatThrownBy(() -> service.ingest("t1", null))
         .isInstanceOf(IllegalArgumentException.class)
@@ -128,30 +94,15 @@ class AlertIngestServiceTest {
   @Test
   void ingest_shouldRejectMissingTenant() {
     AlertIngestService service =
-        new AlertIngestService(
-            new AlertFingerprintPolicy(),
-            null,
-            new ObjectMapper(),
-            null);
+        new AlertIngestService(new AlertFingerprintPolicy(), null, new ObjectMapper(), null);
 
     assertThatThrownBy(
             () ->
                 service.ingest(
                     "",
                     new AlertIngestRequest(
-                        "zabbix",
-                        "10001",
-                        "high",
-                        "CPU",
-                        null,
-                        null,
-                        null,
-                        null,
-                        Map.of(),
-                        null,
-                        null,
-                        null,
-                        Map.of())))
+                        "zabbix", "10001", "high", "CPU", null, null, null, null, Map.of(), null,
+                        null, null, Map.of())))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("tenant");
   }

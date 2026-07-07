@@ -30,7 +30,8 @@ public class AlertIngestRepository {
     String sourceEventId = effectiveSourceEventId(request.sourceEventId(), fingerprint);
     String status = normalizeStatus(request.status());
     String severity = normalizeSeverity(request.severity());
-    OffsetDateTime startsAt = request.startsAt() == null ? OffsetDateTime.now() : request.startsAt();
+    OffsetDateTime startsAt =
+        request.startsAt() == null ? OffsetDateTime.now() : request.startsAt();
 
     String sql =
         """

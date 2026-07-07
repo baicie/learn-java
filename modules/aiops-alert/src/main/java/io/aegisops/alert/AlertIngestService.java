@@ -68,7 +68,8 @@ public class AlertIngestService {
     }
   }
 
-  private void enqueueAggregation(String tenantId, AlertIngestRequest request, AlertIngestResult result) {
+  private void enqueueAggregation(
+      String tenantId, AlertIngestRequest request, AlertIngestResult result) {
     Map<String, Object> payload = new LinkedHashMap<>();
     payload.put("tenantId", tenantId);
     payload.put("alertId", result.alertId());

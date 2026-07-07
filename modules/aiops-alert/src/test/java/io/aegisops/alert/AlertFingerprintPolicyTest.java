@@ -57,7 +57,19 @@ class AlertFingerprintPolicyTest {
     AlertFingerprintPolicy policy = new AlertFingerprintPolicy();
     AlertIngestRequest request =
         new AlertIngestRequest(
-            null, null, null, "Disk Full", null, null, null, null, Map.of(), null, null, null, Map.of());
+            null,
+            null,
+            null,
+            "Disk Full",
+            null,
+            null,
+            null,
+            null,
+            Map.of(),
+            null,
+            null,
+            null,
+            Map.of());
 
     assertThat(policy.fingerprint(request)).isEqualTo("unknown:no-asset:no-event:disk-full");
     assertThat(policy.aggregationKey(request)).isEqualTo("unknown:no-asset:unknown-service");
