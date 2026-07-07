@@ -3,12 +3,12 @@ package io.aegisops.rca;
 import static io.aegisops.persistence.AegisJooq.jsonArrayOrEmpty;
 import static io.aegisops.persistence.AegisJooq.jsonbArrayValue;
 import static io.aegisops.persistence.AegisJooq.jsonbValue;
-import static io.aegisops.persistence.jooq.Tables.ALERT_EVENT;
-import static io.aegisops.persistence.jooq.Tables.ASSET_RELATION;
-import static io.aegisops.persistence.jooq.Tables.INCIDENT;
-import static io.aegisops.persistence.jooq.Tables.INCIDENT_EVENT;
-import static io.aegisops.persistence.jooq.Tables.INCIDENT_TIMELINE;
-import static io.aegisops.persistence.jooq.Tables.RCA_ANALYSIS;
+import static io.aegisops.persistence.jooq.public_.Tables.ALERT_EVENT;
+import static io.aegisops.persistence.jooq.public_.Tables.ASSET_RELATION;
+import static io.aegisops.persistence.jooq.public_.Tables.INCIDENT;
+import static io.aegisops.persistence.jooq.public_.Tables.INCIDENT_EVENT;
+import static io.aegisops.persistence.jooq.public_.Tables.INCIDENT_TIMELINE;
+import static io.aegisops.persistence.jooq.public_.Tables.RCA_ANALYSIS;
 
 import java.math.BigDecimal;
 import java.sql.ResultSet;

@@ -1,11 +1,11 @@
 package io.aegisops.execution;
 
-import static io.aegisops.persistence.jooq.Tables.AI_DIAGNOSIS;
-import static io.aegisops.persistence.jooq.Tables.EXECUTION_RUN;
-import static io.aegisops.persistence.jooq.Tables.INCIDENT;
-import static io.aegisops.persistence.jooq.Tables.INCIDENT_TIMELINE;
-import static io.aegisops.persistence.jooq.Tables.RCA_ANALYSIS;
-import static io.aegisops.persistence.jooq.Tables.ROLLBACK_PLAN;
+import static io.aegisops.persistence.jooq.public_.Tables.AI_DIAGNOSIS;
+import static io.aegisops.persistence.jooq.public_.Tables.EXECUTION_RUN;
+import static io.aegisops.persistence.jooq.public_.Tables.INCIDENT;
+import static io.aegisops.persistence.jooq.public_.Tables.INCIDENT_TIMELINE;
+import static io.aegisops.persistence.jooq.public_.Tables.RCA_ANALYSIS;
+import static io.aegisops.persistence.jooq.public_.Tables.ROLLBACK_PLAN;
 
 import io.aegisops.execution.dto.PostmortemSourceBundle;
 import io.aegisops.execution.dto.PostmortemSourceBundle.AiDiagnosisSnapshot;

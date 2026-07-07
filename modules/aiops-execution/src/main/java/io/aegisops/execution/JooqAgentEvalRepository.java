@@ -1,11 +1,11 @@
 package io.aegisops.execution;
 
 import static io.aegisops.persistence.AegisJooq.jsonbValue;
-import static io.aegisops.persistence.jooq.Tables.AGENT_EVAL_CASE;
-import static io.aegisops.persistence.jooq.Tables.AGENT_EVAL_CASE_RESULT;
-import static io.aegisops.persistence.jooq.Tables.AGENT_EVAL_DATASET;
-import static io.aegisops.persistence.jooq.Tables.AGENT_EVAL_RUN;
-import static io.aegisops.persistence.jooq.Tables.AGENT_PROMPT_PROFILE;
+import static io.aegisops.persistence.jooq.public_.Tables.AGENT_EVAL_CASE;
+import static io.aegisops.persistence.jooq.public_.Tables.AGENT_EVAL_CASE_RESULT;
+import static io.aegisops.persistence.jooq.public_.Tables.AGENT_EVAL_DATASET;
+import static io.aegisops.persistence.jooq.public_.Tables.AGENT_EVAL_RUN;
+import static io.aegisops.persistence.jooq.public_.Tables.AGENT_PROMPT_PROFILE;
 
 import io.aegisops.execution.dto.AgentEvalCaseCreateCommand;
 import io.aegisops.execution.dto.AgentEvalCaseRecord;

@@ -1,8 +1,8 @@
 package io.aegisops.execution;
 
 import static io.aegisops.persistence.AegisJooq.jsonbValue;
-import static io.aegisops.persistence.jooq.Tables.WEBHOOK_CONNECTOR;
-import static io.aegisops.persistence.jooq.Tables.WEBHOOK_EXECUTION_POLICY;
+import static io.aegisops.persistence.jooq.public_.Tables.WEBHOOK_CONNECTOR;
+import static io.aegisops.persistence.jooq.public_.Tables.WEBHOOK_EXECUTION_POLICY;
 
 import io.aegisops.execution.dto.WebhookConnectorCreateCommand;
 import io.aegisops.execution.dto.WebhookConnectorRecord;

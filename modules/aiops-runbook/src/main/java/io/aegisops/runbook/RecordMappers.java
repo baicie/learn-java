@@ -1,13 +1,13 @@
 package io.aegisops.runbook;
 
-import static io.aegisops.persistence.jooq.Tables.AI_DIAGNOSIS;
-import static io.aegisops.persistence.jooq.Tables.ALERT_EVENT;
-import static io.aegisops.persistence.jooq.Tables.AUTOMATION_PLAN;
-import static io.aegisops.persistence.jooq.Tables.AUTOMATION_PLAN_STEP;
-import static io.aegisops.persistence.jooq.Tables.INCIDENT;
-import static io.aegisops.persistence.jooq.Tables.RCA_ANALYSIS;
-import static io.aegisops.persistence.jooq.Tables.RUNBOOK;
-import static io.aegisops.persistence.jooq.Tables.RUNBOOK_STEP_TEMPLATE;
+import static io.aegisops.persistence.jooq.public_.Tables.AI_DIAGNOSIS;
+import static io.aegisops.persistence.jooq.public_.Tables.ALERT_EVENT;
+import static io.aegisops.persistence.jooq.public_.Tables.AUTOMATION_PLAN;
+import static io.aegisops.persistence.jooq.public_.Tables.AUTOMATION_PLAN_STEP;
+import static io.aegisops.persistence.jooq.public_.Tables.INCIDENT;
+import static io.aegisops.persistence.jooq.public_.Tables.RCA_ANALYSIS;
+import static io.aegisops.persistence.jooq.public_.Tables.RUNBOOK;
+import static io.aegisops.persistence.jooq.public_.Tables.RUNBOOK_STEP_TEMPLATE;
 
 import io.aegisops.runbook.dto.AiDiagnosisForPlanRecord;
 import io.aegisops.runbook.dto.AlertForPlanRecord;

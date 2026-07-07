@@ -1,7 +1,7 @@
 package io.aegisops.execution;
 
-import static io.aegisops.persistence.jooq.Tables.EXECUTION_ARTIFACT;
-import static io.aegisops.persistence.jooq.Tables.EXECUTION_STEP;
+import static io.aegisops.persistence.jooq.public_.Tables.EXECUTION_ARTIFACT;
+import static io.aegisops.persistence.jooq.public_.Tables.EXECUTION_STEP;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;

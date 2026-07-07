@@ -1,6 +1,6 @@
 package io.aegisops.execution;
 
-import static io.aegisops.persistence.jooq.Tables.AI_DIAGNOSIS;
+import static io.aegisops.persistence.jooq.public_.Tables.AI_DIAGNOSIS;
 
 import io.aegisops.execution.dto.AgentDiagnosisSnapshot;
 import io.aegisops.execution.dto.IncidentCaseResponse;

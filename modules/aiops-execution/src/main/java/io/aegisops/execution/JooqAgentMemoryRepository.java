@@ -1,8 +1,8 @@
 package io.aegisops.execution;
 
 import static io.aegisops.persistence.AegisJooq.jsonbValue;
-import static io.aegisops.persistence.jooq.Tables.AGENT_MEMORY;
-import static io.aegisops.persistence.jooq.Tables.AGENT_MEMORY_EVENT;
+import static io.aegisops.persistence.jooq.public_.Tables.AGENT_MEMORY;
+import static io.aegisops.persistence.jooq.public_.Tables.AGENT_MEMORY_EVENT;
 
 import io.aegisops.execution.dto.AgentMemoryCreateCommand;
 import io.aegisops.execution.dto.AgentMemoryEventCreateCommand;

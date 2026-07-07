@@ -1,7 +1,7 @@
 package io.aegisops.evidence;
 
-import static io.aegisops.persistence.jooq.Tables.CHANGE_EVENT;
-import static io.aegisops.persistence.jooq.Tables.LOG_EVENT;
+import static io.aegisops.persistence.jooq.public_.Tables.CHANGE_EVENT;
+import static io.aegisops.persistence.jooq.public_.Tables.LOG_EVENT;
 
 import io.aegisops.evidence.dto.ChangeEvidence;
 import io.aegisops.evidence.dto.ChangeEvidenceEvent;

@@ -1,8 +1,8 @@
 package io.aegisops.execution;
 
 import static io.aegisops.persistence.AegisJooq.jsonbValue;
-import static io.aegisops.persistence.jooq.Tables.EXECUTION_ARTIFACT;
-import static io.aegisops.persistence.jooq.Tables.EXECUTION_STEP;
+import static io.aegisops.persistence.jooq.public_.Tables.EXECUTION_ARTIFACT;
+import static io.aegisops.persistence.jooq.public_.Tables.EXECUTION_STEP;
 
 import io.aegisops.execution.dto.ExecutionArtifactCreateCommand;
 import io.aegisops.execution.dto.ExecutionArtifactRecord;

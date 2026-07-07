@@ -1,8 +1,8 @@
 package io.aegisops.runbook;
 
-import static io.aegisops.persistence.jooq.Tables.APPROVAL_DECISION;
-import static io.aegisops.persistence.jooq.Tables.APPROVAL_POLICY;
-import static io.aegisops.persistence.jooq.Tables.AUTOMATION_APPROVAL;
+import static io.aegisops.persistence.jooq.public_.Tables.APPROVAL_DECISION;
+import static io.aegisops.persistence.jooq.public_.Tables.APPROVAL_POLICY;
+import static io.aegisops.persistence.jooq.public_.Tables.AUTOMATION_APPROVAL;
 
 import io.aegisops.runbook.dto.ApprovalDecisionCommand;
 import io.aegisops.runbook.dto.ApprovalDecisionRecord;

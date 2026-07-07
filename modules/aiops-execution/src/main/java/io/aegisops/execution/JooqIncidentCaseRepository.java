@@ -1,9 +1,9 @@
 package io.aegisops.execution;
 
-import static io.aegisops.persistence.jooq.Tables.INCIDENT_CASE;
-import static io.aegisops.persistence.jooq.Tables.INCIDENT_CASE_RESOLUTION_STEP;
-import static io.aegisops.persistence.jooq.Tables.INCIDENT_CASE_SYMPTOM;
-import static io.aegisops.persistence.jooq.Tables.INCIDENT_CASE_TAG;
+import static io.aegisops.persistence.jooq.public_.Tables.INCIDENT_CASE;
+import static io.aegisops.persistence.jooq.public_.Tables.INCIDENT_CASE_RESOLUTION_STEP;
+import static io.aegisops.persistence.jooq.public_.Tables.INCIDENT_CASE_SYMPTOM;
+import static io.aegisops.persistence.jooq.public_.Tables.INCIDENT_CASE_TAG;
 
 import io.aegisops.execution.dto.IncidentCaseCreateCommand;
 import io.aegisops.execution.dto.IncidentCaseRecord;

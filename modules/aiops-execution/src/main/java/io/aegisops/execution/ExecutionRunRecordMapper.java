@@ -1,6 +1,6 @@
 package io.aegisops.execution;
 
-import static io.aegisops.persistence.jooq.Tables.EXECUTION_RUN;
+import static io.aegisops.persistence.jooq.public_.Tables.EXECUTION_RUN;
 
 import io.aegisops.execution.dto.ExecutionRunRecord;
 import java.util.function.IntFunction;

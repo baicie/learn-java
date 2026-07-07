@@ -1,9 +1,9 @@
 package io.aegisops.execution;
 
 import static io.aegisops.persistence.AegisJooq.jsonbValue;
-import static io.aegisops.persistence.jooq.Tables.POSTMORTEM_ACTION_ITEM;
-import static io.aegisops.persistence.jooq.Tables.POSTMORTEM_REPORT;
-import static io.aegisops.persistence.jooq.Tables.POSTMORTEM_SECTION;
+import static io.aegisops.persistence.jooq.public_.Tables.POSTMORTEM_ACTION_ITEM;
+import static io.aegisops.persistence.jooq.public_.Tables.POSTMORTEM_REPORT;
+import static io.aegisops.persistence.jooq.public_.Tables.POSTMORTEM_SECTION;
 
 import io.aegisops.execution.dto.PostmortemActionItemCreateCommand;
 import io.aegisops.execution.dto.PostmortemActionItemRecord;

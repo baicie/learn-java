@@ -1,10 +1,10 @@
 package io.aegisops.execution;
 
 import static io.aegisops.persistence.AegisJooq.jsonbValue;
-import static io.aegisops.persistence.jooq.Tables.ANSIBLE_CREDENTIAL_REF;
-import static io.aegisops.persistence.jooq.Tables.ANSIBLE_EXECUTION_POLICY;
-import static io.aegisops.persistence.jooq.Tables.ANSIBLE_INVENTORY;
-import static io.aegisops.persistence.jooq.Tables.ANSIBLE_PLAYBOOK;
+import static io.aegisops.persistence.jooq.public_.Tables.ANSIBLE_CREDENTIAL_REF;
+import static io.aegisops.persistence.jooq.public_.Tables.ANSIBLE_EXECUTION_POLICY;
+import static io.aegisops.persistence.jooq.public_.Tables.ANSIBLE_INVENTORY;
+import static io.aegisops.persistence.jooq.public_.Tables.ANSIBLE_PLAYBOOK;
 
 import io.aegisops.execution.dto.AnsibleCredentialCreateCommand;
 import io.aegisops.execution.dto.AnsibleCredentialRecord;

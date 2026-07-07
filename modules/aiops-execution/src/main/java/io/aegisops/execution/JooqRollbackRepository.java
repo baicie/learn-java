@@ -1,9 +1,9 @@
 package io.aegisops.execution;
 
 import static io.aegisops.persistence.AegisJooq.jsonbValue;
-import static io.aegisops.persistence.jooq.Tables.ROLLBACK_DECISION;
-import static io.aegisops.persistence.jooq.Tables.ROLLBACK_PLAN;
-import static io.aegisops.persistence.jooq.Tables.ROLLBACK_PLAN_STEP;
+import static io.aegisops.persistence.jooq.public_.Tables.ROLLBACK_DECISION;
+import static io.aegisops.persistence.jooq.public_.Tables.ROLLBACK_PLAN;
+import static io.aegisops.persistence.jooq.public_.Tables.ROLLBACK_PLAN_STEP;
 
 import io.aegisops.execution.dto.RollbackDecisionCreateCommand;
 import io.aegisops.execution.dto.RollbackDecisionRecord;

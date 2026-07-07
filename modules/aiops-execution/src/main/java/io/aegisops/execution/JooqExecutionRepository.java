@@ -1,12 +1,12 @@
 package io.aegisops.execution;
 
 import static io.aegisops.persistence.AegisJooq.jsonbValue;
-import static io.aegisops.persistence.jooq.Tables.AUTOMATION_APPROVAL;
-import static io.aegisops.persistence.jooq.Tables.AUTOMATION_PLAN;
-import static io.aegisops.persistence.jooq.Tables.AUTOMATION_PLAN_STEP;
-import static io.aegisops.persistence.jooq.Tables.EXECUTION_RUN;
-import static io.aegisops.persistence.jooq.Tables.EXECUTION_STEP;
-import static io.aegisops.persistence.jooq.Tables.INCIDENT_TIMELINE;
+import static io.aegisops.persistence.jooq.public_.Tables.AUTOMATION_APPROVAL;
+import static io.aegisops.persistence.jooq.public_.Tables.AUTOMATION_PLAN;
+import static io.aegisops.persistence.jooq.public_.Tables.AUTOMATION_PLAN_STEP;
+import static io.aegisops.persistence.jooq.public_.Tables.EXECUTION_RUN;
+import static io.aegisops.persistence.jooq.public_.Tables.EXECUTION_STEP;
+import static io.aegisops.persistence.jooq.public_.Tables.INCIDENT_TIMELINE;
 
 import io.aegisops.execution.dto.ExecutionApprovalSnapshotRecord;
 import io.aegisops.execution.dto.ExecutionArtifactCreateCommand;

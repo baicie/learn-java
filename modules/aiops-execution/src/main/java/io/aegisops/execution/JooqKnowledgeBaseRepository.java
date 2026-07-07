@@ -1,9 +1,9 @@
 package io.aegisops.execution;
 
 import static io.aegisops.persistence.AegisJooq.jsonbValue;
-import static io.aegisops.persistence.jooq.Tables.KB_CHUNK;
-import static io.aegisops.persistence.jooq.Tables.KB_DOCUMENT;
-import static io.aegisops.persistence.jooq.Tables.KB_SEARCH_LOG;
+import static io.aegisops.persistence.jooq.public_.Tables.KB_CHUNK;
+import static io.aegisops.persistence.jooq.public_.Tables.KB_DOCUMENT;
+import static io.aegisops.persistence.jooq.public_.Tables.KB_SEARCH_LOG;
 
 import io.aegisops.execution.dto.KnowledgeBaseChunkCreateCommand;
 import io.aegisops.execution.dto.KnowledgeBaseChunkRecord;

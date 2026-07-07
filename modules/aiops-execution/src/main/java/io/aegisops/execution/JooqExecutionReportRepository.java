@@ -1,10 +1,10 @@
 package io.aegisops.execution;
 
 import static io.aegisops.persistence.AegisJooq.jsonbValue;
-import static io.aegisops.persistence.jooq.Tables.EXECUTION_AUDIT_EVENT;
-import static io.aegisops.persistence.jooq.Tables.EXECUTION_REPORT;
-import static io.aegisops.persistence.jooq.Tables.EXECUTION_REPORT_SECTION;
-import static io.aegisops.persistence.jooq.Tables.EXECUTION_VERIFICATION;
+import static io.aegisops.persistence.jooq.public_.Tables.EXECUTION_AUDIT_EVENT;
+import static io.aegisops.persistence.jooq.public_.Tables.EXECUTION_REPORT;
+import static io.aegisops.persistence.jooq.public_.Tables.EXECUTION_REPORT_SECTION;
+import static io.aegisops.persistence.jooq.public_.Tables.EXECUTION_VERIFICATION;
 
 import io.aegisops.execution.dto.ExecutionAuditEventCreateCommand;
 import io.aegisops.execution.dto.ExecutionAuditEventRecord;

@@ -1,10 +1,10 @@
 package io.aegisops.plugin;
 
 import static io.aegisops.persistence.AegisJooq.jsonbValue;
-import static io.aegisops.persistence.jooq.Tables.PLUGIN_DESCRIPTOR;
-import static io.aegisops.persistence.jooq.Tables.PLUGIN_EVENT;
-import static io.aegisops.persistence.jooq.Tables.TENANT_PLUGIN;
-import static io.aegisops.persistence.jooq.Tables.TENANT_PLUGIN_TOOL_POLICY;
+import static io.aegisops.persistence.jooq.public_.Tables.PLUGIN_DESCRIPTOR;
+import static io.aegisops.persistence.jooq.public_.Tables.PLUGIN_EVENT;
+import static io.aegisops.persistence.jooq.public_.Tables.TENANT_PLUGIN;
+import static io.aegisops.persistence.jooq.public_.Tables.TENANT_PLUGIN_TOOL_POLICY;
 
 import io.aegisops.plugin.dto.PluginDescriptorCreateCommand;
 import io.aegisops.plugin.dto.PluginDescriptorRecord;
