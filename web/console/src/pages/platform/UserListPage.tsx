@@ -1,7 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
 
-import { listPlatformUsers } from '@/api/client'
 import type { PlatformUserRecord } from '@/api/client'
+
+import { listPlatformUsers } from '@/api/client'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'

@@ -30,7 +30,10 @@ class PlatformMenuRepositoryTest {
     String sql = sqlCaptor.getValue();
     Object[] args = argsCaptor.getValue();
 
-    assertThat(sql).contains("permission_code in").contains("?, ?").contains("order by sort_order asc");
+    assertThat(sql)
+        .contains("permission_code in")
+        .contains("?, ?")
+        .contains("order by sort_order asc");
     assertThat(args).containsExactly("incident:read", "audit:read");
   }
 

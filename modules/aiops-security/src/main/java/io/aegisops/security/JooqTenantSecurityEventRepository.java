@@ -1,7 +1,7 @@
 package io.aegisops.security;
 
 import io.aegisops.persistence.AegisJooq;
-import io.aegisops.persistence.jooq.Tables;
+import io.aegisops.persistence.jooq.public_.Tables;
 import org.jooq.DSLContext;
 import org.jooq.impl.DSL;
 import org.springframework.stereotype.Repository;
