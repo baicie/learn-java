@@ -19,7 +19,8 @@ public class WorkRecordTemplateService {
           "select",
           "multi_select",
           "user",
-          "switch");
+          "switch",
+          "boolean");
 
   private final WorkRecordTemplateRepository templateRepository;
   private final WorkRecordFieldRepository fieldRepository;
@@ -95,6 +96,33 @@ public class WorkRecordTemplateService {
     return updated;
   }
 
+  public WorkRecordTemplate saveSchema(
+      String tenantId, String templateId, TemplateSchemaRequest request, String actor) {
+    requireText(templateId, "templateId");
+    if (request == null) {
+      throw new IllegalArgumentException("schema request is required");
+    }
+    String safeSchema = JsonPayloads.normalizeObject(request.schemaJson(), "schemaJson");
+    List<CreateFieldRequest> requests = request.fields() == null ? List.of() : request.fields();
+    for (CreateFieldRequest field : requests) {
+      validateSchemaField(field);
+    }
+    WorkRecordTemplate template =
+        templateRepository
+            .updateSchema(tenantId, templateId, safeSchema)
+            .orElseThrow(() -> new IllegalArgumentException("template not found"));
+    fieldRepository.replace(tenantId, templateId, requests);
+    audit.record(
+        new AuditRecordCommand(
+            tenantId,
+            defaultActor(actor),
+            "work_record.template.schema.update",
+            "wr_template",
+            template.id(),
+            auditDetail("templateId", templateId, "fieldCount", String.valueOf(requests.size()))));
+    return template;
+  }
+
   public List<WorkRecordField> listFields(String tenantId, String templateId) {
     requireText(templateId, "templateId");
     return fieldRepository.list(tenantId, templateId);
@@ -151,6 +179,24 @@ public class WorkRecordTemplateService {
                 "fieldType",
                 field.fieldType())));
     return field;
+  }
+
+  private void validateSchemaField(CreateFieldRequest request) {
+    if (request == null) {
+      throw new IllegalArgumentException("field request is required");
+    }
+    requireText(request.fieldName(), "fieldName");
+    requireText(request.fieldCode(), "fieldCode");
+    WorkRecordFieldValidator.validateFieldCodeNotReserved(request.fieldCode());
+    requireText(request.fieldType(), "fieldType");
+    if (!FIELD_TYPES.contains(request.fieldType())) {
+      throw new IllegalArgumentException("unsupported fieldType: " + request.fieldType());
+    }
+    String optionSource = request.optionSource() == null ? "static" : request.optionSource();
+    if ("dict".equals(optionSource)) {
+      requireText(request.dictCode(), "dictCode");
+    }
+    JsonPayloads.normalizeArray(request.optionsJson(), "optionsJson");
   }
 
   public WorkRecordField updateField(

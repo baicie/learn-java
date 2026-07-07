@@ -61,8 +61,12 @@ public class DictionaryService {
   }
 
   public List<DictItemRecord> listItems(String tenantId, String dictCode) {
+    return listItems(tenantId, dictCode, false);
+  }
+
+  public List<DictItemRecord> listItems(String tenantId, String dictCode, boolean includeDisabled) {
     requireText(dictCode, "dictCode");
-    return repository.listItems(tenantId, dictCode);
+    return repository.listItems(tenantId, dictCode, includeDisabled);
   }
 
   public DictItemRecord createItem(

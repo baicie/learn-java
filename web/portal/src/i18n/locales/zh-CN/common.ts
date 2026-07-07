@@ -1,0 +1,15 @@
+export const common = {
+  'common.loading': '加载中',
+  'common.empty': '暂无数据',
+  'common.create': '新建',
+  'common.edit': '编辑',
+  'common.save': '保存',
+  'common.cancel': '取消',
+  'common.delete': '删除',
+  'common.export': '导出',
+  'common.search': '搜索',
+  'common.refresh': '刷新',
+  'common.preview': '预览',
+  'common.enabled': '启用',
+  'common.disabled': '禁用',
+} as const

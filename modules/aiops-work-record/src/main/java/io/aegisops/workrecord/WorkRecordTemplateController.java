@@ -52,6 +52,20 @@ public class WorkRecordTemplateController {
             user == null ? "system" : user.id()));
   }
 
+  @PostMapping("/{templateId}/schema")
+  @PreAuthorize("hasAuthority('work-record:template:write')")
+  public ApiResponse<WorkRecordTemplate> saveSchema(
+      @PathVariable String templateId,
+      @RequestBody TemplateSchemaRequest request,
+      @AuthenticationPrincipal UserPrincipal user) {
+    return ApiResponse.ok(
+        service.saveSchema(
+            TenantContext.requireTenantId(),
+            templateId,
+            request,
+            user == null ? "system" : user.id()));
+  }
+
   @GetMapping("/{templateId}/fields")
   @PreAuthorize("hasAuthority('work-record:template:read')")
   public ApiResponse<List<WorkRecordField>> listFields(@PathVariable String templateId) {

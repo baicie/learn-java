@@ -159,6 +159,7 @@ public final class WorkRecordFieldValidator {
         break;
 
       case "switch":
+      case "boolean":
         if (!value.isBoolean()) {
           throw new IllegalArgumentException("field '" + code + "' expects boolean");
         }

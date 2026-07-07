@@ -1,8 +1,11 @@
+import { t } from '@/i18n'
 import {
   Construction,
   LayoutDashboard,
   Monitor,
   Bug,
+  BookOpen,
+  ClipboardList,
   ListTodo,
   FileX,
   HelpCircle,
@@ -52,6 +55,41 @@ export const sidebarData: SidebarData = {
     {
       title: 'General',
       items: [
+        {
+          title: t('workRecords.nav.root'),
+          icon: ClipboardList,
+          items: [
+            {
+              title: t('workRecords.nav.list'),
+              url: '/work-records',
+            },
+            {
+              title: t('workRecords.nav.designer'),
+              url: '/work-records/designer',
+            },
+          ],
+        },
+        {
+          title: t('platform.nav.root'),
+          icon: ShieldCheck,
+          items: [
+            {
+              title: t('platform.nav.users'),
+              url: '/users',
+              icon: Users,
+            },
+            {
+              title: t('platform.nav.roles'),
+              url: '/platform/roles',
+              icon: ShieldCheck,
+            },
+            {
+              title: t('platform.nav.dictionaries'),
+              url: '/platform/dictionaries',
+              icon: BookOpen,
+            },
+          ],
+        },
         {
           title: 'Dashboard',
           url: '/',

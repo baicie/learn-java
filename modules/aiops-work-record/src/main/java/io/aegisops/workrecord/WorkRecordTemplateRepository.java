@@ -86,6 +86,20 @@ public class WorkRecordTemplateRepository {
     return find(tenantId, id);
   }
 
+  public Optional<WorkRecordTemplate> updateSchema(String tenantId, String id, String schemaJson) {
+    jdbc.update(
+        """
+            update wr_template
+               set schema_json = ?::jsonb,
+                   updated_at  = now()
+             where tenant_id = ? and id = ?
+            """,
+        schemaJson,
+        tenantId,
+        id);
+    return find(tenantId, id);
+  }
+
   private WorkRecordTemplate mapTemplate(ResultSet rs) throws SQLException {
     return new WorkRecordTemplate(
         rs.getString("id"),

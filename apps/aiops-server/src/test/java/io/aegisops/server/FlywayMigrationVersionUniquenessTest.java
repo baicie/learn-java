@@ -39,7 +39,8 @@ class FlywayMigrationVersionUniquenessTest {
       Set.of(
           "V0008__platform_navigation_workspace.sql",
           "V0009__alert_ingest_rules.sql",
-          "V0010__evidence_collection_task.sql");
+          "V0010__evidence_collection_task.sql",
+          "V0013__migrate_work_record_schema.sql");
 
   /** 允许但已废弃的宽松正则,仅用于版本号唯一性兜底. */
   private static final Pattern ANY_VERSIONED_MIGRATION = Pattern.compile("^V([^_]+)__.+\\.sql$");

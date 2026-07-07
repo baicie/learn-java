@@ -25,6 +25,7 @@ import { Route as authForgotPasswordRouteImport } from './routes/(auth)/forgot-p
 import { Route as ClerkAuthenticatedRouteRouteImport } from './routes/clerk/_authenticated/route'
 import { Route as ClerkauthRouteRouteImport } from './routes/clerk/(auth)/route'
 import { Route as AuthenticatedSettingsRouteRouteImport } from './routes/_authenticated/settings/route'
+import { Route as AuthenticatedWorkRecordsIndexRouteImport } from './routes/_authenticated/work-records/index'
 import { Route as AuthenticatedUsersIndexRouteImport } from './routes/_authenticated/users/index'
 import { Route as AuthenticatedTasksIndexRouteImport } from './routes/_authenticated/tasks/index'
 import { Route as AuthenticatedSettingsIndexRouteImport } from './routes/_authenticated/settings/index'
@@ -34,11 +35,17 @@ import { Route as AuthenticatedAppsIndexRouteImport } from './routes/_authentica
 import { Route as ClerkAuthenticatedUserManagementRouteImport } from './routes/clerk/_authenticated/user-management'
 import { Route as ClerkauthSignUpRouteImport } from './routes/clerk/(auth)/sign-up'
 import { Route as ClerkauthSignInRouteImport } from './routes/clerk/(auth)/sign-in'
+import { Route as AuthenticatedWorkRecordsNewRouteImport } from './routes/_authenticated/work-records/new'
+import { Route as AuthenticatedWorkRecordsDesignerRouteImport } from './routes/_authenticated/work-records/designer'
+import { Route as AuthenticatedWorkRecordsRecordIdRouteImport } from './routes/_authenticated/work-records/$recordId'
 import { Route as AuthenticatedSettingsNotificationsRouteImport } from './routes/_authenticated/settings/notifications'
 import { Route as AuthenticatedSettingsDisplayRouteImport } from './routes/_authenticated/settings/display'
 import { Route as AuthenticatedSettingsAppearanceRouteImport } from './routes/_authenticated/settings/appearance'
 import { Route as AuthenticatedSettingsAccountRouteImport } from './routes/_authenticated/settings/account'
+import { Route as AuthenticatedPlatformRolesRouteImport } from './routes/_authenticated/platform/roles'
+import { Route as AuthenticatedPlatformDictionariesRouteImport } from './routes/_authenticated/platform/dictionaries'
 import { Route as AuthenticatedErrorsErrorRouteImport } from './routes/_authenticated/errors/$error'
+import { Route as AuthenticatedWorkRecordsRecordIdEditRouteImport } from './routes/_authenticated/work-records/$recordId.edit'
 
 const ClerkRouteRoute = ClerkRouteRouteImport.update({
   id: '/clerk',
@@ -118,6 +125,12 @@ const AuthenticatedSettingsRouteRoute =
     path: '/settings',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedWorkRecordsIndexRoute =
+  AuthenticatedWorkRecordsIndexRouteImport.update({
+    id: '/work-records/',
+    path: '/work-records/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedUsersIndexRoute = AuthenticatedUsersIndexRouteImport.update({
   id: '/users/',
   path: '/users/',
@@ -166,6 +179,24 @@ const ClerkauthSignInRoute = ClerkauthSignInRouteImport.update({
   path: '/sign-in',
   getParentRoute: () => ClerkauthRouteRoute,
 } as any)
+const AuthenticatedWorkRecordsNewRoute =
+  AuthenticatedWorkRecordsNewRouteImport.update({
+    id: '/work-records/new',
+    path: '/work-records/new',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedWorkRecordsDesignerRoute =
+  AuthenticatedWorkRecordsDesignerRouteImport.update({
+    id: '/work-records/designer',
+    path: '/work-records/designer',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedWorkRecordsRecordIdRoute =
+  AuthenticatedWorkRecordsRecordIdRouteImport.update({
+    id: '/work-records/$recordId',
+    path: '/work-records/$recordId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedSettingsNotificationsRoute =
   AuthenticatedSettingsNotificationsRouteImport.update({
     id: '/notifications',
@@ -190,11 +221,29 @@ const AuthenticatedSettingsAccountRoute =
     path: '/account',
     getParentRoute: () => AuthenticatedSettingsRouteRoute,
   } as any)
+const AuthenticatedPlatformRolesRoute =
+  AuthenticatedPlatformRolesRouteImport.update({
+    id: '/platform/roles',
+    path: '/platform/roles',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedPlatformDictionariesRoute =
+  AuthenticatedPlatformDictionariesRouteImport.update({
+    id: '/platform/dictionaries',
+    path: '/platform/dictionaries',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedErrorsErrorRoute =
   AuthenticatedErrorsErrorRouteImport.update({
     id: '/errors/$error',
     path: '/errors/$error',
     getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedWorkRecordsRecordIdEditRoute =
+  AuthenticatedWorkRecordsRecordIdEditRouteImport.update({
+    id: '/edit',
+    path: '/edit',
+    getParentRoute: () => AuthenticatedWorkRecordsRecordIdRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -212,10 +261,15 @@ export interface FileRoutesByFullPath {
   '/500': typeof errors500Route
   '/503': typeof errors503Route
   '/errors/$error': typeof AuthenticatedErrorsErrorRoute
+  '/platform/dictionaries': typeof AuthenticatedPlatformDictionariesRoute
+  '/platform/roles': typeof AuthenticatedPlatformRolesRoute
   '/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
   '/settings/display': typeof AuthenticatedSettingsDisplayRoute
   '/settings/notifications': typeof AuthenticatedSettingsNotificationsRoute
+  '/work-records/$recordId': typeof AuthenticatedWorkRecordsRecordIdRouteWithChildren
+  '/work-records/designer': typeof AuthenticatedWorkRecordsDesignerRoute
+  '/work-records/new': typeof AuthenticatedWorkRecordsNewRoute
   '/clerk/sign-in': typeof ClerkauthSignInRoute
   '/clerk/sign-up': typeof ClerkauthSignUpRoute
   '/clerk/user-management': typeof ClerkAuthenticatedUserManagementRoute
@@ -225,6 +279,8 @@ export interface FileRoutesByFullPath {
   '/settings/': typeof AuthenticatedSettingsIndexRoute
   '/tasks/': typeof AuthenticatedTasksIndexRoute
   '/users/': typeof AuthenticatedUsersIndexRoute
+  '/work-records/': typeof AuthenticatedWorkRecordsIndexRoute
+  '/work-records/$recordId/edit': typeof AuthenticatedWorkRecordsRecordIdEditRoute
 }
 export interface FileRoutesByTo {
   '/clerk': typeof ClerkauthRouteRouteWithChildren
@@ -240,10 +296,15 @@ export interface FileRoutesByTo {
   '/503': typeof errors503Route
   '/': typeof AuthenticatedIndexRoute
   '/errors/$error': typeof AuthenticatedErrorsErrorRoute
+  '/platform/dictionaries': typeof AuthenticatedPlatformDictionariesRoute
+  '/platform/roles': typeof AuthenticatedPlatformRolesRoute
   '/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
   '/settings/display': typeof AuthenticatedSettingsDisplayRoute
   '/settings/notifications': typeof AuthenticatedSettingsNotificationsRoute
+  '/work-records/$recordId': typeof AuthenticatedWorkRecordsRecordIdRouteWithChildren
+  '/work-records/designer': typeof AuthenticatedWorkRecordsDesignerRoute
+  '/work-records/new': typeof AuthenticatedWorkRecordsNewRoute
   '/clerk/sign-in': typeof ClerkauthSignInRoute
   '/clerk/sign-up': typeof ClerkauthSignUpRoute
   '/clerk/user-management': typeof ClerkAuthenticatedUserManagementRoute
@@ -253,6 +314,8 @@ export interface FileRoutesByTo {
   '/settings': typeof AuthenticatedSettingsIndexRoute
   '/tasks': typeof AuthenticatedTasksIndexRoute
   '/users': typeof AuthenticatedUsersIndexRoute
+  '/work-records': typeof AuthenticatedWorkRecordsIndexRoute
+  '/work-records/$recordId/edit': typeof AuthenticatedWorkRecordsRecordIdEditRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -273,10 +336,15 @@ export interface FileRoutesById {
   '/(errors)/503': typeof errors503Route
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/errors/$error': typeof AuthenticatedErrorsErrorRoute
+  '/_authenticated/platform/dictionaries': typeof AuthenticatedPlatformDictionariesRoute
+  '/_authenticated/platform/roles': typeof AuthenticatedPlatformRolesRoute
   '/_authenticated/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/_authenticated/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
   '/_authenticated/settings/display': typeof AuthenticatedSettingsDisplayRoute
   '/_authenticated/settings/notifications': typeof AuthenticatedSettingsNotificationsRoute
+  '/_authenticated/work-records/$recordId': typeof AuthenticatedWorkRecordsRecordIdRouteWithChildren
+  '/_authenticated/work-records/designer': typeof AuthenticatedWorkRecordsDesignerRoute
+  '/_authenticated/work-records/new': typeof AuthenticatedWorkRecordsNewRoute
   '/clerk/(auth)/sign-in': typeof ClerkauthSignInRoute
   '/clerk/(auth)/sign-up': typeof ClerkauthSignUpRoute
   '/clerk/_authenticated/user-management': typeof ClerkAuthenticatedUserManagementRoute
@@ -286,6 +354,8 @@ export interface FileRoutesById {
   '/_authenticated/settings/': typeof AuthenticatedSettingsIndexRoute
   '/_authenticated/tasks/': typeof AuthenticatedTasksIndexRoute
   '/_authenticated/users/': typeof AuthenticatedUsersIndexRoute
+  '/_authenticated/work-records/': typeof AuthenticatedWorkRecordsIndexRoute
+  '/_authenticated/work-records/$recordId/edit': typeof AuthenticatedWorkRecordsRecordIdEditRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -304,10 +374,15 @@ export interface FileRouteTypes {
     | '/500'
     | '/503'
     | '/errors/$error'
+    | '/platform/dictionaries'
+    | '/platform/roles'
     | '/settings/account'
     | '/settings/appearance'
     | '/settings/display'
     | '/settings/notifications'
+    | '/work-records/$recordId'
+    | '/work-records/designer'
+    | '/work-records/new'
     | '/clerk/sign-in'
     | '/clerk/sign-up'
     | '/clerk/user-management'
@@ -317,6 +392,8 @@ export interface FileRouteTypes {
     | '/settings/'
     | '/tasks/'
     | '/users/'
+    | '/work-records/'
+    | '/work-records/$recordId/edit'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/clerk'
@@ -332,10 +409,15 @@ export interface FileRouteTypes {
     | '/503'
     | '/'
     | '/errors/$error'
+    | '/platform/dictionaries'
+    | '/platform/roles'
     | '/settings/account'
     | '/settings/appearance'
     | '/settings/display'
     | '/settings/notifications'
+    | '/work-records/$recordId'
+    | '/work-records/designer'
+    | '/work-records/new'
     | '/clerk/sign-in'
     | '/clerk/sign-up'
     | '/clerk/user-management'
@@ -345,6 +427,8 @@ export interface FileRouteTypes {
     | '/settings'
     | '/tasks'
     | '/users'
+    | '/work-records'
+    | '/work-records/$recordId/edit'
   id:
     | '__root__'
     | '/_authenticated'
@@ -364,10 +448,15 @@ export interface FileRouteTypes {
     | '/(errors)/503'
     | '/_authenticated/'
     | '/_authenticated/errors/$error'
+    | '/_authenticated/platform/dictionaries'
+    | '/_authenticated/platform/roles'
     | '/_authenticated/settings/account'
     | '/_authenticated/settings/appearance'
     | '/_authenticated/settings/display'
     | '/_authenticated/settings/notifications'
+    | '/_authenticated/work-records/$recordId'
+    | '/_authenticated/work-records/designer'
+    | '/_authenticated/work-records/new'
     | '/clerk/(auth)/sign-in'
     | '/clerk/(auth)/sign-up'
     | '/clerk/_authenticated/user-management'
@@ -377,6 +466,8 @@ export interface FileRouteTypes {
     | '/_authenticated/settings/'
     | '/_authenticated/tasks/'
     | '/_authenticated/users/'
+    | '/_authenticated/work-records/'
+    | '/_authenticated/work-records/$recordId/edit'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -508,6 +599,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsRouteRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/work-records/': {
+      id: '/_authenticated/work-records/'
+      path: '/work-records'
+      fullPath: '/work-records/'
+      preLoaderRoute: typeof AuthenticatedWorkRecordsIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/users/': {
       id: '/_authenticated/users/'
       path: '/users'
@@ -571,6 +669,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ClerkauthSignInRouteImport
       parentRoute: typeof ClerkauthRouteRoute
     }
+    '/_authenticated/work-records/new': {
+      id: '/_authenticated/work-records/new'
+      path: '/work-records/new'
+      fullPath: '/work-records/new'
+      preLoaderRoute: typeof AuthenticatedWorkRecordsNewRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/work-records/designer': {
+      id: '/_authenticated/work-records/designer'
+      path: '/work-records/designer'
+      fullPath: '/work-records/designer'
+      preLoaderRoute: typeof AuthenticatedWorkRecordsDesignerRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/work-records/$recordId': {
+      id: '/_authenticated/work-records/$recordId'
+      path: '/work-records/$recordId'
+      fullPath: '/work-records/$recordId'
+      preLoaderRoute: typeof AuthenticatedWorkRecordsRecordIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/settings/notifications': {
       id: '/_authenticated/settings/notifications'
       path: '/notifications'
@@ -599,12 +718,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsAccountRouteImport
       parentRoute: typeof AuthenticatedSettingsRouteRoute
     }
+    '/_authenticated/platform/roles': {
+      id: '/_authenticated/platform/roles'
+      path: '/platform/roles'
+      fullPath: '/platform/roles'
+      preLoaderRoute: typeof AuthenticatedPlatformRolesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/platform/dictionaries': {
+      id: '/_authenticated/platform/dictionaries'
+      path: '/platform/dictionaries'
+      fullPath: '/platform/dictionaries'
+      preLoaderRoute: typeof AuthenticatedPlatformDictionariesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/errors/$error': {
       id: '/_authenticated/errors/$error'
       path: '/errors/$error'
       fullPath: '/errors/$error'
       preLoaderRoute: typeof AuthenticatedErrorsErrorRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/work-records/$recordId/edit': {
+      id: '/_authenticated/work-records/$recordId/edit'
+      path: '/edit'
+      fullPath: '/work-records/$recordId/edit'
+      preLoaderRoute: typeof AuthenticatedWorkRecordsRecordIdEditRouteImport
+      parentRoute: typeof AuthenticatedWorkRecordsRecordIdRoute
     }
   }
 }
@@ -632,26 +772,55 @@ const AuthenticatedSettingsRouteRouteWithChildren =
     AuthenticatedSettingsRouteRouteChildren,
   )
 
+interface AuthenticatedWorkRecordsRecordIdRouteChildren {
+  AuthenticatedWorkRecordsRecordIdEditRoute: typeof AuthenticatedWorkRecordsRecordIdEditRoute
+}
+
+const AuthenticatedWorkRecordsRecordIdRouteChildren: AuthenticatedWorkRecordsRecordIdRouteChildren =
+  {
+    AuthenticatedWorkRecordsRecordIdEditRoute:
+      AuthenticatedWorkRecordsRecordIdEditRoute,
+  }
+
+const AuthenticatedWorkRecordsRecordIdRouteWithChildren =
+  AuthenticatedWorkRecordsRecordIdRoute._addFileChildren(
+    AuthenticatedWorkRecordsRecordIdRouteChildren,
+  )
+
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedSettingsRouteRoute: typeof AuthenticatedSettingsRouteRouteWithChildren
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedErrorsErrorRoute: typeof AuthenticatedErrorsErrorRoute
+  AuthenticatedPlatformDictionariesRoute: typeof AuthenticatedPlatformDictionariesRoute
+  AuthenticatedPlatformRolesRoute: typeof AuthenticatedPlatformRolesRoute
+  AuthenticatedWorkRecordsRecordIdRoute: typeof AuthenticatedWorkRecordsRecordIdRouteWithChildren
+  AuthenticatedWorkRecordsDesignerRoute: typeof AuthenticatedWorkRecordsDesignerRoute
+  AuthenticatedWorkRecordsNewRoute: typeof AuthenticatedWorkRecordsNewRoute
   AuthenticatedAppsIndexRoute: typeof AuthenticatedAppsIndexRoute
   AuthenticatedChatsIndexRoute: typeof AuthenticatedChatsIndexRoute
   AuthenticatedHelpCenterIndexRoute: typeof AuthenticatedHelpCenterIndexRoute
   AuthenticatedTasksIndexRoute: typeof AuthenticatedTasksIndexRoute
   AuthenticatedUsersIndexRoute: typeof AuthenticatedUsersIndexRoute
+  AuthenticatedWorkRecordsIndexRoute: typeof AuthenticatedWorkRecordsIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedSettingsRouteRoute: AuthenticatedSettingsRouteRouteWithChildren,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedErrorsErrorRoute: AuthenticatedErrorsErrorRoute,
+  AuthenticatedPlatformDictionariesRoute:
+    AuthenticatedPlatformDictionariesRoute,
+  AuthenticatedPlatformRolesRoute: AuthenticatedPlatformRolesRoute,
+  AuthenticatedWorkRecordsRecordIdRoute:
+    AuthenticatedWorkRecordsRecordIdRouteWithChildren,
+  AuthenticatedWorkRecordsDesignerRoute: AuthenticatedWorkRecordsDesignerRoute,
+  AuthenticatedWorkRecordsNewRoute: AuthenticatedWorkRecordsNewRoute,
   AuthenticatedAppsIndexRoute: AuthenticatedAppsIndexRoute,
   AuthenticatedChatsIndexRoute: AuthenticatedChatsIndexRoute,
   AuthenticatedHelpCenterIndexRoute: AuthenticatedHelpCenterIndexRoute,
   AuthenticatedTasksIndexRoute: AuthenticatedTasksIndexRoute,
   AuthenticatedUsersIndexRoute: AuthenticatedUsersIndexRoute,
+  AuthenticatedWorkRecordsIndexRoute: AuthenticatedWorkRecordsIndexRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =

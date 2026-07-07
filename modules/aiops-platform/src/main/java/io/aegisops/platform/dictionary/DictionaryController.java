@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -54,8 +55,11 @@ public class DictionaryController {
 
   @GetMapping("/{dictCode}/items")
   @PreAuthorize("hasAuthority('platform:dict:read')")
-  public ApiResponse<List<DictItemRecord>> listItems(@PathVariable String dictCode) {
-    return ApiResponse.ok(service.listItems(TenantContext.requireTenantId(), dictCode));
+  public ApiResponse<List<DictItemRecord>> listItems(
+      @PathVariable String dictCode,
+      @RequestParam(defaultValue = "false") boolean includeDisabled) {
+    return ApiResponse.ok(
+        service.listItems(TenantContext.requireTenantId(), dictCode, includeDisabled));
   }
 
   @PostMapping("/{dictCode}/items")

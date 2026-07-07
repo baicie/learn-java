@@ -1,0 +1,18 @@
+export const workRecords = {
+  'workRecords.nav.root': '工作记录',
+  'workRecords.nav.list': '记录列表',
+  'workRecords.nav.designer': '表单设计',
+  'workRecords.list.title': '记录列表',
+  'workRecords.list.description': '查看、筛选与导出工作记录。',
+  'workRecords.new.title': '新建记录',
+  'workRecords.edit.title': '编辑记录',
+  'workRecords.detail.title': '记录详情',
+  'workRecords.designer.title': '表单设计',
+  'workRecords.designer.description': '配置工作记录模板、字段与字典绑定。',
+  'workRecords.field.title': '标题',
+  'workRecords.field.status': '状态',
+  'workRecords.field.owner': '负责人',
+  'workRecords.field.creator': '创建人',
+  'workRecords.field.recordTime': '记录时间',
+  'workRecords.field.template': '模板',
+} as const

@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 import io.aegisops.audit.AuditRecordCommand;
 import io.aegisops.audit.AuditService;
 import java.time.OffsetDateTime;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
@@ -156,5 +157,39 @@ class DictionaryServiceTest {
             Mockito.any(CreateDictItemRequest.class),
             Mockito.eq("u1"));
     verify(audit).record(any(AuditRecordCommand.class));
+  }
+
+  @Test
+  void listItems_byDefault_shouldHideDisabledItems() {
+    service.listItems("t1", "record_priority");
+
+    verify(repository).listItems("t1", "record_priority", false);
+  }
+
+  @Test
+  void listItems_whenIncludeDisabled_shouldReturnHistoricalItems() {
+    DictItemRecord disabled =
+        new DictItemRecord(
+            "di1",
+            "t1",
+            "dt1",
+            "P2",
+            "P2",
+            null,
+            null,
+            null,
+            false,
+            false,
+            20,
+            "{}",
+            "u1",
+            OffsetDateTime.now(),
+            OffsetDateTime.now());
+    when(repository.listItems("t1", "record_priority", true)).thenReturn(List.of(disabled));
+
+    var items = service.listItems("t1", "record_priority", true);
+
+    org.assertj.core.api.Assertions.assertThat(items).extracting(DictItemRecord::itemValue).containsExactly("P2");
+    verify(repository).listItems("t1", "record_priority", true);
   }
 }

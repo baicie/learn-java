@@ -9,6 +9,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import io.aegisops.audit.AuditService;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class WorkRecordTemplateServiceTest {
@@ -163,5 +164,50 @@ class WorkRecordTemplateServiceTest {
         "u1");
 
     verify(fields).update(eq("t1"), eq("tpl1"), eq("f1"), any(UpdateFieldRequest.class));
+  }
+
+  @Test
+  void saveSchema_shouldRejectReservedFieldCode() {
+    TemplateSchemaRequest request =
+        new TemplateSchemaRequest(
+            "{}",
+            List.of(
+                new CreateFieldRequest(
+                    "标题", "title", "text", true, null, "static", null, "[]", true, true, false, 10, true)));
+
+    assertThatThrownBy(() -> service.saveSchema("t1", "tpl1", request, "u1"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("reserved");
+  }
+
+  @Test
+  void saveSchema_shouldPersistSchemaAndReplaceFields() {
+    WorkRecordTemplate stored =
+        new WorkRecordTemplate(
+            "tpl1",
+            "t1",
+            "日常记录",
+            "daily",
+            null,
+            true,
+            "{\"type\":\"object\"}",
+            "u1",
+            java.time.OffsetDateTime.now(),
+            java.time.OffsetDateTime.now());
+    when(templates.updateSchema(eq("t1"), eq("tpl1"), eq("{\"type\":\"object\"}")))
+        .thenReturn(java.util.Optional.of(stored));
+    TemplateSchemaRequest request =
+        new TemplateSchemaRequest(
+            "{\"type\":\"object\"}",
+            List.of(
+                new CreateFieldRequest(
+                    "优先级", "priority", "boolean", false, null, "static", null, "[]", true, true, false, 10, true)));
+
+    WorkRecordTemplate result = service.saveSchema("t1", "tpl1", request, "u1");
+
+    assertThat(result.id()).isEqualTo("tpl1");
+    verify(templates).updateSchema("t1", "tpl1", "{\"type\":\"object\"}");
+    verify(fields).replace("t1", "tpl1", request.fields());
+    verify(audit).record(any());
   }
 }

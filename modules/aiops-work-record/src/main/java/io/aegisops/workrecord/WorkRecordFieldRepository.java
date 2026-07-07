@@ -6,6 +6,7 @@ import java.sql.SQLException;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
@@ -104,6 +105,20 @@ public class WorkRecordFieldRepository {
     return list(tenantId, templateId).stream()
         .filter(field -> field.id().equals(fieldId))
         .findFirst();
+  }
+
+  @Transactional
+  public void replace(String tenantId, String templateId, List<CreateFieldRequest> requests) {
+    jdbc.update(
+        "delete from wr_template_field where tenant_id = ? and template_id = ?",
+        tenantId,
+        templateId);
+    if (requests == null) {
+      return;
+    }
+    for (CreateFieldRequest request : requests) {
+      create(tenantId, templateId, request);
+    }
   }
 
   private WorkRecordField mapField(ResultSet rs) throws SQLException {

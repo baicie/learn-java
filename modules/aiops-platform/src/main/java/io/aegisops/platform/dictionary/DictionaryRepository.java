@@ -115,6 +115,10 @@ public class DictionaryRepository {
   }
 
   public List<DictItemRecord> listItems(String tenantId, String dictCode) {
+    return listItems(tenantId, dictCode, false);
+  }
+
+  public List<DictItemRecord> listItems(String tenantId, String dictCode, boolean includeDisabled) {
     return jdbc.query(
         """
             select i.id, i.tenant_id, i.dict_type_id, i.item_label, i.item_value, i.color,
@@ -123,11 +127,13 @@ public class DictionaryRepository {
             from platform_dict_item i
             join platform_dict_type t on t.id = i.dict_type_id and t.tenant_id = i.tenant_id
             where i.tenant_id = ? and t.dict_code = ?
+              and (? = true or i.enabled = true)
             order by i.sort_order asc, i.created_at asc
             """,
         (rs, rowNum) -> mapItem(rs),
         tenantId,
-        dictCode);
+        dictCode,
+        includeDisabled);
   }
 
   public DictItemRecord createItem(
