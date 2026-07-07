@@ -1,240 +1,286 @@
 ---
-title: 可配置工作记录模块（终版设计）
+title: 可配置工作记录模块（终版设计 · portal-first）
 type: design
-status: draft
+status: review
 phase: work-record
 owner: platform-team
-created: 2026-07-06
-updated: 2026-07-06
+created: 2026-07-07
+updated: 2026-07-07
+supersedes:
+  - docs/record/2026-07-06-record-index-pre-portal.md
+deprecated_for:
+  reason: 早期基于 web/console 的同主题设计稿；规划、技术栈与目录结构均已被本文档取代，仅供历史回溯。
 related:
   - docs/record/work-record-phases-design-code.md
+  - docs/reviews/work-record/2026-07-06-work-record-implementation-review.md
+  - docs/reviews/work-record/2026-07-07-work-record-final-review.md
+  - docs/reviews/work-record/2026-07-07-work-record-rule-based-review.md
 ---
 
-# 可配置工作记录模块（终版设计）
+# AI-Ops 可配置工作记录模块 · 更新终版设计（portal-first）
 
-下面是结合前面所有讨论后的 **终版设计**。我建议这个模块不要做成“大工单系统”，而是定为：
+> 本文档是"可配置工作记录模块"在 AegisOps 转入 `web/portal` 主前端后的权威设计入口。本次更新将表单设计器定稿为 **Formily + Designable**，并补充 schema 扩展协议、字段索引同步与 portal 目录落点。
+>
+> 历史：`docs/record/2026-07-06-record-index-pre-portal.md` 是基于 `web/console` 的同等设计，已被本文档 `supersedes`。
+>
+> 配套：`docs/record/work-record-phases-design-code.md`（逐 Phase 实现代码）以及 `docs/reviews/work-record/*`（实现与规则评审）继续阅读。
 
-```text id="x3vcuo"
-AI-Ops 运维中台 · 可配置工作记录模块
-```
+## 1. 最终定位
 
-核心能力就是：
+模块名称：
 
-```text id="t52l7g"
-用户管理 + 角色权限 + 字典管理 + 管理员拖拽制表 + 用户填写记录 + 管理员筛选导出
-```
-
----
-
-# 1. 最终结论
-
-## 1.1 前端不需要微前端
-
-当前 `ai-ops mvp` 的前端已经是 `web/console` 单应用，技术栈是 React、Vite、React Router、TanStack Query、shadcn 风格组件，直接加 `work-record` feature 最合适。
-
-当前路由也是集中注册在 `App.tsx` 里，已有数据源、告警、事件、巡检、用户、角色、模块、审计等页面。
-
-所以第一版：
-
-```text id="o5ggmv"
-不要微前端
-不要 qiankun
-不要 module federation
-不要 iframe
-不要单独子应用
-```
-
-直接做：
-
-```text id="qp7okr"
-web/console/src/pages/work-record
-web/console/src/features/work-record
-```
-
-未来只有在下面情况出现时，再考虑微前端：
-
-```text id="8s03sn"
-工作记录要单独卖
-要独立部署
-要嵌入多个系统
-有独立团队维护
-技术栈要和 ai-ops 不同
-```
-
----
-
-# 2. 产品定位
-
-## 2.1 模块名称
-
-一级菜单建议叫：
-
-```text id="xg8gi2"
+```text
 工作记录
 ```
 
-不要叫“工单中心”。
+产品定位：
 
-因为“工单中心”会天然引出：
-
-```text id="8atgq3"
-审批流
-派单
-SLA
-流程引擎
-通知
-工单模板
-服务目录
+```text
+用户管理 + 角色权限 + 字典管理 + Formily 表单设计器 + 工作记录填写 + 记录列表筛选导出
 ```
 
-第一版不需要这么重。
+它不是完整工单系统，也不是完整低代码平台，而是：
 
-## 2.2 产品定位
-
-```text id="n98uvn"
-轻量工作记录系统
-动态表单系统
-运维日报 / 故障记录 / 巡检记录 / 变更记录沉淀工具
+```text
+面向运维中台的可配置工作记录系统
 ```
 
-它的本质是：
+第一版核心目标：
 
-```text id="sewwbt"
-管理员设计表
-用户填数据
-管理员查数据
-系统可导出
-后续可统计
+```text
+管理员配置字典
+管理员拖拽设计工作记录表
+用户填写工作记录
+管理员查看 / 筛选 / 导出
 ```
 
 ---
 
-# 3. 最小闭环
+## 2. 新版 UI 基础判断
 
-最终第一版闭环：
+当前新版 UI 在：
 
-```text id="u6k3pk"
-系统管理员创建用户
-  ↓
-配置角色权限
-  ↓
-配置基础字典
-  ↓
-管理员拖拽设计工作记录表
-  ↓
-普通用户每天填写工作记录
-  ↓
-记录管理员查看全部记录
-  ↓
-筛选 / 导出
+```text
+web/portal
 ```
 
-第一版只做这个闭环。
+它来自 shadcn-admin 模板，`package.json` 中项目名为 `shadcn-admin`，技术栈包含 React、Vite、TanStack Router、TanStack Query、TanStack Table、Radix UI、React Hook Form、Zod、Zustand、Recharts、Tailwind CSS 等。
+
+入口 `main.tsx` 使用 TanStack Router 的 `createRouter` 和生成的 `routeTree.gen`，并通过 `QueryClientProvider`、`ThemeProvider`、`FontProvider`、`DirectionProvider` 包裹应用。
+
+Vite 配置里已经接入 `@tanstack/router-plugin/vite`，并开启 `autoCodeSplitting`。
+
+当前登录后布局走 `/_authenticated` 文件路由，对应 `AuthenticatedLayout`。
+布局内部包含 `AppSidebar`、`SidebarProvider`、`SidebarInset`。
+
+菜单当前来自：
+
+```text
+web/portal/src/components/layout/data/sidebar-data.ts
+```
+
+也就是静态 sidebar 数据，不是旧版 `web/console` 那种后端动态菜单。
+
+所以新版设计按下面方式落地：
+
+```text
+前端主线：web/portal
+路由：TanStack Router 文件路由
+菜单：第一版改 sidebar-data.ts 静态菜单
+表格：TanStack Table
+表单设计器：Formily + Designable
+表单运行态：Formily
+外层 UI：shadcn-admin / Radix / Tailwind
+后端：aiops-server + Maven 多模块
+```
+
+### 2.1 此次切换的关键差异（portal vs console）
+
+```text
+旧版本基于 web/console
+  - React Router（路由集中注册在 App.tsx）
+  - 自封装 ThemeContext、DirectionContext
+  - API 客户端集中在 web/console/src/api/client.ts
+  - 菜单手写 nav.ts，没有 navGroups 概念
+
+新版本基于 web/portal
+  - TanStack Router 文件路由 + autoCodeSplitting
+  - 已有 ThemeProvider / FontProvider / DirectionProvider
+  - sidebar-data.ts 显式 navGroups（General / Pages / Other）
+  - features/* 分目录、hooks/api/components 分层
+  - 已默认走 React 19 / Vite / TS / Tailwind v4 / shadcn/ui
+```
+
+这意味着本模块所有页面均要作为 **web/portal 内的业务 feature** 实现，而不是 console：
+
+```text
+web/portal/src/routes/_authenticated/work-records/...
+web/portal/src/routes/_authenticated/platform/...
+web/portal/src/features/work-records/...
+web/portal/src/features/dictionaries/...
+```
+
+`web/console` 自此版本起不再接受工作记录相关的新增业务代码，存量页面保留供回退与历史使用。
+
+---
+
+## 3. 前端是否需要微前端
+
+结论：
+
+```text
+不需要微前端
+```
 
 不做：
 
-```text id="nflvoz"
+```text
+qiankun
+module federation
+iframe
+独立子应用
+```
+
+原因：
+
+```text
+1. web/portal 已经是完整后台模板
+2. 工作记录和用户、权限、字典强相关
+3. 当前功能没有独立部署诉求
+4. 微前端会增加登录态、权限、路由、样式隔离复杂度
+```
+
+最终前端形态：
+
+```text
+工作记录作为 web/portal 内部 feature
+```
+
+未来只有在这些条件出现后再考虑微前端：
+
+```text
+工作记录要单独卖
+工作记录要独立部署
+工作记录要嵌入多个系统
+工作记录有独立团队维护
+```
+
+---
+
+## 4. Formily / Designable 的最终取舍
+
+之前方案是不自研复杂低代码，但表单设计器可能轻量自研。现在根据新判断调整为：
+
+```text
+第一版直接使用 Formily / Designable
+```
+
+也就是：
+
+```text
+表单设计器：Formily + Designable
+表单运行态：Formily SchemaField
+列表表格：TanStack Table
+外层页面：web/portal shadcn-admin
+```
+
+原因：
+
+```text
+1. 第一版核心就是“管理员拖拽制表”
+2. 没必要自己再造一套字段设计器
+3. Formily 更适合动态表单、schema 表单、表单联动
+4. Designable 能提供设计器能力
+```
+
+但必须注意：
+
+```text
+Designable 生态更偏 Ant Design / Fusion
+web/portal 是 shadcn-admin / Radix / Tailwind
+```
+
+所以第一版接受这个取舍：
+
+```text
+管理员表单设计页：可以使用 Designable 原有设计器风格
+用户填写记录页：尽量保持 portal 的 shadcn-admin 风格
+记录列表页：保持 TanStack Table / portal 风格
+```
+
+---
+
+## 5. 最终功能范围
+
+第一版做：
+
+```text
+1. 用户管理
+2. 角色权限
+3. 字典管理
+4. 表单模板管理
+5. Formily / Designable 表单设计
+6. 工作记录填写
+7. 工作记录详情
+8. 工作记录列表
+9. 筛选
+10. 导出
+```
+
+第一版不做：
+
+```text
+微前端
+微服务
+完整工单流程
 审批流
 SLA
-复杂统计
-AI 总结
-告警联动
-巡检联动
 Excel 导入
 评论时间线
-附件
-流程引擎
-微前端
+附件上传
+告警联动
+巡检联动
+AI 总结
+复杂统计
+字段级权限
+复杂模板版本管理
 ```
-
-这些后续再加。
 
 ---
 
-# 4. 总体架构
+## 6. 页面数量
 
-当前 `ai-ops mvp` 后端已经是 Maven 多模块工程，根工程包含 `aiops-common`、`aiops-web`、`aiops-persistence`、`aiops-audit`、`aiops-tenant`、`aiops-user`、`aiops-security`、`aiops-platform`、`aiops-alert`、`aiops-incident`、`aiops-inspection` 等模块，并由 `apps/aiops-server` 聚合启动。
+最小可用版共 7 个页面：
 
-所以终版架构：
-
-```text id="e883kf"
-ai-ops
-├─ apps
-│  └─ aiops-server
-│
-├─ modules
-│  ├─ aiops-user              # 复用：用户管理
-│  ├─ aiops-security          # 复用：角色权限
-│  ├─ aiops-platform          # 增强：字典管理
-│  ├─ aiops-audit             # 复用：审计日志
-│  └─ aiops-work-record       # 新增：工作记录模块
-│
-└─ web
-   └─ console
-      └─ src
-         ├─ pages/platform
-         │  └─ DictionaryPage.tsx
-         ├─ pages/work-record
-         └─ features/work-record
+```text
+1. 用户管理页
+2. 角色权限页
+3. 字典管理页
+4. 表单设计页
+5. 记录列表页
+6. 记录新建 / 编辑页
+7. 记录详情页
 ```
 
-`apps/aiops-server` 当前已经通过依赖聚合多个业务模块。
-新增 `aiops-work-record` 后，也按同样方式接入。
+其中：
+
+```text
+用户管理页：基于 portal 现有 users 页面改造
+角色权限页：新增或迁移
+字典管理页：新增
+表单设计页：新增，使用 Formily / Designable
+记录列表页：新增，使用 TanStack Table
+记录新建 / 编辑页：新增，使用 Formily runtime
+记录详情页：新增，按 schema 渲染只读视图
+```
 
 ---
 
-# 5. 模块边界
+## 7. 菜单设计
 
-## 5.1 复用现有能力
+第一版菜单：
 
-```text id="yokwhv"
-用户管理：复用 aiops-user
-角色权限：复用 aiops-security
-审计日志：复用 aiops-audit
-菜单导航：复用 aiops-platform
-```
-
-当前前端已经有用户和角色路由：
-
-```text id="4sbjhb"
-/platform/users
-/app/platform/users
-/platform/roles
-/app/platform/roles
-```
-
-这些路由已经在 `App.tsx` 中存在。
-
-## 5.2 新增能力
-
-```text id="jepxju"
-字典管理：放到 aiops-platform
-工作记录：新增 aiops-work-record
-```
-
-不要把工作记录写进：
-
-```text id="b2xu4r"
-aiops-incident
-aiops-inspection
-aiops-platform
-```
-
-否则后面边界会乱。
-
----
-
-# 6. 菜单设计
-
-当前菜单由 `/api/platform/navigation/menus` 获取，菜单项包含 `id`、`moduleId`、`parentId`、`path`、`title`、`icon`、`permissionCode`、`sortOrder`、`enabled`。
-
-前端再通过 `buildMenuTree` 按 `parentId` 组装菜单树。
-
-终版菜单：
-
-```text id="xlw8x7"
-工作台
-
+```text
 工作记录
 ├─ 记录列表
 └─ 表单设计
@@ -242,14 +288,12 @@ aiops-platform
 平台管理
 ├─ 用户管理
 ├─ 角色权限
-├─ 字典管理
-├─ 模块管理
-└─ 审计日志
+└─ 字典管理
 ```
 
 不要把下面这些做成菜单：
 
-```text id="my0iwz"
+```text
 日常记录
 故障记录
 巡检记录
@@ -258,47 +302,211 @@ aiops-platform
 值班交接
 ```
 
-它们应该是 **字典项**，在记录列表里作为“记录类型”筛选。
+它们应该是 `record_type` 字典项。
 
 ---
 
-# 7. 数据库设计
+## 8. 前端路由设计
 
-## 7.1 数据库边界
+基于 TanStack Router 文件路由：
 
-第一版建议：
-
-```text id="ady55q"
-同一个 PostgreSQL 实例
-新增 work_record schema
-平台字典放平台表
+```text
+web/portal/src/routes/_authenticated/
+├─ work-records/
+│  ├─ index.tsx
+│  ├─ new.tsx
+│  ├─ $recordId.tsx
+│  ├─ $recordId.edit.tsx
+│  └─ designer.tsx
+│
+└─ platform/
+   ├─ dictionaries.tsx
+   └─ roles.tsx
 ```
 
-不建议第一版就多个数据库。原因：
+对应页面：
 
-```text id="p6q0hm"
-少一个 DataSource
-少一套事务管理
-少一套 Flyway 配置
-测试更简单
-部署更简单
-```
-
-未来独立产品化时，再拆成：
-
-```text id="bhh8fs"
-aegisops_work_record
+```text
+/_authenticated/work-records/              记录列表
+/_authenticated/work-records/new           新建记录
+/_authenticated/work-records/$recordId      记录详情
+/_authenticated/work-records/$recordId/edit 编辑记录
+/_authenticated/work-records/designer       表单设计
+/_authenticated/platform/dictionaries       字典管理
+/_authenticated/platform/roles              角色权限
 ```
 
 ---
 
-## 7.2 字典表
+## 9. 前端目录设计
 
-字典是平台能力，放平台模块。
+### 9.1 工作记录 feature
 
-### `platform_dict_type`
+```text
+web/portal/src/features/work-records/
+├─ index.tsx
+├─ api/
+│  ├─ work-record-api.ts
+│  ├─ template-api.ts
+│  └─ export-api.ts
+├─ data/
+│  ├─ schema.ts
+│  ├─ formily-schema.ts
+│  ├─ field-types.ts
+│  └─ reserved-field-codes.ts
+├─ components/
+│  ├─ records-table.tsx
+│  ├─ records-columns.tsx
+│  ├─ records-toolbar.tsx
+│  ├─ record-form.tsx
+│  ├─ record-readonly-view.tsx
+│  ├─ formily-runtime-form.tsx
+│  ├─ formily-schema-loader.tsx
+│  ├─ template-designer-page.tsx
+│  ├─ formily-designer-shell.tsx
+│  ├─ dict-schema-injector.ts
+│  └─ export-records-dialog.tsx
+├─ hooks/
+│  ├─ use-records.ts
+│  ├─ use-record-template.ts
+│  ├─ use-template-fields.ts
+│  ├─ use-dict-items.ts
+│  └─ use-formily-schema.ts
+└─ types.ts
+```
 
-```sql id="nqsizg"
+### 9.2 字典 feature
+
+```text
+web/portal/src/features/dictionaries/
+├─ index.tsx
+├─ api.ts
+├─ data/
+│  └─ schema.ts
+├─ components/
+│  ├─ dictionary-type-list.tsx
+│  ├─ dictionary-item-table.tsx
+│  ├─ dictionary-type-dialog.tsx
+│  └─ dictionary-item-dialog.tsx
+└─ hooks/
+   └─ use-dictionaries.ts
+```
+
+---
+
+## 10. Formily 设计器方案
+
+### 10.1 设计态
+
+页面：
+
+```text
+/work-records/designer
+```
+
+使用：
+
+```text
+Formily + Designable
+```
+
+能力：
+
+```text
+拖拽字段
+配置字段属性
+配置字段标题
+配置字段编码
+配置默认值
+配置校验
+配置布局
+配置选项
+配置是否列表展示
+配置是否支持筛选
+配置是否支持统计
+绑定平台字典
+保存 schema
+预览表单
+```
+
+### 10.2 运行态
+
+页面：
+
+```text
+/work-records/new
+/work-records/$recordId/edit
+```
+
+流程：
+
+```text
+后端返回 wr_template.schema_json
+  ↓
+前端扫描 schema
+  ↓
+发现字段引用字典
+  ↓
+请求字典项
+  ↓
+注入 enum / dataSource / options
+  ↓
+Formily 渲染表单
+  ↓
+用户填写
+  ↓
+提交 values
+  ↓
+保存到 wr_record.custom_data_json
+```
+
+### 10.3 只读态
+
+页面：
+
+```text
+/work-records/$recordId
+```
+
+流程：
+
+```text
+读取记录
+读取模板 schema
+注入字典 label
+按 schema 顺序渲染只读详情
+```
+
+---
+
+## 11. 数据模型更新
+
+如果上 Formily，不能只存 `wr_template_field`，也不能只存 `schema_json`。
+
+最终采用双结构：
+
+```text
+wr_template.schema_json
+  负责设计器还原和运行态表单渲染
+
+wr_template_field
+  负责列表列、筛选白名单、导出、后端校验、统计
+```
+
+也就是：
+
+```text
+Formily schema 是主表单协议
+wr_template_field 是字段索引表 / 查询辅助表
+```
+
+---
+
+## 12. 数据库设计
+
+### 12.1 字典表
+
+```sql
 create table platform_dict_type (
   id uuid primary key,
   tenant_id uuid not null,
@@ -315,9 +523,7 @@ create table platform_dict_type (
 );
 ```
 
-### `platform_dict_item`
-
-```sql id="jtkh16"
+```sql
 create table platform_dict_item (
   id uuid primary key,
   tenant_id uuid not null,
@@ -338,49 +544,9 @@ create table platform_dict_item (
 );
 ```
 
-第一批内置字典：
+### 12.2 模板表
 
-```text id="t3scdz"
-record_type        工作记录类型
-record_status      工作记录状态
-record_priority    优先级
-env_type           环境类型
-yes_no             是否
-process_result     处理结果
-```
-
-字典项示例：
-
-```text id="keamj6"
-record_type:
-  daily        日常记录
-  fault        故障记录
-  inspection   巡检记录
-  change       变更记录
-  release      发布记录
-  handover     值班交接
-  other        其他
-
-record_status:
-  draft        草稿
-  processing   处理中
-  done         已完成
-  archived     已归档
-
-record_priority:
-  P0           紧急
-  P1           高
-  P2           中
-  P3           低
-```
-
----
-
-## 7.3 工作记录表
-
-### `work_record.wr_template`
-
-```sql id="z7rl0p"
+```sql
 create schema if not exists work_record;
 
 create table work_record.wr_template (
@@ -390,27 +556,41 @@ create table work_record.wr_template (
   code varchar(64) not null,
   description text,
   enabled boolean not null default true,
+
   schema_json jsonb not null default '{}'::jsonb,
+  designer_json jsonb not null default '{}'::jsonb,
+
   created_by uuid not null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
+
   unique (tenant_id, code)
 );
 ```
 
-### `work_record.wr_template_field`
+字段说明：
 
-```sql id="hjpjn9"
+```text
+schema_json：
+  Formily 表单 schema，用于运行态渲染和设计器加载
+
+designer_json：
+  Designable 设计器元信息、画布状态、额外扩展信息
+```
+
+### 12.3 字段索引表
+
+```sql
 create table work_record.wr_template_field (
   id uuid primary key,
   tenant_id uuid not null,
   template_id uuid not null,
+
   field_name varchar(128) not null,
   field_code varchar(128) not null,
   field_type varchar(32) not null,
 
   required boolean not null default false,
-  default_value text,
 
   option_source varchar(32) not null default 'static',
   dict_code varchar(128),
@@ -423,6 +603,8 @@ create table work_record.wr_template_field (
   sort_order integer not null default 0,
   enabled boolean not null default true,
 
+  schema_path varchar(512),
+
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
 
@@ -430,9 +612,9 @@ create table work_record.wr_template_field (
 );
 ```
 
-### `work_record.wr_record`
+### 12.4 记录表
 
-```sql id="uov8mj"
+```sql
 create table work_record.wr_record (
   id uuid primary key,
   tenant_id uuid not null,
@@ -453,9 +635,9 @@ create table work_record.wr_record (
 );
 ```
 
-第一版就这 5 张表：
+第一版核心表：
 
-```text id="g7a37s"
+```text
 platform_dict_type
 platform_dict_item
 work_record.wr_template
@@ -463,23 +645,72 @@ work_record.wr_template_field
 work_record.wr_record
 ```
 
-够了。
+---
+
+## 13. Formily schema 扩展协议
+
+为了让 Formily schema 支持工作记录业务，需要给字段增加扩展属性。
+
+示例：
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "priority": {
+      "type": "string",
+      "title": "优先级",
+      "x-decorator": "FormItem",
+      "x-component": "Select",
+      "x-work-record-field-code": "priority",
+      "x-work-record-field-type": "select",
+      "x-work-record-option-source": "dict",
+      "x-work-record-dict-code": "record_priority",
+      "x-work-record-list-visible": true,
+      "x-work-record-filterable": true,
+      "x-work-record-statistical": true
+    }
+  }
+}
+```
+
+扩展字段：
+
+```text
+x-work-record-field-code
+x-work-record-field-type
+x-work-record-option-source
+x-work-record-dict-code
+x-work-record-list-visible
+x-work-record-filterable
+x-work-record-statistical
+```
+
+保存模板时：
+
+```text
+1. 保存完整 Formily schema 到 wr_template.schema_json
+2. 保存设计器元信息到 wr_template.designer_json
+3. 从 schema 中抽取字段元信息
+4. 同步写入 wr_template_field
+```
 
 ---
 
-# 8. 字典与表单设计器关系
+## 14. 字典和 Formily 的关系
 
-字段选项来源分两种。
+字段选项来源：
 
-## 8.1 静态选项
+```text
+static：字段自己的静态选项
+dict：引用平台字典
+```
 
-适合某个表单独有的选项。
+静态选项示例：
 
-```json id="eduxbh"
+```json
 {
-  "fieldName": "影响范围",
   "fieldCode": "impact_scope",
-  "fieldType": "select",
   "optionSource": "static",
   "options": [
     { "label": "无影响", "value": "none" },
@@ -489,34 +720,133 @@ work_record.wr_record
 }
 ```
 
-## 8.2 字典选项
+字典选项示例：
 
-适合通用枚举。
-
-```json id="ya66be"
+```json
 {
-  "fieldName": "优先级",
   "fieldCode": "priority",
-  "fieldType": "select",
   "optionSource": "dict",
   "dictCode": "record_priority"
 }
 ```
 
-原则：
+运行态注入流程：
 
-```text id="3wdo4b"
-通用枚举走字典表
-临时枚举走 options_json
+```text
+扫描 schema
+  ↓
+找到 x-work-record-option-source = dict
+  ↓
+读取 x-work-record-dict-code
+  ↓
+请求 /api/platform/dictionaries/{dictCode}/items
+  ↓
+转换成 Formily Select 所需 options
+  ↓
+注入 schema
+  ↓
+渲染表单
 ```
 
 ---
 
-# 9. 后端设计
+## 15. API 设计
 
-## 9.1 `aiops-platform` 增加字典能力
+### 15.1 字典 API
 
-```text id="l8qpao"
+```text
+GET    /api/platform/dictionaries
+POST   /api/platform/dictionaries
+GET    /api/platform/dictionaries/{dictCode}
+PUT    /api/platform/dictionaries/{dictCode}
+DELETE /api/platform/dictionaries/{dictCode}
+
+GET    /api/platform/dictionaries/{dictCode}/items
+POST   /api/platform/dictionaries/{dictCode}/items
+PUT    /api/platform/dictionaries/{dictCode}/items/{itemId}
+DELETE /api/platform/dictionaries/{dictCode}/items/{itemId}
+```
+
+删除实际是：
+
+```text
+enabled = false
+```
+
+### 15.2 模板 API
+
+```text
+GET    /api/work-record/templates
+POST   /api/work-record/templates
+GET    /api/work-record/templates/{id}
+PUT    /api/work-record/templates/{id}
+DELETE /api/work-record/templates/{id}
+```
+
+模板详情返回：
+
+```json
+{
+  "id": "template-id",
+  "name": "默认工作记录表",
+  "code": "default_work_record",
+  "schemaJson": {},
+  "designerJson": {},
+  "fields": []
+}
+```
+
+### 15.3 字段元数据 API
+
+字段元数据主要由模板保存时自动同步，但可以提供只读接口：
+
+```text
+GET /api/work-record/templates/{templateId}/fields
+```
+
+必要时提供字段配置更新接口：
+
+```text
+PUT /api/work-record/templates/{templateId}/fields/{fieldId}
+POST /api/work-record/templates/{templateId}/fields/reorder
+```
+
+### 15.4 工作记录 API
+
+```text
+GET    /api/work-record/records
+POST   /api/work-record/records
+GET    /api/work-record/records/{id}
+PUT    /api/work-record/records/{id}
+DELETE /api/work-record/records/{id}
+GET    /api/work-record/records/export
+```
+
+记录创建请求：
+
+```json
+{
+  "templateId": "template-id",
+  "title": "每日工作记录",
+  "status": "done",
+  "ownerId": "user-id",
+  "recordTime": "2026-07-07T10:00:00+09:00",
+  "customData": {
+    "record_type": "daily",
+    "work_content": "处理服务器巡检异常",
+    "priority": "P2",
+    "env": "prod"
+  }
+}
+```
+
+---
+
+## 16. 后端模块设计
+
+### 16.1 字典模块
+
+```text
 modules/aiops-platform
 └─ src/main/java/io/aegisops/platform/dictionary
    ├─ api
@@ -530,9 +860,9 @@ modules/aiops-platform
       └─ DictionaryRepository.java
 ```
 
-## 9.2 新增 `aiops-work-record`
+### 16.2 工作记录模块
 
-```text id="1du2qx"
+```text
 modules/aiops-work-record
 └─ src/main/java/io/aegisops/workrecord
    ├─ api
@@ -543,7 +873,8 @@ modules/aiops-work-record
    ├─ application
    │  ├─ WorkRecordService.java
    │  ├─ WorkRecordTemplateService.java
-   │  ├─ WorkRecordFieldService.java
+   │  ├─ WorkRecordSchemaService.java
+   │  ├─ WorkRecordFieldIndexService.java
    │  ├─ WorkRecordQueryService.java
    │  └─ WorkRecordExportService.java
    │
@@ -556,282 +887,28 @@ modules/aiops-work-record
    │
    └─ infrastructure
       ├─ jdbc
+      ├─ schema
       ├─ excel
       └─ validator
 ```
 
-## 9.3 Maven 接入
+新增重点服务：
 
-根 `pom.xml` 新增：
+```text
+WorkRecordSchemaService：
+  负责保存 / 读取 / 清洗 Formily schema
 
-```xml id="pvlzqn"
-<module>modules/aiops-work-record</module>
-```
-
-`apps/aiops-server/pom.xml` 新增：
-
-```xml id="qqnrqu"
-<dependency>
-  <groupId>io.aegisops</groupId>
-  <artifactId>aiops-work-record</artifactId>
-  <version>${project.version}</version>
-</dependency>
+WorkRecordFieldIndexService：
+  负责从 Formily schema 中抽取字段元数据并同步 wr_template_field
 ```
 
 ---
 
-# 10. API 设计
+## 17. 权限设计
 
-## 10.1 字典 API
+权限码：
 
-```text id="fb2xbf"
-GET    /api/platform/dictionaries
-POST   /api/platform/dictionaries
-GET    /api/platform/dictionaries/{dictCode}
-PUT    /api/platform/dictionaries/{dictCode}
-DELETE /api/platform/dictionaries/{dictCode}
-
-GET    /api/platform/dictionaries/{dictCode}/items
-POST   /api/platform/dictionaries/{dictCode}/items
-PUT    /api/platform/dictionaries/{dictCode}/items/{itemId}
-DELETE /api/platform/dictionaries/{dictCode}/items/{itemId}
-```
-
-## 10.2 表单模板 API
-
-```text id="7ia5lx"
-GET    /api/work-record/templates
-POST   /api/work-record/templates
-GET    /api/work-record/templates/{id}
-PUT    /api/work-record/templates/{id}
-DELETE /api/work-record/templates/{id}
-```
-
-## 10.3 字段 API
-
-```text id="1uq0n6"
-GET    /api/work-record/templates/{templateId}/fields
-POST   /api/work-record/templates/{templateId}/fields
-PUT    /api/work-record/templates/{templateId}/fields/{fieldId}
-DELETE /api/work-record/templates/{templateId}/fields/{fieldId}
-POST   /api/work-record/templates/{templateId}/fields/reorder
-```
-
-## 10.4 工作记录 API
-
-```text id="x9i6ws"
-GET    /api/work-record/records
-POST   /api/work-record/records
-GET    /api/work-record/records/{id}
-PUT    /api/work-record/records/{id}
-DELETE /api/work-record/records/{id}
-GET    /api/work-record/records/export
-```
-
----
-
-# 11. 前端设计
-
-## 11.1 目录结构
-
-```text id="6h9ceq"
-web/console/src/pages/platform
-└─ DictionaryPage.tsx
-```
-
-```text id="2l0bnh"
-web/console/src/pages/work-record
-├─ WorkRecordListPage.tsx
-├─ WorkRecordEditPage.tsx
-├─ WorkRecordDetailPage.tsx
-└─ WorkRecordTemplateDesignerPage.tsx
-```
-
-```text id="w7f9tx"
-web/console/src/features/work-record
-├─ api.ts
-├─ types.ts
-├─ constants.ts
-├─ components
-│  ├─ DynamicForm.tsx
-│  ├─ DynamicTable.tsx
-│  ├─ FieldPalette.tsx
-│  ├─ FieldCanvas.tsx
-│  ├─ FieldPropertyPanel.tsx
-│  ├─ DictSelect.tsx
-│  └─ RecordFilterBar.tsx
-└─ hooks
-   ├─ useWorkRecords.ts
-   ├─ useWorkRecordTemplates.ts
-   └─ useDictItems.ts
-```
-
-## 11.2 新增路由
-
-```tsx id="c7cfwe"
-<Route path="/app/platform/dictionaries" element={<DictionaryPage />} />
-
-<Route path="/app/work-records" element={<WorkRecordListPage />} />
-<Route path="/app/work-records/create" element={<WorkRecordEditPage />} />
-<Route path="/app/work-records/:recordId" element={<WorkRecordDetailPage />} />
-<Route path="/app/work-records/:recordId/edit" element={<WorkRecordEditPage />} />
-<Route path="/app/work-records/designer" element={<WorkRecordTemplateDesignerPage />} />
-```
-
----
-
-# 12. 页面终版设计
-
-## 12.1 字典管理页
-
-```text id="d998na"
-左侧：字典类型
-  - 工作记录类型
-  - 工作记录状态
-  - 优先级
-  - 环境类型
-  - 是否
-  - 处理结果
-
-右侧：字典项表格
-  - 标签
-  - 值
-  - 颜色
-  - 排序
-  - 启用状态
-  - 操作
-```
-
-能力：
-
-```text id="mspbeh"
-新增字典类型
-编辑字典类型
-启用 / 禁用
-新增字典项
-编辑字典项
-调整排序
-```
-
-## 12.2 表单设计页
-
-三栏布局：
-
-```text id="b6qbk7"
-左侧：字段组件区
-中间：表单画布
-右侧：字段属性面板
-```
-
-字段组件：
-
-```text id="hev07k"
-单行文本
-多行文本
-数字
-日期
-日期时间
-单选
-多选
-人员
-开关
-```
-
-字段属性：
-
-```text id="7ylv58"
-字段名称
-字段编码
-字段类型
-是否必填
-默认值
-选项来源
-选择字典
-自定义选项
-是否列表展示
-是否支持筛选
-是否支持统计
-排序
-```
-
-## 12.3 记录列表页
-
-```text id="d7zcvz"
-顶部：
-  新建记录
-  导出
-
-快捷视图：
-  全部
-  我的
-  今日
-  本周
-  待处理
-  已完成
-
-筛选：
-  关键字
-  日期范围
-  负责人
-  状态
-  记录类型
-  自定义字段筛选
-
-表格：
-  标题
-  类型
-  状态
-  负责人
-  日期
-  自定义字段...
-  操作
-```
-
-## 12.4 新建 / 编辑记录页
-
-根据管理员设计的表动态渲染。
-
-基础字段：
-
-```text id="k8og90"
-标题
-记录时间
-负责人
-状态
-```
-
-动态字段：
-
-```text id="tcd72u"
-来自 wr_template_field
-保存到 custom_data_json
-```
-
-示例保存数据：
-
-```json id="v52ezf"
-{
-  "title": "每日工作记录",
-  "status": "done",
-  "ownerId": "user-id",
-  "recordTime": "2026-07-06T10:00:00+09:00",
-  "customData": {
-    "record_type": "daily",
-    "work_content": "处理服务器巡检异常",
-    "priority": "P2",
-    "env": "prod",
-    "need_follow_up": true
-  }
-}
-```
-
----
-
-# 13. 权限设计
-
-## 13.1 权限码
-
-```text id="nshgvf"
+```text
 platform:dict:view
 platform:dict:create
 platform:dict:update
@@ -850,9 +927,9 @@ work-record:template:update
 work-record:template:delete
 ```
 
-## 13.2 角色
+角色：
 
-```text id="eutssu"
+```text
 系统管理员：
   全部权限
 
@@ -871,304 +948,974 @@ work-record:template:delete
   查看记录
 ```
 
-第一版权限可以先简单实现：
+后端权限规则：
 
-```text id="lntaa0"
-管理员看全部
-普通用户看自己的
+```text
+普通用户：
+  creator_id = 当前用户
+  or owner_id = 当前用户
+
+记录管理员：
+  可查看全部记录
+
+系统管理员：
+  全部权限
 ```
-
-后续再细化到字段权限。
 
 ---
 
-# 14. AI 维护边界
+## 18. 关键实现注意事项
 
-你最担心的是 AI 后续维护失控，所以要在工程上限制它。
+### 18.1 先做 Formily / Designable 兼容性 Spike
 
-## 14.1 AI 可修改范围
+因为 `web/portal` 当前是 React 19。`package.json` 显示 React 和 React DOM 为 19.2.7。
 
-每个 phase 默认只允许修改：
+必须先验证：
 
-```text id="zs826s"
-modules/aiops-work-record/**
-modules/aiops-platform/**/dictionary/**
-web/console/src/pages/work-record/**
-web/console/src/features/work-record/**
-web/console/src/pages/platform/DictionaryPage.tsx
+```text
+Formily runtime 能否正常渲染
+Designable 能否正常打开
+Vite build 是否通过
+React 19 下是否有明显兼容问题
+样式是否严重冲突
 ```
 
-不允许乱改：
+如果 Designable 兼容性不好，则降级为：
 
-```text id="kldiid"
-aiops-security
-aiops-user
-aiops-tenant
-aiops-alert
-aiops-incident
-aiops-inspection
-全局 Layout
-全局 api client 大量重构
+```text
+第一版：Formily runtime + 简单 schema 编辑器
+第二版：再接 Designable
 ```
 
-## 14.2 必须补测试
+但优先目标仍然是第一版直接 Designable。
 
-当前工程已经配置 Spotless、Checkstyle，并且 `aiops-server` 也有 ArchUnit、Testcontainers PostgreSQL 测试依赖。
+### 18.2 不要只存 Formily schema
 
-建议新增：
+必须同步 `wr_template_field`。
 
-```text id="ow42m2"
-DictionaryServiceTest
+原因：
+
+```text
+列表动态列需要字段元数据
+筛选白名单需要字段元数据
+导出字段需要字段元数据
+后端校验需要字段元数据
+统计字段需要字段元数据
+```
+
+### 18.3 field_code 不能随便改
+
+Formily schema 的 `properties` key 就是业务字段编码。
+
+例如：
+
+```json
+{
+  "properties": {
+    "priority": {}
+  }
+}
+```
+
+这个 `priority` 后面不能随便改，否则历史记录中的：
+
+```json
+{
+  "priority": "P2"
+}
+```
+
+会读不到。
+
+### 18.4 字典项不能物理删除
+
+禁用即可：
+
+```text
+enabled = false
+```
+
+历史记录仍然需要展示 label。
+
+### 18.5 自定义字段筛选必须走白名单
+
+后端流程：
+
+```text
+读取 template_id
+读取 wr_template_field
+确认 field_code 存在
+确认 filterable = true
+确认字段类型合法
+再构造 JSONB 查询
+```
+
+禁止直接用前端传入的字段名拼 SQL。
+
+### 18.6 导出必须限流
+
+第一版同步导出，限制：
+
+```text
+最多 5000 或 10000 行
+```
+
+后面再做异步导出。
+
+---
+
+## 19. portal 构建接管注意事项
+
+当前根 `package.json` 的 build、lint、typecheck、test 等脚本仍然指向 `web/console`。
+
+如果新版 UI 确认以 `web/portal` 为主，需要调整：
+
+```text
+pnpm -C web/console run build
+改为
+pnpm -C web/portal run build
+```
+
+涉及：
+
+```text
+build
+lint
+format
+typecheck
+test
+ci:frontend
+```
+
+同时，后端打包静态资源也要从旧 console 切到 portal：
+
+```text
+web/portal/dist -> aiops-server static
+```
+
+建议新增 profile：
+
+```text
+with-portal
+```
+
+而不是直接删除旧 `with-console`，这样可以保留回退能力。
+
+### 19.1 console 废弃声明
+
+```text
+web/console 自本设计起仅做历史保留与回退用途：
+  - 不再新增业务模块（包括工作记录的所有功能）
+  - 不再追加依赖、组件、路由
+  - 不参与本地与 CI 默认质量门禁
+  - 现有页面继续保留以便旧用户回退
+  - 干净移除留待 Phase 8 生产加固阶段统一评估
+```
+
+---
+
+## 20. 最新 Phase 设计与代码交付包
+
+本节替代旧的粗粒度路线图。当前仓库事实是：
+
+```text
+后端：
+  modules/aiops-platform 已存在 dictionary 包
+  modules/aiops-work-record 已存在模板 / 字段 / 记录 / 导出服务与单元测试
+  apps/aiops-server 已包含 V0012 / V0013 / V0014 工作记录 migration
+
+前端：
+  主前端切换为 web/portal
+  web/portal 已有 i18next + zh-CN / en-US TS 资源文件
+  当前菜单可先不动，业务菜单以后只追加，不删除模板菜单
+```
+
+因此后续实施不从零开始，而是按“补齐后端缺口 + 新增 portal feature + 国际化 key”推进。
+
+### Phase WR-0：现状固化与边界校准
+
+目标：
+
+```text
+确认已实现后端能力、冻结 console 历史设计、把后续开发入口统一到 web/portal。
+```
+
+后端代码现状：
+
+```text
+modules/aiops-platform/src/main/java/io/aegisops/platform/dictionary/*
+modules/aiops-work-record/src/main/java/io/aegisops/workrecord/*
+apps/aiops-server/src/main/resources/db/migration/V0012__init_work_record.sql
+apps/aiops-server/src/main/resources/db/migration/V0013__migrate_work_record_schema.sql
+apps/aiops-server/src/main/resources/db/migration/V0014__init_work_record_default_template.sql
+```
+
+后端测试现状：
+
+```text
+modules/aiops-platform/src/test/java/io/aegisops/platform/dictionary/DictionaryServiceTest.java
+modules/aiops-work-record/src/test/java/io/aegisops/workrecord/WorkRecordTemplateServiceTest.java
+modules/aiops-work-record/src/test/java/io/aegisops/workrecord/WorkRecordServiceTest.java
+modules/aiops-work-record/src/test/java/io/aegisops/workrecord/WorkRecordFieldValidatorTest.java
+modules/aiops-work-record/src/test/java/io/aegisops/workrecord/WorkRecordExportServiceTest.java
+```
+
+需要补齐：
+
+```text
+1. 将 docs/record/work-record-phases-design-code.md 标记为历史代码包或重写为 portal-first
+2. 在本文档保留 console 废弃声明
+3. 明确工作记录模块不是 Incident 主闭环优先项，只作为 execution 体系的轻量记录能力推进
+4. 不新增微服务，不引入审批流，不动现有 portal 模板菜单
+```
+
+验收：
+
+```text
+mvn -pl modules/aiops-work-record -am test
+mvn -pl modules/aiops-platform -am test
+pnpm -C web/portal run test
+```
+
+### Phase WR-1：portal 菜单、路由与 i18n 骨架
+
+目标：
+
+```text
+在不移除现有模板菜单的前提下，追加工作记录与平台管理入口，并建立 TS key-value 国际化骨架。
+```
+
+前端新增代码：
+
+```text
+web/portal/src/routes/_authenticated/work-records/index.tsx
+web/portal/src/routes/_authenticated/work-records/new.tsx
+web/portal/src/routes/_authenticated/work-records/$recordId.tsx
+web/portal/src/routes/_authenticated/work-records/$recordId.edit.tsx
+web/portal/src/routes/_authenticated/work-records/designer.tsx
+web/portal/src/routes/_authenticated/platform/dictionaries.tsx
+web/portal/src/routes/_authenticated/platform/roles.tsx
+
+web/portal/src/features/work-records/index.tsx
+web/portal/src/features/work-records/components/records-empty-state.tsx
+web/portal/src/features/work-records/components/template-designer-placeholder.tsx
+web/portal/src/features/dictionaries/index.tsx
+web/portal/src/features/roles/index.tsx
+
+web/portal/src/i18n/locales/zh-CN/work-records.ts
+web/portal/src/i18n/locales/en-US/work-records.ts
+web/portal/src/i18n/locales/zh-CN/platform.ts
+web/portal/src/i18n/locales/en-US/platform.ts
+```
+
+修改代码：
+
+```text
+web/portal/src/components/layout/data/sidebar-data.ts
+web/portal/src/i18n/locales/zh-CN/nav.ts
+web/portal/src/i18n/locales/en-US/nav.ts
+web/portal/src/i18n/locales/zh-CN/index.ts
+web/portal/src/i18n/locales/en-US/index.ts
+web/portal/src/i18n/config.ts
+```
+
+路由 search schema：
+
+```tsx
+const recordsSearchSchema = z.object({
+  page: z.number().optional().catch(1),
+  pageSize: z.number().optional().catch(10),
+  status: z
+    .array(z.enum(["draft", "processing", "done", "archived"]))
+    .optional()
+    .catch([]),
+  title: z.string().optional().catch(""),
+});
+```
+
+单元测试：
+
+```text
+web/portal/src/features/work-records/components/records-empty-state.test.tsx
+web/portal/src/features/work-records/components/template-designer-placeholder.test.tsx
+```
+
+验收：
+
+```text
+侧边栏追加工作记录 / 记录列表 / 表单设计 / 平台管理 / 字典管理 / 角色权限
+所有新增路由能打开
+页面关键文案均来自 t('workRecords.*') 或 t('platform.*')
+routeTree.gen.ts 自动更新
+```
+
+### Phase WR-2：字典管理 portal 接入
+
+目标：
+
+```text
+把已存在的后端 dictionary 能力接入 portal，先支持记录类型、优先级、环境、状态等关键字典。
+```
+
+后端保留与补齐：
+
+```text
+保留：
+  DictionaryController.java
+  DictionaryService.java
+  DictionaryRepository.java
+  DefaultDictionaryInitializer.java
+  DictionaryServiceTest.java
+
+补齐：
+  DictionaryControllerTest.java
+  默认字典 seed 覆盖测试
+  字典项禁用后仍可按 value 回显 label 的查询方法
+```
+
+前端完整代码落点：
+
+```text
+web/portal/src/features/dictionaries/
+├─ index.tsx
+├─ data/
+│  ├─ schema.ts
+│  └─ data.ts
+├─ data/client.ts
+├─ hooks/use-dictionaries.ts
+└─ components/
+   ├─ dictionaries-provider.tsx
+   ├─ dictionary-type-list.tsx
+   ├─ dictionary-item-table.tsx
+   ├─ dictionary-item-columns.tsx
+   ├─ dictionary-type-dialog.tsx
+   ├─ dictionary-item-dialog.tsx
+   └─ dictionary-delete-dialog.tsx
+```
+
+前端单元测试：
+
+```text
+web/portal/src/features/dictionaries/components/dictionaries-provider.test.tsx
+web/portal/src/features/dictionaries/data/schema.test.ts
+web/portal/src/features/dictionaries/hooks/use-dictionaries.test.tsx
+```
+
+API client 约束：
+
+```text
+统一新增 data/client.ts
+使用 axios 实例
+baseURL 读取 VITE_API_BASE_URL
+响应使用 zod parse
+不在 client.ts toast
+错误交给 QueryClient onError
+```
+
+验收：
+
+```text
+能列出字典类型
+能新增 / 编辑 / 禁用字典类型
+能新增 / 编辑 / 禁用字典项
+record_type / record_priority / record_env / record_status 默认存在
+portal 字典页面所有关键文案已国际化
+```
+
+### Phase WR-3：Formily / Designable 兼容性 Spike
+
+目标：
+
+```text
+在 React 19 + Vite 8 + portal 样式下验证 Formily runtime 与 Designable 是否能稳定工作。
+```
+
+新增依赖候选：
+
+```text
+@formily/core
+@formily/react
+@formily/json-schema
+@formily/validator
+@designable/core
+@designable/react
+@designable/formily-setters
+@designable/formily-transformer
+```
+
+新增代码：
+
+```text
+web/portal/src/features/work-records/data/formily-schema.ts
+web/portal/src/features/work-records/components/formily-runtime-form.tsx
+web/portal/src/features/work-records/components/formily-designer-shell.tsx
+web/portal/src/features/work-records/components/formily-spike-page.tsx
+web/portal/src/features/work-records/components/dict-schema-injector.ts
+```
+
+单元测试：
+
+```text
+web/portal/src/features/work-records/components/dict-schema-injector.test.ts
+web/portal/src/features/work-records/data/formily-schema.test.ts
+```
+
+降级策略：
+
+```text
+如果 Designable 与 React 19 / Vite 8 不兼容：
+  Phase WR-3 只交付 Formily runtime
+  Phase WR-4 改为 JSON schema 编辑器 + 预览
+  Designable 延后到单独 ADR 决策
+```
+
+验收：
+
+```text
+pnpm -C web/portal run build 通过
+runtime 能渲染最小 schema
+设计器页面能打开或明确落入降级策略
+字典注入函数纯单测通过
+```
+
+### Phase WR-4：模板后端升级与字段索引同步
+
+目标：
+
+```text
+把已存在的模板后端从“手工字段 CRUD”升级为“保存 Formily schema，同时自动同步 wr_template_field”。
+```
+
+当前已实现：
+
+```text
+WorkRecordTemplateService.createTemplate()
+WorkRecordTemplateService.updateTemplate()
+WorkRecordTemplateService.createField()
+WorkRecordTemplateService.updateField()
+WorkRecordFieldValidator
 WorkRecordTemplateServiceTest
-WorkRecordFieldServiceTest
+```
+
+需要新增 / 修改：
+
+```text
+modules/aiops-work-record/src/main/java/io/aegisops/workrecord/WorkRecordSchemaService.java
+modules/aiops-work-record/src/main/java/io/aegisops/workrecord/WorkRecordFieldIndexService.java
+modules/aiops-work-record/src/main/java/io/aegisops/workrecord/FormilyFieldDescriptor.java
+modules/aiops-work-record/src/main/java/io/aegisops/workrecord/SaveTemplateSchemaRequest.java
+
+WorkRecordTemplate.java 增加 designerJson
+CreateTemplateRequest.java 增加 designerJson
+UpdateTemplateRequest.java 增加 designerJson
+WorkRecordTemplateRepository.java 保存 / 更新 designer_json
+```
+
+数据库 migration：
+
+```text
+apps/aiops-server/src/main/resources/db/migration/V0015__work_record_formily_schema_index.sql
+```
+
+migration 内容：
+
+```sql
+alter table wr_template
+  add column if not exists designer_json jsonb not null default '{}'::jsonb;
+
+alter table wr_template_field
+  add column if not exists schema_path varchar(512);
+```
+
+后端单元测试：
+
+```text
+WorkRecordSchemaServiceTest
+  - normalize 空 schema 为 {}
+  - 拒绝非 object JSON
+  - 保留 x-work-record-* 扩展属性
+
+WorkRecordFieldIndexServiceTest
+  - 从 properties 抽取字段编码
+  - dict 字段必须带 dictCode
+  - field_code 使用 properties key，不接受运行时改名
+  - listVisible / filterable / statistical 正确落库
+
+WorkRecordTemplateServiceTest 补充：
+  - updateTemplate 保存 schema 后调用字段索引同步
+  - repository 更新失败时不写 audit
+```
+
+验收：
+
+```text
+保存模板 schema_json 与 designer_json
+同步生成 wr_template_field
+重复 field_code 被拒绝或覆盖为同一字段
+字段索引同步有完整单测
+```
+
+### Phase WR-5：记录填写、编辑与详情
+
+目标：
+
+```text
+用户可基于模板填写记录，详情页按 schema 只读展示。
+```
+
+当前后端已实现：
+
+```text
+WorkRecordService.create()
+WorkRecordService.update()
+WorkRecordService.get()
+WorkRecordService.list()
+WorkRecordFieldValidator.validateAgainstTemplate()
 WorkRecordServiceTest
-WorkRecordQueryServiceTest
+```
+
+后端补齐：
+
+```text
 WorkRecordControllerTest
-WorkRecordArchitectureTest
+WorkRecordFieldValidatorTest 增加 select / multi_select / required / unknown field case
+WorkRecordServiceTest 增加 owner / creator / read all 权限组合
 ```
 
----
+前端完整代码落点：
 
-# 15. 路线图
+```text
+web/portal/src/features/work-records/
+├─ data/
+│  ├─ schema.ts
+│  ├─ client.ts
+│  ├─ field-types.ts
+│  └─ reserved-field-codes.ts
+├─ hooks/
+│  ├─ use-record-template.ts
+│  ├─ use-record.ts
+│  ├─ use-save-record.ts
+│  └─ use-dict-items.ts
+└─ components/
+   ├─ record-form.tsx
+   ├─ formily-runtime-form.tsx
+   ├─ formily-schema-loader.tsx
+   ├─ record-readonly-view.tsx
+   └─ record-page-header.tsx
+```
 
-## Phase 1：菜单与空页面
+前端单元测试：
+
+```text
+record-readonly-view.test.tsx
+formily-schema-loader.test.tsx
+reserved-field-codes.test.ts
+schema.test.ts
+```
+
+验收：
+
+```text
+新建页读取默认模板
+编辑页回填已有 customDataJson
+详情页按 schema 顺序只读渲染
+字典 value 能显示 label
+非法自定义字段值被后端拒绝
+普通用户不能读取别人的记录
+```
+
+### Phase WR-6：记录列表、动态列、筛选与导出
 
 目标：
 
-```text id="7t1ffy"
-字典管理菜单出现
-工作记录菜单出现
-页面能打开
+```text
+管理员可在 portal 以 TanStack Table 查看、筛选、导出工作记录。
 ```
 
-内容：
+当前后端已实现：
 
-```text id="yeohp0"
-新增路由
-新增空页面
-新增菜单种子数据
-确认用户管理 / 角色权限复用
+```text
+WorkRecordRepository.page()
+WorkRecordRepository.pageForUser()
+WorkRecordExportController
+WorkRecordExportService
+WorkRecordExportServiceTest
 ```
 
-耗时：
+后端补齐：
 
-```text id="j1a0py"
-1 天
+```text
+1. 自定义字段筛选 DTO
+2. filterable 白名单校验
+3. JSONB 查询参数化实现
+4. 导出上限配置，默认 5000 行
+5. 导出使用当前筛选条件
 ```
 
----
+前端完整代码落点：
 
-## Phase 2：字典管理
+```text
+web/portal/src/features/work-records/components/
+├─ records-table.tsx
+├─ records-columns.tsx
+├─ records-toolbar.tsx
+├─ records-primary-buttons.tsx
+├─ records-provider.tsx
+├─ records-dialogs.tsx
+├─ export-records-dialog.tsx
+├─ data-table-row-actions.tsx
+└─ data-table-bulk-actions.tsx
+```
+
+前端单元测试：
+
+```text
+records-provider.test.tsx
+records-columns.test.tsx
+export-records-dialog.test.tsx
+```
+
+验收：
+
+```text
+分页 / 状态筛选 / 标题搜索同步到 URL search
+动态列只来自 list_visible 字段
+自定义筛选只允许 filterable 字段
+导出按钮使用当前筛选条件
+超出导出上限返回明确错误
+```
+
+### Phase WR-7：权限、审计、质量门禁
 
 目标：
 
-```text id="qd8u4t"
-平台可维护字典
-表单设计器可引用字典
+```text
+把工作记录模块从“可用”推进到“可试用”，重点补齐权限、审计和测试。
 ```
 
-内容：
+后端必须覆盖：
 
-```text id="q3f41a"
-platform_dict_type
-platform_dict_item
-字典类型 CRUD
-字典项 CRUD
-内置字典初始化
-前端字典管理页
+```text
+1. work-record:read:self
+2. work-record:read:all
+3. work-record:template:read
+4. work-record:template:write
+5. work-record:export
+6. platform:dict:read
+7. platform:dict:write
 ```
 
-耗时：
+审计动作：
 
-```text id="z9gb0o"
-2～3 天
+```text
+work_record.template.create
+work_record.template.update
+work_record.field.create
+work_record.field.update
+work_record.record.create
+work_record.record.update
+work_record.record.delete
+work_record.record.export
+platform.dict.type.create
+platform.dict.type.update
+platform.dict.item.create
+platform.dict.item.update
+```
+
+质量门禁：
+
+```bash
+mvn -pl modules/aiops-platform -am test
+mvn -pl modules/aiops-work-record -am test
+mvn -pl apps/aiops-server -am test
+pnpm -C web/portal run lint
+pnpm -C web/portal run build
+pnpm -C web/portal run test
+```
+
+验收：
+
+```text
+所有新增后端服务有单元测试
+所有新增 portal Provider / schema / 纯函数有单元测试
+权限不足返回 403
+所有敏感写操作写审计
+文档、代码、测试三者一致
+```
+
+## 21. portal 国际化方案
+
+当前 `web/portal` 已经采用：
+
+```text
+i18next
+react-i18next
+i18next-browser-languagedetector
+TS 文件存储 key-value
+默认语言 zh-CN
+cookie: aegisops_portal_lang
+```
+
+继续沿用现有结构，不引入 JSON 资源文件：
+
+```text
+web/portal/src/i18n/locales/zh-CN/<namespace>.ts
+web/portal/src/i18n/locales/en-US/<namespace>.ts
+```
+
+新增 namespace：
+
+```text
+workRecords
+platform
+```
+
+`zh-CN/work-records.ts`：
+
+```ts
+export const workRecords = {
+  title: "工作记录",
+  description: "填写、查看和导出可配置工作记录",
+  list: {
+    title: "记录列表",
+    create: "新建记录",
+    export: "导出记录",
+    searchPlaceholder: "筛选记录标题...",
+  },
+  designer: {
+    title: "表单设计",
+    description: "配置工作记录模板、字段和字典绑定",
+    save: "保存模板",
+    preview: "预览",
+  },
+  form: {
+    title: "记录标题",
+    template: "记录模板",
+    recordTime: "记录时间",
+    owner: "负责人",
+    submit: "提交记录",
+  },
+  status: {
+    draft: "草稿",
+    processing: "处理中",
+    done: "已完成",
+    archived: "已归档",
+  },
+  columns: {
+    title: "标题",
+    status: "状态",
+    owner: "负责人",
+    creator: "创建人",
+    recordTime: "记录时间",
+    actions: "操作",
+  },
+} as const;
+```
+
+`en-US/work-records.ts`：
+
+```ts
+export const workRecords = {
+  title: "Work Records",
+  description: "Create, review, and export configurable work records",
+  list: {
+    title: "Records",
+    create: "New Record",
+    export: "Export Records",
+    searchPlaceholder: "Filter record titles...",
+  },
+  designer: {
+    title: "Form Designer",
+    description: "Configure templates, fields, and dictionary bindings",
+    save: "Save Template",
+    preview: "Preview",
+  },
+  form: {
+    title: "Record Title",
+    template: "Template",
+    recordTime: "Record Time",
+    owner: "Owner",
+    submit: "Submit Record",
+  },
+  status: {
+    draft: "Draft",
+    processing: "Processing",
+    done: "Done",
+    archived: "Archived",
+  },
+  columns: {
+    title: "Title",
+    status: "Status",
+    owner: "Owner",
+    creator: "Creator",
+    recordTime: "Record Time",
+    actions: "Actions",
+  },
+} as const;
+```
+
+`zh-CN/platform.ts`：
+
+```ts
+export const platform = {
+  title: "平台管理",
+  dictionaries: {
+    title: "字典管理",
+    description: "管理平台枚举、字段选项和表单字典",
+    type: "字典类型",
+    item: "字典项",
+    code: "编码",
+    name: "名称",
+    label: "标签",
+    value: "值",
+    enabled: "启用",
+  },
+  roles: {
+    title: "角色权限",
+    description: "管理角色、权限和菜单访问范围",
+  },
+} as const;
+```
+
+`en-US/platform.ts`：
+
+```ts
+export const platform = {
+  title: "Platform",
+  dictionaries: {
+    title: "Dictionaries",
+    description: "Manage enums, field options, and form dictionaries",
+    type: "Dictionary Type",
+    item: "Dictionary Item",
+    code: "Code",
+    name: "Name",
+    label: "Label",
+    value: "Value",
+    enabled: "Enabled",
+  },
+  roles: {
+    title: "Roles & Permissions",
+    description: "Manage roles, permissions, and menu access",
+  },
+} as const;
+```
+
+必须同步：
+
+```text
+1. zh-CN/index.ts 与 en-US/index.ts import 并导出 workRecords / platform
+2. i18n/config.ts 的 NAMESPACES 追加 workRecords / platform
+3. nav.ts 追加工作记录与平台管理菜单 key
+4. 组件中只使用静态 key：t('workRecords.list.title')
+5. 禁止字符串拼接 key：t(`workRecords.status.${status}`) 仅在 status 已被 zod enum 校验后允许
+```
+
+首批国际化范围：
+
+```text
+菜单
+页面标题 / 描述
+表格列名
+状态文案
+按钮
+Dialog 标题 / 描述
+Toast 成功 / 失败提示
+空态
+```
+
+暂缓国际化范围：
+
+```text
+Designable 内置面板文案
+Formily 第三方组件内置校验文案
+后端异常原始 message
+后续可能移除的模板示例页面
 ```
 
 ---
 
-## Phase 3：工作记录模块骨架
+## 22. 总工期
 
-目标：
+一个人 + AI：
 
-```text id="i8wff0"
-新增 aiops-work-record 模块
-能创建模板和字段
-```
-
-内容：
-
-```text id="xkckux"
-新增 Maven 模块
-接入 aiops-server
-新增 work_record schema
-新增 wr_template
-新增 wr_template_field
-模板 CRUD
-字段 CRUD
-```
-
-耗时：
-
-```text id="xsmfrx"
-2～3 天
-```
-
----
-
-## Phase 4：管理员拖拽表单设计
-
-目标：
-
-```text id="6tm8fm"
-管理员能拖拽配置一张工作记录表
-```
-
-内容：
-
-```text id="an2kr6"
-字段组件区
-表单画布
-字段属性面板
-字段排序
-字段保存
-字段预览
-字典选项绑定
-```
-
-耗时：
-
-```text id="i4ch5g"
-4～6 天
-```
-
----
-
-## Phase 5：用户填写工作记录
-
-目标：
-
-```text id="78c6d4"
-用户能按模板填写记录
-```
-
-内容：
-
-```text id="r52145"
-wr_record 表
-动态表单渲染
-保存 custom_data_json
-编辑记录
-详情页
-```
-
-耗时：
-
-```text id="y4l3j8"
-3～5 天
-```
-
----
-
-## Phase 6：记录列表、筛选、导出
-
-目标：
-
-```text id="cxfm6l"
-管理员能查看、筛选、导出记录
-```
-
-内容：
-
-```text id="kz2uh8"
-动态表格列
-基础筛选
-自定义字段筛选
-我的记录 / 全部记录
-Excel 导出
-```
-
-耗时：
-
-```text id="s9h9zw"
-4～6 天
-```
-
----
-
-# 16. MVP 总工期
-
-如果你一个人 + AI：
-
-```text id="rfzg9u"
-能演示：7～10 天
-内部可试用：2～3 周
+```text
+能演示：2 周左右
+内部可试用：3～4 周
 做得比较稳：4～5 周
 ```
 
-推荐不要赶太狠。
+推荐节奏：
 
-最稳版本：
+```text
+第 1 周：
+  portal 接管
+  Formily Spike
+  菜单路由
+  字典管理
 
-```text id="rn6rio"
-Phase 1 + Phase 2 + Phase 3 + Phase 4 + Phase 5 + Phase 6
-```
+第 2 周：
+  模板后端
+  schema 保存
+  字段索引同步
+  表单设计页
 
-大概：
+第 3 周：
+  记录填写
+  编辑
+  详情
+  字典注入
 
-```text id="q8yw0j"
-3～4 周
+第 4 周：
+  列表
+  筛选
+  导出
+  权限
+  测试
 ```
 
 ---
 
-# 17. 后续增强路线
+## 23. 最终架构总结
 
-MVP 之后再加：
+最终架构：
 
-```text id="v7leam"
-1. Excel 导入
-2. 统计分析
-3. 评论时间线
-4. 附件上传
-5. 关联告警 / 巡检 / 事件
-6. 从告警一键生成记录
-7. 从巡检报告一键生成记录
-8. AI 自动总结工作记录
-9. AI 根据历史记录推荐处理方式
-10. 独立产品化部署
+```text
+前端：
+  web/portal
+  shadcn-admin 外壳
+  TanStack Router
+  TanStack Query
+  TanStack Table
+  Formily / Designable
+
+后端：
+  aiops-server
+  aiops-platform/dictionary
+  aiops-work-record
+
+数据库：
+  platform_dict_type
+  platform_dict_item
+  work_record.wr_template
+  work_record.wr_template_field
+  work_record.wr_record
 ```
 
-但这些都不是第一版必须。
+最终取舍：
 
----
-
-# 18. 终版取舍
-
-最终取舍是：
-
-```text id="i5kgv0"
-做用户管理：复用现有
-做角色权限：复用现有
-做字典管理：新增到 aiops-platform
-做拖拽制表：新增到 aiops-work-record
-做记录填写：新增到 aiops-work-record
-做筛选导出：新增到 aiops-work-record
+```text
+表单设计器不自研，直接 Formily / Designable
+表单运行态使用 Formily
+列表表格继续使用 TanStack Table
+字典自研平台能力
+后端保存 schema_json，同时同步字段索引表
 不做微前端
-不做完整低代码引擎
+不做微服务
 不做完整工单系统
-不做复杂流程
 ```
 
-最终系统形态：
+一句话：
 
-```text id="bu1fuo"
-AegisOps 运维中台
-├─ 用户 / 权限 / 字典
-└─ 可配置工作记录
-   ├─ 管理员设计表
-   ├─ 用户填写记录
-   ├─ 管理员查看筛选
-   └─ 导出沉淀
+```text
+第一版直接上 Formily 是可以的，但必须把 Formily schema 和业务字段索引拆开：schema 负责渲染，wr_template_field 负责查询、筛选、导出和后端校验。
 ```
-
-这就是我认为最稳、最适合当前 `ai-ops mvp` 的终版设计。
