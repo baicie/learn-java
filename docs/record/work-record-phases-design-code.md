@@ -1,16 +1,19 @@
 ---
-title: 工作记录模块 Phase 设计与代码包
+title: 工作记录模块 Phase 设计与代码包（已废弃）
 type: design
-status: draft
+status: deprecated
 phase: work-record
 owner: ai
 created: 2026-07-06
-updated: 2026-07-06
+updated: 2026-07-07
 related:
   - docs/record/index.md
+  - docs/record/phase-00-baseline-and-contract.md
 ---
 
 # 工作记录模块 Phase 设计与代码包
+
+> 废弃说明：本文是旧版合并式 Phase 代码包，包含已过时的 `web/console` 前端方案。最新设计以 `docs/record/index.md` 和 `docs/record/phase-*.md` 为准。
 
 本文基于当前仓库现状与 `docs/record/index.md` 的终版设想，给出“可配置工作记录模块”的逐 Phase 详细设计、实施文件、核心完整代码与单元测试。
 

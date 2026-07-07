@@ -11,7 +11,14 @@ supersedes:
 deprecated_for:
   reason: 早期基于 web/console 的同主题设计稿；规划、技术栈与目录结构均已被本文档取代，仅供历史回溯。
 related:
-  - docs/record/work-record-phases-design-code.md
+  - docs/record/phase-00-baseline-and-contract.md
+  - docs/record/phase-01-portal-i18n-and-shell.md
+  - docs/record/phase-02-platform-dictionary.md
+  - docs/record/phase-03-work-record-template.md
+  - docs/record/phase-04-formily-designer.md
+  - docs/record/phase-05-record-runtime.md
+  - docs/record/phase-06-record-list-export.md
+  - docs/record/phase-07-role-permission-hardening.md
   - docs/reviews/work-record/2026-07-06-work-record-implementation-review.md
   - docs/reviews/work-record/2026-07-07-work-record-final-review.md
   - docs/reviews/work-record/2026-07-07-work-record-rule-based-review.md
@@ -23,7 +30,7 @@ related:
 >
 > 历史：`docs/record/2026-07-06-record-index-pre-portal.md` 是基于 `web/console` 的同等设计，已被本文档 `supersedes`。
 >
-> 配套：`docs/record/work-record-phases-design-code.md`（逐 Phase 实现代码）以及 `docs/reviews/work-record/*`（实现与规则评审）继续阅读。
+> 配套：`docs/record/phase-*.md`（逐 Phase 详细设计、代码落点与测试）以及 `docs/reviews/work-record/*`（实现与规则评审）继续阅读。旧的 `docs/record/work-record-phases-design-code.md` 已废弃，仅供历史回溯。
 
 ## 1. 最终定位
 
