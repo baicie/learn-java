@@ -1,8 +1,8 @@
 package io.aegisops.persistence;
 
-import static io.aegisops.persistence.jooq.Tables.ALERT_EVENT;
-import static io.aegisops.persistence.jooq.Tables.INCIDENT;
-import static io.aegisops.persistence.jooq.Tables.INCIDENT_EVENT;
+import static io.aegisops.persistence.jooq.public_.Tables.ALERT_EVENT;
+import static io.aegisops.persistence.jooq.public_.Tables.INCIDENT;
+import static io.aegisops.persistence.jooq.public_.Tables.INCIDENT_EVENT;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.jooq.SQLDialect;

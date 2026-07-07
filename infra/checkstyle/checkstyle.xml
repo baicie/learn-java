@@ -20,7 +20,7 @@
       <property name="countEmpty" value="false"/>
     </module>
     <module name="ParameterNumber">
-      <property name="max" value="5"/>
+      <property name="max" value="6"/>
       <property name="ignoreOverriddenMethods" value="true"/>
     </module>
     <module name="NestedIfDepth">

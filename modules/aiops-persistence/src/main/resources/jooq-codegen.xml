@@ -70,7 +70,9 @@
         agent_eval_dataset | agent_eval_case | agent_prompt_profile | agent_eval_run | agent_eval_case_result |
         agent_memory | agent_memory_event | tenant_quota_policy | tenant_security_event |
         plugin_descriptor | tenant_plugin | tenant_plugin_tool_policy | plugin_event |
-        automation_outbox | platform_module | sys_workspace | evidence_collection_task
+        automation_outbox | platform_module | sys_workspace | evidence_collection_task |
+        platform_dict_type | platform_dict_item |
+        wr_template | wr_template_field | wr_record
       </includes>
 
       <excludes>flyway_schema_history</excludes>

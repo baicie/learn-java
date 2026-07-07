@@ -1,11 +1,11 @@
 package io.aegisops.persistence;
 
-import static io.aegisops.persistence.jooq.Tables.AGENT_RUN;
-import static io.aegisops.persistence.jooq.Tables.AI_DIAGNOSIS;
-import static io.aegisops.persistence.jooq.Tables.CHANGE_EVENT;
-import static io.aegisops.persistence.jooq.Tables.INCIDENT;
-import static io.aegisops.persistence.jooq.Tables.LOG_EVENT;
-import static io.aegisops.persistence.jooq.Tables.RCA_ANALYSIS;
+import static io.aegisops.persistence.jooq.public_.Tables.AGENT_RUN;
+import static io.aegisops.persistence.jooq.public_.Tables.AI_DIAGNOSIS;
+import static io.aegisops.persistence.jooq.public_.Tables.CHANGE_EVENT;
+import static io.aegisops.persistence.jooq.public_.Tables.INCIDENT;
+import static io.aegisops.persistence.jooq.public_.Tables.LOG_EVENT;
+import static io.aegisops.persistence.jooq.public_.Tables.RCA_ANALYSIS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
