@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { LanguagesIcon, MenuIcon } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { Link, useLocation } from 'react-router-dom'
 
 import { listPlatformMenus } from '../api/client'
 import { Button } from '../components/ui/button'
@@ -21,17 +22,52 @@ const LANGUAGE_LABEL: Record<SupportedLanguage, string> = {
   'en-US': 'English',
 }
 
+function isActive(currentPath: string, targetPath: string | null | undefined): boolean {
+  if (!targetPath) return false
+  if (targetPath === currentPath) return true
+  // /app/x 子路由视为父路由 active
+  return currentPath.startsWith(targetPath + '/')
+}
+
+/**
+ * 用 React Router 的 Link 替代 shadcn NavigationMenuLink 内部的 <a href>，
+ * 避免每次菜单点击触发整页刷新（重载整页 = "整个页面闪一下"）。
+ *
+ * shadcn NavigationMenuPrimitive.Link 的 API 是 accept any anchor props，
+ * 实际渲染为 <a>。我们用 render prop 替换为客户端路由 Link。
+ */
+function RouterNavLink({
+  to,
+  className,
+  children,
+  active,
+}: {
+  to: string
+  className?: string
+  children: React.ReactNode
+  active?: boolean
+}) {
+  return (
+    <NavigationMenuLink render={<Link to={to} />} className={className} active={active}>
+      {children}
+    </NavigationMenuLink>
+  )
+}
+
 function LeafLink({ node }: { node: MenuNode }) {
   const Icon = resolveMenuIcon(node.icon)
+  const location = useLocation()
+  const active = isActive(location.pathname, node.path)
   return (
     <NavigationMenuItem>
-      <NavigationMenuLink
-        href={node.path}
+      <RouterNavLink
+        to={node.path ?? '/'}
         className={`${navigationMenuTriggerStyle()} w-full justify-start`}
+        active={active}
       >
         {Icon ? <Icon className="size-4" /> : <span className="size-4" aria-hidden />}
         <span className="truncate">{node.title}</span>
-      </NavigationMenuLink>
+      </RouterNavLink>
     </NavigationMenuItem>
   )
 }
@@ -47,15 +83,7 @@ function Branch({ node }: { node: MenuNode }) {
       <NavigationMenuContent className="min-w-48 p-1">
         <ul className="flex w-full flex-col gap-1">
           {node.children.map((child) => (
-            <li key={child.id}>
-              <NavigationMenuLink
-                href={child.path}
-                className="flex items-center gap-2 rounded-md px-3 py-2 text-sm"
-              >
-                <ChildIcon name={child.icon} />
-                <span className="truncate">{child.title}</span>
-              </NavigationMenuLink>
-            </li>
+            <ChildLink key={child.id} node={child} />
           ))}
         </ul>
       </NavigationMenuContent>
@@ -63,10 +91,22 @@ function Branch({ node }: { node: MenuNode }) {
   )
 }
 
-function ChildIcon({ name }: { name: string | null | undefined }) {
-  const Icon = resolveMenuIcon(name)
-  if (!Icon) return <span className="size-4" aria-hidden />
-  return <Icon className="size-4" />
+function ChildLink({ node }: { node: MenuNode }) {
+  const Icon = resolveMenuIcon(node.icon)
+  const location = useLocation()
+  const active = isActive(location.pathname, node.path)
+  return (
+    <li>
+      <RouterNavLink
+        to={node.path ?? '/'}
+        className="flex items-center gap-2 rounded-md px-3 py-2 text-sm"
+        active={active}
+      >
+        {Icon ? <Icon className="size-4" /> : <span className="size-4" aria-hidden />}
+        <span className="truncate">{node.title}</span>
+      </RouterNavLink>
+    </li>
+  )
 }
 
 function MenuRow({ node }: { node: MenuNode }) {
