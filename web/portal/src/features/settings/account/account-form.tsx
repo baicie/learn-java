@@ -1,9 +1,9 @@
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { CaretSortIcon, CheckIcon } from '@radix-ui/react-icons'
-import { zodResolver } from '@hookform/resolvers/zod'
 import { showSubmittedData } from '@/lib/show-submitted-data'
 import { cn } from '@/lib/utils'
+import { zodV4Resolver } from '@/lib/zod-v4-resolver'
 import { Button } from '@/components/ui/button'
 import {
   Command,
@@ -61,7 +61,7 @@ const defaultValues: Partial<AccountFormValues> = {
 
 export function AccountForm() {
   const form = useForm<AccountFormValues>({
-    resolver: zodResolver(accountFormSchema),
+    resolver: zodV4Resolver(accountFormSchema),
     defaultValues,
   })
 

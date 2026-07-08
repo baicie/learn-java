@@ -1,9 +1,9 @@
 import { z } from 'zod'
 import { useFieldArray, useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
 import { Link } from '@tanstack/react-router'
 import { showSubmittedData } from '@/lib/show-submitted-data'
 import { cn } from '@/lib/utils'
+import { zodV4Resolver } from '@/lib/zod-v4-resolver'
 import { Button } from '@/components/ui/button'
 import {
   Form,
@@ -53,7 +53,7 @@ const defaultValues: Partial<ProfileFormValues> = {
 
 export function ProfileForm() {
   const form = useForm<ProfileFormValues>({
-    resolver: zodResolver(profileFormSchema),
+    resolver: zodV4Resolver(profileFormSchema),
     defaultValues,
     mode: 'onChange',
   })

@@ -256,11 +256,17 @@ export function FormilyRuntimeForm({
 
     if (!onValuesChange) return
 
-    const unsubscribe = form.subscribe((f) => {
-      onValuesChangeRef.current?.(f.values as Record<string, unknown>)
+    // form.subscribe 返回订阅 id，需要用 form.unsubscribe(id) 解绑
+    const id = form.subscribe((f) => {
+      // HeartSubscriber 回调形参是 { type, payload }，payload 才是 Form 实例
+      onValuesChangeRef.current?.(
+        (f.payload as Form).values as Record<string, unknown>
+      )
     })
 
-    return unsubscribe
+    return () => {
+      form.unsubscribe(id)
+    }
   }, [form, onValuesChange])
 
   // Build dict map for injectDictionaryOptions

@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
 import { showSubmittedData } from '@/lib/show-submitted-data'
+import { zodV4Resolver } from '@/lib/zod-v4-resolver'
 import { Button } from '@/components/ui/button'
 import {
   Form,
@@ -47,7 +47,7 @@ export function TasksMutateDrawer({
   const isUpdate = !!currentRow
 
   const form = useForm<TaskForm>({
-    resolver: zodResolver(formSchema),
+    resolver: zodV4Resolver(formSchema),
     defaultValues: currentRow ?? {
       title: '',
       status: '',

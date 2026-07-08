@@ -1,8 +1,8 @@
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
 import { MailPlus, Send } from 'lucide-react'
 import { showSubmittedData } from '@/lib/show-submitted-data'
+import { zodV4Resolver } from '@/lib/zod-v4-resolver'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -44,7 +44,7 @@ export function UsersInviteDialog({
   onOpenChange,
 }: UserInviteDialogProps) {
   const form = useForm<UserInviteForm>({
-    resolver: zodResolver(formSchema),
+    resolver: zodV4Resolver(formSchema),
     defaultValues: { email: '', role: '', desc: '' },
   })
 

@@ -1,6 +1,10 @@
+import { z } from 'zod'
 import { useQueries, useQuery } from '@tanstack/react-query'
 import { listDictItems } from '@/features/dictionaries/api'
-import { type DictItem } from '@/features/dictionaries/data/schema'
+import {
+  dictItemSchema,
+  type DictItem,
+} from '@/features/dictionaries/data/schema'
 import { listTemplates } from '../api/template-api'
 import { type WorkRecordTemplate } from '../data/schema'
 
@@ -74,10 +78,13 @@ export function useTemplateDictionaries(
     })),
   })
 
+  // zod v4 的 z.infer 在 nullable 字段推断上偶尔把字段标成可选，
+  // 这里用明确的 z.array(dictItemSchema) 重新窄化
   const dictionaries: Record<string, DictItem[]> = {}
   for (let i = 0; i < dictCodes.length; i++) {
-    if (results[i].data) {
-      dictionaries[dictCodes[i]] = results[i].data
+    const data = results[i].data
+    if (data) {
+      dictionaries[dictCodes[i]] = z.array(dictItemSchema).parse(data)
     }
   }
 

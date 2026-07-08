@@ -10,7 +10,11 @@ import {
   SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet'
-import type { RecordListFilterField, DynamicFilter } from '../data/schema'
+import type {
+  RecordListFilterField,
+  DynamicFilter,
+  DynamicFilterOperator,
+} from '../data/schema'
 import { DynamicFilterRow } from './dynamic-filter-row'
 
 type DynamicFilterSheetProps = {
@@ -40,9 +44,12 @@ export function DynamicFilterSheet({
   const handleAddFilter = () => {
     if (filterFields.length === 0) return
     const firstField = filterFields[0]
+    // operators 在 schema 中是 string[]，运行时实际是 DynamicFilterOperator 子集
+    const firstOperator = firstField.operators[0] as
+      DynamicFilterOperator | undefined
     const newFilter: DynamicFilter = {
       fieldCode: firstField.fieldCode,
-      operator: firstField.operators[0] ?? 'eq',
+      operator: firstOperator ?? 'eq',
       value: null,
       values: null,
     }

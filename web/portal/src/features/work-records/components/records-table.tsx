@@ -30,11 +30,10 @@ import {
   type WorkRecord,
   type RecordListMetadata,
   type DynamicFilter,
-  recordStatusValues,
 } from '../data/schema'
 import { DynamicFilterSheet } from './dynamic-filter-sheet'
 import { ExportRecordsDialog } from './export-records-dialog'
-import { createRecordsColumns } from './records-columns'
+import { createRecordsColumns, recordStatusValues } from './records-columns'
 
 type RecordsTableProps = {
   data: WorkRecord[]
