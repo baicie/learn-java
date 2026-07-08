@@ -74,6 +74,9 @@ aiops:
     zabbix:
       webhook:
         token: ${AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN:dev-zabbix-webhook-token}
+  work-record:
+    export:
+      max-rows: ${AIOPS_WORK_RECORD_EXPORT_MAX_ROWS:5000}
 
 springdoc:
   swagger-ui:

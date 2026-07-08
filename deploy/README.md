@@ -19,8 +19,10 @@ deploy/   ── Helm chart + Dockerfile + 离线包（生产 / 预发部署）
 ```text
 deploy/
 ├─ docker/                          # 各 app 的 Dockerfile
-│  ├─ java-app.Dockerfile           # aiops-server / aiops-worker / aiops-runner 共用
+│  ├─ java-app.Dockerfile           # 通用 Java 镜像模板（ARG: APP_MODULE / APP_NAME / APP_PORT）
 │  └─ aiops-agent.Dockerfile        # aiops-agent（Python 服务）
+│
+├─ apps/<app-name>/Dockerfile       # 实际生产的镜像入口（deploy.yml / docker.yml 引用）
 │
 ├─ helm/aegisops/                   # Helm chart
 │  ├─ Chart.yaml
@@ -43,6 +45,8 @@ deploy/
 │     ├─ test_observability_values.py
 │     └─ test_offline_values.py
 │
+├─ docker-compose.app.yml           # 腾讯云 VM 部署用的 compose（postgres + server + agent + worker + runner）
+│
 ├─ tests/                           # 跨 helm chart 与 dockerfile 的 Python 测试
 │  └─ test_deploy_scripts.py        # 校验 deploy 脚本、镜像清单、Dockerfile 行为
 │
@@ -52,15 +56,39 @@ deploy/
    └─ *.tar / *.tgz                 # 实际产物（构建期生成，git 忽略）
 ```
 
+## 运行时拓扑
+
+```text
+生产 VM（部署单元）：
+  postgres  ── 5432  ──┐
+                        ├── aiops-server   (8080, 控制面, Spring Boot)
+                        ├── aiops-worker   (8081, 异步消费 + RCA/Incident 聚合)
+                        └── aiops-runner   (8092, 隔离执行 ansible / webhook)
+
+  aiops-agent  (9008, Python LangGraph) ── 通过 internal token 调 aiops-server internal API
+```
+
+说明：
+
+- worker / runner 跟 server 共享同一 Postgres（独立 schema 与表，互不耦合）
+- runner 镜像额外装了 `ansible-playbook` / `sshpass` / `openssh-client` 与 `tini`
+- worker / runner 不依赖 agent（agent 走 canonical workflow 只查 server，不直接调 runner）
+
 ## 镜像名 / Tag 约束
 
-- 所有镜像统一命名空间：`aegisops/<app-name>:<version>`
+- 所有镜像统一命名空间：`aegisops/<app-name>:<version>`，前缀由 deploy.yml 注入为 `${DOCKERHUB_USERNAME}/aegisops`
 - 当前约定版本：`0.1.0`
 - 修改任何镜像名 / Tag，**必须同步修改**：
   - `infra/docker-compose.yml`
   - `deploy/offline/images.txt`
-  - `deploy/docker/*Dockerfile`
+  - `deploy/docker-compose.app.yml`
+  - `apps/<app-name>/Dockerfile`
 - CI 中的 `deploy/tests/test_deploy_scripts.py::test_offline_image_list_contains_required_images` 会校验镜像清单一致性
+- `deploy.yml` 给每个镜像打以下 tag（长 SHA 用于按 commit 回滚）：
+  - `aegisops/aiops-server` → `git-<sha7>` / `<sha40>` / `<branch>` / `latest`(仅 main)
+  - `aegisops/aiops-agent` → `git-<sha7>` / `<sha40>` / `<branch>` / `latest`(仅 main)
+  - `aegisops/aiops-worker` → `git-<sha7>` / `<sha40>` / `<branch>` / `latest`(仅 main)
+  - `aegisops/aiops-runner` → `git-<sha7>` / `<sha40>` / `<branch>` / `latest`(仅 main)
 
 ## 密钥引用方式
 

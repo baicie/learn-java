@@ -54,7 +54,9 @@ class WorkRecordAuditTest {
     templateService =
         new WorkRecordTemplateService(
             templateRepository, fieldRepository, schemaService, fieldIndexService, audit);
-    exportService = new WorkRecordExportService(repository, fieldRepository, audit);
+    exportService =
+        new WorkRecordExportService(
+            repository, fieldRepository, audit, new WorkRecordProperties());
 
     // queryService 仅在 metadata 中用，这里无需完整 mock
     queryService = mock(WorkRecordQueryService.class);
@@ -100,6 +102,7 @@ class WorkRecordAuditTest {
                       "[]",
                       true,
                       false,
+                      true,
                       false,
                       0,
                       true,
@@ -212,10 +215,10 @@ class WorkRecordAuditTest {
       // extractFields 返回 1 个描述符
       when(schemaService.extractFields("{}")).thenReturn(List.of());
       when(fieldRepository.list("t1", "tpl1")).thenReturn(List.of());
-      // syncFields 不抛
+      // syncFields 不抛（带 actor 参数）
       org.mockito.Mockito.doNothing()
           .when(fieldIndexService)
-          .syncFields(eq("t1"), eq("tpl1"), any(), any());
+          .syncFields(eq("t1"), eq("tpl1"), any(), any(), eq("admin"));
       when(templateRepository.updateSchema(eq("t1"), eq("tpl1"), eq("{}"), eq("{}")))
           .thenReturn(Optional.of(updated));
 
@@ -261,6 +264,7 @@ class WorkRecordAuditTest {
               "[]",
               true,
               false,
+              true,
               false,
               0,
               true,
@@ -284,6 +288,7 @@ class WorkRecordAuditTest {
               "[]",
               true,
               false,
+              true,
               false,
               0,
               true,

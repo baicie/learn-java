@@ -238,6 +238,7 @@ class WorkRecordServiceTest {
                     "[]",
                     true,
                     false,
+                    true,
                     false,
                     0,
                     true,

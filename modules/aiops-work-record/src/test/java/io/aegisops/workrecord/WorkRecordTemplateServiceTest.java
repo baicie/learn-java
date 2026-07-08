@@ -18,9 +18,9 @@ class WorkRecordTemplateServiceTest {
   private final WorkRecordTemplateRepository templates = mock(WorkRecordTemplateRepository.class);
   private final WorkRecordFieldRepository fields = mock(WorkRecordFieldRepository.class);
   private final WorkRecordSchemaService schemaService = new WorkRecordSchemaService();
-  private final WorkRecordFieldIndexService fieldIndexService =
-      new WorkRecordFieldIndexService(fields);
   private final AuditService audit = mock(AuditService.class);
+  private final WorkRecordFieldIndexService fieldIndexService =
+      new WorkRecordFieldIndexService(fields, audit);
   private WorkRecordTemplateService service;
 
   @BeforeEach
@@ -65,7 +65,7 @@ class WorkRecordTemplateServiceTest {
     CreateFieldRequest request =
         new CreateFieldRequest(
             "字段", "field", "unknown", false, null, "static", null, "[]", false, false,
-            false, 0, true, null);
+            true, false, 0, true, null);
 
     assertThatThrownBy(() -> service.createField("t1", "tpl1", request, "u1"))
         .isInstanceOf(IllegalArgumentException.class)
@@ -76,7 +76,7 @@ class WorkRecordTemplateServiceTest {
   void createField_whenDictOption_shouldRequireDictCode() {
     CreateFieldRequest request =
         new CreateFieldRequest(
-            "优先级", "priority", "select", false, null, "dict", "", "[]", true, true, false, 0,
+            "优先级", "priority", "select", false, null, "dict", "", "[]", true, true, true, false, 0,
             true, null);
 
     assertThatThrownBy(() -> service.createField("t1", "tpl1", request, "u1"))
@@ -96,6 +96,7 @@ class WorkRecordTemplateServiceTest {
             "static",
             null,
             "{not-json}",
+            true,
             true,
             true,
             false,
@@ -120,6 +121,7 @@ class WorkRecordTemplateServiceTest {
             "static",
             null,
             "{}",
+            true,
             true,
             true,
             false,
@@ -175,6 +177,7 @@ class WorkRecordTemplateServiceTest {
             "[{\"label\":\"a\",\"value\":\"a\"}]",
             true,
             true,
+            true,
             false,
             0,
             true,
@@ -194,7 +197,7 @@ class WorkRecordTemplateServiceTest {
         "t1",
         "tpl1",
         "f1",
-        new UpdateFieldRequest("新名称", null, null, null, null, null, null, null, null, null, null),
+        new UpdateFieldRequest("新名称", null, null, null, null, null, null, null, null, null, null, null),
         "u1");
 
     verify(fields).update(eq("t1"), eq("tpl1"), eq("f1"), any(UpdateFieldRequest.class));
@@ -219,6 +222,7 @@ class WorkRecordTemplateServiceTest {
                     "static",
                     null,
                     "[]",
+                    true,
                     true,
                     true,
                     false,
@@ -263,6 +267,7 @@ class WorkRecordTemplateServiceTest {
                     "static",
                     null,
                     "[]",
+                    true,
                     true,
                     true,
                     false,

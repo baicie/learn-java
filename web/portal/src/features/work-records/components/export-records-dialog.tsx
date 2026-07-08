@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Download, Loader2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Dialog,
   DialogContent,
@@ -12,8 +13,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
+import { Label } from '@/components/ui/label'
 import { exportRecords } from '../api/work-record-api'
-import type { DynamicFilter } from '../data/schema'
+import type { DynamicFilter, RecordListColumn } from '../data/schema'
 
 type ExportRecordsDialogProps = {
   templateId?: string
@@ -22,6 +24,7 @@ type ExportRecordsDialogProps = {
   filters?: DynamicFilter[]
   total: number
   maxRows?: number
+  columns?: RecordListColumn[]
 }
 
 export function ExportRecordsDialog({
@@ -31,10 +34,17 @@ export function ExportRecordsDialog({
   filters,
   total,
   maxRows = 5000,
+  columns = [],
 }: ExportRecordsDialogProps) {
   const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
+
+  // 仅列出 exportable=true 的字段；UI 不可让用户选不可导出列。
+  const exportableColumns = useMemo(
+    () => columns.filter((c) => c.exportable),
+    [columns]
+  )
 
   const exceedsLimit = total > maxRows
 
@@ -46,6 +56,7 @@ export function ExportRecordsDialog({
         status,
         keyword,
         filters,
+        columns: exportableColumns.map((c) => c.fieldCode),
         format: 'csv',
       })
       const url = URL.createObjectURL(blob)
@@ -74,7 +85,7 @@ export function ExportRecordsDialog({
           {t('workRecords.list.export')}
         </Button>
       </DialogTrigger>
-      <DialogContent className='sm:max-w-[400px]'>
+      <DialogContent className='sm:max-w-[480px]'>
         <DialogHeader>
           <DialogTitle>{t('workRecords.export.title')}</DialogTitle>
           <DialogDescription>
@@ -105,6 +116,31 @@ export function ExportRecordsDialog({
             </span>
             <span>{maxRows}</span>
           </div>
+
+          {exportableColumns.length > 0 && (
+            <div className='space-y-2'>
+              <Label className='text-sm text-muted-foreground'>
+                {t('workRecords.export.columns')}
+              </Label>
+              <div className='max-h-40 overflow-auto rounded-md border p-2'>
+                {exportableColumns.map((c) => (
+                  <div
+                    key={c.fieldCode}
+                    className='flex items-center gap-2 py-1 text-sm'
+                  >
+                    <Checkbox checked disabled />
+                    <span>{c.label}</span>
+                    <span className='ml-auto text-xs text-muted-foreground'>
+                      {c.fieldCode}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <p className='text-xs text-muted-foreground'>
+                {t('workRecords.export.columnsHint')}
+              </p>
+            </div>
+          )}
 
           {exceedsLimit && (
             <div className='rounded-md border border-destructive bg-destructive/10 p-2 text-sm text-destructive'>

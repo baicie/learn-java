@@ -181,7 +181,8 @@ export function RecordsTable({
             keyword={search.keyword as string | undefined}
             filters={filters}
             total={total}
-            maxRows={5000}
+            maxRows={metadata?.maxExportRows ?? 5000}
+            columns={metadata?.columns}
           />
 
           {/* New record button */}

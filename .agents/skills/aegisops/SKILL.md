@@ -1424,14 +1424,19 @@ filterable=false 字段不能筛选
 导出行数限制生效
 ```
 
-建议增加 ArchUnit 规则:
+强约束 ArchUnit 规则（必须满足，CI 守卫）:
 
 ```txt
-workrecord domain/application 不能依赖 Spring Web
-workrecord api 不能直接访问 JDBC
-workrecord 不能依赖 alert/incident/inspection 的 repository 包
+workrecord domain 包不得 import org.springframework.web.* / springdoc / openapi
+workrecord domain 包不得 import org.springframework.jdbc.* / org.jooq.* / javax.sql.DataSource
+workrecord api 包不得 import org.springframework.jdbc.* / org.jooq.*
+workrecord 任何类不得依赖 alert/incident/inspection 的 repository 包
 dictionary 不能反向依赖 workrecord
 ```
+
+具体包归属、命名后缀、ArchUnit 模板参见
+`references/module-package-conventions.md` §7。每个强约束模块必须自带一个
+`<Name>ArchUnitTest`（test scope，archunit-junit5），mvn verify 必须通过。
 
 ### 6.15.9 AI 实现纪律
 

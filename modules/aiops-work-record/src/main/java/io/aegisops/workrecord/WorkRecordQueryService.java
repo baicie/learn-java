@@ -26,10 +26,15 @@ public class WorkRecordQueryService {
 
   private final WorkRecordRepository repository;
   private final WorkRecordFieldRepository fieldRepository;
+  private final WorkRecordProperties properties;
 
-  public WorkRecordQueryService(WorkRecordRepository repository, WorkRecordFieldRepository fieldRepository) {
+  public WorkRecordQueryService(
+      WorkRecordRepository repository,
+      WorkRecordFieldRepository fieldRepository,
+      WorkRecordProperties properties) {
     this.repository = repository;
     this.fieldRepository = fieldRepository;
+    this.properties = properties;
   }
 
   /**
@@ -109,6 +114,7 @@ public class WorkRecordQueryService {
                 field.fieldType(),
                 field.listVisible(),
                 field.filterable(),
+                field.exportable(),
                 field.statistical(),
                 field.sortOrder());
         columns.add(col);
@@ -127,6 +133,7 @@ public class WorkRecordQueryService {
                   field.fieldType(),
                   operators,
                   dictCode,
+                  field.exportable(),
                   options);
           filterFields.add(ff);
         }
@@ -138,7 +145,11 @@ public class WorkRecordQueryService {
             .map(t -> new RecordListTemplate(t.id(), t.name(), t.enabled()))
             .toList();
 
-    return new RecordListMetadata(templateList, columns, filterFields);
+    int maxExportRows = properties.getExport().getMaxRows();
+    if (maxExportRows <= 0) {
+      maxExportRows = WorkRecordExportService.DEFAULT_MAX_EXPORT_ROWS;
+    }
+    return new RecordListMetadata(templateList, columns, filterFields, maxExportRows);
   }
 
   private boolean hasAuthority(UserPrincipal user, String authority) {
@@ -162,7 +173,8 @@ public class WorkRecordQueryService {
   public record RecordListMetadata(
       List<RecordListTemplate> templates,
       List<RecordListColumn> columns,
-      List<RecordListFilterField> filterFields) {}
+      List<RecordListFilterField> filterFields,
+      int maxExportRows) {}
 
   public record RecordListTemplate(String id, String name, boolean enabled) {}
 
@@ -172,6 +184,7 @@ public class WorkRecordQueryService {
       String fieldType,
       boolean listVisible,
       boolean filterable,
+      boolean exportable,
       boolean statistical,
       int sortOrder) {}
 
@@ -181,6 +194,7 @@ public class WorkRecordQueryService {
       String fieldType,
       List<String> operators,
       String dictionaryCode,
+      boolean exportable,
       List<RecordListOption> options) {}
 
   public record RecordListOption(String value, String label) {}

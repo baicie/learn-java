@@ -16,6 +16,7 @@ public record WorkRecordField(
     String optionsJson,
     boolean listVisible,
     boolean filterable,
+    boolean exportable,
     boolean statistical,
     int sortOrder,
     boolean enabled,

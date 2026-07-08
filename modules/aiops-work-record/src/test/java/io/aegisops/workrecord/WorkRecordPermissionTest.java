@@ -167,7 +167,7 @@ class WorkRecordPermissionTest {
 
       assertThatThrownBy(
               () ->
-                  new WorkRecordExportService(repository, fieldRepository, audit)
+                  new WorkRecordExportService(repository, fieldRepository, audit, new WorkRecordProperties())
                       .exportCsv("t1", null, null, null, null, null, null, null, user))
           .isInstanceOf(SecurityException.class);
     }
@@ -183,7 +183,7 @@ class WorkRecordPermissionTest {
           .thenReturn(List.of());
 
       byte[] csv =
-          new WorkRecordExportService(repository, fieldRepository, audit)
+          new WorkRecordExportService(repository, fieldRepository, audit, new WorkRecordProperties())
               .exportCsv("t1", null, null, null, null, null, null, null, user);
 
       assertThat(csv).isNotEmpty();

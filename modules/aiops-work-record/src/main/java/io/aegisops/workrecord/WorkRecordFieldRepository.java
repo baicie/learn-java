@@ -23,7 +23,7 @@ public class WorkRecordFieldRepository {
         """
             select id, tenant_id, template_id, field_name, field_code, field_type,
                    required, default_value, option_source, dict_code, options_json::text,
-                   list_visible, filterable, statistical, sort_order, enabled,
+                   list_visible, filterable, exportable, statistical, sort_order, enabled,
                    schema_path, created_at, updated_at
             from wr_template_field
             where tenant_id = ? and template_id = ?
@@ -45,8 +45,8 @@ public class WorkRecordFieldRepository {
             insert into wr_template_field(
               id, tenant_id, template_id, field_name, field_code, field_type, required,
               default_value, option_source, dict_code, options_json, list_visible,
-              filterable, statistical, sort_order, enabled, schema_path)
-            values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?, ?, ?, ?, ?, ?)
+              filterable, exportable, statistical, sort_order, enabled, schema_path)
+            values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?, ?, ?, ?, ?, ?, ?)
             """,
         id,
         tenantId,
@@ -61,6 +61,7 @@ public class WorkRecordFieldRepository {
         blankArray(request.optionsJson()),
         request.listVisible() != null && request.listVisible(),
         request.filterable() != null && request.filterable(),
+        request.exportable() == null || request.exportable(),
         request.statistical() != null && request.statistical(),
         request.sortOrder() == null ? 0 : request.sortOrder(),
         request.enabled() == null || request.enabled(),
@@ -105,6 +106,7 @@ public class WorkRecordFieldRepository {
                        options_json  = coalesce(?::jsonb, options_json),
                        list_visible  = coalesce(?, list_visible),
                        filterable    = coalesce(?, filterable),
+                       exportable    = coalesce(?, exportable),
                        statistical   = coalesce(?, statistical),
                        sort_order    = coalesce(?, sort_order),
                        enabled       = coalesce(?, enabled),
@@ -119,6 +121,7 @@ public class WorkRecordFieldRepository {
             nullableArray(request.optionsJson()),
             request.listVisible(),
             request.filterable(),
+            request.exportable(),
             request.statistical(),
             request.sortOrder(),
             request.enabled(),
@@ -179,6 +182,7 @@ public class WorkRecordFieldRepository {
         rs.getString("options_json"),
         rs.getBoolean("list_visible"),
         rs.getBoolean("filterable"),
+        rs.getBoolean("exportable"),
         rs.getBoolean("statistical"),
         rs.getInt("sort_order"),
         rs.getBoolean("enabled"),

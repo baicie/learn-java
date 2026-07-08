@@ -13,6 +13,7 @@ const fields: RecordListFilterField[] = [
     fieldType: 'text',
     operators: ['eq', 'contains', 'exists'],
     dictionaryCode: null,
+    exportable: true,
     options: [],
   },
   {
@@ -21,6 +22,7 @@ const fields: RecordListFilterField[] = [
     fieldType: 'select',
     operators: ['eq', 'in', 'exists'],
     dictionaryCode: 'env',
+    exportable: true,
     options: [
       { value: 'prod', label: '生产' },
       { value: 'test', label: '测试' },

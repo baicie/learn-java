@@ -528,7 +528,7 @@ public class WorkRecordRepository {
         tenantId,
         request.templateId(),
         request.title(),
-        request.status() == null || request.status().isBlank() ? "draft" : request.status(),
+        request.status() == null || request.status().isBlank() ? RecordStatus.DRAFT : request.status(),
         request.ownerId(),
         creatorId,
         request.recordTime(),

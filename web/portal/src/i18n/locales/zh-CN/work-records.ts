@@ -1,3 +1,6 @@
+// 工作记录状态字典（与后端 RecordStatus 枚举 + platform_dict_item.value 同步）
+// 历史命名差异：phase 设计文档使用 "submitted"，实现统一为 "processing"。
+// 见 Phase 01-07 实施审查报告 §4.5。
 export const workRecords = {
   'workRecords.nav.root': '工作记录',
   'workRecords.nav.list': '记录列表',

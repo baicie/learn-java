@@ -10,6 +10,7 @@ public record UpdateFieldRequest(
     String optionsJson,
     Boolean listVisible,
     Boolean filterable,
+    Boolean exportable,
     Boolean statistical,
     Integer sortOrder,
     Boolean enabled) {}

@@ -33,7 +33,7 @@ class WorkRecordQueryServiceTest {
   void setUp() {
     repository = mock(WorkRecordRepository.class);
     fieldRepository = mock(WorkRecordFieldRepository.class);
-    service = new WorkRecordQueryService(repository, fieldRepository);
+    service = new WorkRecordQueryService(repository, fieldRepository, new WorkRecordProperties());
   }
 
   private WorkRecordField textField(String code, boolean filterable, boolean enabled) {
@@ -51,6 +51,7 @@ class WorkRecordQueryServiceTest {
         "[]",
         true,
         filterable,
+        true,
         false,
         0,
         enabled,
@@ -197,7 +198,7 @@ class WorkRecordQueryServiceTest {
       WorkRecordField number = new WorkRecordField(
           "f2", "t1", "tpl1", "count", "count", "number",
           false, null, "static", null, "[]",
-          true, true, false, 0, true,
+          true, true, true, false, 0, true,
           ".properties.count", OffsetDateTime.now(), OffsetDateTime.now());
       when(fieldRepository.list("t1", "tpl1")).thenReturn(List.of(text, number));
 
@@ -210,6 +211,8 @@ class WorkRecordQueryServiceTest {
           .findFirst()
           .orElseThrow();
       assertThat(memo.operators()).contains("contains", "eq", "exists");
+      assertThat(memo.exportable()).isTrue();
+      assertThat(meta.columns().get(0).exportable()).isTrue();
     }
 
     @Test

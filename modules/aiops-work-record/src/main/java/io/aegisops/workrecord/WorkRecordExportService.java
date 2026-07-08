@@ -10,23 +10,41 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class WorkRecordExportService {
-  public static final int MAX_EXPORT_ROWS = 5000;
+  /** 兜底默认导出行数；真实值由 {@link WorkRecordProperties.Export#getMaxRows()} 决定。 */
+  public static final int DEFAULT_MAX_EXPORT_ROWS = 5000;
 
   private final WorkRecordRepository repository;
   private final WorkRecordFieldRepository fieldRepository;
   private final AuditService audit;
+  private final WorkRecordProperties properties;
 
   public WorkRecordExportService(
       WorkRecordRepository repository,
       WorkRecordFieldRepository fieldRepository,
-      AuditService audit) {
+      AuditService audit,
+      WorkRecordProperties properties) {
     this.repository = repository;
     this.fieldRepository = fieldRepository;
     this.audit = audit;
+    this.properties = properties;
+  }
+
+  /** 当前生效的最大导出行数（来自配置）。 */
+  public int getMaxExportRows() {
+    int configured = properties.getExport().getMaxRows();
+    return configured > 0 ? configured : DEFAULT_MAX_EXPORT_ROWS;
   }
 
   /**
    * 导出 CSV（支持动态筛选和自定义列）。
+   *
+   * <p>列过滤规则：
+   *
+   * <ul>
+   *   <li>内建列（id / title / status / templateId / ownerId / creatorId / recordTime /
+   *       createdAt）始终允许导出
+   *   <li>动态列必须存在于模板字段中且 {@code exportable=true}，否则抛出 SecurityException
+   * </ul>
    *
    * @param tenantId 租户 ID
    * @param templateId 模板 ID（可选）
@@ -66,8 +84,11 @@ public class WorkRecordExportService {
       WorkRecordFilterValidator.validate(fields, filters);
     }
 
+    // 校验 columns 中所有动态列必须 exportable=true
+    List<String> resolvedColumns = resolveColumns(tenantId, templateId, columns);
+
     // 查询数据
-    int pageSize = MAX_EXPORT_ROWS;
+    int maxRows = getMaxExportRows();
     long total;
     List<WorkRecord> records;
 
@@ -75,21 +96,21 @@ public class WorkRecordExportService {
       total = repository.countWithFilters(tenantId, templateId, status, keyword,
           recordTimeFrom, recordTimeTo, filters, null, null);
       records = repository.pageForExport(
-          tenantId, pageSize, templateId, status, keyword, recordTimeFrom, recordTimeTo, filters);
+          tenantId, maxRows, templateId, status, keyword, recordTimeFrom, recordTimeTo, filters);
     } else {
       String userId = actor.id();
       total = repository.countForExportUser(tenantId, userId, templateId, status, keyword,
           recordTimeFrom, recordTimeTo, filters);
       records = repository.pageForExportUser(
-          tenantId, userId, pageSize, templateId, status, keyword, recordTimeFrom, recordTimeTo, filters);
+          tenantId, userId, maxRows, templateId, status, keyword, recordTimeFrom, recordTimeTo, filters);
     }
 
-    boolean truncated = total > MAX_EXPORT_ROWS;
+    boolean truncated = total > maxRows;
     if (truncated) {
-      records = records.subList(0, Math.min(records.size(), MAX_EXPORT_ROWS));
+      records = records.subList(0, Math.min(records.size(), maxRows));
     }
 
-    byte[] body = renderCsv(records, columns);
+    byte[] body = renderCsv(records, resolvedColumns);
 
     audit.record(
         new AuditRecordCommand(
@@ -105,10 +126,49 @@ public class WorkRecordExportService {
                 + ",\"truncated\":"
                 + truncated
                 + ",\"maxRows\":"
-                + MAX_EXPORT_ROWS
+                + maxRows
                 + "}"));
 
     return body;
+  }
+
+  /** 内建列始终允许导出，动态列必须 exportable=true。 */
+  private static final List<String> BUILTIN_COLUMNS =
+      List.of("id", "title", "status", "templateId", "ownerId", "creatorId", "recordTime", "createdAt");
+
+  /**
+   * 解析导出列：
+   * <ul>
+   *   <li>columns 为 null → 返回默认内建列
+   *   <li>columns 非空 → 内建列直接放行，动态列按模板 exportable 校验
+   * </ul>
+   */
+  private List<String> resolveColumns(String tenantId, String templateId, List<String> columns) {
+    if (columns == null || columns.isEmpty()) {
+      return BUILTIN_COLUMNS;
+    }
+    // 没有任何动态列 → 直接返回
+    if (templateId == null || templateId.isBlank()) {
+      return columns;
+    }
+    List<WorkRecordField> fields = fieldRepository.list(tenantId, templateId);
+    java.util.Map<String, WorkRecordField> fieldByCode = new java.util.HashMap<>();
+    for (WorkRecordField f : fields) {
+      fieldByCode.put(f.fieldCode(), f);
+    }
+    for (String col : columns) {
+      if (BUILTIN_COLUMNS.contains(col)) {
+        continue;
+      }
+      WorkRecordField f = fieldByCode.get(col);
+      if (f == null) {
+        throw new IllegalArgumentException("column not in template: " + col);
+      }
+      if (!f.exportable()) {
+        throw new SecurityException("column is not exportable: " + col);
+      }
+    }
+    return columns;
   }
 
   private byte[] renderCsv(List<WorkRecord> records, List<String> columns) {

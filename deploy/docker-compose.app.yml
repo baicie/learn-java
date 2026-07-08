@@ -1,8 +1,24 @@
 services:
+  postgres:
+    image: postgres:16
+    container_name: aegisops-postgres
+    environment:
+      POSTGRES_DB: aegisops
+      POSTGRES_USER: aegisops
+      POSTGRES_PASSWORD: aegisops
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aegisops -d aegisops"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
   aiops-server:
-    build:
-      context: ..
-      dockerfile: apps/aiops-server/Dockerfile
+    image: DOCKERHUB_USERNAME_REPLACE_ME/aegisops:git-SHA_REPLACE_ME
     container_name: aegisops-server
     environment:
       AIOPS_SERVER_PORT: 8080
@@ -21,4 +37,138 @@ services:
         condition: service_healthy
       aiops-agent:
         condition: service_started
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget -q -O - http://localhost:8080/actuator/health >/dev/null || exit 1",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 15
     restart: unless-stopped
+
+  aiops-agent:
+    image: DOCKERHUB_USERNAME_REPLACE_ME/aegisops/aiops-agent:git-SHA_REPLACE_ME
+    container_name: aegisops-agent
+    environment:
+      AIOPS_AGENT_INTERNAL_AGENT_TOKEN: dev-internal-agent-token
+      AIOPS_AGENT_PROVIDER: aiops-agent
+      AIOPS_AGENT_NAME: aegisops_diagnosis_graph
+      AIOPS_AGENT_AGENT_NAME: aegisops_diagnosis_graph
+      AIOPS_AGENT_CONTRACT_VERSION: agent-diagnosis.v1
+      AIOPS_AGENT_GENERATION_MODE: openai-compatible
+      AIOPS_AGENT_MODEL: deepseek-v4-flash
+      # Phase4.2 LLM provider
+      AIOPS_AGENT_OPENAI_BASE_URL: ${AIOPS_AGENT_OPENAI_BASE_URL:-https://api.deepseek.com/v1}
+      AIOPS_AGENT_OPENAI_API_KEY: ${AIOPS_DEEPSEEK_API_KEY:-}
+      AIOPS_AGENT_OPENAI_TIMEOUT_SECONDS: 60
+      AIOPS_AGENT_OPENAI_TEMPERATURE: 0.2
+      AIOPS_AGENT_OPENAI_MAX_TOKENS: 1200
+      AIOPS_AGENT_OPENAI_RESPONSE_FORMAT_ENABLED: "true"
+      # Phase4.3 evidence tool. Disabled by default to keep local stack self-contained.
+      AIOPS_AGENT_EVIDENCE_ENABLED: "false"
+      AIOPS_AGENT_EVIDENCE_BASE_URL: http://aiops-server:8080/internal/agent/evidence
+      AIOPS_AGENT_EVIDENCE_INTERNAL_TOKEN: dev-internal-token
+      AIOPS_AGENT_EVIDENCE_TIMEOUT_SECONDS: 5
+      # Phase4.4 observability. When enabled, response.raw carries agentRun + agentEval.
+      AIOPS_AGENT_TRACE_ENABLED: "true"
+      AIOPS_AGENT_EVAL_ENABLED: "true"
+      # Phase7 canonical workflow. It only queries Java internal APIs and never calls runner.
+      AIOPS_AGENT_WORKFLOW_API_BASE_URL: http://aiops-server:8080
+      AIOPS_AGENT_WORKFLOW_EVIDENCE_ENABLED: "true"
+      AIOPS_AGENT_WORKFLOW_CASE_RETRIEVAL_ENABLED: "true"
+      AIOPS_AGENT_WORKFLOW_HUMAN_CHECKPOINT_ENABLED: "false"
+      AIOPS_AGENT_WORKFLOW_MULTI_AGENT_ENABLED: "false"
+      AIOPS_AGENT_WORKFLOW_MEMORY_ENABLED: "true"
+      AIOPS_AGENT_WORKFLOW_MEMORY_WRITE_ENABLED: "false"
+    ports:
+      - "9008:9008"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget -q -O - http://localhost:9008/health >/dev/null || exit 1",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  # Worker: 异步消费 outbox + 跑 Incident 聚合 / RCA / Zabbix sync / 复盘草稿。
+  # 共享 server 同一 Postgres；不暴露给外部。
+  aiops-worker:
+    image: DOCKERHUB_USERNAME_REPLACE_ME/aegisops/aiops-worker:git-SHA_REPLACE_ME
+    container_name: aegisops-worker
+    environment:
+      AIOPS_DB_URL: jdbc:postgresql://postgres:5432/aegisops
+      AIOPS_DB_USER: aegisops
+      AIOPS_DB_PASSWORD: aegisops
+      AIOPS_WORKER_PORT: 8081
+      AIOPS_OUTBOX_ENABLED: "true"
+      AIOPS_OUTBOX_POLL_MS: 5000
+      AIOPS_OUTBOX_BATCH: 10
+      AIOPS_OUTBOX_TARGET_APP: worker
+      AIOPS_RUNTIME_PHASE: ${AIOPS_RUNTIME_PHASE:-phase5}
+    ports:
+      - "8081:8081"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget -q -O - http://localhost:8081/actuator/health >/dev/null || exit 1",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+    restart: unless-stopped
+
+  # Runner: 隔离执行 ansible / webhook 步骤；MVP 阶段跑在同主机，但作为独立进程保证故障隔离。
+  # 跑 ansible 需要 sshpass + openssh-client，基础镜像里已装。
+  aiops-runner:
+    image: DOCKERHUB_USERNAME_REPLACE_ME/aegisops/aiops-runner:git-SHA_REPLACE_ME
+    container_name: aegisops-runner
+    environment:
+      AIOPS_DB_URL: jdbc:postgresql://postgres:5432/aegisops
+      AIOPS_DB_USERNAME: aegisops
+      AIOPS_DB_PASSWORD: aegisops
+      AIOPS_RUNNER_PORT: 8092
+      AIOPS_RUNNER_ID: ${AIOPS_RUNNER_ID:-prod-runner-1}
+      AIOPS_RUNNER_POLL_MS: 5000
+      AIOPS_RUNNER_SWEEP_MS: 10000
+      AIOPS_RUNNER_MAX_PER_TICK: 1
+      AIOPS_RUNNER_SWEEP_LIMIT: 20
+      AIOPS_RUNNER_ANSIBLE_CHECK_ENABLED: "true"
+      AIOPS_RUNNER_ANSIBLE_BINARY: ansible-playbook
+      AIOPS_RUNNER_ANSIBLE_WORKSPACE_ROOT: .runtime/ansible/workspaces
+      AIOPS_RUNNER_ANSIBLE_RESOURCE_ROOT: .runtime/ansible/resources
+      AIOPS_RUNNER_ANSIBLE_CLEANUP_WORKSPACE: "true"
+      AIOPS_EXECUTION_LEASE_SECONDS: 60
+      AIOPS_EXECUTION_RUN_TIMEOUT_SECONDS: 1800
+      AIOPS_EXECUTION_STEP_TIMEOUT_SECONDS: 300
+      AIOPS_EXECUTION_MAX_RETRY_ATTEMPTS: 3
+      AIOPS_RUNTIME_PHASE: ${AIOPS_RUNTIME_PHASE:-phase5}
+    ports:
+      - "8092:8092"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget -q -O - http://localhost:8092/actuator/health >/dev/null || exit 1",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+    # tmpfs 隔离 ansible workspace，避免宿主机目录权限问题
+    tmpfs:
+      - /app/.runtime:size=512m,mode=1777
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

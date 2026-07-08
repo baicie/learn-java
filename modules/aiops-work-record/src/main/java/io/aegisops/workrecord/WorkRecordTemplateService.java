@@ -149,7 +149,7 @@ public class WorkRecordTemplateService {
 
     // 4. 同步字段索引
     List<WorkRecordField> existingFields = fieldRepository.list(tenantId, templateId);
-    fieldIndexService.syncFields(tenantId, templateId, descriptors, existingFields);
+    fieldIndexService.syncFields(tenantId, templateId, descriptors, existingFields, actor);
 
     // 4. 保存到模板
     WorkRecordTemplate template =
@@ -209,6 +209,7 @@ public class WorkRecordTemplateService {
                 safeOptions,
                 request.listVisible(),
                 request.filterable(),
+                request.exportable() != null ? request.exportable() : Boolean.TRUE,
                 request.statistical(),
                 request.sortOrder(),
                 request.enabled(),
@@ -255,6 +256,7 @@ public class WorkRecordTemplateService {
             safeOptions,
             request.listVisible(),
             request.filterable(),
+            request.exportable(),
             request.statistical(),
             request.sortOrder(),
             request.enabled());

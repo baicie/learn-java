@@ -20,6 +20,16 @@ import org.junit.jupiter.api.Test;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
 class WorkRecordExportServiceTest {
+  private static WorkRecordProperties propsWith(int maxRows) {
+    WorkRecordProperties p = new WorkRecordProperties();
+    p.getExport().setMaxRows(maxRows);
+    return p;
+  }
+
+  private static WorkRecordProperties defaultProps() {
+    return propsWith(5000);
+  }
+
   @Test
   void exportCsv_shouldEscapeCommaAndQuote() {
     WorkRecordRepository repository = mock(WorkRecordRepository.class);
@@ -44,7 +54,8 @@ class WorkRecordExportServiceTest {
                     null,
                     null)));
 
-    WorkRecordExportService service = new WorkRecordExportService(repository, fieldRepository, audit);
+    WorkRecordExportService service = new WorkRecordExportService(
+        repository, fieldRepository, audit, defaultProps());
     UserPrincipal admin = principal("admin", "work-record:export", "work-record:read:all");
     String csv = new String(service.exportCsv(
         "t1", null, null, null, null, null, null, null, admin), StandardCharsets.UTF_8);
@@ -63,7 +74,8 @@ class WorkRecordExportServiceTest {
     when(repository.pageForExport(any(), anyInt(), any(), any(), any(), any(), any(), any()))
         .thenReturn(List.of());
 
-    WorkRecordExportService service = new WorkRecordExportService(repository, fieldRepository, audit);
+    WorkRecordExportService service = new WorkRecordExportService(
+        repository, fieldRepository, audit, defaultProps());
     UserPrincipal admin = principal("admin", "work-record:export", "work-record:read:all");
     String csv = new String(service.exportCsv(
         "t1", null, null, null, null, null, null, null, admin), StandardCharsets.UTF_8);
@@ -82,7 +94,8 @@ class WorkRecordExportServiceTest {
     when(repository.pageForExportUser(any(), any(), anyInt(), any(), any(), any(), any(), any(), any()))
         .thenReturn(List.of());
 
-    WorkRecordExportService service = new WorkRecordExportService(repository, fieldRepository, audit);
+    WorkRecordExportService service = new WorkRecordExportService(
+        repository, fieldRepository, audit, defaultProps());
     UserPrincipal user = principal("u1", "work-record:export", "work-record:read:self");
     String csv = new String(service.exportCsv(
         "t1", null, null, null, null, null, null, null, user), StandardCharsets.UTF_8);
@@ -91,6 +104,129 @@ class WorkRecordExportServiceTest {
     verify(repository).countForExportUser(eq("t1"), eq("u1"), any(), any(), any(), any(), any(), any());
     verify(repository, never()).countWithFilters(any(), any(), any(), any(), any(), any(), any(), any(), any());
     verify(audit).record(any());
+  }
+
+  @Test
+  void exportCsv_rejectsNonExportableColumn() {
+    WorkRecordRepository repository = mock(WorkRecordRepository.class);
+    WorkRecordFieldRepository fieldRepository = mock(WorkRecordFieldRepository.class);
+    AuditService audit = mock(AuditService.class);
+    WorkRecordField secret =
+        new WorkRecordField(
+            "f1",
+            "t1",
+            "tpl1",
+            "secret",
+            "secret",
+            "text",
+            false,
+            null,
+            "static",
+            null,
+            "[]",
+            true,
+            false,
+            false, // exportable=false
+            false,
+            0,
+            true,
+            ".properties.secret",
+            OffsetDateTime.now(),
+            OffsetDateTime.now());
+    when(fieldRepository.list(eq("t1"), eq("tpl1"))).thenReturn(List.of(secret));
+
+    WorkRecordExportService service = new WorkRecordExportService(
+        repository, fieldRepository, audit, defaultProps());
+    UserPrincipal admin = principal("admin", "work-record:export", "work-record:read:all");
+
+    org.assertj.core.api.Assertions.assertThatThrownBy(
+            () ->
+                service.exportCsv(
+                    "t1",
+                    "tpl1",
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    List.of("id", "secret"),
+                    admin))
+        .isInstanceOf(SecurityException.class)
+        .hasMessageContaining("secret");
+  }
+
+  @Test
+  void exportCsv_rejectsColumnNotInTemplate() {
+    WorkRecordRepository repository = mock(WorkRecordRepository.class);
+    WorkRecordFieldRepository fieldRepository = mock(WorkRecordFieldRepository.class);
+    AuditService audit = mock(AuditService.class);
+    when(fieldRepository.list(eq("t1"), eq("tpl1"))).thenReturn(List.of());
+
+    WorkRecordExportService service = new WorkRecordExportService(
+        repository, fieldRepository, audit, defaultProps());
+    UserPrincipal admin = principal("admin", "work-record:export", "work-record:read:all");
+
+    org.assertj.core.api.Assertions.assertThatThrownBy(
+            () ->
+                service.exportCsv(
+                    "t1",
+                    "tpl1",
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    List.of("id", "unknown"),
+                    admin))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("unknown");
+  }
+
+  @Test
+  void exportCsv_allowsBuiltinColumnAlways() {
+    WorkRecordRepository repository = mock(WorkRecordRepository.class);
+    WorkRecordFieldRepository fieldRepository = mock(WorkRecordFieldRepository.class);
+    AuditService audit = mock(AuditService.class);
+    when(repository.countWithFilters(any(), any(), any(), any(), any(), any(), any(), any(), any()))
+        .thenReturn(0L);
+    when(repository.pageForExport(any(), anyInt(), any(), any(), any(), any(), any(), any()))
+        .thenReturn(List.of());
+
+    WorkRecordExportService service = new WorkRecordExportService(
+        repository, fieldRepository, audit, defaultProps());
+    UserPrincipal admin = principal("admin", "work-record:export", "work-record:read:all");
+
+    String csv =
+        new String(
+            service.exportCsv(
+                "t1", null, null, null, null, null, null,
+                List.of("id", "title", "status"),
+                admin),
+            StandardCharsets.UTF_8);
+    assertThat(csv).isEqualTo("id,title,status\n");
+  }
+
+  @Test
+  void maxRows_usesConfigurationProperty() {
+    WorkRecordRepository repository = mock(WorkRecordRepository.class);
+    WorkRecordFieldRepository fieldRepository = mock(WorkRecordFieldRepository.class);
+    AuditService audit = mock(AuditService.class);
+    WorkRecordExportService service = new WorkRecordExportService(
+        repository, fieldRepository, audit, propsWith(2000));
+
+    assertThat(service.getMaxExportRows()).isEqualTo(2000);
+  }
+
+  @Test
+  void maxRows_fallsBackToDefaultWhenZeroOrNegative() {
+    WorkRecordRepository repository = mock(WorkRecordRepository.class);
+    WorkRecordFieldRepository fieldRepository = mock(WorkRecordFieldRepository.class);
+    AuditService audit = mock(AuditService.class);
+    WorkRecordExportService service = new WorkRecordExportService(
+        repository, fieldRepository, audit, propsWith(0));
+
+    assertThat(service.getMaxExportRows())
+        .isEqualTo(WorkRecordExportService.DEFAULT_MAX_EXPORT_ROWS);
   }
 
   private static UserPrincipal principal(String id, String... authorities) {

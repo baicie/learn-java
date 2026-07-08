@@ -75,6 +75,7 @@ export const recordListColumnSchema = z.object({
   fieldType: z.string(),
   listVisible: z.boolean(),
   filterable: z.boolean(),
+  exportable: z.boolean(),
   statistical: z.boolean(),
   sortOrder: z.number(),
 })
@@ -85,6 +86,7 @@ export const recordListFilterFieldSchema = z.object({
   fieldType: z.string(),
   operators: z.array(z.string()),
   dictionaryCode: z.string().nullable(),
+  exportable: z.boolean(),
   options: z.array(z.object({ value: z.string(), label: z.string() })),
 })
 
@@ -98,6 +100,7 @@ export const recordListMetadataSchema = z.object({
   templates: z.array(recordListTemplateSchema),
   columns: z.array(recordListColumnSchema),
   filterFields: z.array(recordListFilterFieldSchema),
+  maxExportRows: z.number(),
 })
 
 // ---- Filter types ----

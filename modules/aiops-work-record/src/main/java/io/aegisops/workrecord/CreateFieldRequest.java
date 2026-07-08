@@ -11,6 +11,7 @@ public record CreateFieldRequest(
     String optionsJson,
     Boolean listVisible,
     Boolean filterable,
+    Boolean exportable,
     Boolean statistical,
     Integer sortOrder,
     Boolean enabled,

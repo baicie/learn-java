@@ -97,10 +97,10 @@ public class DefaultTemplateInitializer {
               insert into wr_template_field(
                 id, tenant_id, template_id, field_name, field_code, field_type,
                 required, default_value, option_source, dict_code, options_json,
-                list_visible, filterable, statistical, sort_order, enabled,
+                list_visible, filterable, exportable, statistical, sort_order, enabled,
                 created_at, updated_at)
               values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb,
-                      ?, ?, ?, ?, true, ?, ?)
+                      ?, ?, ?, ?, ?, true, ?, ?)
               """,
           UUID.randomUUID().toString(),
           tenantId,
@@ -115,6 +115,7 @@ public class DefaultTemplateInitializer {
           field.optionsJson(),
           field.listVisible(),
           field.filterable(),
+          field.exportable(),
           field.statistical(),
           order++,
           now,
@@ -126,7 +127,7 @@ public class DefaultTemplateInitializer {
     List<TemplateField> fields = new ArrayList<>();
     fields.add(
         new TemplateField(
-            "环境", "env", "select", true, null, "dict", "env_type", "[]", true, true, false));
+            "环境", "env", "select", true, null, "dict", "env_type", "[]", true, true, true, false));
     fields.add(
         new TemplateField(
             "记录时间",
@@ -139,13 +140,14 @@ public class DefaultTemplateInitializer {
             "[]",
             false,
             true,
+            true,
             false));
     fields.add(
         new TemplateField(
-            "摘要", "summary", "text", true, null, "static", null, "[]", true, true, false));
+            "摘要", "summary", "text", true, null, "static", null, "[]", true, true, true, false));
     fields.add(
         new TemplateField(
-            "详情", "detail", "textarea", false, null, "static", null, "[]", false, false, false));
+            "详情", "detail", "textarea", false, null, "static", null, "[]", false, false, true, false));
     fields.add(
         new TemplateField(
             "处理结果",
@@ -158,6 +160,7 @@ public class DefaultTemplateInitializer {
             "[]",
             true,
             true,
+            true,
             true));
     return fields;
   }
@@ -166,10 +169,10 @@ public class DefaultTemplateInitializer {
     List<TemplateField> fields = new ArrayList<>();
     fields.add(
         new TemplateField(
-            "变更编号", "change_id", "text", true, null, "static", null, "[]", true, true, false));
+            "变更编号", "change_id", "text", true, null, "static", null, "[]", true, true, true, false));
     fields.add(
         new TemplateField(
-            "环境", "env", "select", true, null, "dict", "env_type", "[]", true, true, false));
+            "环境", "env", "select", true, null, "dict", "env_type", "[]", true, true, true, false));
     fields.add(
         new TemplateField(
             "变更窗口",
@@ -182,10 +185,11 @@ public class DefaultTemplateInitializer {
             "[]",
             true,
             true,
+            true,
             false));
     fields.add(
         new TemplateField(
-            "影响范围", "impact", "textarea", true, null, "static", null, "[]", true, false, false));
+            "影响范围", "impact", "textarea", true, null, "static", null, "[]", true, false, true, false));
     fields.add(
         new TemplateField(
             "是否回滚",
@@ -196,6 +200,7 @@ public class DefaultTemplateInitializer {
             "static",
             null,
             "[]",
+            true,
             true,
             true,
             true));
@@ -213,5 +218,6 @@ public class DefaultTemplateInitializer {
       String optionsJson,
       boolean listVisible,
       boolean filterable,
+      boolean exportable,
       boolean statistical) {}
 }
