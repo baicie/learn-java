@@ -12,6 +12,12 @@ import static org.mockito.Mockito.when;
 
 import io.aegisops.audit.AuditService;
 import io.aegisops.security.UserPrincipal;
+import io.aegisops.workrecord.application.WorkRecordExportApplicationService;
+import io.aegisops.workrecord.domain.model.WorkRecord;
+import io.aegisops.workrecord.domain.model.WorkRecordField;
+import io.aegisops.workrecord.infrastructure.config.WorkRecordProperties;
+import io.aegisops.workrecord.infrastructure.persistence.WorkRecordFieldRepository;
+import io.aegisops.workrecord.infrastructure.persistence.WorkRecordRepository;
 import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -54,11 +60,13 @@ class WorkRecordExportServiceTest {
                     null,
                     null)));
 
-    WorkRecordExportService service = new WorkRecordExportService(
-        repository, fieldRepository, audit, defaultProps());
+    WorkRecordExportApplicationService service =
+        new WorkRecordExportApplicationService(repository, fieldRepository, audit, defaultProps());
     UserPrincipal admin = principal("admin", "work-record:export", "work-record:read:all");
-    String csv = new String(service.exportCsv(
-        "t1", null, null, null, null, null, null, null, admin), StandardCharsets.UTF_8);
+    String csv =
+        new String(
+            service.exportCsv("t1", null, null, null, null, null, null, null, admin),
+            StandardCharsets.UTF_8);
 
     assertThat(csv).contains("\"巡检,\"\"核心\"\"\"");
     verify(audit).record(any());
@@ -74,13 +82,16 @@ class WorkRecordExportServiceTest {
     when(repository.pageForExport(any(), anyInt(), any(), any(), any(), any(), any(), any()))
         .thenReturn(List.of());
 
-    WorkRecordExportService service = new WorkRecordExportService(
-        repository, fieldRepository, audit, defaultProps());
+    WorkRecordExportApplicationService service =
+        new WorkRecordExportApplicationService(repository, fieldRepository, audit, defaultProps());
     UserPrincipal admin = principal("admin", "work-record:export", "work-record:read:all");
-    String csv = new String(service.exportCsv(
-        "t1", null, null, null, null, null, null, null, admin), StandardCharsets.UTF_8);
+    String csv =
+        new String(
+            service.exportCsv("t1", null, null, null, null, null, null, null, admin),
+            StandardCharsets.UTF_8);
 
-    assertThat(csv).isEqualTo("id,title,status,templateId,ownerId,creatorId,recordTime,createdAt\n");
+    assertThat(csv)
+        .isEqualTo("id,title,status,templateId,ownerId,creatorId,recordTime,createdAt\n");
     verify(audit).record(any());
   }
 
@@ -91,18 +102,24 @@ class WorkRecordExportServiceTest {
     AuditService audit = mock(AuditService.class);
     when(repository.countForExportUser(any(), any(), any(), any(), any(), any(), any(), any()))
         .thenReturn(0L);
-    when(repository.pageForExportUser(any(), any(), anyInt(), any(), any(), any(), any(), any(), any()))
+    when(repository.pageForExportUser(
+            any(), any(), anyInt(), any(), any(), any(), any(), any(), any()))
         .thenReturn(List.of());
 
-    WorkRecordExportService service = new WorkRecordExportService(
-        repository, fieldRepository, audit, defaultProps());
+    WorkRecordExportApplicationService service =
+        new WorkRecordExportApplicationService(repository, fieldRepository, audit, defaultProps());
     UserPrincipal user = principal("u1", "work-record:export", "work-record:read:self");
-    String csv = new String(service.exportCsv(
-        "t1", null, null, null, null, null, null, null, user), StandardCharsets.UTF_8);
+    String csv =
+        new String(
+            service.exportCsv("t1", null, null, null, null, null, null, null, user),
+            StandardCharsets.UTF_8);
 
-    assertThat(csv).isEqualTo("id,title,status,templateId,ownerId,creatorId,recordTime,createdAt\n");
-    verify(repository).countForExportUser(eq("t1"), eq("u1"), any(), any(), any(), any(), any(), any());
-    verify(repository, never()).countWithFilters(any(), any(), any(), any(), any(), any(), any(), any(), any());
+    assertThat(csv)
+        .isEqualTo("id,title,status,templateId,ownerId,creatorId,recordTime,createdAt\n");
+    verify(repository)
+        .countForExportUser(eq("t1"), eq("u1"), any(), any(), any(), any(), any(), any());
+    verify(repository, never())
+        .countWithFilters(any(), any(), any(), any(), any(), any(), any(), any(), any());
     verify(audit).record(any());
   }
 
@@ -135,22 +152,14 @@ class WorkRecordExportServiceTest {
             OffsetDateTime.now());
     when(fieldRepository.list(eq("t1"), eq("tpl1"))).thenReturn(List.of(secret));
 
-    WorkRecordExportService service = new WorkRecordExportService(
-        repository, fieldRepository, audit, defaultProps());
+    WorkRecordExportApplicationService service =
+        new WorkRecordExportApplicationService(repository, fieldRepository, audit, defaultProps());
     UserPrincipal admin = principal("admin", "work-record:export", "work-record:read:all");
 
     org.assertj.core.api.Assertions.assertThatThrownBy(
             () ->
                 service.exportCsv(
-                    "t1",
-                    "tpl1",
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    List.of("id", "secret"),
-                    admin))
+                    "t1", "tpl1", null, null, null, null, null, List.of("id", "secret"), admin))
         .isInstanceOf(SecurityException.class)
         .hasMessageContaining("secret");
   }
@@ -162,22 +171,14 @@ class WorkRecordExportServiceTest {
     AuditService audit = mock(AuditService.class);
     when(fieldRepository.list(eq("t1"), eq("tpl1"))).thenReturn(List.of());
 
-    WorkRecordExportService service = new WorkRecordExportService(
-        repository, fieldRepository, audit, defaultProps());
+    WorkRecordExportApplicationService service =
+        new WorkRecordExportApplicationService(repository, fieldRepository, audit, defaultProps());
     UserPrincipal admin = principal("admin", "work-record:export", "work-record:read:all");
 
     org.assertj.core.api.Assertions.assertThatThrownBy(
             () ->
                 service.exportCsv(
-                    "t1",
-                    "tpl1",
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    List.of("id", "unknown"),
-                    admin))
+                    "t1", "tpl1", null, null, null, null, null, List.of("id", "unknown"), admin))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("unknown");
   }
@@ -192,16 +193,14 @@ class WorkRecordExportServiceTest {
     when(repository.pageForExport(any(), anyInt(), any(), any(), any(), any(), any(), any()))
         .thenReturn(List.of());
 
-    WorkRecordExportService service = new WorkRecordExportService(
-        repository, fieldRepository, audit, defaultProps());
+    WorkRecordExportApplicationService service =
+        new WorkRecordExportApplicationService(repository, fieldRepository, audit, defaultProps());
     UserPrincipal admin = principal("admin", "work-record:export", "work-record:read:all");
 
     String csv =
         new String(
             service.exportCsv(
-                "t1", null, null, null, null, null, null,
-                List.of("id", "title", "status"),
-                admin),
+                "t1", null, null, null, null, null, null, List.of("id", "title", "status"), admin),
             StandardCharsets.UTF_8);
     assertThat(csv).isEqualTo("id,title,status\n");
   }
@@ -211,8 +210,8 @@ class WorkRecordExportServiceTest {
     WorkRecordRepository repository = mock(WorkRecordRepository.class);
     WorkRecordFieldRepository fieldRepository = mock(WorkRecordFieldRepository.class);
     AuditService audit = mock(AuditService.class);
-    WorkRecordExportService service = new WorkRecordExportService(
-        repository, fieldRepository, audit, propsWith(2000));
+    WorkRecordExportApplicationService service =
+        new WorkRecordExportApplicationService(repository, fieldRepository, audit, propsWith(2000));
 
     assertThat(service.getMaxExportRows()).isEqualTo(2000);
   }
@@ -222,11 +221,11 @@ class WorkRecordExportServiceTest {
     WorkRecordRepository repository = mock(WorkRecordRepository.class);
     WorkRecordFieldRepository fieldRepository = mock(WorkRecordFieldRepository.class);
     AuditService audit = mock(AuditService.class);
-    WorkRecordExportService service = new WorkRecordExportService(
-        repository, fieldRepository, audit, propsWith(0));
+    WorkRecordExportApplicationService service =
+        new WorkRecordExportApplicationService(repository, fieldRepository, audit, propsWith(0));
 
     assertThat(service.getMaxExportRows())
-        .isEqualTo(WorkRecordExportService.DEFAULT_MAX_EXPORT_ROWS);
+        .isEqualTo(WorkRecordExportApplicationService.DEFAULT_MAX_EXPORT_ROWS);
   }
 
   private static UserPrincipal principal(String id, String... authorities) {

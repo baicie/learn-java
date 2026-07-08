@@ -13,6 +13,13 @@ import static org.mockito.Mockito.when;
 
 import io.aegisops.audit.AuditService;
 import io.aegisops.security.UserPrincipal;
+import io.aegisops.workrecord.api.dto.CreateWorkRecordRequest;
+import io.aegisops.workrecord.api.dto.UpdateWorkRecordRequest;
+import io.aegisops.workrecord.application.WorkRecordApplicationService;
+import io.aegisops.workrecord.domain.model.WorkRecord;
+import io.aegisops.workrecord.domain.model.WorkRecordField;
+import io.aegisops.workrecord.infrastructure.persistence.WorkRecordFieldRepository;
+import io.aegisops.workrecord.infrastructure.persistence.WorkRecordRepository;
 import java.time.OffsetDateTime;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -22,8 +29,8 @@ class WorkRecordServiceTest {
   private final WorkRecordRepository repository = mock(WorkRecordRepository.class);
   private final WorkRecordFieldRepository fieldRepository = mock(WorkRecordFieldRepository.class);
   private final AuditService audit = mock(AuditService.class);
-  private final WorkRecordService service =
-      new WorkRecordService(repository, fieldRepository, audit);
+  private final WorkRecordApplicationService service =
+      new WorkRecordApplicationService(repository, fieldRepository, audit);
 
   /**
    * Test-only principal factory. The {@code roles} set is unused by the service (it only inspects

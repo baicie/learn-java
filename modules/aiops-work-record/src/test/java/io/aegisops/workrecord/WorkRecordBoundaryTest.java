@@ -13,6 +13,7 @@ import com.tngtech.archunit.lang.ArchCondition;
 import com.tngtech.archunit.lang.ArchRule;
 import com.tngtech.archunit.lang.ConditionEvents;
 import com.tngtech.archunit.lang.SimpleConditionEvent;
+import io.aegisops.workrecord.infrastructure.persistence.WorkRecordFieldRepository;
 import java.util.List;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -62,15 +63,14 @@ class WorkRecordBoundaryTest {
   /**
    * 导出服务必须注入 WorkRecordFieldRepository，保证 exportable 字段级权限校验生效。
    *
-   * <p>如果未来有人把 export 链路简化掉字段仓储，P0-2 的字段级 exportable 校验会失效。
-   * 本规则是字段权限位的最后一道防线。
+   * <p>如果未来有人把 export 链路简化掉字段仓储，P0-2 的字段级 exportable 校验会失效。 本规则是字段权限位的最后一道防线。
    */
   @ArchTest
   static final ArchRule export_service_must_inject_field_repository =
       constructors()
           .that()
           .areDeclaredInClassesThat()
-          .haveSimpleName("WorkRecordExportService")
+          .haveSimpleName("WorkRecordExportApplicationService")
           .should(injectWorkRecordFieldRepository());
 
   @ArchTest
@@ -78,7 +78,7 @@ class WorkRecordBoundaryTest {
       constructors()
           .that()
           .areDeclaredInClassesThat()
-          .haveSimpleName("WorkRecordQueryService")
+          .haveSimpleName("WorkRecordQueryApplicationService")
           .should(injectWorkRecordFieldRepository());
 
   private static ArchCondition<JavaConstructor> injectWorkRecordFieldRepository() {
@@ -98,8 +98,9 @@ class WorkRecordBoundaryTest {
         if (containsFieldRepository.test(params)) {
           events.add(SimpleConditionEvent.satisfied(item, item.getDescription()));
         } else {
-          events.add(SimpleConditionEvent.violated(item,
-              item.getDescription() + " does not inject WorkRecordFieldRepository"));
+          events.add(
+              SimpleConditionEvent.violated(
+                  item, item.getDescription() + " does not inject WorkRecordFieldRepository"));
         }
       }
     };

@@ -3,6 +3,8 @@ package io.aegisops.workrecord;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import io.aegisops.workrecord.domain.model.WorkRecordField;
+import io.aegisops.workrecord.domain.rule.WorkRecordFieldValidator;
 import java.time.OffsetDateTime;
 import java.util.List;
 import org.junit.jupiter.api.Test;

@@ -13,6 +13,14 @@ import static org.mockito.Mockito.when;
 
 import io.aegisops.common.api.PageResult;
 import io.aegisops.security.UserPrincipal;
+import io.aegisops.workrecord.api.dto.WorkRecordListRequest;
+import io.aegisops.workrecord.application.WorkRecordQueryApplicationService;
+import io.aegisops.workrecord.domain.model.DynamicFieldFilter;
+import io.aegisops.workrecord.domain.model.WorkRecordField;
+import io.aegisops.workrecord.domain.model.WorkRecordTemplate;
+import io.aegisops.workrecord.infrastructure.config.WorkRecordProperties;
+import io.aegisops.workrecord.infrastructure.persistence.WorkRecordFieldRepository;
+import io.aegisops.workrecord.infrastructure.persistence.WorkRecordRepository;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -27,13 +35,15 @@ class WorkRecordQueryServiceTest {
 
   private WorkRecordRepository repository;
   private WorkRecordFieldRepository fieldRepository;
-  private WorkRecordQueryService service;
+  private WorkRecordQueryApplicationService service;
 
   @BeforeEach
   void setUp() {
     repository = mock(WorkRecordRepository.class);
     fieldRepository = mock(WorkRecordFieldRepository.class);
-    service = new WorkRecordQueryService(repository, fieldRepository, new WorkRecordProperties());
+    service =
+        new WorkRecordQueryApplicationService(
+            repository, fieldRepository, new WorkRecordProperties());
   }
 
   private WorkRecordField textField(String code, boolean filterable, boolean enabled) {
@@ -92,48 +102,97 @@ class WorkRecordQueryServiceTest {
     @Test
     void adminUser_callsRepositoryPage() {
       UserPrincipal user = makeUser(auth("work-record:read:all"));
-      when(repository.page(anyString(), anyInt(), anyInt(), any(), any(), any(), any(), any(), any(), any(), any()))
+      when(repository.page(
+              anyString(),
+              anyInt(),
+              anyInt(),
+              any(),
+              any(),
+              any(),
+              any(),
+              any(),
+              any(),
+              any(),
+              any()))
           .thenReturn(new PageResult<>(0, 1, 20, List.of()));
 
       var result = service.list("t1", user, emptyRequest());
 
       assertThat(result).isNotNull();
-      verify(repository).page(eq("t1"), eq(1), eq(20), any(), any(), any(), any(), any(), any(), any(), any());
-      verify(repository, never()).pageForUser(anyString(), anyString(), anyInt(), anyInt(), any(), any(), any(), any(), any(), any());
+      verify(repository)
+          .page(eq("t1"), eq(1), eq(20), any(), any(), any(), any(), any(), any(), any(), any());
+      verify(repository, never())
+          .pageForUser(
+              anyString(),
+              anyString(),
+              anyInt(),
+              anyInt(),
+              any(),
+              any(),
+              any(),
+              any(),
+              any(),
+              any());
     }
 
     @Test
     void normalUser_callsRepositoryPageForUser() {
       UserPrincipal user = makeUser(auth("work-record:read:self"));
-      when(repository.pageForUser(anyString(), anyString(), anyInt(), anyInt(), any(), any(), any(), any(), any(), any()))
+      when(repository.pageForUser(
+              anyString(),
+              anyString(),
+              anyInt(),
+              anyInt(),
+              any(),
+              any(),
+              any(),
+              any(),
+              any(),
+              any()))
           .thenReturn(new PageResult<>(0, 1, 20, List.of()));
 
       var result = service.list("t1", user, emptyRequest());
 
       assertThat(result).isNotNull();
-      verify(repository).pageForUser(eq("t1"), eq("user-1"), eq(1), eq(20), any(), any(), any(), any(), any(), any());
+      verify(repository)
+          .pageForUser(
+              eq("t1"), eq("user-1"), eq(1), eq(20), any(), any(), any(), any(), any(), any());
     }
 
     @Test
     void pageSizeClampedToMax100() {
       UserPrincipal user = makeUser(auth("work-record:read:all"));
       List<DynamicFieldFilter> noFilters = List.of();
-      WorkRecordListRequest req = new WorkRecordListRequest(
-          1, 500, null, null, null, null, null, null, null, noFilters, null);
-      when(repository.page(anyString(), anyInt(), anyInt(), any(), any(), any(), any(), any(), any(), any(), any()))
+      WorkRecordListRequest req =
+          new WorkRecordListRequest(
+              1, 500, null, null, null, null, null, null, null, noFilters, null);
+      when(repository.page(
+              anyString(),
+              anyInt(),
+              anyInt(),
+              any(),
+              any(),
+              any(),
+              any(),
+              any(),
+              any(),
+              any(),
+              any()))
           .thenReturn(new PageResult<>(0, 1, 100, List.of()));
 
       service.list("t1", user, req);
 
-      verify(repository).page(eq("t1"), eq(1), eq(100), any(), any(), any(), any(), any(), any(), any(), any());
+      verify(repository)
+          .page(eq("t1"), eq(1), eq(100), any(), any(), any(), any(), any(), any(), any(), any());
     }
 
     @Test
     void dynamicFilters_requiresTemplateId() {
       UserPrincipal user = makeUser(auth("work-record:read:all"));
-      List<DynamicFieldFilter> filters = List.of(new DynamicFieldFilter("memo", "contains", "hello", null));
-      WorkRecordListRequest req = new WorkRecordListRequest(
-          1, 20, null, null, null, null, null, null, null, filters, null);
+      List<DynamicFieldFilter> filters =
+          List.of(new DynamicFieldFilter("memo", "contains", "hello", null));
+      WorkRecordListRequest req =
+          new WorkRecordListRequest(1, 20, null, null, null, null, null, null, null, filters, null);
 
       assertThatThrownBy(() -> service.list("t1", user, req))
           .isInstanceOf(IllegalArgumentException.class)
@@ -145,11 +204,22 @@ class WorkRecordQueryServiceTest {
       UserPrincipal user = makeUser(auth("work-record:read:all"));
       WorkRecordField field = textField("memo", true, true);
       when(fieldRepository.list("t1", "tpl1")).thenReturn(List.of(field));
-      when(repository.page(anyString(), anyInt(), anyInt(), any(), any(), any(), any(), any(), any(), any(), any()))
+      when(repository.page(
+              anyString(),
+              anyInt(),
+              anyInt(),
+              any(),
+              any(),
+              any(),
+              any(),
+              any(),
+              any(),
+              any(),
+              any()))
           .thenReturn(new PageResult<>(0, 1, 20, List.of()));
 
-      WorkRecordListRequest req = requestWithFilters(
-          List.of(new DynamicFieldFilter("unknown", "contains", "x", null)));
+      WorkRecordListRequest req =
+          requestWithFilters(List.of(new DynamicFieldFilter("unknown", "contains", "x", null)));
 
       assertThatThrownBy(() -> service.list("t1", user, req))
           .isInstanceOf(IllegalArgumentException.class)
@@ -161,11 +231,22 @@ class WorkRecordQueryServiceTest {
       UserPrincipal user = makeUser(auth("work-record:read:all"));
       WorkRecordField field = textField("memo", true, true);
       when(fieldRepository.list("t1", "tpl1")).thenReturn(List.of(field));
-      when(repository.page(anyString(), anyInt(), anyInt(), any(), any(), any(), any(), any(), any(), any(), any()))
+      when(repository.page(
+              anyString(),
+              anyInt(),
+              anyInt(),
+              any(),
+              any(),
+              any(),
+              any(),
+              any(),
+              any(),
+              any(),
+              any()))
           .thenReturn(new PageResult<>(0, 1, 20, List.of()));
 
-      WorkRecordListRequest req = requestWithFilters(
-          List.of(new DynamicFieldFilter("memo", "contains", "hello", null)));
+      WorkRecordListRequest req =
+          requestWithFilters(List.of(new DynamicFieldFilter("memo", "contains", "hello", null)));
 
       var result = service.list("t1", user, req);
       assertThat(result).isNotNull();
@@ -177,12 +258,32 @@ class WorkRecordQueryServiceTest {
 
     @Test
     void emptyTemplateId_returnsTemplatesOnly() {
-      WorkRecordTemplate t1 = new WorkRecordTemplate(
-          "tpl1", "t1", "T1", "t1", null, true, "{}", "{}", null,
-          OffsetDateTime.now(), OffsetDateTime.now());
-      WorkRecordTemplate t2 = new WorkRecordTemplate(
-          "tpl2", "t1", "T2", "t2", null, true, "{}", "{}", null,
-          OffsetDateTime.now(), OffsetDateTime.now());
+      WorkRecordTemplate t1 =
+          new WorkRecordTemplate(
+              "tpl1",
+              "t1",
+              "T1",
+              "t1",
+              null,
+              true,
+              "{}",
+              "{}",
+              null,
+              OffsetDateTime.now(),
+              OffsetDateTime.now());
+      WorkRecordTemplate t2 =
+          new WorkRecordTemplate(
+              "tpl2",
+              "t1",
+              "T2",
+              "t2",
+              null,
+              true,
+              "{}",
+              "{}",
+              null,
+              OffsetDateTime.now(),
+              OffsetDateTime.now());
       when(repository.listTemplates("t1")).thenReturn(List.of(t1, t2));
 
       var meta = service.metadata("t1", null);
@@ -195,21 +296,39 @@ class WorkRecordQueryServiceTest {
     @Test
     void withTemplateId_returnsColumnsAndFilterFields() {
       WorkRecordField text = textField("memo", true, true);
-      WorkRecordField number = new WorkRecordField(
-          "f2", "t1", "tpl1", "count", "count", "number",
-          false, null, "static", null, "[]",
-          true, true, true, false, 0, true,
-          ".properties.count", OffsetDateTime.now(), OffsetDateTime.now());
+      WorkRecordField number =
+          new WorkRecordField(
+              "f2",
+              "t1",
+              "tpl1",
+              "count",
+              "count",
+              "number",
+              false,
+              null,
+              "static",
+              null,
+              "[]",
+              true,
+              true,
+              true,
+              false,
+              0,
+              true,
+              ".properties.count",
+              OffsetDateTime.now(),
+              OffsetDateTime.now());
       when(fieldRepository.list("t1", "tpl1")).thenReturn(List.of(text, number));
 
       var meta = service.metadata("t1", "tpl1");
 
       assertThat(meta.columns()).hasSize(2);
       assertThat(meta.filterFields()).hasSize(2);
-      WorkRecordQueryService.RecordListFilterField memo = meta.filterFields().stream()
-          .filter(f -> f.fieldCode().equals("memo"))
-          .findFirst()
-          .orElseThrow();
+      WorkRecordQueryApplicationService.RecordListFilterField memo =
+          meta.filterFields().stream()
+              .filter(f -> f.fieldCode().equals("memo"))
+              .findFirst()
+              .orElseThrow();
       assertThat(memo.operators()).contains("contains", "eq", "exists");
       assertThat(memo.exportable()).isTrue();
       assertThat(meta.columns().get(0).exportable()).isTrue();
@@ -223,7 +342,8 @@ class WorkRecordQueryServiceTest {
 
       var meta = service.metadata("t1", "tpl1");
 
-      assertThat(meta.columns()).extracting(WorkRecordQueryService.RecordListColumn::fieldCode)
+      assertThat(meta.columns())
+          .extracting(WorkRecordQueryApplicationService.RecordListColumn::fieldCode)
           .containsExactly("memo");
     }
 

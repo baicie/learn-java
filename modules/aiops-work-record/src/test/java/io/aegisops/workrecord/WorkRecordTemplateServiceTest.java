@@ -9,6 +9,17 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import io.aegisops.audit.AuditService;
+import io.aegisops.workrecord.api.dto.CreateFieldRequest;
+import io.aegisops.workrecord.api.dto.CreateTemplateRequest;
+import io.aegisops.workrecord.api.dto.TemplateSchemaRequest;
+import io.aegisops.workrecord.api.dto.UpdateFieldRequest;
+import io.aegisops.workrecord.application.WorkRecordFieldIndexService;
+import io.aegisops.workrecord.application.WorkRecordSchemaService;
+import io.aegisops.workrecord.application.WorkRecordTemplateApplicationService;
+import io.aegisops.workrecord.domain.model.WorkRecordField;
+import io.aegisops.workrecord.domain.model.WorkRecordTemplate;
+import io.aegisops.workrecord.infrastructure.persistence.WorkRecordFieldRepository;
+import io.aegisops.workrecord.infrastructure.persistence.WorkRecordTemplateRepository;
 import java.time.OffsetDateTime;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -21,12 +32,12 @@ class WorkRecordTemplateServiceTest {
   private final AuditService audit = mock(AuditService.class);
   private final WorkRecordFieldIndexService fieldIndexService =
       new WorkRecordFieldIndexService(fields, audit);
-  private WorkRecordTemplateService service;
+  private WorkRecordTemplateApplicationService service;
 
   @BeforeEach
   void setup() {
     service =
-        new WorkRecordTemplateService(
+        new WorkRecordTemplateApplicationService(
             templates, fields, schemaService, fieldIndexService, audit);
   }
 
@@ -35,9 +46,7 @@ class WorkRecordTemplateServiceTest {
     assertThatThrownBy(
             () ->
                 service.createTemplate(
-                    "t1",
-                    new CreateTemplateRequest("", "daily", null, true, "{}", null),
-                    "u1"))
+                    "t1", new CreateTemplateRequest("", "daily", null, true, "{}", null), "u1"))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("name");
   }
@@ -64,8 +73,8 @@ class WorkRecordTemplateServiceTest {
   void createField_shouldRejectUnsupportedFieldType() {
     CreateFieldRequest request =
         new CreateFieldRequest(
-            "字段", "field", "unknown", false, null, "static", null, "[]", false, false,
-            true, false, 0, true, null);
+            "字段", "field", "unknown", false, null, "static", null, "[]", false, false, true, false,
+            0, true, null);
 
     assertThatThrownBy(() -> service.createField("t1", "tpl1", request, "u1"))
         .isInstanceOf(IllegalArgumentException.class)
@@ -76,8 +85,21 @@ class WorkRecordTemplateServiceTest {
   void createField_whenDictOption_shouldRequireDictCode() {
     CreateFieldRequest request =
         new CreateFieldRequest(
-            "优先级", "priority", "select", false, null, "dict", "", "[]", true, true, true, false, 0,
-            true, null);
+            "优先级",
+            "priority",
+            "select",
+            false,
+            null,
+            "dict",
+            "",
+            "[]",
+            true,
+            true,
+            true,
+            false,
+            0,
+            true,
+            null);
 
     assertThatThrownBy(() -> service.createField("t1", "tpl1", request, "u1"))
         .isInstanceOf(IllegalArgumentException.class)
@@ -113,21 +135,8 @@ class WorkRecordTemplateServiceTest {
   void createField_shouldRejectJsonObjectForOptionsJson() {
     CreateFieldRequest request =
         new CreateFieldRequest(
-            "标签",
-            "tags",
-            "select",
-            false,
-            null,
-            "static",
-            null,
-            "{}",
-            true,
-            true,
-            true,
-            false,
-            0,
-            true,
-            null);
+            "标签", "tags", "select", false, null, "static", null, "{}", true, true, true, false, 0,
+            true, null);
 
     assertThatThrownBy(() -> service.createField("t1", "tpl1", request, "u1"))
         .isInstanceOf(IllegalArgumentException.class)
@@ -149,8 +158,7 @@ class WorkRecordTemplateServiceTest {
             "u1",
             OffsetDateTime.now(),
             OffsetDateTime.now());
-    when(templates.create(eq("t1"), any(CreateTemplateRequest.class), eq("u1")))
-        .thenReturn(stored);
+    when(templates.create(eq("t1"), any(CreateTemplateRequest.class), eq("u1"))).thenReturn(stored);
     CreateTemplateRequest request =
         new CreateTemplateRequest("日常记录", "daily", null, true, "{}", "{}");
 
@@ -197,7 +205,8 @@ class WorkRecordTemplateServiceTest {
         "t1",
         "tpl1",
         "f1",
-        new UpdateFieldRequest("新名称", null, null, null, null, null, null, null, null, null, null, null),
+        new UpdateFieldRequest(
+            "新名称", null, null, null, null, null, null, null, null, null, null, null),
         "u1");
 
     verify(fields).update(eq("t1"), eq("tpl1"), eq("f1"), any(UpdateFieldRequest.class));
@@ -279,8 +288,7 @@ class WorkRecordTemplateServiceTest {
 
     assertThat(result.id()).isEqualTo("tpl1");
     // updateSchema 接受 4 参数：tenantId, templateId, schemaJson, designerJson
-    verify(templates)
-        .updateSchema(eq("t1"), eq("tpl1"), any(String.class), any(String.class));
+    verify(templates).updateSchema(eq("t1"), eq("tpl1"), any(String.class), any(String.class));
     // 字段替换使用 syncFields 路径（通过 saveSchema 间接调用）
     verify(audit).record(any());
   }
@@ -307,7 +315,6 @@ class WorkRecordTemplateServiceTest {
     // 空 schema 不抛异常
     service.saveSchema("t1", "tpl1", new TemplateSchemaRequest(null, null, List.of()), "u1");
 
-    verify(templates)
-        .updateSchema(eq("t1"), eq("tpl1"), eq("{}"), any(String.class));
+    verify(templates).updateSchema(eq("t1"), eq("tpl1"), eq("{}"), any(String.class));
   }
 }

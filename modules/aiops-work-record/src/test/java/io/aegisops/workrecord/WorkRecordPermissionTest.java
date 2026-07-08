@@ -14,6 +14,13 @@ import static org.mockito.Mockito.when;
 import io.aegisops.audit.AuditService;
 import io.aegisops.common.api.PageResult;
 import io.aegisops.security.UserPrincipal;
+import io.aegisops.workrecord.api.dto.UpdateWorkRecordRequest;
+import io.aegisops.workrecord.application.WorkRecordApplicationService;
+import io.aegisops.workrecord.application.WorkRecordExportApplicationService;
+import io.aegisops.workrecord.domain.model.WorkRecord;
+import io.aegisops.workrecord.infrastructure.config.WorkRecordProperties;
+import io.aegisops.workrecord.infrastructure.persistence.WorkRecordFieldRepository;
+import io.aegisops.workrecord.infrastructure.persistence.WorkRecordRepository;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -34,14 +41,14 @@ class WorkRecordPermissionTest {
   private WorkRecordRepository repository;
   private WorkRecordFieldRepository fieldRepository;
   private AuditService audit;
-  private WorkRecordService service;
+  private WorkRecordApplicationService service;
 
   @BeforeEach
   void setUp() {
     repository = mock(WorkRecordRepository.class);
     fieldRepository = mock(WorkRecordFieldRepository.class);
     audit = mock(AuditService.class);
-    service = new WorkRecordService(repository, fieldRepository, audit);
+    service = new WorkRecordApplicationService(repository, fieldRepository, audit);
   }
 
   private static UserPrincipal principal(String id, String... authorities) {
@@ -167,7 +174,8 @@ class WorkRecordPermissionTest {
 
       assertThatThrownBy(
               () ->
-                  new WorkRecordExportService(repository, fieldRepository, audit, new WorkRecordProperties())
+                  new WorkRecordExportApplicationService(
+                          repository, fieldRepository, audit, new WorkRecordProperties())
                       .exportCsv("t1", null, null, null, null, null, null, null, user))
           .isInstanceOf(SecurityException.class);
     }
@@ -183,7 +191,8 @@ class WorkRecordPermissionTest {
           .thenReturn(List.of());
 
       byte[] csv =
-          new WorkRecordExportService(repository, fieldRepository, audit, new WorkRecordProperties())
+          new WorkRecordExportApplicationService(
+                  repository, fieldRepository, audit, new WorkRecordProperties())
               .exportCsv("t1", null, null, null, null, null, null, null, user);
 
       assertThat(csv).isNotEmpty();

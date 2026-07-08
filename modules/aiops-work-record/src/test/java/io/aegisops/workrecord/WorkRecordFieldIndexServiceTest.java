@@ -3,16 +3,19 @@ package io.aegisops.workrecord;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 import io.aegisops.audit.AuditRecordCommand;
 import io.aegisops.audit.AuditService;
+import io.aegisops.workrecord.application.WorkRecordFieldIndexService;
+import io.aegisops.workrecord.application.WorkRecordSchemaService;
+import io.aegisops.workrecord.domain.model.FormilyFieldDescriptor;
+import io.aegisops.workrecord.domain.model.WorkRecordField;
+import io.aegisops.workrecord.infrastructure.persistence.WorkRecordFieldRepository;
 import java.time.OffsetDateTime;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -77,7 +80,15 @@ class WorkRecordFieldIndexServiceTest {
     List<FormilyFieldDescriptor> descriptors =
         List.of(
             new FormilyFieldDescriptor(
-                "inspector", "巡检人", "text", "static", null, true, false, false, ".properties.inspector"));
+                "inspector",
+                "巡检人",
+                "text",
+                "static",
+                null,
+                true,
+                false,
+                false,
+                ".properties.inspector"));
 
     service.syncFields("tenant_1", "template_1", descriptors, List.of(), "actor-1");
 
@@ -100,18 +111,32 @@ class WorkRecordFieldIndexServiceTest {
     List<FormilyFieldDescriptor> descriptors =
         List.of(
             new FormilyFieldDescriptor(
-                "inspector", "巡检人", "text", "static", null, true, false, false, ".properties.inspector"),
+                "inspector",
+                "巡检人",
+                "text",
+                "static",
+                null,
+                true,
+                false,
+                false,
+                ".properties.inspector"),
             new FormilyFieldDescriptor(
-                "summary", "摘要", "text", "static", null, true, false, false, ".properties.summary"));
+                "summary",
+                "摘要",
+                "text",
+                "static",
+                null,
+                true,
+                false,
+                false,
+                ".properties.summary"));
 
     service.syncFields("tenant_1", "template_1", descriptors, List.of(), "actor-1");
 
     ArgumentCaptor<AuditRecordCommand> captor = ArgumentCaptor.forClass(AuditRecordCommand.class);
     verify(audit, atLeastOnce()).record(captor.capture());
     List<AuditRecordCommand> calls = captor.getAllValues();
-    assertThat(calls)
-        .extracting(AuditRecordCommand::action)
-        .contains("work_record.field.create");
+    assertThat(calls).extracting(AuditRecordCommand::action).contains("work_record.field.create");
     assertThat(calls)
         .filteredOn(c -> "work_record.field.create".equals(c.action()))
         .extracting(c -> c.detailJson())
@@ -131,7 +156,15 @@ class WorkRecordFieldIndexServiceTest {
     List<FormilyFieldDescriptor> descriptors =
         List.of(
             new FormilyFieldDescriptor(
-                "summary", "摘要", "text", "static", null, true, false, false, ".properties.summary"));
+                "summary",
+                "摘要",
+                "text",
+                "static",
+                null,
+                true,
+                false,
+                false,
+                ".properties.summary"));
 
     service.syncFields(
         "tenant_1", "template_1", descriptors, List.of(existing, removed), "actor-1");
@@ -151,7 +184,9 @@ class WorkRecordFieldIndexServiceTest {
   void syncFields_reenablesDisabledFieldsInSchema() {
     WorkRecordFieldRepository repository = Mockito.mock(WorkRecordFieldRepository.class);
     AuditService audit = Mockito.mock(AuditService.class);
-    Mockito.doNothing().when(repository).updateEnabled(anyString(), anyString(), anyString(), anyBoolean());
+    Mockito.doNothing()
+        .when(repository)
+        .updateEnabled(anyString(), anyString(), anyString(), anyBoolean());
     WorkRecordFieldIndexService service = new WorkRecordFieldIndexService(repository, audit);
 
     WorkRecordField disabled = field("reappear", false);
@@ -169,8 +204,7 @@ class WorkRecordFieldIndexServiceTest {
                 false,
                 ".properties.reappear"));
 
-    service.syncFields(
-        "tenant_1", "template_1", descriptors, List.of(disabled), "actor-1");
+    service.syncFields("tenant_1", "template_1", descriptors, List.of(disabled), "actor-1");
 
     verify(repository).updateEnabled("tenant_1", "template_1", "f_reappear", true);
 

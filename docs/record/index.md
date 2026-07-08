@@ -23,6 +23,7 @@ related:
   - docs/reviews/work-record/2026-07-06-work-record-implementation-review.md
   - docs/reviews/work-record/2026-07-07-work-record-final-review.md
   - docs/reviews/work-record/2026-07-07-work-record-rule-based-review.md
+  - docs/adr/0005-work-record-designer-formily-core-only.md
 ---
 
 # AI-Ops 可配置工作记录模块 · 更新终版设计（portal-first）
@@ -180,29 +181,40 @@ iframe
 最终方案：
 
 ```text
-第一版不直接引入 Designable 作为主设计器。
-第一版采用 portal 原生字段设计器，生成稳定的 Formily-compatible schema。
-记录填写与详情运行态使用 Formily。
-```
-
-也就是：
-
-```text
-表单设计器：portal 原生字段设计器
+设计态：portal 原生字段设计器（四区布局：字段库 / 画布 / 属性面板 / 实时预览），
+       引擎使用 @formily/core / @formily/react / @formily/json-schema。
+       禁止引入 @formily/antd*、@formily/designable-setters、@formily/fusion、
+       @formily/element-plus、@formily/next 等任何 UI 框架适配包。
 Schema 协议：Formily-compatible JSON schema + wr_template_field 字段索引
 表单运行态：Formily SchemaField / Formily runtime
 列表表格：TanStack Table
 外层页面：web/portal shadcn-admin
 ```
 
+也就是：
+
+```text
+字段库（9 类字段）   →  shadcn/ui 卡片，点击追加
+画布（字段排序/选中） →  shadcn/ui + 上下箭头按钮，不引拖拽库
+属性面板              →  shadcn/ui 实现的 setter，契约 {value, onChange, props}
+实时预览              →  复用 FormilyRuntimeForm
+setter 框架           →  portal 自研，禁引 @formily/designable-setters / @formily/antd-setters
+```
+
+具体工程约束、CI 守卫与备选方案见 ADR 0005（`docs/adr/0005-work-record-designer-formily-core-only.md`）。
+
 原因：
 
 ```text
-1. web/portal 的主 UI 是 shadcn-admin / Radix / Tailwind，直接引入 Designable 会带来 Ant Design / Fusion 风格割裂。
+1. web/portal 的主 UI 是 shadcn-admin / Radix / Tailwind，引入 Antd/Fusion 风格的
+   setter 会让设计器与 portal 其他页面的视觉/主题/i18n/权限体系割裂。
 2. 第一版需要的是运维记录字段配置，不是完整低代码设计平台。
-3. portal 原生设计器更容易接入项目现有 i18n、权限、主题、表格、表单校验和测试体系。
-4. Formily runtime 仍然保留动态表单、schema 渲染和未来联动能力。
-5. 后端以 schema_json + wr_template_field 双结构存储，既能运行动态表单，也能支持列表筛选、导出和字段索引。
+3. @formily/core 已经在 web/portal 中作为运行态依赖，安装已成事实；让设计态也复用
+   @formily/core，可以让 schema 校验、字段反应式状态、订阅能力贯通设计态与运行态。
+4. 仍不引入 Antd/Fusion 的 setter 与 UI 适配，避免双 UI 体系。
+5. Formily runtime 保留动态表单、schema 渲染和未来联动能力。
+6. 后端以 schema_json + wr_template_field 双结构存储，既能运行动态表单，也能支持
+   列表筛选、导出和字段索引。
 ```
 
 Designable 的定位：
@@ -462,7 +474,11 @@ web/portal/src/features/calendars/
 使用：
 
 ```text
-portal 原生字段设计器
+portal 原生字段设计器（四区布局：字段库 / 画布 / 属性面板 / 实时预览）
+引擎：@formily/core / @formily/react / @formily/json-schema
+setter：portal 自行用 shadcn/ui 实现（TextSetter / NumberSetter / BooleanSetter /
+        SelectSetter / DictSetter），不引 @formily/designable-setters /
+        @formily/antd-setters
 生成 Formily-compatible schema
 同步 wr_template_field 字段索引
 ```
@@ -471,10 +487,10 @@ portal 原生字段设计器
 
 ```text
 从字段面板添加字段
-支持字段排序
+支持字段排序（上下箭头按钮，不引拖拽库）
 配置字段属性
 配置字段标题
-配置字段编码
+配置字段编码（首次保存前可改，之后锁定）
 配置默认值
 配置校验
 配置布局
@@ -487,7 +503,9 @@ portal 原生字段设计器
 预览表单
 ```
 
-第一版不把 Designable 作为主路径。Designable 仅作为后续高级设计器候选，原因见 `docs/record/phase-04-formily-designer.md`。
+字段类型限定为 SKILL §6.15.5 列出的 9 类（text / textarea / number / date / datetime / select / multi_select / user / boolean），不做级联选择、子表单、公式字段、联动显示、条件必填、复杂布局、远程接口字段。
+
+设计态引擎与禁用包清单、CI 守卫见 ADR 0005（`docs/adr/0005-work-record-designer-formily-core-only.md`）。Designable 仅作为后续高级设计器候选，原因同 §4。
 
 ### 10.2 运行态
 
@@ -1441,7 +1459,7 @@ docs/record/phase-02a-platform-calendar.md
 在 React 19 + Vite 8 + portal 样式下验证 Formily runtime、schema 生成与字典注入是否能稳定工作。
 ```
 
-新增依赖候选：
+新增依赖（运行时 + 设计态共享）：
 
 ```text
 @formily/core
@@ -1450,21 +1468,47 @@ docs/record/phase-02a-platform-calendar.md
 @formily/validator
 ```
 
+禁用包（参见 ADR 0005，CI 由 scripts/ci/check-formily-deps.sh 守卫）：
+
+```text
+@formily/antd
+@formily/antd-components
+@formily/antd-setters
+@formily/antd-icons
+@formily/designable-setters
+@formily/fusion
+@formily/element-plus
+@formily/next
+@formily/icons
+```
+
 新增代码：
 
 ```text
 web/portal/src/features/work-records/data/formily-schema.ts
+web/portal/src/features/work-records/data/designer/field-types.ts
+web/portal/src/features/work-records/data/designer/palette.ts
+web/portal/src/features/work-records/data/designer/schema-builder.ts
 web/portal/src/features/work-records/components/formily-runtime-form.tsx
-web/portal/src/features/work-records/components/designer/designer-shell.tsx
-web/portal/src/features/work-records/components/designer/schema-preview.tsx
+web/portal/src/features/work-records/components/designer/designer-canvas.tsx
+web/portal/src/features/work-records/components/designer/designer-palette.tsx
+web/portal/src/features/work-records/components/designer/designer-property-panel.tsx
+web/portal/src/features/work-records/components/designer/designer-preview.tsx
+web/portal/src/features/work-records/components/designer/setter/{text,number,boolean,select,dict}-setter.tsx
 web/portal/src/features/work-records/components/dict-schema-injector.ts
 ```
+
+`formily-designer-shell.tsx` 重写为四区布局：左字段库 / 中画布 / 右上半属性 / 右下半预览。
 
 单元测试：
 
 ```text
 web/portal/src/features/work-records/components/dict-schema-injector.test.ts
 web/portal/src/features/work-records/data/formily-schema.test.ts
+web/portal/src/features/work-records/data/designer/field-types.test.ts
+web/portal/src/features/work-records/data/designer/schema-builder.test.ts
+web/portal/src/features/work-records/components/designer/designer-canvas.test.tsx
+web/portal/src/features/work-records/components/designer/designer-property-panel.test.tsx
 ```
 
 降级策略：
@@ -1472,8 +1516,8 @@ web/portal/src/features/work-records/data/formily-schema.test.ts
 ```text
 如果 Formily runtime 与 React 19 / Vite 8 不兼容：
   Phase WR-3 交付 schema 契约与字段索引
-  Phase WR-4 使用 portal 原生字段设计器继续生成同一份 schema
-  Phase WR-5 暂时改为 React Hook Form 动态渲染
+  Phase WR-4 使用 portal 原生设计器（不依赖 Formily runtime）继续生成同一份 schema
+  Phase WR-5 暂时改为 React Hook Form + zod-v4-resolver 动态渲染
   Formily runtime 延后到单独 ADR 决策
 ```
 
@@ -1482,8 +1526,10 @@ web/portal/src/features/work-records/data/formily-schema.test.ts
 ```text
 pnpm -C web/portal run build 通过
 runtime 能渲染最小 schema
-portal 原生设计器能生成可运行 schema
+设计器四区布局与 setter 行为符合 ADR 0005
+scripts/ci/check-formily-deps.sh 在 CI 中通过
 字典注入函数纯单测通过
+禁用包不在 lockfile 中出现
 ```
 
 ### Phase WR-4：模板后端升级与字段索引同步

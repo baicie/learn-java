@@ -3,6 +3,9 @@ package io.aegisops.workrecord;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import io.aegisops.workrecord.domain.model.DynamicFieldFilter;
+import io.aegisops.workrecord.domain.model.WorkRecordField;
+import io.aegisops.workrecord.domain.rule.WorkRecordFilterValidator;
 import java.time.OffsetDateTime;
 import java.util.List;
 import org.junit.jupiter.api.Nested;
@@ -202,7 +205,8 @@ class WorkRecordFilterValidatorTest {
         OffsetDateTime.now());
   }
 
-  private DynamicFieldFilter filter(String fieldCode, String operator, Object value, List<Object> values) {
+  private DynamicFieldFilter filter(
+      String fieldCode, String operator, Object value, List<Object> values) {
     return new DynamicFieldFilter(fieldCode, operator, value, values);
   }
 
@@ -240,7 +244,8 @@ class WorkRecordFilterValidatorTest {
     @Test
     void validDateFilter_isAllowed() {
       List<WorkRecordField> fields = List.of(dateField("check_date", true));
-      List<DynamicFieldFilter> filters = List.of(filter("check_date", "between", null, List.of("2026-01-01", "2026-12-31")));
+      List<DynamicFieldFilter> filters =
+          List.of(filter("check_date", "between", null, List.of("2026-01-01", "2026-12-31")));
       assertThatCode(() -> WorkRecordFilterValidator.validate(fields, filters))
           .doesNotThrowAnyException();
     }
@@ -403,26 +408,25 @@ class WorkRecordFilterValidatorTest {
 
     @Test
     void mixedValidFilters_areAllowed() {
-      List<WorkRecordField> fields = List.of(
-          textField("memo", true),
-          numberField("count", true),
-          dateField("check_date", true));
-      List<DynamicFieldFilter> filters = List.of(
-          filter("memo", "contains", "hello", null),
-          filter("count", "gte", 10, null),
-          filter("check_date", "eq", "2026-07-08", null));
+      List<WorkRecordField> fields =
+          List.of(
+              textField("memo", true), numberField("count", true), dateField("check_date", true));
+      List<DynamicFieldFilter> filters =
+          List.of(
+              filter("memo", "contains", "hello", null),
+              filter("count", "gte", 10, null),
+              filter("check_date", "eq", "2026-07-08", null));
       assertThatCode(() -> WorkRecordFilterValidator.validate(fields, filters))
           .doesNotThrowAnyException();
     }
 
     @Test
     void oneInvalidFilter_failsWithFirstError() {
-      List<WorkRecordField> fields = List.of(
-          textField("memo", true),
-          numberField("count", true));
-      List<DynamicFieldFilter> filters = List.of(
-          filter("memo", "contains", "hello", null),
-          filter("unknown_field", "eq", "bad", null));
+      List<WorkRecordField> fields = List.of(textField("memo", true), numberField("count", true));
+      List<DynamicFieldFilter> filters =
+          List.of(
+              filter("memo", "contains", "hello", null),
+              filter("unknown_field", "eq", "bad", null));
       assertThatThrownBy(() -> WorkRecordFilterValidator.validate(fields, filters))
           .isInstanceOf(IllegalArgumentException.class)
           .hasMessageContaining("unknown_field");

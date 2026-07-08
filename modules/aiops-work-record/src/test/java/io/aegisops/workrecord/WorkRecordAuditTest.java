@@ -12,6 +12,25 @@ import static org.mockito.Mockito.when;
 import io.aegisops.audit.AuditRecordCommand;
 import io.aegisops.audit.AuditService;
 import io.aegisops.security.UserPrincipal;
+import io.aegisops.workrecord.api.dto.CreateFieldRequest;
+import io.aegisops.workrecord.api.dto.CreateTemplateRequest;
+import io.aegisops.workrecord.api.dto.CreateWorkRecordRequest;
+import io.aegisops.workrecord.api.dto.TemplateSchemaRequest;
+import io.aegisops.workrecord.api.dto.UpdateWorkRecordRequest;
+import io.aegisops.workrecord.application.WorkRecordApplicationService;
+import io.aegisops.workrecord.application.WorkRecordExportApplicationService;
+import io.aegisops.workrecord.application.WorkRecordFieldIndexService;
+import io.aegisops.workrecord.application.WorkRecordQueryApplicationService;
+import io.aegisops.workrecord.application.WorkRecordSchemaService;
+import io.aegisops.workrecord.application.WorkRecordTemplateApplicationService;
+import io.aegisops.workrecord.domain.model.FormilyFieldDescriptor;
+import io.aegisops.workrecord.domain.model.WorkRecord;
+import io.aegisops.workrecord.domain.model.WorkRecordField;
+import io.aegisops.workrecord.domain.model.WorkRecordTemplate;
+import io.aegisops.workrecord.infrastructure.config.WorkRecordProperties;
+import io.aegisops.workrecord.infrastructure.persistence.WorkRecordFieldRepository;
+import io.aegisops.workrecord.infrastructure.persistence.WorkRecordRepository;
+import io.aegisops.workrecord.infrastructure.persistence.WorkRecordTemplateRepository;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -35,11 +54,11 @@ class WorkRecordAuditTest {
   private WorkRecordTemplateRepository templateRepository;
   private WorkRecordSchemaService schemaService;
   private WorkRecordFieldIndexService fieldIndexService;
-  private WorkRecordQueryService queryService;
+  private WorkRecordQueryApplicationService queryService;
   private AuditService audit;
-  private WorkRecordService recordService;
-  private WorkRecordTemplateService templateService;
-  private WorkRecordExportService exportService;
+  private WorkRecordApplicationService recordService;
+  private WorkRecordTemplateApplicationService templateService;
+  private WorkRecordExportApplicationService exportService;
 
   @BeforeEach
   void setUp() {
@@ -50,16 +69,16 @@ class WorkRecordAuditTest {
     fieldIndexService = mock(WorkRecordFieldIndexService.class);
     audit = mock(AuditService.class);
 
-    recordService = new WorkRecordService(repository, fieldRepository, audit);
+    recordService = new WorkRecordApplicationService(repository, fieldRepository, audit);
     templateService =
-        new WorkRecordTemplateService(
+        new WorkRecordTemplateApplicationService(
             templateRepository, fieldRepository, schemaService, fieldIndexService, audit);
     exportService =
-        new WorkRecordExportService(
+        new WorkRecordExportApplicationService(
             repository, fieldRepository, audit, new WorkRecordProperties());
 
     // queryService 仅在 metadata 中用，这里无需完整 mock
-    queryService = mock(WorkRecordQueryService.class);
+    queryService = mock(WorkRecordQueryApplicationService.class);
   }
 
   private static UserPrincipal principal(String id, String... authorities) {
