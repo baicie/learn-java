@@ -22,4 +22,18 @@ export const workRecords = {
   'workRecords.list.detail': '详情',
   'workRecords.list.edit': '编辑',
   'workRecords.list.exportStarted': '导出已开始',
+  // Form
+  'workRecords.form.basicInfo': '基本信息',
+  'workRecords.form.recordContent': '记录内容',
+  'workRecords.form.selectTemplate': '选择模板',
+  'workRecords.form.titlePlaceholder': '输入记录标题',
+  'workRecords.form.ownerPlaceholder': '选择或输入负责人',
+  'workRecords.form.templateRequired': '请选择模板',
+  'workRecords.form.titleRequired': '请输入标题',
+  'workRecords.form.submitSuccess': '提交成功',
+  'workRecords.form.submit': '提交',
+  'workRecords.form.saveDraft': '保存草稿',
+  // Detail
+  'workRecords.detail.template': '模板',
+  'workRecords.detail.legacyFields': '历史遗留字段',
 } as const

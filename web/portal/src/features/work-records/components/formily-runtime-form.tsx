@@ -1,16 +1,8 @@
-import { useMemo } from 'react'
-import {
-  createForm,
-  type Form,
-  createEffectHook,
-} from '@formily/core'
-import {
-  FormProvider,
-  createSchemaField,
-} from '@formily/react'
+import { useEffect, useMemo, useRef } from 'react'
+import { createForm, type Form } from '@formily/core'
 import { Schema } from '@formily/json-schema'
+import { FormProvider, createSchemaField } from '@formily/react'
 import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
 import {
   Select,
   SelectContent,
@@ -19,8 +11,9 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
-import { injectDictionaryOptions } from './dict-schema-injector'
+import { Textarea } from '@/components/ui/textarea'
 import type { DictItem } from '@/features/dictionaries/data/schema'
+import { injectDictionaryOptions } from './dict-schema-injector'
 
 // --- Portal UI → Formily component bridge ---
 
@@ -102,10 +95,7 @@ const FormilySelect = (props: {
   enum?: Array<{ label: string; value: unknown }>
   [key: string]: unknown
 }) => (
-  <Select
-    value={props.value ?? ''}
-    onValueChange={(v) => props.onChange?.(v)}
-  >
+  <Select value={props.value ?? ''} onValueChange={(v) => props.onChange?.(v)}>
     <SelectTrigger>
       <SelectValue />
     </SelectTrigger>
@@ -131,7 +121,7 @@ const FormilyBoolean = (props: {
 )
 
 const FormilyUnknown = () => (
-  <span className='text-muted-foreground text-sm'>未知控件</span>
+  <span className='text-sm text-muted-foreground'>未知控件</span>
 )
 
 const SchemaField = createSchemaField({
@@ -164,7 +154,8 @@ const FIELD_TYPE_TO_COMPONENT: Record<string, string> = {
 function normalizeField(
   fieldSchema: Record<string, unknown>
 ): Record<string, unknown> {
-  const ext = fieldSchema['x-work-record'] as Record<string, unknown> | undefined
+  const ext = fieldSchema['x-work-record'] as
+    Record<string, unknown> | undefined
   const fieldType = (ext?.fieldType as string) ?? 'text'
   const component = FIELD_TYPE_TO_COMPONENT[fieldType] ?? 'Input'
 
@@ -248,28 +239,29 @@ export function FormilyRuntimeForm({
   dictionaries = {},
   onValuesChange,
 }: FormilyRuntimeFormProps) {
-  // Use effects for onValuesChange callback
-  const form = useMemo<Form>(
-    () =>
-      createForm({
-        initialValues,
-        readOnly,
-        effects: (form) => {
-          const onFormValuesChange = createEffectHook('onFormValuesChange')
-          onFormValuesChange(() => {
-            onValuesChange?.(form.values as Record<string, unknown>)
-          })
-        },
-      }),
-    // Re-create form only when these change
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [JSON.stringify(initialValues), readOnly]
-  )
+  // Create a new form when initialValues or readOnly changes
+  const form = useMemo<Form>(() => {
+    return createForm({
+      initialValues,
+      readOnly,
+    })
+  }, [initialValues, readOnly])
 
-  // Update form values when initialValues prop changes
-  useMemo(() => {
-    form.setValues(initialValues)
-  }, [form, initialValues])
+  // Keep onValuesChange callback ref updated without triggering form recreation
+  const onValuesChangeRef = useRef(onValuesChange)
+
+  // Sync onValuesChange callback to form effects
+  useEffect(() => {
+    onValuesChangeRef.current = onValuesChange
+
+    if (!onValuesChange) return
+
+    const unsubscribe = form.subscribe((f) => {
+      onValuesChangeRef.current?.(f.values as Record<string, unknown>)
+    })
+
+    return unsubscribe
+  }, [form, onValuesChange])
 
   // Build dict map for injectDictionaryOptions
   const dictMap = useMemo(
@@ -296,8 +288,7 @@ export function FormilyRuntimeForm({
     [withDicts]
   )
 
-  // Convert to ISchema for SchemaField
-// compile JSON schema → Formily schema
+  // 3. Compile JSON schema → Formily schema
   const formilySchema = useMemo(
     () => Schema.compile(normalizedSchema),
     [normalizedSchema]

@@ -23,4 +23,18 @@ export const workRecords = {
   'workRecords.list.detail': 'Details',
   'workRecords.list.edit': 'Edit',
   'workRecords.list.exportStarted': 'Export started',
+  // Form
+  'workRecords.form.basicInfo': 'Basic Info',
+  'workRecords.form.recordContent': 'Record Content',
+  'workRecords.form.selectTemplate': 'Select template',
+  'workRecords.form.titlePlaceholder': 'Enter record title',
+  'workRecords.form.ownerPlaceholder': 'Select or enter owner',
+  'workRecords.form.templateRequired': 'Please select a template',
+  'workRecords.form.titleRequired': 'Please enter a title',
+  'workRecords.form.submitSuccess': 'Submitted successfully',
+  'workRecords.form.submit': 'Submit',
+  'workRecords.form.saveDraft': 'Save as Draft',
+  // Detail
+  'workRecords.detail.template': 'Template',
+  'workRecords.detail.legacyFields': 'Legacy Fields',
 } as const

@@ -4,6 +4,7 @@ export const common = {
   'common.create': '新建',
   'common.edit': '编辑',
   'common.save': '保存',
+  'common.saveFailed': '保存失败',
   'common.cancel': '取消',
   'common.delete': '删除',
   'common.export': '导出',

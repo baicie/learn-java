@@ -4,6 +4,7 @@ export const common = {
   'common.create': 'New',
   'common.edit': 'Edit',
   'common.save': 'Save',
+  'common.saveFailed': 'Failed to save',
   'common.cancel': 'Cancel',
   'common.delete': 'Delete',
   'common.export': 'Export',
