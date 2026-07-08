@@ -1,2 +1,11 @@
-# Helm templates contain Go template syntax - not valid YAML for parsers
-deploy/helm/
+web/*/node_modules
+web/*/dist
+web/*/build
+web/*/.turbo
+web/*/.vite
+web/*/coverage
+**/target
+**/.idea
+**/.vscode
+**/*.generated.ts
+**/routeTree.gen.ts
