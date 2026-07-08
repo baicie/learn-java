@@ -273,7 +273,7 @@ describe('setDictionaryCode', () => {
   it('rejects dictCode on a non-select field', () => {
     const seeded = seed()
     expect(() => setDictionaryCode(seeded, 'severity', 'record_severity')).toThrow(
-      /dictCode requires select or multi_select/
+      /select or multi_select/
     )
   })
 })

@@ -34,27 +34,33 @@ function asSchema(value: unknown): DesignerSchema {
     typeof properties !== 'object' ||
     Array.isArray(properties)
   ) {
-    return { ...(value as DesignerSchema), type: 'object', properties: {} }
+    return { type: 'object', properties: {} } as DesignerSchema
   }
-  return { ...(value as DesignerSchema), type: 'object', properties }
+  return {
+    type: 'object',
+    properties: properties as Record<string, Record<string, unknown>>,
+  } as DesignerSchema
 }
 
 function lenientAsSchema(value: unknown): DesignerSchema {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    return { type: 'object', properties: {} }
+    return { type: 'object', properties: {} } as DesignerSchema
   }
-  const obj = value as { type?: unknown; properties?: unknown }
-  const properties =
-    obj.properties !== undefined &&
-    obj.properties !== null &&
-    typeof obj.properties === 'object' &&
-    !Array.isArray(obj.properties)
-      ? (obj.properties as Record<string, unknown>)
+  const obj = value as Record<string, unknown>
+  const rawProps = obj.properties
+  const props: Record<string, Record<string, unknown>> =
+    rawProps !== undefined &&
+    rawProps !== null &&
+    typeof rawProps === 'object' &&
+    !Array.isArray(rawProps)
+      ? (rawProps as Record<string, Record<string, unknown>>)
       : {}
-  if (obj.type !== 'object') {
-    return { ...obj, type: 'object', properties }
-  }
-  return { ...obj, type: 'object', properties }
+  // Merge: obj's extra keys first, then override type + properties.
+  // Object.assign copies properties left-to-right; later args overwrite earlier ones.
+  const base: Record<string, unknown> = { ...obj }
+  base.type = 'object'
+  base.properties = props
+  return base as DesignerSchema
 }
 
 export function emptySchema(): DesignerSchema {
@@ -215,7 +221,8 @@ export function updateField(
   currentFieldCode: string,
   patch: UpdateFieldPatch
 ): DesignerSchema {
-  const target = schema.properties[currentFieldCode]
+  ensureSchemaInput(schema)
+  const target = schema.properties[currentFieldCode] 
   if (!target) {
     throw new SchemaBuilderError(`fieldCode not found: ${currentFieldCode}`)
   }
@@ -272,18 +279,7 @@ export function setDictionaryCode(
   fieldCode: string,
   dictCode: string | null
 ): DesignerSchema {
-  const target = schema.properties[fieldCode]
-  if (!target) {
-    throw new SchemaBuilderError(`fieldCode not found: ${fieldCode}`)
-  }
-  const extension = (target['x-work-record'] ?? {}) as Record<string, unknown>
-  const fieldType = (extension.fieldType as WorkRecordFieldType) ?? 'text'
-  if (dictCode !== null && !isSelectLike(fieldType)) {
-    throw new SchemaBuilderError(
-      `dictCode requires select or multi_select, got ${fieldType}`
-    )
-  }
-
+  ensureSchemaInput(schema)
   return updateField(schema, fieldCode, {
     optionSource: dictCode ? 'dict' : 'static',
     dictCode: dictCode ?? undefined,

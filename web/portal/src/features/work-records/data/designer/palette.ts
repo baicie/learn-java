@@ -87,7 +87,7 @@ export function getFieldTypeOption(
 ): FieldTypeOption {
   const option = palette.find((entry) => entry.fieldType === fieldType)
   if (!option) {
-    throw new Error(`unknown palette fieldType: ${fieldType satisfies never}`)
+    throw new Error(`unknown palette fieldType: ${fieldType satisfies WorkRecordFieldType}`)
   }
   return option
 }
@@ -97,18 +97,19 @@ export function defaultDescriptorFor(
   fieldCode: string,
   overrides: Partial<FieldDescriptor> = {}
 ): FieldDescriptor {
+  const { fieldType: _ft, fieldCode: _fc, ...rest } = overrides
   const descriptor: FieldDescriptor = {
     fieldCode,
     fieldType,
-    title: fieldCode,
-    required: false,
-    listVisible: false,
-    filterable: false,
-    statistical: false,
-    optionSource: 'static',
-    ...overrides,
-    fieldType,
-    fieldCode,
+    title: overrides.title ?? fieldCode,
+    required: overrides.required ?? false,
+    listVisible: overrides.listVisible ?? false,
+    filterable: overrides.filterable ?? false,
+    statistical: overrides.statistical ?? false,
+    optionSource: overrides.optionSource ?? 'static',
+    dictCode: overrides.dictCode,
+    options: overrides.options,
+    ...rest,
   }
   return descriptor
 }
