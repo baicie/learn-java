@@ -1,0 +1,202 @@
+name: Deploy
+
+# 触发模式：
+#   - workflow_dispatch：手动触发
+#   - push 到 main/master：自动触发
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - 'apps/**'
+      - 'modules/**'
+      - 'web/**'
+      - 'contracts/**'
+      - 'deploy/**'
+      - 'infra/docker-compose.yml'
+      - '.github/workflows/deploy.yml'
+      - 'pom.xml'
+      - 'pnpm-lock.yaml'
+      - 'package.json'
+
+  workflow_dispatch:
+    inputs:
+      reseed:
+        description: '是否重新初始化数据'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+
+concurrency:
+  group: deploy-aegisops-${{ github.ref }}
+  cancel-in-progress: false  # 串行，避免两个 deploy 撞同一个 VM
+
+env:
+  IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/aegisops
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
+    environment:
+      name: aegisops-prod
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix=git-
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+
+      - name: Build and push aiops-server
+        if: ${{ runner.os != 'Windows' && fileExists('apps/aiops-server/Dockerfile') }}
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./apps/aiops-server/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: false
+
+      - name: Build and push aiops-agent
+        if: ${{ runner.os != 'Windows' && fileExists('apps/aiops-agent/Dockerfile') }}
+        uses: docker/build-push-action@v6
+        with:
+          context: ./apps/aiops-agent
+          file: ./apps/aiops-agent/Dockerfile
+          push: true
+          tags: |
+            ${{ env.IMAGE_NAME }}/aiops-agent:${{ github.sha }}
+            ${{ env.IMAGE_NAME }}/aiops-agent:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: false
+
+      - name: Deploy to Tencent Cloud VM
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.PERF_VM_HOST }}
+          username: ${{ secrets.PERF_VM_USER }}
+          key: ${{ secrets.PERF_VM_KEY }}
+          password: ${{ secrets.PERF_VM_PASSWORD }}
+          port: ${{ secrets.PERF_VM_SSH_PORT || '22' }}
+          timeout: 30m
+          command_timeout: 30m
+          script: |
+            set -euo pipefail
+
+            RESEED='${{ github.event.inputs.reseed || 'false' }}'
+            IMAGE_NAME='${{ env.IMAGE_NAME }}'
+            SHA_TAG='${{ github.sha }}'
+            APP_DIR="$HOME/workspace/aegisops"
+
+            configure_mirror() {
+              echo "::group::Configuring Docker mirror"
+              sudo mkdir -p /etc/docker
+              printf '%s\n' '{"registry-mirrors":["https://mirror.ccs.tencentyun.com"]}' | sudo tee /etc/docker/daemon.json
+              sudo systemctl daemon-reload 2>/dev/null || true
+              sudo systemctl restart docker 2>/dev/null || true
+              sleep 8
+              docker info | grep -A 3 "Registry Mirrors" || true
+              echo "::endgroup::"
+            }
+
+            pull_with_retry() {
+              for i in 1 2 3 4 5; do
+                echo "::group::Pull attempt $i"
+                if docker pull "$1"; then
+                  echo "::endgroup::"
+                  echo "Pull OK: $1"
+                  return 0
+                fi
+                echo "Pull failed, retrying in $((i * 15))s"
+                echo "::endgroup::"
+                sleep $((i * 15))
+              done
+              return 1
+            }
+
+            configure_mirror
+
+            pull_with_retry "${IMAGE_NAME}:${SHA_TAG}" || { echo "::error::Failed to pull server image"; exit 1; }
+            pull_with_retry "${IMAGE_NAME}/aiops-agent:${SHA_TAG}" || { echo "::error::Failed to pull agent image"; exit 1; }
+
+            if [ ! -d "$APP_DIR" ]; then
+              mkdir -p "$(dirname "$APP_DIR")"
+              git clone https://github.com/${{ github.repository }}.git "$APP_DIR" --depth 1
+            fi
+
+            cd "$APP_DIR"
+            git pull origin ${{ github.ref_name }} || true
+
+            echo "::group::Updating compose file with new images"
+            sed -i "s|image: .*aiops-server.*|image: ${IMAGE_NAME}:${SHA_TAG}|" deploy/docker-compose.app.yml 2>/dev/null || true
+            sed -i "s|image: .*aiops-agent.*|image: ${IMAGE_NAME}/aiops-agent:${SHA_TAG}|" deploy/docker-compose.app.yml 2>/dev/null || true
+            cat deploy/docker-compose.app.yml
+            echo "::endgroup::"
+
+            docker compose -f deploy/docker-compose.app.yml pull
+            docker compose -f deploy/docker-compose.app.yml down
+            docker compose -f deploy/docker-compose.app.yml up -d
+
+            echo "::group::Waiting for services health"
+            sleep 10
+
+            # 检查 server 健康状态
+            for i in $(seq 1 30); do
+              if curl -fsS http://127.0.0.1:8080/actuator/health >/dev/null 2>&1; then
+                echo "aiops-server healthy after ${i}s"
+                break
+              fi
+              sleep 2
+            done
+
+            # 检查 agent 健康状态
+            for i in $(seq 1 15); do
+              if curl -fsS http://127.0.0.1:9008/health >/dev/null 2>&1; then
+                echo "aiops-agent healthy after ${i}s"
+                break
+              fi
+              sleep 2
+            done
+            echo "::endgroup::"
+
+            # 验证部署
+            echo "::group::Verifying deployment"
+            curl -fsS http://127.0.0.1:8080/actuator/health | tee /tmp/health.json || echo "Server health check failed"
+            docker compose -f deploy/docker-compose.app.yml ps | tee /tmp/ps.txt
+            echo "::endgroup::"
+
+            # 可选：重新初始化数据
+            if [ "$RESEED" = "true" ]; then
+              echo "::group::Reseeding data"
+              # 根据实际情况添加 reseed 命令
+              # 例如: docker compose exec server pnpm seed || true
+              echo "::endgroup::"
+            fi
+
+            docker image prune -f >/dev/null 2>&1 || true
+            echo "::notice::Deployed ${IMAGE_NAME}:${SHA_TAG} to $(hostname)"
