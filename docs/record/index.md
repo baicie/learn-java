@@ -5,7 +5,7 @@ status: review
 phase: work-record
 owner: platform-team
 created: 2026-07-07
-updated: 2026-07-07
+updated: 2026-07-08
 supersedes:
   - docs/record/2026-07-06-record-index-pre-portal.md
 deprecated_for:
@@ -14,6 +14,7 @@ related:
   - docs/record/phase-00-baseline-and-contract.md
   - docs/record/phase-01-portal-i18n-and-shell.md
   - docs/record/phase-02-platform-dictionary.md
+  - docs/record/phase-02a-platform-calendar.md
   - docs/record/phase-03-work-record-template.md
   - docs/record/phase-04-formily-designer.md
   - docs/record/phase-05-record-runtime.md
@@ -26,7 +27,7 @@ related:
 
 # AI-Ops 可配置工作记录模块 · 更新终版设计（portal-first）
 
-> 本文档是"可配置工作记录模块"在 AegisOps 转入 `web/portal` 主前端后的权威设计入口。本次更新将表单设计器定稿为 **Formily + Designable**，并补充 schema 扩展协议、字段索引同步与 portal 目录落点。
+> 本文档是"可配置工作记录模块"在 AegisOps 转入 `web/portal` 主前端后的权威设计入口。本次更新将表单能力定稿为 **portal 原生字段设计器 + Formily-compatible schema + Formily runtime**，并补充 schema 扩展协议、字段索引同步与 portal 目录落点。Designable 仅作为后续高级设计器候选，不进入第一版必选路径。
 >
 > 历史：`docs/record/2026-07-06-record-index-pre-portal.md` 是基于 `web/console` 的同等设计，已被本文档 `supersedes`。
 >
@@ -43,7 +44,7 @@ related:
 产品定位：
 
 ```text
-用户管理 + 角色权限 + 字典管理 + Formily 表单设计器 + 工作记录填写 + 记录列表筛选导出
+用户管理 + 角色权限 + 字典管理 + 工作日历基础能力 + portal 原生表单设计器 + Formily 运行态 + 工作记录填写 + 记录列表筛选导出
 ```
 
 它不是完整工单系统，也不是完整低代码平台，而是：
@@ -95,7 +96,7 @@ web/portal/src/components/layout/data/sidebar-data.ts
 路由：TanStack Router 文件路由
 菜单：第一版改 sidebar-data.ts 静态菜单
 表格：TanStack Table
-表单设计器：Formily + Designable
+表单设计器：portal 原生字段设计器，生成 Formily-compatible schema
 表单运行态：Formily
 外层 UI：shadcn-admin / Radix / Tailwind
 后端：aiops-server + Maven 多模块
@@ -176,17 +177,20 @@ iframe
 
 ## 4. Formily / Designable 的最终取舍
 
-之前方案是不自研复杂低代码，但表单设计器可能轻量自研。现在根据新判断调整为：
+最终方案：
 
 ```text
-第一版直接使用 Formily / Designable
+第一版不直接引入 Designable 作为主设计器。
+第一版采用 portal 原生字段设计器，生成稳定的 Formily-compatible schema。
+记录填写与详情运行态使用 Formily。
 ```
 
 也就是：
 
 ```text
-表单设计器：Formily + Designable
-表单运行态：Formily SchemaField
+表单设计器：portal 原生字段设计器
+Schema 协议：Formily-compatible JSON schema + wr_template_field 字段索引
+表单运行态：Formily SchemaField / Formily runtime
 列表表格：TanStack Table
 外层页面：web/portal shadcn-admin
 ```
@@ -194,25 +198,27 @@ iframe
 原因：
 
 ```text
-1. 第一版核心就是“管理员拖拽制表”
-2. 没必要自己再造一套字段设计器
-3. Formily 更适合动态表单、schema 表单、表单联动
-4. Designable 能提供设计器能力
+1. web/portal 的主 UI 是 shadcn-admin / Radix / Tailwind，直接引入 Designable 会带来 Ant Design / Fusion 风格割裂。
+2. 第一版需要的是运维记录字段配置，不是完整低代码设计平台。
+3. portal 原生设计器更容易接入项目现有 i18n、权限、主题、表格、表单校验和测试体系。
+4. Formily runtime 仍然保留动态表单、schema 渲染和未来联动能力。
+5. 后端以 schema_json + wr_template_field 双结构存储，既能运行动态表单，也能支持列表筛选、导出和字段索引。
 ```
 
-但必须注意：
+Designable 的定位：
 
 ```text
-Designable 生态更偏 Ant Design / Fusion
-web/portal 是 shadcn-admin / Radix / Tailwind
+Designable 不废弃，但只作为后续高级设计器候选。
+只有当第一版字段设计器无法满足布局、联动、复杂组件编排时，再通过 ADR 评估是否引入。
 ```
 
-所以第一版接受这个取舍：
+第一版不把 Designable 作为主路径，是为了避免：
 
 ```text
-管理员表单设计页：可以使用 Designable 原有设计器风格
-用户填写记录页：尽量保持 portal 的 shadcn-admin 风格
-记录列表页：保持 TanStack Table / portal 风格
+1. 双 UI 体系长期并存。
+2. 表单设计器与 portal 权限/i18n/主题割裂。
+3. 为低代码能力提前支付过高复杂度。
+4. 后续列表筛选、导出、审计无法稳定依赖字段索引。
 ```
 
 ---
@@ -225,13 +231,14 @@ web/portal 是 shadcn-admin / Radix / Tailwind
 1. 用户管理
 2. 角色权限
 3. 字典管理
-4. 表单模板管理
-5. Formily / Designable 表单设计
-6. 工作记录填写
-7. 工作记录详情
-8. 工作记录列表
-9. 筛选
-10. 导出
+4. 工作日历基础能力（表 + API + CSV 导入，页面可选）
+5. 表单模板管理
+6. portal 原生表单设计
+7. 工作记录填写
+8. 工作记录详情
+9. 工作记录列表
+10. 筛选
+11. 导出
 ```
 
 第一版不做：
@@ -243,6 +250,8 @@ web/portal 是 shadcn-admin / Radix / Tailwind
 审批流
 SLA
 Excel 导入
+自动爬取节假日
+复杂排班
 评论时间线
 附件上传
 告警联动
@@ -257,7 +266,7 @@ AI 总结
 
 ## 6. 页面数量
 
-最小可用版共 7 个页面：
+严格 MVP 仍然是 7 个页面：
 
 ```text
 1. 用户管理页
@@ -269,13 +278,27 @@ AI 总结
 7. 记录详情页
 ```
 
+工程稳妥版可以增加第 8 个页面：
+
+```text
+8. 工作日历页
+```
+
+但第一版建议：
+
+```text
+先做 aiops-platform/calendar 表 + API + CSV 导入。
+页面可以延后，不阻塞工作记录核心闭环。
+```
+
 其中：
 
 ```text
 用户管理页：基于 portal 现有 users 页面改造
 角色权限页：新增或迁移
 字典管理页：新增
-表单设计页：新增，使用 Formily / Designable
+工作日历页：可选新增，默认延后；如实现，使用表格视图，不做月历拖拽
+表单设计页：新增，使用 portal 原生字段设计器并生成 Formily-compatible schema
 记录列表页：新增，使用 TanStack Table
 记录新建 / 编辑页：新增，使用 Formily runtime
 记录详情页：新增，按 schema 渲染只读视图
@@ -295,7 +318,8 @@ AI 总结
 平台管理
 ├─ 用户管理
 ├─ 角色权限
-└─ 字典管理
+├─ 字典管理
+└─ 工作日历（可选，页面延后时不显示）
 ```
 
 不要把下面这些做成菜单：
@@ -310,6 +334,8 @@ AI 总结
 ```
 
 它们应该是 `record_type` 字典项。
+
+工作日历也不要放在“工作记录”下面。它是 `platform` 能力，后续巡检任务、值班排班、SLA、告警静默和执行计划都会复用。
 
 ---
 
@@ -328,6 +354,7 @@ web/portal/src/routes/_authenticated/
 │
 └─ platform/
    ├─ dictionaries.tsx
+   ├─ calendars.tsx
    └─ roles.tsx
 ```
 
@@ -340,6 +367,7 @@ web/portal/src/routes/_authenticated/
 /_authenticated/work-records/$recordId/edit 编辑记录
 /_authenticated/work-records/designer       表单设计
 /_authenticated/platform/dictionaries       字典管理
+/_authenticated/platform/calendars          工作日历（可选）
 /_authenticated/platform/roles              角色权限
 ```
 
@@ -399,9 +427,29 @@ web/portal/src/features/dictionaries/
    └─ use-dictionaries.ts
 ```
 
+### 9.3 工作日历 feature（可选页面）
+
+```text
+web/portal/src/features/calendars/
+├─ index.tsx
+├─ api/
+│  └─ calendar-api.ts
+├─ data/
+│  └─ calendar-schema.ts
+├─ components/
+│  ├─ calendar-table.tsx
+│  ├─ calendar-day-table.tsx
+│  ├─ calendar-import-dialog.tsx
+│  └─ calendar-day-dialog.tsx
+└─ hooks/
+   └─ use-calendars.ts
+```
+
+第一版如果不做页面，只保留后端 API 与 i18n key 预留。
+
 ---
 
-## 10. Formily 设计器方案
+## 10. 表单设计器方案
 
 ### 10.1 设计态
 
@@ -414,13 +462,16 @@ web/portal/src/features/dictionaries/
 使用：
 
 ```text
-Formily + Designable
+portal 原生字段设计器
+生成 Formily-compatible schema
+同步 wr_template_field 字段索引
 ```
 
 能力：
 
 ```text
-拖拽字段
+从字段面板添加字段
+支持字段排序
 配置字段属性
 配置字段标题
 配置字段编码
@@ -435,6 +486,8 @@ Formily + Designable
 保存 schema
 预览表单
 ```
+
+第一版不把 Designable 作为主路径。Designable 仅作为后续高级设计器候选，原因见 `docs/record/phase-04-formily-designer.md`。
 
 ### 10.2 运行态
 
@@ -582,7 +635,8 @@ schema_json：
   Formily 表单 schema，用于运行态渲染和设计器加载
 
 designer_json：
-  Designable 设计器元信息、画布状态、额外扩展信息
+  portal 原生设计器状态、属性面板展开状态、布局辅助信息等
+  不作为运行态真相源
 ```
 
 ### 12.3 字段索引表
@@ -973,7 +1027,7 @@ work-record:template:delete
 
 ## 18. 关键实现注意事项
 
-### 18.1 先做 Formily / Designable 兼容性 Spike
+### 18.1 先做 Formily runtime 与 schema 契约 Spike
 
 因为 `web/portal` 当前是 React 19。`package.json` 显示 React 和 React DOM 为 19.2.7。
 
@@ -981,20 +1035,20 @@ work-record:template:delete
 
 ```text
 Formily runtime 能否正常渲染
-Designable 能否正常打开
 Vite build 是否通过
 React 19 下是否有明显兼容问题
 样式是否严重冲突
+portal 原生设计器生成的 schema 能否被 runtime 稳定消费
 ```
 
-如果 Designable 兼容性不好，则降级为：
+如果 Formily runtime 兼容性不好，则降级为：
 
 ```text
-第一版：Formily runtime + 简单 schema 编辑器
-第二版：再接 Designable
+第一版：portal 原生字段配置 + React Hook Form 动态渲染
+第二版：再接 Formily runtime 或通过 ADR 评估替代方案
 ```
 
-但优先目标仍然是第一版直接 Designable。
+优先目标仍然是第一版使用 Formily runtime；Designable 不进入第一版主路径。
 
 ### 18.2 不要只存 Formily schema
 
@@ -1233,11 +1287,11 @@ const recordsSearchSchema = z.object({
   page: z.number().optional().catch(1),
   pageSize: z.number().optional().catch(10),
   status: z
-    .array(z.enum(["draft", "processing", "done", "archived"]))
+    .array(z.enum(['draft', 'processing', 'done', 'archived']))
     .optional()
     .catch([]),
-  title: z.string().optional().catch(""),
-});
+  title: z.string().optional().catch(''),
+})
 ```
 
 单元测试：
@@ -1329,12 +1383,62 @@ record_type / record_priority / record_env / record_status 默认存在
 portal 字典页面所有关键文案已国际化
 ```
 
-### Phase WR-3：Formily / Designable 兼容性 Spike
+### Phase WR-2A：平台工作日历基础能力
 
 目标：
 
 ```text
-在 React 19 + Vite 8 + portal 样式下验证 Formily runtime 与 Designable 是否能稳定工作。
+新增 aiops-platform/calendar 轻量基础能力，用于判断工作日、统计工作日数量，并为后续日报缺失判断、月报统计、巡检任务、值班排班和 SLA 计算预留基础。
+```
+
+第一版交付：
+
+```text
+1. platform_calendar 表。
+2. platform_calendar_day 表。
+3. CalendarService / CalendarController。
+4. 工作日 check / range / count API。
+5. CSV 导入。
+6. 租户级自定义覆盖。
+7. 权限、审计和单元测试。
+```
+
+第一版可选：
+
+```text
+/platform/calendars 工作日历页
+```
+
+默认建议：
+
+```text
+先做表 + API + CSV 导入。
+页面延后，不阻塞工作记录核心闭环。
+```
+
+完整设计见：
+
+```text
+docs/record/phase-02a-platform-calendar.md
+```
+
+验收：
+
+```text
+能创建 CN_YYYY 工作日历
+能导入 CSV 日期
+能判断某一天是否工作日
+能统计日期范围内工作日数量
+所有 calendar 查询按 tenantId 隔离
+导入和单日覆盖写审计
+```
+
+### Phase WR-3：Formily runtime 与 schema 契约 Spike
+
+目标：
+
+```text
+在 React 19 + Vite 8 + portal 样式下验证 Formily runtime、schema 生成与字典注入是否能稳定工作。
 ```
 
 新增依赖候选：
@@ -1344,10 +1448,6 @@ portal 字典页面所有关键文案已国际化
 @formily/react
 @formily/json-schema
 @formily/validator
-@designable/core
-@designable/react
-@designable/formily-setters
-@designable/formily-transformer
 ```
 
 新增代码：
@@ -1355,8 +1455,8 @@ portal 字典页面所有关键文案已国际化
 ```text
 web/portal/src/features/work-records/data/formily-schema.ts
 web/portal/src/features/work-records/components/formily-runtime-form.tsx
-web/portal/src/features/work-records/components/formily-designer-shell.tsx
-web/portal/src/features/work-records/components/formily-spike-page.tsx
+web/portal/src/features/work-records/components/designer/designer-shell.tsx
+web/portal/src/features/work-records/components/designer/schema-preview.tsx
 web/portal/src/features/work-records/components/dict-schema-injector.ts
 ```
 
@@ -1370,10 +1470,11 @@ web/portal/src/features/work-records/data/formily-schema.test.ts
 降级策略：
 
 ```text
-如果 Designable 与 React 19 / Vite 8 不兼容：
-  Phase WR-3 只交付 Formily runtime
-  Phase WR-4 改为 JSON schema 编辑器 + 预览
-  Designable 延后到单独 ADR 决策
+如果 Formily runtime 与 React 19 / Vite 8 不兼容：
+  Phase WR-3 交付 schema 契约与字段索引
+  Phase WR-4 使用 portal 原生字段设计器继续生成同一份 schema
+  Phase WR-5 暂时改为 React Hook Form 动态渲染
+  Formily runtime 延后到单独 ADR 决策
 ```
 
 验收：
@@ -1381,7 +1482,7 @@ web/portal/src/features/work-records/data/formily-schema.test.ts
 ```text
 pnpm -C web/portal run build 通过
 runtime 能渲染最小 schema
-设计器页面能打开或明确落入降级策略
+portal 原生设计器能生成可运行 schema
 字典注入函数纯单测通过
 ```
 
@@ -1610,6 +1711,9 @@ export-records-dialog.test.tsx
 5. work-record:export
 6. platform:dict:read
 7. platform:dict:write
+8. platform:calendar:read
+9. platform:calendar:write
+10. platform:calendar:import
 ```
 
 审计动作：
@@ -1681,130 +1785,143 @@ platform
 
 ```ts
 export const workRecords = {
-  title: "工作记录",
-  description: "填写、查看和导出可配置工作记录",
+  title: '工作记录',
+  description: '填写、查看和导出可配置工作记录',
   list: {
-    title: "记录列表",
-    create: "新建记录",
-    export: "导出记录",
-    searchPlaceholder: "筛选记录标题...",
+    title: '记录列表',
+    create: '新建记录',
+    export: '导出记录',
+    searchPlaceholder: '筛选记录标题...',
   },
   designer: {
-    title: "表单设计",
-    description: "配置工作记录模板、字段和字典绑定",
-    save: "保存模板",
-    preview: "预览",
+    title: '表单设计',
+    description: '配置工作记录模板、字段和字典绑定',
+    save: '保存模板',
+    preview: '预览',
   },
   form: {
-    title: "记录标题",
-    template: "记录模板",
-    recordTime: "记录时间",
-    owner: "负责人",
-    submit: "提交记录",
+    title: '记录标题',
+    template: '记录模板',
+    recordTime: '记录时间',
+    owner: '负责人',
+    submit: '提交记录',
   },
   status: {
-    draft: "草稿",
-    processing: "处理中",
-    done: "已完成",
-    archived: "已归档",
+    draft: '草稿',
+    processing: '处理中',
+    done: '已完成',
+    archived: '已归档',
   },
   columns: {
-    title: "标题",
-    status: "状态",
-    owner: "负责人",
-    creator: "创建人",
-    recordTime: "记录时间",
-    actions: "操作",
+    title: '标题',
+    status: '状态',
+    owner: '负责人',
+    creator: '创建人',
+    recordTime: '记录时间',
+    actions: '操作',
   },
-} as const;
+} as const
 ```
 
 `en-US/work-records.ts`：
 
 ```ts
 export const workRecords = {
-  title: "Work Records",
-  description: "Create, review, and export configurable work records",
+  title: 'Work Records',
+  description: 'Create, review, and export configurable work records',
   list: {
-    title: "Records",
-    create: "New Record",
-    export: "Export Records",
-    searchPlaceholder: "Filter record titles...",
+    title: 'Records',
+    create: 'New Record',
+    export: 'Export Records',
+    searchPlaceholder: 'Filter record titles...',
   },
   designer: {
-    title: "Form Designer",
-    description: "Configure templates, fields, and dictionary bindings",
-    save: "Save Template",
-    preview: "Preview",
+    title: 'Form Designer',
+    description: 'Configure templates, fields, and dictionary bindings',
+    save: 'Save Template',
+    preview: 'Preview',
   },
   form: {
-    title: "Record Title",
-    template: "Template",
-    recordTime: "Record Time",
-    owner: "Owner",
-    submit: "Submit Record",
+    title: 'Record Title',
+    template: 'Template',
+    recordTime: 'Record Time',
+    owner: 'Owner',
+    submit: 'Submit Record',
   },
   status: {
-    draft: "Draft",
-    processing: "Processing",
-    done: "Done",
-    archived: "Archived",
+    draft: 'Draft',
+    processing: 'Processing',
+    done: 'Done',
+    archived: 'Archived',
   },
   columns: {
-    title: "Title",
-    status: "Status",
-    owner: "Owner",
-    creator: "Creator",
-    recordTime: "Record Time",
-    actions: "Actions",
+    title: 'Title',
+    status: 'Status',
+    owner: 'Owner',
+    creator: 'Creator',
+    recordTime: 'Record Time',
+    actions: 'Actions',
   },
-} as const;
+} as const
 ```
 
 `zh-CN/platform.ts`：
 
 ```ts
 export const platform = {
-  title: "平台管理",
+  title: '平台管理',
   dictionaries: {
-    title: "字典管理",
-    description: "管理平台枚举、字段选项和表单字典",
-    type: "字典类型",
-    item: "字典项",
-    code: "编码",
-    name: "名称",
-    label: "标签",
-    value: "值",
-    enabled: "启用",
+    title: '字典管理',
+    description: '管理平台枚举、字段选项和表单字典',
+    type: '字典类型',
+    item: '字典项',
+    code: '编码',
+    name: '名称',
+    label: '标签',
+    value: '值',
+    enabled: '启用',
   },
   roles: {
-    title: "角色权限",
-    description: "管理角色、权限和菜单访问范围",
+    title: '角色权限',
+    description: '管理角色、权限和菜单访问范围',
   },
-} as const;
+  calendars: {
+    title: '工作日历',
+    description: '维护工作日、节假日、调休和公司自定义日期',
+    year: '年份',
+    region: '地区',
+    import: '导入 CSV',
+    date: '日期',
+    dayOfWeek: '星期',
+    dayType: '日期类型',
+    isWorkday: '是否工作日',
+    holidayName: '节日名称',
+    remark: '备注',
+  },
+} as const
 ```
 
 `en-US/platform.ts`：
 
 ```ts
 export const platform = {
-  title: "Platform",
+  title: 'Platform',
   dictionaries: {
-    title: "Dictionaries",
-    description: "Manage enums, field options, and form dictionaries",
-    type: "Dictionary Type",
-    item: "Dictionary Item",
-    code: "Code",
-    name: "Name",
-    label: "Label",
-    value: "Value",
-    enabled: "Enabled",
+    title: 'Dictionaries',
+    description: 'Manage enums, field options, and form dictionaries',
+    type: 'Dictionary Type',
+    item: 'Dictionary Item',
+    code: 'Code',
+    name: 'Name',
+    label: 'Label',
+    value: 'Value',
+    enabled: 'Enabled',
   },
   roles: {
-    title: "Roles & Permissions",
-    description: "Manage roles, permissions, and menu access",
+    title: 'Roles & Permissions',
+    description: 'Manage roles, permissions, and menu access',
   },
-} as const;
+} as const
 ```
 
 必须同步：
@@ -1833,7 +1950,6 @@ Toast 成功 / 失败提示
 暂缓国际化范围：
 
 ```text
-Designable 内置面板文案
 Formily 第三方组件内置校验文案
 后端异常原始 message
 后续可能移除的模板示例页面
@@ -1856,9 +1972,10 @@ Formily 第三方组件内置校验文案
 ```text
 第 1 周：
   portal 接管
-  Formily Spike
+  Formily runtime 与 schema 契约 Spike
   菜单路由
   字典管理
+  工作日历表 + API（不阻塞页面）
 
 第 2 周：
   模板后端
@@ -1893,16 +2010,20 @@ Formily 第三方组件内置校验文案
   TanStack Router
   TanStack Query
   TanStack Table
-  Formily / Designable
+  portal 原生字段设计器
+  Formily runtime
 
 后端：
   aiops-server
   aiops-platform/dictionary
+  aiops-platform/calendar
   aiops-work-record
 
 数据库：
   platform_dict_type
   platform_dict_item
+  platform_calendar
+  platform_calendar_day
   work_record.wr_template
   work_record.wr_template_field
   work_record.wr_record
@@ -1911,7 +2032,7 @@ Formily 第三方组件内置校验文案
 最终取舍：
 
 ```text
-表单设计器不自研，直接 Formily / Designable
+表单设计器采用 portal 原生字段设计器
 表单运行态使用 Formily
 列表表格继续使用 TanStack Table
 字典自研平台能力
@@ -1919,10 +2040,11 @@ Formily 第三方组件内置校验文案
 不做微前端
 不做微服务
 不做完整工单系统
+Designable 作为后续高级设计器候选，不进入第一版主路径
 ```
 
 一句话：
 
 ```text
-第一版直接上 Formily 是可以的，但必须把 Formily schema 和业务字段索引拆开：schema 负责渲染，wr_template_field 负责查询、筛选、导出和后端校验。
+第一版保留 Formily runtime 的动态表单优势，但设计器必须贴合 portal：schema 负责渲染，wr_template_field 负责查询、筛选、导出和后端校验。
 ```
