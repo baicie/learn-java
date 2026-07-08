@@ -24,6 +24,7 @@ export default defineConfig({
   test: {
     silent: 'passed-only',
     unstubEnvs: true,
+    setupFiles: ['./src/test-utils/vitest-setup.ts'],
     browser: {
       enabled: true,
       provider: playwright(),

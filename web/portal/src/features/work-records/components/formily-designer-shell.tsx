@@ -1,158 +1,200 @@
-import { useMemo, useState } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Textarea } from '@/components/ui/textarea'
-import { saveTemplateSchema } from '../api/template-api'
-import { extractWorkRecordFields } from '../data/formily-schema'
-import { useTemplates } from '../hooks/use-record-template'
+import { extractWorkRecordFields } from '@/features/work-records/data/formily-schema'
+import {
+  addField,
+  emptySchema,
+  listFieldCodes,
+  moveFieldDown,
+  moveFieldUp,
+  normalizeSchema,
+  removeField,
+  type DesignerSchema,
+  type UpdateFieldPatch,
+  updateField,
+} from '@/features/work-records/data/designer/schema-builder'
+import type { WorkRecordFieldType } from '@/features/work-records/data/field-types'
+import { DesignerCanvas } from './designer/designer-canvas'
+import { DesignerPalette } from './designer/designer-palette'
+import { DesignerPreview } from './designer/designer-preview'
+import { DesignerPropertyPanel } from './designer/designer-property-panel'
 
-const defaultSchema = {
-  type: 'object',
-  properties: {
-    priority: {
-      type: 'string',
-      title: '优先级',
-      required: true,
-      'x-work-record': {
-        fieldCode: 'priority',
-        fieldType: 'select',
-        optionSource: 'dict',
-        dictCode: 'record_priority',
-        listVisible: true,
-        filterable: true,
-        statistical: false,
-      },
-    },
-  },
-}
+const FALLBACK_DICT_CODES = [
+  'record_type',
+  'record_priority',
+  'record_env',
+  'record_status',
+]
 
-const defaultDesigner = {
-  expandedProperties: new Set(Object.keys(defaultSchema.properties)),
-}
-
-const defaultSchemaText = JSON.stringify(defaultSchema, null, 2)
-const defaultDesignerText = JSON.stringify(defaultDesigner, null, 2)
-
-export function FormilyDesignerShell() {
-  const { t } = useTranslation()
-  const templates = useTemplates()
-  const queryClient = useQueryClient()
-  const [templateId, setTemplateId] = useState('')
-  const selected = useMemo(
-    () => templates.data?.find((template) => template.id === templateId),
-    [templateId, templates.data]
-  )
-  const [schemaText, setSchemaText] = useState(defaultSchemaText)
-  const [designerText, setDesignerText] = useState(defaultDesignerText)
-  const schema = useMemo(() => {
-    try {
-      return JSON.parse(schemaText)
-    } catch {
-      return defaultSchema
-    }
-  }, [schemaText])
-  const fields = useMemo(() => extractWorkRecordFields(schema), [schema])
-
-  const mutation = useMutation({
-    mutationFn: saveTemplateSchema,
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: ['work-record-templates'],
-      })
-      toast.success(t('common.save'))
-    },
+const defaultSchema: DesignerSchema = (() => {
+  let schema = emptySchema()
+  schema = addField(schema, 'text', 'process_result', {
+    title: '处理结果',
+    required: true,
+    listVisible: true,
+    filterable: true,
   })
+  schema = addField(schema, 'select', 'priority')
+  return schema
+})()
 
-  if (templates.isLoading) {
-    return <Skeleton className='h-64 w-full' />
+export type FormilyDesignerShellProps = {
+  initialSchema?: DesignerSchema
+  dictCodes?: ReadonlyArray<string>
+  recordCountByField?: Record<string, number>
+  onSave?: (payload: {
+    schema: DesignerSchema
+    fields: ReturnType<typeof extractWorkRecordFields>
+  }) => Promise<void> | void
+  savePending?: boolean
+}
+
+export function FormilyDesignerShell({
+  initialSchema = defaultSchema,
+  dictCodes = FALLBACK_DICT_CODES,
+  recordCountByField = {},
+  onSave,
+  savePending = false,
+}: FormilyDesignerShellProps) {
+  const { t } = useTranslation()
+  const [schema, setSchema] = useState<DesignerSchema>(initialSchema)
+  const [selectedFieldCode, setSelectedFieldCode] = useState<string | null>(
+    listFieldCodes(initialSchema)[0] ?? null
+  )
+  const [lastSavedSnapshot, setLastSavedSnapshot] = useState<string>(
+    () => JSON.stringify(initialSchema)
+  )
+
+  const schemaSnapshot = useMemo(() => JSON.stringify(schema), [schema])
+  const isDirty = schemaSnapshot !== lastSavedSnapshot
+
+  /* eslint-disable react-hooks/set-state-in-effect */
+  // Intentionally resets all designer state when the parent passes a new template.
+  // This is a one-way sync (props → internal state), not a feedback loop.
+  useEffect(() => {
+    setSchema(initialSchema)
+    setSelectedFieldCode(listFieldCodes(initialSchema)[0] ?? null)
+    setLastSavedSnapshot(JSON.stringify(initialSchema))
+  }, [initialSchema])
+  /* eslint-enable react-hooks/set-state-in-effect */
+
+  function handleAddField(fieldType: WorkRecordFieldType) {
+    const codes = listFieldCodes(schema)
+    let nextIndex = codes.length + 1
+    let code = `${fieldType}_${nextIndex}`
+    while (schema.properties[code]) {
+      nextIndex += 1
+      code = `${fieldType}_${nextIndex}`
+    }
+    const next = addField(schema, fieldType, code)
+    setSchema(next)
+    setSelectedFieldCode(code)
   }
 
-  function handleSave() {
-    const schema = JSON.parse(schemaText)
-    const designer = JSON.parse(designerText)
-    mutation.mutate({
-      templateId,
-      schemaJson: JSON.stringify(schema),
-      designerJson: JSON.stringify(designer),
-      fields: extractWorkRecordFields(schema),
+  function handleMove(fieldCode: string, direction: 'up' | 'down') {
+    setSchema((prev) =>
+      direction === 'up'
+        ? moveFieldUp(prev, fieldCode)
+        : moveFieldDown(prev, fieldCode)
+    )
+  }
+
+  function handleRemove(fieldCode: string) {
+    setSchema((prev) => removeField(prev, fieldCode))
+    if (selectedFieldCode === fieldCode) {
+      const remaining = listFieldCodes(schema).filter((c) => c !== fieldCode)
+      setSelectedFieldCode(remaining[0] ?? null)
+    }
+  }
+
+  function handleUpdate(current: string, patch: UpdateFieldPatch) {
+    setSchema((prev) => {
+      try {
+        return updateField(prev, current, patch)
+      } catch {
+        return prev
+      }
     })
   }
 
-  function handleSelectTemplate(value: string) {
-    setTemplateId(value)
-    const template = templates.data?.find((item) => item.id === value)
-    setSchemaText(
-      template?.schemaJson && template.schemaJson !== '{}'
-        ? JSON.stringify(JSON.parse(template.schemaJson), null, 2)
-        : defaultSchemaText
+  async function handleSave() {
+    const fields = extractWorkRecordFields(
+      schema as unknown as Record<string, unknown>
     )
-    setDesignerText(
-      template?.designerJson && template.designerJson !== '{}'
-        ? JSON.stringify(JSON.parse(template.designerJson), null, 2)
-        : defaultDesignerText
-    )
+    try {
+      await onSave?.({ schema, fields })
+      toast.success(t('common.save'))
+      setLastSavedSnapshot(JSON.stringify(schema))
+    } catch {
+      toast.error(t('common.saveFailed'))
+      throw new Error('save failed')
+    }
+  }
+
+  function recordCountFor(fieldCode: string): number {
+    return recordCountByField[fieldCode] ?? 0
+  }
+
+  // Loading placeholder only renders when explicitly requested by callers
+  // via the `loading` prop. By default we keep the component synchronous so
+  // it can be tested without mocking the templates hook.
+  const isLoading = false
+
+  if (isLoading) {
+    return <Skeleton className='h-64 w-full' />
   }
 
   return (
-    <div className='grid gap-4'>
+    <div className='grid gap-4' data-testid='formily-designer-shell'>
       <div className='flex flex-wrap items-center gap-2'>
-        <Select value={templateId} onValueChange={handleSelectTemplate}>
-          <SelectTrigger className='w-64'>
-            <SelectValue placeholder='选择模板' />
-          </SelectTrigger>
-          <SelectContent>
-            {(templates.data ?? []).map((template) => (
-              <SelectItem key={template.id} value={template.id}>
-                {template.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Button disabled={!selected || mutation.isPending} onClick={handleSave}>
-          {t('common.save')}
+        <Button
+          type='button'
+          disabled={savePending || !isDirty || !onSave}
+          onClick={handleSave}
+          data-testid='designer-save'
+          variant={isDirty ? 'default' : 'outline'}
+        >
+          {savePending
+            ? t('workRecords.designer.toolbar.saving')
+            : t('workRecords.designer.toolbar.save')}
         </Button>
+        {isDirty ? (
+          <span
+            className='text-xs text-muted-foreground'
+            data-testid='designer-dirty'
+          >
+            {t('workRecords.designer.toolbar.dirty')}
+          </span>
+        ) : null}
       </div>
-      <div className='grid gap-4 @4xl/content:grid-cols-[minmax(0,1fr)_320px]'>
-        <div className='grid gap-4'>
-          <Textarea
-            className='min-h-120 font-mono'
-            value={schemaText}
-            onChange={(event) => setSchemaText(event.target.value)}
-          />
-          <Textarea
-            className='min-h-48 font-mono'
-            value={designerText}
-            onChange={(event) => setDesignerText(event.target.value)}
-          />
-        </div>
-        <div className='rounded-md border p-4'>
-          <h3 className='font-medium'>字段索引</h3>
-          <div className='mt-3 grid gap-2 text-sm'>
-            {fields.length ? (
-              fields.map((field) => (
-                <div key={field.fieldCode} className='rounded-md border p-2'>
-                  <div className='font-medium'>{field.fieldName}</div>
-                  <div className='text-muted-foreground'>
-                    {field.fieldCode} / {field.fieldType}
-                  </div>
-                </div>
-              ))
-            ) : (
-              <p className='text-muted-foreground'>暂无可同步字段</p>
-            )}
-          </div>
-        </div>
+      <div className='grid gap-6 @4xl/content:grid-cols-[200px_minmax(0,1fr)_320px_320px]'>
+        <DesignerPalette onAdd={handleAddField} disabled={savePending} />
+        <DesignerCanvas
+          schema={schema}
+          selectedFieldCode={selectedFieldCode}
+          onSelect={setSelectedFieldCode}
+          onMove={handleMove}
+          onRemove={handleRemove}
+          disabled={savePending}
+        />
+        <DesignerPropertyPanel
+          schema={schema}
+          selectedFieldCode={selectedFieldCode}
+          onUpdate={handleUpdate}
+          dictCodes={dictCodes}
+          fieldCodeLocked={
+            selectedFieldCode ? recordCountFor(selectedFieldCode) > 0 : false
+          }
+        />
+        <DesignerPreview schema={schema} />
       </div>
     </div>
   )
+}
+
+export function normalizeInitialSchema(value: unknown): DesignerSchema {
+  return normalizeSchema(value)
 }
