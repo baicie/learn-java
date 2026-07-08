@@ -4,10 +4,13 @@ import io.aegisops.common.api.ApiResponse;
 import io.aegisops.common.api.PageResult;
 import io.aegisops.common.tenant.TenantContext;
 import io.aegisops.security.UserPrincipal;
+import jakarta.validation.Valid;
+import java.util.List;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -20,19 +23,34 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/work-record/records")
 public class WorkRecordController {
   private final WorkRecordService service;
+  private final WorkRecordQueryService queryService;
 
-  public WorkRecordController(WorkRecordService service) {
+  public WorkRecordController(WorkRecordService service, WorkRecordQueryService queryService) {
     this.service = service;
+    this.queryService = queryService;
   }
 
+  /**
+   * 增强的列表查询接口。
+   * 支持内置字段筛选和动态字段筛选，所有状态进入 URL search。
+   */
   @GetMapping
   @PreAuthorize("hasAuthority('work-record:read:self') or hasAuthority('work-record:read:all')")
   public ApiResponse<PageResult<WorkRecord>> list(
-      @RequestParam(required = false) String status,
-      @RequestParam(required = false) Integer page,
-      @RequestParam(required = false) Integer size,
+      @Valid @ModelAttribute WorkRecordListRequest request,
       @AuthenticationPrincipal UserPrincipal user) {
-    return ApiResponse.ok(service.list(TenantContext.requireTenantId(), user, status, page, size));
+    return ApiResponse.ok(queryService.list(TenantContext.requireTenantId(), user, request));
+  }
+
+  /**
+   * 列表元数据接口。
+   * 返回模板列表、动态列定义和可筛选字段。
+   */
+  @GetMapping("/list-metadata")
+  @PreAuthorize("hasAuthority('work-record:read:self') or hasAuthority('work-record:read:all')")
+  public ApiResponse<WorkRecordQueryService.RecordListMetadata> listMetadata(
+      @RequestParam(required = false) String templateId) {
+    return ApiResponse.ok(queryService.metadata(TenantContext.requireTenantId(), templateId));
   }
 
   @GetMapping("/{recordId}")

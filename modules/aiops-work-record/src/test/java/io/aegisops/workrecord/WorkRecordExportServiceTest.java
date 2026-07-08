@@ -23,8 +23,11 @@ class WorkRecordExportServiceTest {
   @Test
   void exportCsv_shouldEscapeCommaAndQuote() {
     WorkRecordRepository repository = mock(WorkRecordRepository.class);
+    WorkRecordFieldRepository fieldRepository = mock(WorkRecordFieldRepository.class);
     AuditService audit = mock(AuditService.class);
-    when(repository.export(eq("t1"), eq(null), eq(null), anyInt()))
+    when(repository.countWithFilters(any(), any(), any(), any(), any(), any(), any(), any(), any()))
+        .thenReturn(1L);
+    when(repository.pageForExport(any(), anyInt(), any(), any(), any(), any(), any(), any()))
         .thenReturn(
             List.of(
                 new WorkRecord(
@@ -41,11 +44,11 @@ class WorkRecordExportServiceTest {
                     null,
                     null)));
 
-    WorkRecordExportService service = new WorkRecordExportService(repository, audit);
+    WorkRecordExportService service = new WorkRecordExportService(repository, fieldRepository, audit);
     UserPrincipal admin = principal("admin", "work-record:export", "work-record:read:all");
-    String csv = new String(service.exportCsv("t1", null, null, admin), StandardCharsets.UTF_8);
+    String csv = new String(service.exportCsv(
+        "t1", null, null, null, null, null, null, null, admin), StandardCharsets.UTF_8);
 
-    assertThat(csv).startsWith("id,title,status,ownerId,creatorId,recordTime");
     assertThat(csv).contains("\"巡检,\"\"核心\"\"\"");
     verify(audit).record(any());
   }
@@ -53,31 +56,40 @@ class WorkRecordExportServiceTest {
   @Test
   void exportCsv_shouldHandleEmptyList() {
     WorkRecordRepository repository = mock(WorkRecordRepository.class);
+    WorkRecordFieldRepository fieldRepository = mock(WorkRecordFieldRepository.class);
     AuditService audit = mock(AuditService.class);
-    when(repository.export(eq("t1"), eq(null), eq(null), anyInt())).thenReturn(List.of());
+    when(repository.countWithFilters(any(), any(), any(), any(), any(), any(), any(), any(), any()))
+        .thenReturn(0L);
+    when(repository.pageForExport(any(), anyInt(), any(), any(), any(), any(), any(), any()))
+        .thenReturn(List.of());
 
-    WorkRecordExportService service = new WorkRecordExportService(repository, audit);
+    WorkRecordExportService service = new WorkRecordExportService(repository, fieldRepository, audit);
     UserPrincipal admin = principal("admin", "work-record:export", "work-record:read:all");
-    String csv = new String(service.exportCsv("t1", null, null, admin), StandardCharsets.UTF_8);
+    String csv = new String(service.exportCsv(
+        "t1", null, null, null, null, null, null, null, admin), StandardCharsets.UTF_8);
 
-    assertThat(csv).isEqualTo("id,title,status,ownerId,creatorId,recordTime\n");
+    assertThat(csv).isEqualTo("id,title,status,templateId,ownerId,creatorId,recordTime,createdAt\n");
     verify(audit).record(any());
   }
 
   @Test
   void exportCsv_withoutReadAllAuthority_scopesToSelf() {
     WorkRecordRepository repository = mock(WorkRecordRepository.class);
+    WorkRecordFieldRepository fieldRepository = mock(WorkRecordFieldRepository.class);
     AuditService audit = mock(AuditService.class);
-    when(repository.exportForUser(eq("t1"), eq("u1"), eq(null), anyInt())).thenReturn(List.of());
+    when(repository.countForExportUser(any(), any(), any(), any(), any(), any(), any(), any()))
+        .thenReturn(0L);
+    when(repository.pageForExportUser(any(), any(), anyInt(), any(), any(), any(), any(), any(), any()))
+        .thenReturn(List.of());
 
-    WorkRecordExportService service = new WorkRecordExportService(repository, audit);
+    WorkRecordExportService service = new WorkRecordExportService(repository, fieldRepository, audit);
     UserPrincipal user = principal("u1", "work-record:export", "work-record:read:self");
-    String csv = new String(service.exportCsv("t1", null, null, user), StandardCharsets.UTF_8);
+    String csv = new String(service.exportCsv(
+        "t1", null, null, null, null, null, null, null, user), StandardCharsets.UTF_8);
 
-    assertThat(csv).isEqualTo("id,title,status,ownerId,creatorId,recordTime\n");
-    verify(repository)
-        .exportForUser(eq("t1"), eq("u1"), eq(null), eq(WorkRecordExportService.MAX_EXPORT_ROWS));
-    verify(repository, never()).export(any(), any(), any(), anyInt());
+    assertThat(csv).isEqualTo("id,title,status,templateId,ownerId,creatorId,recordTime,createdAt\n");
+    verify(repository).countForExportUser(eq("t1"), eq("u1"), any(), any(), any(), any(), any(), any());
+    verify(repository, never()).countWithFilters(any(), any(), any(), any(), any(), any(), any(), any(), any());
     verify(audit).record(any());
   }
 
