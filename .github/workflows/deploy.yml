@@ -9,31 +9,31 @@ on:
       - main
       - master
     paths:
-      - 'apps/**'
-      - 'modules/**'
-      - 'web/**'
-      - 'contracts/**'
-      - 'deploy/**'
-      - 'infra/docker-compose.yml'
-      - '.github/workflows/deploy.yml'
-      - 'pom.xml'
-      - 'pnpm-lock.yaml'
-      - 'package.json'
+      - "apps/**"
+      - "modules/**"
+      - "web/**"
+      - "contracts/**"
+      - "deploy/**"
+      - "infra/docker-compose.yml"
+      - ".github/workflows/deploy.yml"
+      - "pom.xml"
+      - "pnpm-lock.yaml"
+      - "package.json"
 
   workflow_dispatch:
     inputs:
       reseed:
-        description: '是否重新初始化数据'
+        description: "是否重新初始化数据"
         required: false
-        default: 'false'
+        default: "false"
         type: choice
         options:
-          - 'false'
-          - 'true'
+          - "false"
+          - "true"
 
 concurrency:
   group: deploy-aegisops-${{ github.ref }}
-  cancel-in-progress: false  # 串行，避免两个 deploy 撞同一个 VM
+  cancel-in-progress: false # 串行，避免两个 deploy 撞同一个 VM
 
 env:
   IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/aegisops
@@ -69,7 +69,6 @@ jobs:
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
 
       - name: Build and push aiops-server
-        if: ${{ runner.os != 'Windows' && fileExists('apps/aiops-server/Dockerfile') }}
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -82,7 +81,6 @@ jobs:
           provenance: false
 
       - name: Build and push aiops-agent
-        if: ${{ runner.os != 'Windows' && fileExists('apps/aiops-agent/Dockerfile') }}
         uses: docker/build-push-action@v6
         with:
           context: ./apps/aiops-agent

@@ -44,7 +44,7 @@
   "devDependencies": {
     "@baicie/scripts": "^0.1.2",
     "@trivago/prettier-plugin-sort-imports": "^6.0.2",
-    "@types/node": "^26.1.0",
+    "@types/node": "^26.1.1",
     "eslint": "^10.6.0",
     "lint-staged": "^17.0.8",
     "prettier": "^3.9.4",
