@@ -315,6 +315,7 @@ class WorkRecordFieldValidatorTest {
         false,
         0,
         enabled,
+        ".properties." + code,
         OffsetDateTime.now(),
         OffsetDateTime.now());
   }
@@ -348,6 +349,7 @@ class WorkRecordFieldValidatorTest {
         false,
         0,
         true,
+        ".properties." + code,
         OffsetDateTime.now(),
         OffsetDateTime.now());
   }

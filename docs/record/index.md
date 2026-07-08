@@ -1522,7 +1522,7 @@ WorkRecordTemplateRepository.java 保存 / 更新 designer_json
 数据库 migration：
 
 ```text
-apps/aiops-server/src/main/resources/db/migration/V0015__work_record_formily_schema_index.sql
+apps/aiops-server/src/main/resources/db/migration/V0015__init_work_record_formily_schema_index.sql
 ```
 
 migration 内容：

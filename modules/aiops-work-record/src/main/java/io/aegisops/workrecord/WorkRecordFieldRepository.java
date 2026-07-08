@@ -23,7 +23,8 @@ public class WorkRecordFieldRepository {
         """
             select id, tenant_id, template_id, field_name, field_code, field_type,
                    required, default_value, option_source, dict_code, options_json::text,
-                   list_visible, filterable, statistical, sort_order, enabled, created_at, updated_at
+                   list_visible, filterable, statistical, sort_order, enabled,
+                   schema_path, created_at, updated_at
             from wr_template_field
             where tenant_id = ? and template_id = ?
             order by sort_order asc, created_at asc
@@ -35,13 +36,17 @@ public class WorkRecordFieldRepository {
 
   public WorkRecordField create(String tenantId, String templateId, CreateFieldRequest request) {
     String id = Ids.newId();
+    String schemaPath =
+        request.schemaPath() != null && !request.schemaPath().isBlank()
+            ? request.schemaPath()
+            : defaultSchemaPath(request.fieldCode());
     jdbc.update(
         """
             insert into wr_template_field(
               id, tenant_id, template_id, field_name, field_code, field_type, required,
               default_value, option_source, dict_code, options_json, list_visible,
-              filterable, statistical, sort_order, enabled)
-            values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?, ?, ?, ?, ?)
+              filterable, statistical, sort_order, enabled, schema_path)
+            values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?, ?, ?, ?, ?, ?)
             """,
         id,
         tenantId,
@@ -58,11 +63,32 @@ public class WorkRecordFieldRepository {
         request.filterable() != null && request.filterable(),
         request.statistical() != null && request.statistical(),
         request.sortOrder() == null ? 0 : request.sortOrder(),
-        request.enabled() == null || request.enabled());
+        request.enabled() == null || request.enabled(),
+        schemaPath);
     return list(tenantId, templateId).stream()
         .filter(field -> field.id().equals(id))
         .findFirst()
         .orElseThrow();
+  }
+
+  /**
+   * 批量创建字段索引记录，用于从 Formily schema 同步字段时的批量插入。
+   *
+   * <p>不清理现有字段（由调用方自行调用 replace 或逐个 updateEnabled）。
+   *
+   * @param tenantId 租户 ID
+   * @param templateId 模板 ID
+   * @param requests 字段创建请求列表（已按 sortOrder 排序）
+   */
+  @Transactional
+  public void createInBatch(
+      String tenantId, String templateId, List<CreateFieldRequest> requests) {
+    if (requests == null || requests.isEmpty()) {
+      return;
+    }
+    for (CreateFieldRequest request : requests) {
+      create(tenantId, templateId, request);
+    }
   }
 
   public Optional<WorkRecordField> update(
@@ -107,6 +133,23 @@ public class WorkRecordFieldRepository {
         .findFirst();
   }
 
+  /**
+   * 软禁用字段（enabled=false），用于 schema 同步时删除不再出现的字段。
+   */
+  public void updateEnabled(String tenantId, String templateId, String fieldId, boolean enabled) {
+    jdbc.update(
+        """
+            update wr_template_field
+               set enabled   = ?,
+                   updated_at = now()
+             where tenant_id = ? and template_id = ? and id = ?
+            """,
+        enabled,
+        tenantId,
+        templateId,
+        fieldId);
+  }
+
   @Transactional
   public void replace(String tenantId, String templateId, List<CreateFieldRequest> requests) {
     jdbc.update(
@@ -139,6 +182,7 @@ public class WorkRecordFieldRepository {
         rs.getBoolean("statistical"),
         rs.getInt("sort_order"),
         rs.getBoolean("enabled"),
+        rs.getString("schema_path"),
         rs.getObject("created_at", OffsetDateTime.class),
         rs.getObject("updated_at", OffsetDateTime.class));
   }
@@ -147,14 +191,22 @@ public class WorkRecordFieldRepository {
     return value == null || value.isBlank() ? "[]" : value;
   }
 
-  /**
-   * 用于 update 路径：{@code null} 透传给 SQL，让 {@code coalesce(?::jsonb, ...)} 保留现有 值。空串同样视为
-   * null，避免被解析成空数组。
-   */
+  /** @see #nullableArray(String) */
   private String nullableArray(String value) {
     if (value == null || value.isBlank()) {
       return null;
     }
     return value;
+  }
+
+  /**
+   * 默认 schema path 规则：{@code .properties.<fieldCode>}。
+   *
+   * <p>字段在 Formily schema 的 {@code properties} 节点下以 fieldCode 为 key，
+   * 因此 path 对应 {@code .properties.<fieldCode>}。若设计器支持嵌套 schema，
+   * 由 CreateFieldRequest.schemaPath 传入显式路径。
+   */
+  static String defaultSchemaPath(String fieldCode) {
+    return ".properties." + (fieldCode == null ? "" : fieldCode);
   }
 }

@@ -18,6 +18,7 @@ export const workRecordTemplateSchema = z.object({
   description: z.string().nullable(),
   enabled: z.boolean(),
   schemaJson: z.string(),
+  designerJson: z.string().nullable().default('{}'),
   createdBy: z.string().nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),

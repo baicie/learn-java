@@ -24,14 +24,20 @@ public class WorkRecordTemplateService {
 
   private final WorkRecordTemplateRepository templateRepository;
   private final WorkRecordFieldRepository fieldRepository;
+  private final WorkRecordSchemaService schemaService;
+  private final WorkRecordFieldIndexService fieldIndexService;
   private final AuditService audit;
 
   public WorkRecordTemplateService(
       WorkRecordTemplateRepository templateRepository,
       WorkRecordFieldRepository fieldRepository,
+      WorkRecordSchemaService schemaService,
+      WorkRecordFieldIndexService fieldIndexService,
       AuditService audit) {
     this.templateRepository = templateRepository;
     this.fieldRepository = fieldRepository;
+    this.schemaService = schemaService;
+    this.fieldIndexService = fieldIndexService;
     this.audit = audit;
   }
 
@@ -46,7 +52,8 @@ public class WorkRecordTemplateService {
     }
     requireText(request.name(), "name");
     requireText(request.code(), "code");
-    String safeSchema = JsonPayloads.normalizeObject(request.schemaJson(), "schemaJson");
+    String safeSchema = schemaService.normalize(request.schemaJson());
+    String safeDesigner = schemaService.normalize(request.designerJson());
     WorkRecordTemplate template =
         templateRepository.create(
             tenantId,
@@ -55,7 +62,8 @@ public class WorkRecordTemplateService {
                 request.code(),
                 request.description(),
                 request.enabled(),
-                safeSchema),
+                safeSchema,
+                safeDesigner),
             defaultActor(createdBy));
     audit.record(
         new AuditRecordCommand(
@@ -77,10 +85,18 @@ public class WorkRecordTemplateService {
     String safeSchema =
         request.schemaJson() == null
             ? null
-            : JsonPayloads.normalizeObject(request.schemaJson(), "schemaJson");
+            : schemaService.normalize(request.schemaJson());
+    String safeDesigner =
+        request.designerJson() == null
+            ? null
+            : schemaService.normalize(request.designerJson());
     UpdateTemplateRequest normalized =
         new UpdateTemplateRequest(
-            request.name(), request.description(), request.enabled(), safeSchema);
+            request.name(),
+            request.description(),
+            request.enabled(),
+            safeSchema,
+            safeDesigner);
     WorkRecordTemplate updated =
         templateRepository
             .update(tenantId, templateId, normalized)
@@ -96,22 +112,50 @@ public class WorkRecordTemplateService {
     return updated;
   }
 
+  /**
+   * 保存设计器产出的 Formily schema 并同步字段索引。
+   *
+   * <p>流程：
+   *
+   * <ol>
+   *   <li>规范化 schema JSON（校验为合法 object）
+   *   <li>从 schema 抽取字段描述符列表
+   *   <li>同步字段索引（新建/启用/禁用）
+   *   <li>保存 schemaJson + designerJson 到模板
+   * </ol>
+   *
+   * @param tenantId 租户 ID
+   * @param templateId 模板 ID
+   * @param request 包含 schemaJson 和 designerJson 的保存请求
+   * @param actor 操作人
+   * @return 更新后的模板
+   */
   public WorkRecordTemplate saveSchema(
       String tenantId, String templateId, TemplateSchemaRequest request, String actor) {
     requireText(templateId, "templateId");
     if (request == null) {
       throw new IllegalArgumentException("schema request is required");
     }
-    String safeSchema = JsonPayloads.normalizeObject(request.schemaJson(), "schemaJson");
-    List<CreateFieldRequest> requests = request.fields() == null ? List.of() : request.fields();
-    for (CreateFieldRequest field : requests) {
-      validateSchemaField(field);
-    }
+
+    // 1. 规范化 schema
+    String safeSchema = schemaService.normalize(request.schemaJson());
+    String safeDesigner = schemaService.normalize(request.designerJson());
+
+    // 2. 校验保留字段码（在抽取前检查原始 schema，避免 extractFields 过滤后漏检）
+    schemaService.validateNoReservedFieldCodes(safeSchema);
+
+    // 3. 从 schema 抽取字段描述符
+    List<FormilyFieldDescriptor> descriptors = schemaService.extractFields(safeSchema);
+
+    // 4. 同步字段索引
+    List<WorkRecordField> existingFields = fieldRepository.list(tenantId, templateId);
+    fieldIndexService.syncFields(tenantId, templateId, descriptors, existingFields);
+
+    // 4. 保存到模板
     WorkRecordTemplate template =
         templateRepository
-            .updateSchema(tenantId, templateId, safeSchema)
+            .updateSchema(tenantId, templateId, safeSchema, safeDesigner)
             .orElseThrow(() -> new IllegalArgumentException("template not found"));
-    fieldRepository.replace(tenantId, templateId, requests);
     audit.record(
         new AuditRecordCommand(
             tenantId,
@@ -119,7 +163,11 @@ public class WorkRecordTemplateService {
             "work_record.template.schema.update",
             "wr_template",
             template.id(),
-            auditDetail("templateId", templateId, "fieldCount", String.valueOf(requests.size()))));
+            auditDetail(
+                "templateId",
+                templateId,
+                "fieldCount",
+                String.valueOf(descriptors.size()))));
     return template;
   }
 
@@ -163,7 +211,8 @@ public class WorkRecordTemplateService {
                 request.filterable(),
                 request.statistical(),
                 request.sortOrder(),
-                request.enabled()));
+                request.enabled(),
+                request.schemaPath()));
     audit.record(
         new AuditRecordCommand(
             tenantId,
@@ -179,24 +228,6 @@ public class WorkRecordTemplateService {
                 "fieldType",
                 field.fieldType())));
     return field;
-  }
-
-  private void validateSchemaField(CreateFieldRequest request) {
-    if (request == null) {
-      throw new IllegalArgumentException("field request is required");
-    }
-    requireText(request.fieldName(), "fieldName");
-    requireText(request.fieldCode(), "fieldCode");
-    WorkRecordFieldValidator.validateFieldCodeNotReserved(request.fieldCode());
-    requireText(request.fieldType(), "fieldType");
-    if (!FIELD_TYPES.contains(request.fieldType())) {
-      throw new IllegalArgumentException("unsupported fieldType: " + request.fieldType());
-    }
-    String optionSource = request.optionSource() == null ? "static" : request.optionSource();
-    if ("dict".equals(optionSource)) {
-      requireText(request.dictCode(), "dictCode");
-    }
-    JsonPayloads.normalizeArray(request.optionsJson(), "optionsJson");
   }
 
   public WorkRecordField updateField(

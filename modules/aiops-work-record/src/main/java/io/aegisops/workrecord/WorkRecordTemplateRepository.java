@@ -20,7 +20,8 @@ public class WorkRecordTemplateRepository {
   public List<WorkRecordTemplate> list(String tenantId) {
     return jdbc.query(
         """
-            select id, tenant_id, name, code, description, enabled, schema_json::text,
+            select id, tenant_id, name, code, description, enabled,
+                   schema_json::text, designer_json::text,
                    created_by, created_at, updated_at
             from wr_template
             where tenant_id = ?
@@ -34,7 +35,8 @@ public class WorkRecordTemplateRepository {
     List<WorkRecordTemplate> rows =
         jdbc.query(
             """
-                select id, tenant_id, name, code, description, enabled, schema_json::text,
+                select id, tenant_id, name, code, description, enabled,
+                       schema_json::text, designer_json::text,
                        created_by, created_at, updated_at
                 from wr_template
                 where tenant_id = ? and id = ?
@@ -51,8 +53,9 @@ public class WorkRecordTemplateRepository {
     jdbc.update(
         """
             insert into wr_template(
-              id, tenant_id, name, code, description, enabled, schema_json, created_by)
-            values (?, ?, ?, ?, ?, ?, ?::jsonb, ?)
+              id, tenant_id, name, code, description, enabled,
+              schema_json, designer_json, created_by)
+            values (?, ?, ?, ?, ?, ?, ?::jsonb, ?::jsonb, ?)
             """,
         id,
         tenantId,
@@ -61,6 +64,7 @@ public class WorkRecordTemplateRepository {
         request.description(),
         request.enabled() == null || request.enabled(),
         blankJson(request.schemaJson()),
+        blankJson(request.designerJson()),
         createdBy);
     return find(tenantId, id).orElseThrow();
   }
@@ -70,31 +74,44 @@ public class WorkRecordTemplateRepository {
     jdbc.update(
         """
             update wr_template
-               set name        = coalesce(?, name),
-                   description = coalesce(?, description),
-                   enabled     = coalesce(?, enabled),
-                   schema_json = coalesce(?::jsonb, schema_json),
-                   updated_at  = now()
+               set name           = coalesce(?, name),
+                   description    = coalesce(?, description),
+                   enabled        = coalesce(?, enabled),
+                   schema_json    = coalesce(?::jsonb, schema_json),
+                   designer_json  = coalesce(?::jsonb, designer_json),
+                   updated_at     = now()
              where tenant_id = ? and id = ?
             """,
         request.name(),
         request.description(),
         request.enabled(),
         nullableJson(request.schemaJson()),
+        nullableJson(request.designerJson()),
         tenantId,
         id);
     return find(tenantId, id);
   }
 
-  public Optional<WorkRecordTemplate> updateSchema(String tenantId, String id, String schemaJson) {
+  /**
+   * 单独更新 schema_json 与 designer_json，用于门户设计器一次性保存 schema 的路径。
+   *
+   * <p>调用方负责校验字段索引已同步。
+   */
+  public Optional<WorkRecordTemplate> updateSchema(
+      String tenantId,
+      String id,
+      String schemaJson,
+      String designerJson) {
     jdbc.update(
         """
             update wr_template
-               set schema_json = ?::jsonb,
-                   updated_at  = now()
+               set schema_json   = ?::jsonb,
+                   designer_json = coalesce(?::jsonb, designer_json),
+                   updated_at    = now()
              where tenant_id = ? and id = ?
             """,
-        schemaJson,
+        blankJson(schemaJson),
+        nullableJson(designerJson),
         tenantId,
         id);
     return find(tenantId, id);
@@ -109,6 +126,7 @@ public class WorkRecordTemplateRepository {
         rs.getString("description"),
         rs.getBoolean("enabled"),
         rs.getString("schema_json"),
+        rs.getString("designer_json"),
         rs.getString("created_by"),
         rs.getObject("created_at", OffsetDateTime.class),
         rs.getObject("updated_at", OffsetDateTime.class));

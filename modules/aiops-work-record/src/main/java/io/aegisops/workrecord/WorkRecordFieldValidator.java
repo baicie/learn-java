@@ -47,10 +47,15 @@ public final class WorkRecordFieldValidator {
 
   /** 校验保留字段冲突。 */
   public static void validateFieldCodeNotReserved(String fieldCode) {
-    if (fieldCode != null && RESERVED_FIELD_CODES.contains(fieldCode)) {
+    if (isReserved(fieldCode)) {
       throw new IllegalArgumentException(
           "fieldCode '" + fieldCode + "' is reserved and cannot be used");
     }
+  }
+
+  /** 判断 fieldCode 是否为保留编码。 */
+  public static boolean isReserved(String fieldCode) {
+    return fieldCode != null && RESERVED_FIELD_CODES.contains(fieldCode);
   }
 
   /**

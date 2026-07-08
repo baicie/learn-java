@@ -10,6 +10,7 @@ public record WorkRecordTemplate(
     String description,
     boolean enabled,
     String schemaJson,
+    String designerJson,
     String createdBy,
     OffsetDateTime createdAt,
     OffsetDateTime updatedAt) {}

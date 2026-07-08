@@ -241,6 +241,7 @@ class WorkRecordServiceTest {
                     false,
                     0,
                     true,
+                    ".properties.inspector",
                     OffsetDateTime.now(),
                     OffsetDateTime.now())));
     when(repository.create(any(), any(), eq("u1"))).thenReturn(stored);

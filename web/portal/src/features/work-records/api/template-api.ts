@@ -35,12 +35,14 @@ export async function listTemplateFields(
 export async function saveTemplateSchema(input: {
   templateId: string
   schemaJson: string
+  designerJson?: string
   fields: WorkRecordSchemaField[]
 }): Promise<WorkRecordTemplate> {
   const { data } = await workRecordHttp.post(
     `/api/work-record/templates/${input.templateId}/schema`,
     {
       schemaJson: input.schemaJson,
+      designerJson: input.designerJson ?? '{}',
       fields: input.fields.map((field) => ({
         fieldName: field.fieldName,
         fieldCode: field.fieldCode,

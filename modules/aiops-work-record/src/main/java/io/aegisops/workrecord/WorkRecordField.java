@@ -19,5 +19,6 @@ public record WorkRecordField(
     boolean statistical,
     int sortOrder,
     boolean enabled,
+    String schemaPath,
     OffsetDateTime createdAt,
     OffsetDateTime updatedAt) {}

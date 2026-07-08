@@ -13,4 +13,5 @@ public record CreateFieldRequest(
     Boolean filterable,
     Boolean statistical,
     Integer sortOrder,
-    Boolean enabled) {}
+    Boolean enabled,
+    String schemaPath) {}
