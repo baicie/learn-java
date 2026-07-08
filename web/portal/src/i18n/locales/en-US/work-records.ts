@@ -23,6 +23,40 @@ export const workRecords = {
   'workRecords.list.detail': 'Details',
   'workRecords.list.edit': 'Edit',
   'workRecords.list.exportStarted': 'Export started',
+  'workRecords.list.searchPlaceholder': 'Search records...',
+  'workRecords.list.create': 'New Record',
+  'workRecords.list.allTemplates': 'All templates',
+  'workRecords.list.empty': 'No records',
+  // Dynamic filters
+  'workRecords.list.dynamicFilters': 'Dynamic Filters',
+  'workRecords.list.dynamicFiltersDescription':
+    'Filter records by template dynamic fields',
+  'workRecords.list.addFilter': 'Add filter',
+  // Export
+  'workRecords.list.export': 'Export',
+  'workRecords.export.title': 'Export records',
+  'workRecords.export.description': 'Export filtered records to CSV',
+  'workRecords.export.success': 'Export successful',
+  'workRecords.export.failed': 'Export failed',
+  'workRecords.export.currentFilters': 'Filtered records',
+  'workRecords.export.records': 'records',
+  'workRecords.export.format': 'Format',
+  'workRecords.export.maxRows': 'Max rows',
+  'workRecords.export.confirm': 'Export',
+  'workRecords.export.tooManyRows':
+    '{{count}} records exceed the limit of {{max}}. Please narrow your filters.',
+  // Filter operators
+  'workRecords.filters.operator.eq': 'Equals',
+  'workRecords.filters.operator.in': 'In',
+  'workRecords.filters.operator.contains': 'Contains',
+  'workRecords.filters.operator.gte': 'Greater or equal',
+  'workRecords.filters.operator.lte': 'Less or equal',
+  'workRecords.filters.operator.between': 'Between',
+  'workRecords.filters.operator.exists': 'Exists',
+  'workRecords.filters.valuePlaceholder': 'Enter value',
+  'workRecords.filters.multiValuePlaceholder':
+    'Multiple values separated by comma',
+  'workRecords.filters.existsHint': '(Exists / Not exists)',
   // Form
   'workRecords.form.basicInfo': 'Basic Info',
   'workRecords.form.recordContent': 'Record Content',

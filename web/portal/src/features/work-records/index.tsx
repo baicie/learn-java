@@ -1,48 +1,56 @@
-import { Link, getRouteApi } from '@tanstack/react-router'
-import { useTranslation } from 'react-i18next'
-import { Plus } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { useQuery } from '@tanstack/react-query'
+import { getRouteApi } from '@tanstack/react-router'
+import { useTranslation as _useTranslation } from 'react-i18next'
 import { Skeleton } from '@/components/ui/skeleton'
-import { ExportRecordsButton } from './components/export-records-dialog'
+import { listWorkRecords, getListMetadata } from './api/work-record-api'
 import { RecordsTable } from './components/records-table'
 import { WorkRecordsLayout } from './components/work-records-layout'
-import { useRecords } from './hooks/use-records'
 
 const route = getRouteApi('/_authenticated/work-records/')
 
 export function WorkRecords() {
-  const { t } = useTranslation()
   const search = route.useSearch()
   const navigate = route.useNavigate()
-  const records = useRecords({
-    page: search.page,
-    pageSize: search.pageSize,
-    status: search.status,
+
+  const records = useQuery({
+    queryKey: ['work-records', 'list', search],
+    queryFn: () =>
+      listWorkRecords({
+        page: search.page,
+        pageSize: search.pageSize,
+        templateId: search.templateId,
+        status: search.status,
+        keyword: search.keyword,
+        recordTimeFrom: search.recordTimeFrom,
+        recordTimeTo: search.recordTimeTo,
+        filters: search.filters,
+      }),
   })
+
+  const metadata = useQuery({
+    queryKey: ['work-records', 'metadata', search.templateId],
+    queryFn: () => getListMetadata(search.templateId),
+  })
+
+  const handleQueryChange = (newSearch: Record<string, unknown>) => {
+    navigate({ search: newSearch })
+  }
 
   return (
     <WorkRecordsLayout
       titleKey='workRecords.list.title'
       descriptionKey='workRecords.list.description'
-      actions={
-        <div className='flex flex-wrap gap-2'>
-          <ExportRecordsButton status={search.status} />
-          <Button asChild>
-            <Link to='/work-records/new'>
-              <Plus className='size-4' />
-              {t('common.create')}
-            </Link>
-          </Button>
-        </div>
-      }
     >
       {records.isLoading ? (
         <Skeleton className='h-64 w-full' />
       ) : (
         <RecordsTable
           data={records.data?.items ?? []}
+          total={records.data?.total ?? 0}
+          metadata={metadata.data}
           search={search}
           navigate={navigate}
+          onQueryChange={handleQueryChange}
         />
       )}
     </WorkRecordsLayout>
