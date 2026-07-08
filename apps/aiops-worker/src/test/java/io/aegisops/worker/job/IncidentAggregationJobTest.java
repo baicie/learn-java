@@ -9,7 +9,7 @@ import static org.mockito.Mockito.when;
 import io.aegisops.incident.IncidentAggregateRequest;
 import io.aegisops.incident.IncidentAggregationResponse;
 import io.aegisops.incident.IncidentService;
-import io.aegisops.persistence.jooq.tables.records.AutomationOutboxRecord;
+import io.aegisops.persistence.jooq.public_.tables.records.AutomationOutboxRecord;
 import org.junit.jupiter.api.Test;
 
 class IncidentAggregationJobTest {

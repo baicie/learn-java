@@ -1,6 +1,6 @@
 package io.aegisops.worker.job;
 
-import io.aegisops.persistence.jooq.tables.records.AutomationOutboxRecord;
+import io.aegisops.persistence.jooq.public_.tables.records.AutomationOutboxRecord;
 import org.springframework.stereotype.Component;
 
 /**

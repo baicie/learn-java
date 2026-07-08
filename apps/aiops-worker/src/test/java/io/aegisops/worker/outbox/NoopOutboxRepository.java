@@ -1,6 +1,6 @@
 package io.aegisops.worker.outbox;
 
-import io.aegisops.persistence.jooq.tables.records.AutomationOutboxRecord;
+import io.aegisops.persistence.jooq.public_.tables.records.AutomationOutboxRecord;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;

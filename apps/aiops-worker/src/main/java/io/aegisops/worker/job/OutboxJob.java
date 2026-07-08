@@ -21,5 +21,5 @@ public interface OutboxJob {
    * @return {@link JobResult#success()} if the side effect landed; {@link JobResult#failure} with a
    *     short reason otherwise
    */
-  JobResult handle(io.aegisops.persistence.jooq.tables.records.AutomationOutboxRecord row);
+  JobResult handle(io.aegisops.persistence.jooq.public_.tables.records.AutomationOutboxRecord row);
 }

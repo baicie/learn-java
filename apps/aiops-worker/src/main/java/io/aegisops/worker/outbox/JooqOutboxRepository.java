@@ -2,7 +2,7 @@ package io.aegisops.worker.outbox;
 
 import static io.aegisops.persistence.jooq.public_.Tables.AUTOMATION_OUTBOX;
 
-import io.aegisops.persistence.jooq.tables.records.AutomationOutboxRecord;
+import io.aegisops.persistence.jooq.public_.tables.records.AutomationOutboxRecord;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;

@@ -2,7 +2,7 @@ package io.aegisops.worker.job;
 
 import io.aegisops.incident.IncidentAggregateRequest;
 import io.aegisops.incident.IncidentService;
-import io.aegisops.persistence.jooq.tables.records.AutomationOutboxRecord;
+import io.aegisops.persistence.jooq.public_.tables.records.AutomationOutboxRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;

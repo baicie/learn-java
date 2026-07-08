@@ -3,7 +3,7 @@ package io.aegisops.worker.outbox;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import io.aegisops.persistence.jooq.tables.records.AutomationOutboxRecord;
+import io.aegisops.persistence.jooq.public_.tables.records.AutomationOutboxRecord;
 import io.aegisops.worker.job.JobResult;
 import io.aegisops.worker.job.OutboxJob;
 import java.util.ArrayList;
