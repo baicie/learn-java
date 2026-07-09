@@ -192,4 +192,34 @@ class DictionaryServiceTest {
     org.assertj.core.api.Assertions.assertThat(items).extracting(DictItemRecord::itemValue).containsExactly("P2");
     verify(repository).listItems("t1", "record_priority", true);
   }
+
+  @Test
+  void disableItem_shouldReturnDisabledItemAndAudit() {
+    DictItemRecord disabled =
+        new DictItemRecord(
+            "item-1",
+            "tenant-1",
+            "dict-1",
+            "P2",
+            "P2",
+            null,
+            null,
+            null,
+            false,
+            false,
+            20,
+            "{}",
+            "u1",
+            OffsetDateTime.now(),
+            OffsetDateTime.now());
+
+    when(repository.disableItem("tenant-1", "record_priority", "item-1"))
+        .thenReturn(java.util.Optional.of(disabled));
+
+    DictItemRecord result =
+        service.disableItem("tenant-1", "record_priority", "item-1", "u1");
+
+    org.assertj.core.api.Assertions.assertThat(result.enabled()).isFalse();
+    verify(audit).record(any(AuditRecordCommand.class));
+  }
 }

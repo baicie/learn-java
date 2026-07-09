@@ -1,6 +1,6 @@
 import { z } from 'zod'
-import { workRecordHttp } from '@/features/work-records/api/http'
-import { apiResponseSchema } from '@/features/work-records/data/schema'
+import { apiClient } from '@/lib/api-client'
+import { apiResponseSchema } from '@/lib/api-response'
 
 export const calendarSchema = z.object({
   id: z.string(),
@@ -39,7 +39,7 @@ export type Calendar = z.infer<typeof calendarSchema>
 export type CalendarDay = z.infer<typeof calendarDaySchema>
 
 export async function listCalendars(): Promise<Calendar[]> {
-  const { data } = await workRecordHttp.get('/api/platform/calendars')
+  const { data } = await apiClient.get('/api/platform/calendars')
   return apiResponseSchema(z.array(calendarSchema)).parse(data).data
 }
 
@@ -53,7 +53,7 @@ export async function createCalendar(input: {
   sourceType?: string
   description?: string
 }) {
-  const { data } = await workRecordHttp.post('/api/platform/calendars', input)
+  const { data } = await apiClient.post('/api/platform/calendars', input)
   return apiResponseSchema(calendarSchema).parse(data).data
 }
 
@@ -62,7 +62,7 @@ export async function listCalendarDays(
   start: string,
   end: string
 ): Promise<CalendarDay[]> {
-  const { data } = await workRecordHttp.get(
+  const { data } = await apiClient.get(
     `/api/platform/calendars/${calendarId}/days`,
     {
       params: { start, end },
@@ -83,7 +83,7 @@ export async function updateCalendarDay(
     remark?: string
   }
 ) {
-  const { data } = await workRecordHttp.put(
+  const { data } = await apiClient.put(
     `/api/platform/calendars/${calendarId}/days/${date}`,
     input
   )
@@ -91,7 +91,7 @@ export async function updateCalendarDay(
 }
 
 export async function importCalendarCsv(calendarId: string, csv: string) {
-  const { data } = await workRecordHttp.post(
+  const { data } = await apiClient.post(
     `/api/platform/calendars/${calendarId}/days/import`,
     {
       csv,

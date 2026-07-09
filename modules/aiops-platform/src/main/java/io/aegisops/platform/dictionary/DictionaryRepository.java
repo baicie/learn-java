@@ -86,16 +86,21 @@ public class DictionaryRepository {
     return findType(tenantId, request.dictCode()).orElseThrow();
   }
 
-  /** 字典类型按业务惯例采用软删除（enabled=false），避免被业务侧硬删除造成历史记录不可解释。 系统内置字典允许更新元数据但不允许禁用。 */
+  /** 字典类型按业务惯例采用软删除（enabled=false），避免被业务侧硬删除造成历史记录不可解释。 内置字典不允许禁用，但可以更新元数据。 */
   public Optional<DictTypeRecord> updateType(
       String tenantId, String dictCode, UpdateDictTypeRequest request, String actor) {
     DictTypeRecord existing =
         findType(tenantId, dictCode)
             .orElseThrow(() -> new IllegalArgumentException("dict type not found"));
+
     if (existing.systemBuiltin() && request.enabled() != null && !request.enabled()) {
       throw new IllegalArgumentException(
           "system builtin dict type '" + dictCode + "' cannot be disabled");
     }
+
+    // 内置字典只能更新元数据（dict_name, description, sort_order），不能改 enabled
+    Boolean nextEnabled = existing.systemBuiltin() ? null : request.enabled();
+
     int rows =
         jdbc.update(
             """
@@ -105,16 +110,16 @@ public class DictionaryRepository {
                        enabled     = coalesce(?, enabled),
                        sort_order  = coalesce(?, sort_order),
                        updated_at  = now()
-                 where tenant_id = ? and dict_code = ? and system_builtin = false
+                 where tenant_id = ? and dict_code = ?
                 """,
             request.dictName(),
             request.description(),
-            request.enabled(),
+            nextEnabled,
             request.sortOrder(),
             tenantId,
             dictCode);
-    if (rows == 0 && !existing.systemBuiltin()) {
-      return Optional.of(existing);
+    if (rows == 0) {
+      return Optional.empty();
     }
     return findType(tenantId, dictCode);
   }
@@ -191,7 +196,7 @@ public class DictionaryRepository {
         request.sortOrder() == null ? 0 : request.sortOrder(),
         blankJson(request.extraJson()),
         createdBy);
-    return listItems(tenantId, dictCode).stream()
+    return listItems(tenantId, dictCode, true).stream()
         .filter(item -> item.id().equals(id))
         .findFirst()
         .orElseThrow();
@@ -227,7 +232,7 @@ public class DictionaryRepository {
     if (rows == 0) {
       return Optional.empty();
     }
-    return listItems(tenantId, dictCode).stream()
+    return listItems(tenantId, dictCode, true).stream()
         .filter(item -> item.id().equals(itemId))
         .findFirst();
   }

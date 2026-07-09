@@ -102,4 +102,32 @@ class CalendarServiceTest {
     assertThat(response.workday()).isFalse();
     assertThat(response.holidayName()).isEqualTo("元旦");
   }
+
+  @Test
+  void shouldCountDerivedWorkdaysWhenDaysAreMissing() {
+    when(repository.listDays(
+            "tenant-1",
+            "cal-1",
+            LocalDate.of(2026, 7, 6),
+            LocalDate.of(2026, 7, 12)))
+        .thenReturn(java.util.List.of());
+
+    WorkdayCountResponse response =
+        service.countWorkdays(
+            "tenant-1",
+            "cal-1",
+            LocalDate.of(2026, 7, 6),
+            LocalDate.of(2026, 7, 12));
+
+    // 2026-07-06 (Mon) to 2026-07-12 (Sun) = 7 days
+    // Mon-Fri are workdays, Sat-Sun are not
+    assertThat(response.workdays()).isEqualTo(5);
+  }
+
+  @Test
+  void shouldRejectNullCreateCalendarRequest() {
+    assertThatThrownBy(() -> service.createCalendar("tenant-1", null, "u1"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("calendar request is required");
+  }
 }

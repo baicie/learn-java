@@ -35,4 +35,30 @@ class CalendarCsvImporterTest {
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("csv is required");
   }
+
+  @Test
+  void shouldRejectInvalidBoolean() {
+    assertThatThrownBy(
+            () ->
+                importer.parse(
+                    """
+                    date,dayType,isWorkday,holidayName,remark
+                    2026-01-01,HOLIDAY,NOPE,元旦,
+                    """))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("invalid isWorkday");
+  }
+
+  @Test
+  void shouldRejectInvalidDayType() {
+    assertThatThrownBy(
+            () ->
+                importer.parse(
+                    """
+                    date,dayType,isWorkday,holidayName,remark
+                    2026-01-01,BAD_TYPE,false,元旦,
+                    """))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("invalid dayType");
+  }
 }

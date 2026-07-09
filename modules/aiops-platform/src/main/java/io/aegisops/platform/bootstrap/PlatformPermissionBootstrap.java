@@ -1,16 +1,23 @@
 package io.aegisops.platform.bootstrap;
 
 import java.util.List;
+import org.springframework.boot.ApplicationArguments;
+import org.springframework.boot.ApplicationRunner;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 @Component
-public class PlatformPermissionBootstrap {
+public class PlatformPermissionBootstrap implements ApplicationRunner {
   private final JdbcTemplate jdbc;
 
   public PlatformPermissionBootstrap(JdbcTemplate jdbc) {
     this.jdbc = jdbc;
+  }
+
+  @Override
+  public void run(ApplicationArguments args) {
+    initialize();
   }
 
   @Transactional

@@ -1,6 +1,6 @@
 import { z } from 'zod'
-import { workRecordHttp } from '@/features/work-records/api/http'
-import { apiResponseSchema } from '@/features/work-records/data/schema'
+import { apiClient } from '@/lib/api-client'
+import { apiResponseSchema } from '@/lib/api-response'
 
 export const dictTypeSchema = z.object({
   id: z.string(),
@@ -40,7 +40,7 @@ export type DictItem = z.infer<typeof dictItemSchema>
 export async function listDictTypes(
   includeDisabled = true
 ): Promise<DictType[]> {
-  const { data } = await workRecordHttp.get('/api/platform/dictionaries', {
+  const { data } = await apiClient.get('/api/platform/dictionaries', {
     params: { includeDisabled },
   })
   return apiResponseSchema(z.array(dictTypeSchema)).parse(data).data
@@ -53,10 +53,7 @@ export async function createDictType(input: {
   enabled?: boolean
   sortOrder?: number
 }) {
-  const { data } = await workRecordHttp.post(
-    '/api/platform/dictionaries',
-    input
-  )
+  const { data } = await apiClient.post('/api/platform/dictionaries', input)
   return apiResponseSchema(dictTypeSchema).parse(data).data
 }
 
@@ -69,7 +66,7 @@ export async function updateDictType(
     sortOrder?: number
   }
 ) {
-  const { data } = await workRecordHttp.put(
+  const { data } = await apiClient.put(
     `/api/platform/dictionaries/${dictCode}`,
     input
   )
@@ -77,7 +74,7 @@ export async function updateDictType(
 }
 
 export async function disableDictType(dictCode: string) {
-  const { data } = await workRecordHttp.delete(
+  const { data } = await apiClient.delete(
     `/api/platform/dictionaries/${dictCode}`
   )
   return apiResponseSchema(dictTypeSchema).parse(data).data
@@ -87,7 +84,7 @@ export async function listDictItems(
   dictCode: string,
   includeDisabled = true
 ): Promise<DictItem[]> {
-  const { data } = await workRecordHttp.get(
+  const { data } = await apiClient.get(
     `/api/platform/dictionaries/${dictCode}/items`,
     {
       params: { includeDisabled },
@@ -109,7 +106,7 @@ export async function createDictItem(
     extraJson?: string
   }
 ) {
-  const { data } = await workRecordHttp.post(
+  const { data } = await apiClient.post(
     `/api/platform/dictionaries/${dictCode}/items`,
     input
   )
@@ -128,7 +125,7 @@ export async function updateDictItem(
     enabled?: boolean
   }
 ) {
-  const { data } = await workRecordHttp.put(
+  const { data } = await apiClient.put(
     `/api/platform/dictionaries/${dictCode}/items/${itemId}`,
     input
   )
@@ -136,7 +133,7 @@ export async function updateDictItem(
 }
 
 export async function disableDictItem(dictCode: string, itemId: string) {
-  const { data } = await workRecordHttp.delete(
+  const { data } = await apiClient.delete(
     `/api/platform/dictionaries/${dictCode}/items/${itemId}`
   )
   return apiResponseSchema(dictItemSchema).parse(data).data
