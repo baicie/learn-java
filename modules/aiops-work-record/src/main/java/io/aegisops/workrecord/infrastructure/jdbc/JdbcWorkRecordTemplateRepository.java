@@ -2,6 +2,7 @@ package io.aegisops.workrecord.infrastructure.jdbc;
 
 import io.aegisops.common.id.Ids;
 import io.aegisops.workrecord.application.command.CreateTemplateCommand;
+import io.aegisops.workrecord.application.command.UpdateTemplateCommand;
 import io.aegisops.workrecord.application.command.UpdateTemplateDraftCommand;
 import io.aegisops.workrecord.application.port.WorkRecordTemplateRepository;
 import io.aegisops.workrecord.domain.model.TemplateStatus;
@@ -26,17 +27,19 @@ public class JdbcWorkRecordTemplateRepository implements WorkRecordTemplateRepos
   }
 
   @Override
-  public List<WorkRecordTemplate> list(String tenantId) {
+  public List<WorkRecordTemplate> list(String tenantId, boolean includeDisabled) {
     return jdbc.query(
         """
         select id, tenant_id, code, name, description, status, enabled, current_version_id,
                draft_schema_json::text, draft_designer_json::text,
                created_by, created_at, updated_at, deleted_at
           from work_record.wr_template
-         where tenant_id = :tenantId and deleted_at is null
+         where tenant_id = :tenantId
+           and deleted_at is null
+           and (:includeDisabled = true or enabled = true)
          order by updated_at desc
         """,
-        Map.of("tenantId", tenantId),
+        Map.of("tenantId", tenantId, "includeDisabled", includeDisabled),
         (rs, rowNum) -> mapTemplate(rs));
   }
 
@@ -52,6 +55,24 @@ public class JdbcWorkRecordTemplateRepository implements WorkRecordTemplateRepos
              where tenant_id = :tenantId and id = :id and deleted_at is null
             """,
             Map.of("tenantId", tenantId, "id", templateId),
+            (rs, rowNum) -> mapTemplate(rs));
+    return rows.stream().findFirst();
+  }
+
+  @Override
+  public Optional<WorkRecordTemplate> findByCode(String tenantId, String code) {
+    List<WorkRecordTemplate> rows =
+        jdbc.query(
+            """
+            select id, tenant_id, code, name, description, status, enabled, current_version_id,
+                   draft_schema_json::text, draft_designer_json::text,
+                   created_by, created_at, updated_at, deleted_at
+              from work_record.wr_template
+             where tenant_id = :tenantId
+               and code = :code
+               and deleted_at is null
+            """,
+            Map.of("tenantId", tenantId, "code", code),
             (rs, rowNum) -> mapTemplate(rs));
     return rows.stream().findFirst();
   }
@@ -79,6 +100,29 @@ public class JdbcWorkRecordTemplateRepository implements WorkRecordTemplateRepos
         """,
         params);
     return find(tenantId, id).orElseThrow();
+  }
+
+  @Override
+  public WorkRecordTemplate update(
+      String tenantId, String templateId, UpdateTemplateCommand command) {
+    Map<String, Object> params = new HashMap<>();
+    params.put("tenantId", tenantId);
+    params.put("id", templateId);
+    params.put("name", command.name());
+    params.put("description", command.description());
+
+    jdbc.update(
+        """
+        update work_record.wr_template
+           set name = coalesce(:name, name),
+               description = coalesce(:description, description)
+         where tenant_id = :tenantId
+           and id = :id
+           and deleted_at is null
+        """,
+        params);
+
+    return find(tenantId, templateId).orElseThrow();
   }
 
   @Override
@@ -121,14 +165,43 @@ public class JdbcWorkRecordTemplateRepository implements WorkRecordTemplateRepos
   }
 
   @Override
+  public void enable(String tenantId, String templateId) {
+    jdbc.update(
+        """
+        update work_record.wr_template
+           set enabled = true,
+               status = case when current_version_id is null then 'draft' else 'published' end
+         where tenant_id = :tenantId
+           and id = :templateId
+           and deleted_at is null
+        """,
+        Map.of("tenantId", tenantId, "templateId", templateId));
+  }
+
+  @Override
   public void disable(String tenantId, String templateId) {
     jdbc.update(
         """
         update work_record.wr_template
            set enabled = false,
-               status = 'disabled',
+               status = 'disabled'
+         where tenant_id = :tenantId
+           and id = :templateId
+           and deleted_at is null
+        """,
+        Map.of("tenantId", tenantId, "templateId", templateId));
+  }
+
+  @Override
+  public void archive(String tenantId, String templateId) {
+    jdbc.update(
+        """
+        update work_record.wr_template
+           set enabled = false,
+               status = 'archived',
                deleted_at = coalesce(deleted_at, now())
-         where tenant_id = :tenantId and id = :templateId
+         where tenant_id = :tenantId
+           and id = :templateId
         """,
         Map.of("tenantId", tenantId, "templateId", templateId));
   }

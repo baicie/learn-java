@@ -90,6 +90,25 @@ public class JdbcWorkRecordTemplateVersionRepository implements WorkRecordTempla
   }
 
   @Override
+  public Optional<WorkRecordTemplateVersion> findByTemplateAndVersion(
+      String tenantId, String templateId, String versionId) {
+    List<WorkRecordTemplateVersion> rows =
+        jdbc.query(
+            """
+            select id, tenant_id, template_id, version_no, version_name,
+                   schema_json::text, designer_json::text, field_index_json::text,
+                   published_by, published_at, created_at
+              from work_record.wr_template_version
+             where tenant_id = :tenantId
+               and template_id = :templateId
+               and id = :versionId
+            """,
+            Map.of("tenantId", tenantId, "templateId", templateId, "versionId", versionId),
+            (rs, rowNum) -> mapVersion(rs));
+    return rows.stream().findFirst();
+  }
+
+  @Override
   public Optional<WorkRecordTemplateVersion> findCurrent(String tenantId, String templateId) {
     List<WorkRecordTemplateVersion> rows =
         jdbc.query(

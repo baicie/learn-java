@@ -1,7 +1,7 @@
 package io.aegisops.workrecord.application.service;
 
+import io.aegisops.workrecord.application.command.TemplateFieldIndexEntry;
 import io.aegisops.workrecord.application.port.WorkRecordFieldIndexRepository;
-import io.aegisops.workrecord.domain.model.FormFieldDescriptor;
 import io.aegisops.workrecord.domain.rule.FieldCodeRules;
 import java.util.HashSet;
 import java.util.List;
@@ -20,14 +20,14 @@ public class WorkRecordFieldIndexService {
       String tenantId,
       String templateId,
       String templateVersionId,
-      List<FormFieldDescriptor> descriptors) {
+      List<TemplateFieldIndexEntry> fields) {
     Set<String> seen = new HashSet<>();
-    for (FormFieldDescriptor descriptor : descriptors) {
-      FieldCodeRules.validate(descriptor.fieldCode());
-      if (!seen.add(descriptor.fieldCode())) {
-        throw new IllegalArgumentException("duplicated fieldCode: " + descriptor.fieldCode());
+    for (TemplateFieldIndexEntry field : fields) {
+      FieldCodeRules.validate(field.fieldCode());
+      if (!seen.add(field.fieldCode())) {
+        throw new IllegalArgumentException("duplicated fieldCode: " + field.fieldCode());
       }
     }
-    repository.createForVersion(tenantId, templateId, templateVersionId, descriptors);
+    repository.createForVersion(tenantId, templateId, templateVersionId, fields);
   }
 }

@@ -3,9 +3,9 @@ package io.aegisops.workrecord.application.service;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.verify;
 
+import io.aegisops.workrecord.application.command.TemplateFieldIndexEntry;
 import io.aegisops.workrecord.application.port.WorkRecordFieldIndexRepository;
 import io.aegisops.workrecord.domain.model.FieldType;
-import io.aegisops.workrecord.domain.model.FormFieldDescriptor;
 import io.aegisops.workrecord.domain.model.OptionSource;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -18,12 +18,13 @@ class WorkRecordFieldIndexServiceTest {
 
   @Test
   void shouldRejectDuplicatedFieldCode() {
-    var descriptor =
-        new FormFieldDescriptor(
+    var entry =
+        new TemplateFieldIndexEntry(
             "优先级",
             "priority",
             FieldType.SELECT,
             false,
+            null,
             OptionSource.DICT,
             "record_priority",
             "[]",
@@ -32,22 +33,24 @@ class WorkRecordFieldIndexServiceTest {
             true,
             true,
             false,
-            0);
+            0,
+            true);
 
     assertThatThrownBy(
-            () -> service.createForVersion("t1", "tpl1", "v1", List.of(descriptor, descriptor)))
+            () -> service.createForVersion("t1", "tpl1", "v1", List.of(entry, entry)))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("duplicated fieldCode");
   }
 
   @Test
   void shouldDelegateToRepository() {
-    var descriptor =
-        new FormFieldDescriptor(
+    var entry =
+        new TemplateFieldIndexEntry(
             "内容",
             "content",
             FieldType.TEXTAREA,
             true,
+            null,
             OptionSource.STATIC,
             null,
             "[]",
@@ -56,10 +59,11 @@ class WorkRecordFieldIndexServiceTest {
             true,
             true,
             false,
-            0);
+            0,
+            true);
 
-    service.createForVersion("t1", "tpl1", "v1", List.of(descriptor));
+    service.createForVersion("t1", "tpl1", "v1", List.of(entry));
 
-    verify(repository).createForVersion("t1", "tpl1", "v1", List.of(descriptor));
+    verify(repository).createForVersion("t1", "tpl1", "v1", List.of(entry));
   }
 }

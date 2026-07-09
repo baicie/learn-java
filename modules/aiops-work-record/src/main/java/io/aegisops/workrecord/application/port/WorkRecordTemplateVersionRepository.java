@@ -19,6 +19,9 @@ public interface WorkRecordTemplateVersionRepository {
 
   Optional<WorkRecordTemplateVersion> find(String tenantId, String versionId);
 
+  Optional<WorkRecordTemplateVersion> findByTemplateAndVersion(
+      String tenantId, String templateId, String versionId);
+
   Optional<WorkRecordTemplateVersion> findCurrent(String tenantId, String templateId);
 
   List<WorkRecordTemplateVersion> list(String tenantId, String templateId);

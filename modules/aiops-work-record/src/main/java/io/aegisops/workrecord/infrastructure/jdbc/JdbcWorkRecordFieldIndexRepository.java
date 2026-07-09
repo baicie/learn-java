@@ -1,9 +1,9 @@
 package io.aegisops.workrecord.infrastructure.jdbc;
 
 import io.aegisops.common.id.Ids;
+import io.aegisops.workrecord.application.command.TemplateFieldIndexEntry;
 import io.aegisops.workrecord.application.port.WorkRecordFieldIndexRepository;
 import io.aegisops.workrecord.domain.model.FieldType;
-import io.aegisops.workrecord.domain.model.FormFieldDescriptor;
 import io.aegisops.workrecord.domain.model.OptionSource;
 import io.aegisops.workrecord.domain.model.WorkRecordField;
 import java.sql.ResultSet;
@@ -29,8 +29,8 @@ public class JdbcWorkRecordFieldIndexRepository implements WorkRecordFieldIndexR
       String tenantId,
       String templateId,
       String templateVersionId,
-      List<FormFieldDescriptor> descriptors) {
-    for (FormFieldDescriptor field : descriptors) {
+      List<TemplateFieldIndexEntry> fields) {
+    for (TemplateFieldIndexEntry field : fields) {
       Map<String, Object> params = new HashMap<>();
       params.put("id", Ids.newId());
       params.put("tenantId", tenantId);
@@ -40,6 +40,7 @@ public class JdbcWorkRecordFieldIndexRepository implements WorkRecordFieldIndexR
       params.put("fieldCode", field.fieldCode());
       params.put("fieldType", field.fieldType().value());
       params.put("required", field.required());
+      params.put("defaultValue", field.defaultValue());
       params.put("optionSource", field.optionSource().value());
       params.put("dictCode", nullable(field.dictCode()));
       params.put("options", field.optionsJson() == null ? "[]" : field.optionsJson());
@@ -49,19 +50,20 @@ public class JdbcWorkRecordFieldIndexRepository implements WorkRecordFieldIndexR
       params.put("exportable", field.exportable());
       params.put("statistical", field.statistical());
       params.put("sortOrder", field.sortOrder());
+      params.put("enabled", field.enabled());
 
       jdbc.update(
           """
           insert into work_record.wr_template_field(
             id, tenant_id, template_id, template_version_id,
-            field_name, field_code, field_type, required,
+            field_name, field_code, field_type, required, default_value,
             option_source, dict_code, options_json, schema_path,
             list_visible, filterable, exportable, statistical, sort_order, enabled)
           values (
             :id, :tenantId, :templateId, :versionId,
-            :fieldName, :fieldCode, :fieldType, :required,
-            :optionSource, :dictCode, :options::jsonb, :schemaPath,
-            :listVisible, :filterable, :exportable, :statistical, :sortOrder, true)
+            :fieldName, :fieldCode, :fieldType, :required, :defaultValue,
+            :optionSource, :dictCode, cast(:options as jsonb), :schemaPath,
+            :listVisible, :filterable, :exportable, :statistical, :sortOrder, :enabled)
           """,
           params);
     }

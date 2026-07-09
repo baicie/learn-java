@@ -1,83 +1,74 @@
 package io.aegisops.workrecord.application.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.*;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.aegisops.workrecord.application.command.PublishTemplateCommand;
-import io.aegisops.workrecord.application.port.WorkRecordAuditRepository;
+import io.aegisops.workrecord.application.command.TemplatePublishValidationResult;
 import io.aegisops.workrecord.application.port.WorkRecordFieldIndexRepository;
 import io.aegisops.workrecord.application.port.WorkRecordTemplateRepository;
+import io.aegisops.workrecord.application.port.WorkRecordTemplateUsageRepository;
 import io.aegisops.workrecord.application.port.WorkRecordTemplateVersionRepository;
+import io.aegisops.workrecord.application.schema.WorkRecordSchemaDocument;
+import io.aegisops.workrecord.domain.model.FieldType;
+import io.aegisops.workrecord.domain.model.FormFieldDescriptor;
+import io.aegisops.workrecord.domain.model.OptionSource;
 import io.aegisops.workrecord.domain.model.TemplateStatus;
+import io.aegisops.workrecord.domain.model.WorkRecordField;
 import io.aegisops.workrecord.domain.model.WorkRecordTemplate;
 import io.aegisops.workrecord.domain.model.WorkRecordTemplateVersion;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 
 class WorkRecordTemplateVersionServiceTest {
   private final WorkRecordTemplateRepository templateRepository =
-      Mockito.mock(WorkRecordTemplateRepository.class);
+      mock(WorkRecordTemplateRepository.class);
   private final WorkRecordTemplateVersionRepository versionRepository =
-      Mockito.mock(WorkRecordTemplateVersionRepository.class);
+      mock(WorkRecordTemplateVersionRepository.class);
   private final WorkRecordFieldIndexRepository fieldRepository =
-      Mockito.mock(WorkRecordFieldIndexRepository.class);
-  private final WorkRecordSchemaService schemaService =
-      new WorkRecordSchemaService(
-          new io.aegisops.workrecord.application.schema.WorkRecordSchemaParser(
-              new ObjectMapper(), new io.aegisops.workrecord.application.schema.WorkRecordSchemaValidator()),
-          new io.aegisops.workrecord.application.schema.WorkRecordSchemaValidator(),
-          new io.aegisops.workrecord.application.schema.WorkRecordSchemaNormalizer(new ObjectMapper()));
-  private final WorkRecordFieldIndexService fieldIndexService =
-      new WorkRecordFieldIndexService(fieldRepository);
-  private final WorkRecordAuditService auditService =
-      new WorkRecordAuditService(
-          (WorkRecordAuditRepository) (tenantId, recordId, templateId, resourceType, resourceId, action, actorId, beforeJson, afterJson, detailJson) -> {});
+      mock(WorkRecordFieldIndexRepository.class);
+  private final WorkRecordTemplateUsageRepository usageRepository =
+      mock(WorkRecordTemplateUsageRepository.class);
+  private final WorkRecordSchemaService schemaService = mock(WorkRecordSchemaService.class);
+  private final WorkRecordFieldIndexService fieldIndexService = mock(WorkRecordFieldIndexService.class);
+  private final WorkRecordTemplatePublishGuard guard = new WorkRecordTemplatePublishGuard();
+  private final WorkRecordAuditService auditService = mock(WorkRecordAuditService.class);
+
   private final WorkRecordTemplateVersionService service =
       new WorkRecordTemplateVersionService(
-          templateRepository, versionRepository, schemaService, fieldIndexService, auditService);
+          templateRepository,
+          versionRepository,
+          fieldRepository,
+          usageRepository,
+          schemaService,
+          fieldIndexService,
+          guard,
+          auditService);
 
   @Test
-  void shouldPublishDraftTemplateIntoVersionAndFieldIndex() {
-    String schema =
-        """
-        {
-          "type": "object",
-          "properties": {
-            "content": {
-              "title": "工作内容",
-              "x-component": "Textarea",
-              "x-work-record": {
-                "fieldCode": "content",
-                "fieldType": "textarea",
-                "listVisible": true,
-                "filterable": true,
-                "exportable": true
-              }
-            }
-          }
-        }
-        """;
+  void validatePublishShouldReturnErrorsForDisabledTemplate() {
+    when(templateRepository.find("t1", "tpl1"))
+        .thenReturn(Optional.of(template(TemplateStatus.DISABLED, false, null)));
 
-    WorkRecordTemplate template =
-        new WorkRecordTemplate(
-            "tpl1",
-            "t1",
-            "daily",
-            "日报",
-            null,
-            TemplateStatus.DRAFT,
-            true,
-            null,
-            schema,
+    TemplatePublishValidationResult result = service.validatePublish("t1", "tpl1");
+
+    assertThat(result.valid()).isFalse();
+    assertThat(result.errors()).anyMatch(item -> item.contains("disabled template"));
+  }
+
+  @Test
+  void publishShouldCreateVersionAndSyncFieldIndex() {
+    WorkRecordTemplate template = template(TemplateStatus.DRAFT, true, null);
+    WorkRecordSchemaDocument document =
+        new WorkRecordSchemaDocument(
+            1,
+            "{\"x-work-record-schema-version\":1}",
             "{}",
-            "u1",
-            OffsetDateTime.now(),
-            OffsetDateTime.now(),
-            null);
+            List.of(field("content", FieldType.TEXTAREA)),
+            "[]");
 
     WorkRecordTemplateVersion version =
         new WorkRecordTemplateVersion(
@@ -86,7 +77,7 @@ class WorkRecordTemplateVersionServiceTest {
             "tpl1",
             1,
             "v1",
-            schema,
+            document.normalizedSchemaJson(),
             "{}",
             "[]",
             "u1",
@@ -94,23 +85,92 @@ class WorkRecordTemplateVersionServiceTest {
             OffsetDateTime.now());
 
     when(templateRepository.find("t1", "tpl1")).thenReturn(Optional.of(template));
+    when(schemaService.prepareForPublish("{}", "{}")).thenReturn(document);
     when(versionRepository.nextVersionNo("t1", "tpl1")).thenReturn(1);
-    when(versionRepository.create(
-            Mockito.eq("t1"),
-            Mockito.eq("tpl1"),
-            Mockito.eq(1),
-            Mockito.eq("v1"),
-            Mockito.anyString(),
-            Mockito.anyString(),
-            Mockito.anyString(),
-            Mockito.eq("u1")))
+    when(versionRepository.create(any(), any(), anyInt(), any(), any(), any(), any(), any()))
         .thenReturn(version);
 
     WorkRecordTemplateVersion published =
         service.publish("t1", new PublishTemplateCommand("tpl1", "v1"), "u1");
 
     assertThat(published.id()).isEqualTo("v1");
-    verify(fieldRepository).createForVersion(Mockito.eq("t1"), Mockito.eq("tpl1"), Mockito.eq("v1"), Mockito.anyList());
+    verify(fieldIndexService).createForVersion(eq("t1"), eq("tpl1"), eq("v1"), anyList());
     verify(templateRepository).updateCurrentVersion("t1", "tpl1", "v1");
+  }
+
+  @Test
+  void publishShouldRejectLockedFieldTypeChangeWhenReferenced() {
+    WorkRecordTemplate template = template(TemplateStatus.PUBLISHED, true, "v0");
+    WorkRecordSchemaDocument document =
+        new WorkRecordSchemaDocument(1, "{}", "{}", List.of(field("priority", FieldType.TEXT)), "[]");
+
+    WorkRecordField previous =
+        new WorkRecordField(
+            "f1",
+            "t1",
+            "tpl1",
+            "v0",
+            "priority",
+            "priority",
+            FieldType.SELECT,
+            false,
+            null,
+            OptionSource.STATIC,
+            null,
+            "[]",
+            ".properties.priority",
+            true,
+            true,
+            true,
+            false,
+            1,
+            true,
+            OffsetDateTime.now(),
+            OffsetDateTime.now());
+
+    when(templateRepository.find("t1", "tpl1")).thenReturn(Optional.of(template));
+    when(schemaService.prepareForPublish("{}", "{}")).thenReturn(document);
+    when(fieldRepository.listByVersion("t1", "v0")).thenReturn(List.of(previous));
+    when(usageRepository.countRecordsByTemplateVersion("t1", "v0")).thenReturn(10L);
+
+    assertThatThrownBy(() -> service.publish("t1", new PublishTemplateCommand("tpl1", "v2"), "u1"))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("fieldType is locked");
+  }
+
+  private WorkRecordTemplate template(
+      TemplateStatus status, boolean enabled, String currentVersionId) {
+    return new WorkRecordTemplate(
+        "tpl1",
+        "t1",
+        "daily",
+        "日报",
+        null,
+        status,
+        enabled,
+        currentVersionId,
+        "{}",
+        "{}",
+        "u1",
+        OffsetDateTime.now(),
+        OffsetDateTime.now(),
+        null);
+  }
+
+  private FormFieldDescriptor field(String code, FieldType type) {
+    return new FormFieldDescriptor(
+        code,
+        code,
+        type,
+        false,
+        OptionSource.STATIC,
+        null,
+        "[]",
+        ".properties." + code,
+        true,
+        true,
+        true,
+        false,
+        1);
   }
 }
