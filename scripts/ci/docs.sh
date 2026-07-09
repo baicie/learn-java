@@ -16,4 +16,5 @@ pnpm install --frozen-lockfile
 pnpm exec tsx scripts/ci/docs.ts
 pnpm exec tsx scripts/ci/check-record-phase0-contracts.ts
 pnpm exec tsx scripts/ci/check-record-phase1-baseline.ts
+pnpm exec tsx scripts/ci/check-record-phase3-model.ts
 pnpm exec tsx scripts/docs.ts check
