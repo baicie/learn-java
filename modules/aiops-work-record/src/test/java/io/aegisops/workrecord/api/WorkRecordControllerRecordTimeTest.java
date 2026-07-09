@@ -10,11 +10,13 @@ import static org.mockito.Mockito.when;
 
 import io.aegisops.common.api.ApiResponse;
 import io.aegisops.common.exception.AppException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.aegisops.common.tenant.TenantContext;
 import io.aegisops.workrecord.api.dto.RecordRequests.CreateRecordRequest;
 import io.aegisops.workrecord.api.dto.RecordRequests.UpdateRecordRequest;
 import io.aegisops.workrecord.application.command.CreateRecordCommand;
 import io.aegisops.workrecord.application.command.UpdateRecordCommand;
+import io.aegisops.workrecord.application.service.WorkRecordListMetaService;
 import io.aegisops.workrecord.application.service.WorkRecordQueryService;
 import io.aegisops.workrecord.application.service.WorkRecordService;
 import io.aegisops.workrecord.domain.model.RecordStatus;
@@ -29,8 +31,10 @@ class WorkRecordControllerRecordTimeTest {
 
   private final WorkRecordService recordService = mock(WorkRecordService.class);
   private final WorkRecordQueryService queryService = mock(WorkRecordQueryService.class);
+  private final WorkRecordListMetaService metaService = mock(WorkRecordListMetaService.class);
+  private final ObjectMapper objectMapper = new ObjectMapper();
   private final WorkRecordController controller =
-      new WorkRecordController(recordService, queryService);
+      new WorkRecordController(recordService, queryService, metaService, objectMapper);
 
   @BeforeEach
   void setUp() {

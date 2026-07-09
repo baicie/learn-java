@@ -79,6 +79,42 @@ public class JdbcWorkRecordFieldIndexRepository implements WorkRecordFieldIndexR
     return listFields(tenantId, templateVersionId, true);
   }
 
+  @Override
+  public List<WorkRecordField> listEnabledByVersions(
+      String tenantId, List<String> templateVersionIds) {
+    return listFieldsAcrossVersions(tenantId, templateVersionIds, false);
+  }
+
+  @Override
+  public List<WorkRecordField> listFilterableByVersions(
+      String tenantId, List<String> templateVersionIds) {
+    return listFieldsAcrossVersions(tenantId, templateVersionIds, true);
+  }
+
+  private List<WorkRecordField> listFieldsAcrossVersions(
+      String tenantId, List<String> templateVersionIds, boolean filterableOnly) {
+    if (templateVersionIds == null || templateVersionIds.isEmpty()) {
+      return List.of();
+    }
+    String sql =
+        """
+        select id, tenant_id, template_id, template_version_id, field_name, field_code, field_type,
+               required, default_value, option_source, dict_code, options_json::text, schema_path,
+               list_visible, filterable, exportable, statistical, sort_order, enabled,
+               created_at, updated_at
+          from work_record.wr_template_field
+         where tenant_id = :tenantId
+           and template_version_id in (:versionIds)
+           and enabled = true
+        """
+            + (filterableOnly ? " and filterable = true " : "")
+            + " order by sort_order asc, field_code asc ";
+    return jdbc.query(
+        sql,
+        Map.of("tenantId", tenantId, "versionIds", templateVersionIds),
+        (rs, rowNum) -> mapField(rs));
+  }
+
   private List<WorkRecordField> listFields(
       String tenantId, String templateVersionId, boolean onlyEnabled) {
     return jdbc.query(

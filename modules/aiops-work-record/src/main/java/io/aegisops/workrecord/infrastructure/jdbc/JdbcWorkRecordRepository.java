@@ -3,11 +3,13 @@ package io.aegisops.workrecord.infrastructure.jdbc;
 import io.aegisops.common.api.PageResult;
 import io.aegisops.common.id.Ids;
 import io.aegisops.workrecord.application.command.CreateRecordCommand;
+import io.aegisops.workrecord.application.command.RecordDynamicFilter;
 import io.aegisops.workrecord.application.command.RecordQuery;
 import io.aegisops.workrecord.application.command.UpdateRecordCommand;
 import io.aegisops.workrecord.application.port.WorkRecordRepository;
 import io.aegisops.workrecord.domain.model.RecordStatus;
 import io.aegisops.workrecord.domain.model.WorkRecord;
+import io.aegisops.workrecord.domain.rule.FieldCodeRules;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.OffsetDateTime;
@@ -160,6 +162,8 @@ public class JdbcWorkRecordRepository implements WorkRecordRepository {
       params.put("ownerId", query.ownerId());
     }
 
+    applyDynamicFilters(where, params, query);
+
     Long total =
         jdbc.queryForObject(
             "select count(*) from work_record.wr_record " + where, params, Long.class);
@@ -177,7 +181,8 @@ public class JdbcWorkRecordRepository implements WorkRecordRepository {
               from work_record.wr_record
             """
                 + where
-                + " order by record_time desc, created_at desc limit :limit offset :offset",
+                + orderBy(query.sortBy(), query.sortDir())
+                + " limit :limit offset :offset",
             params,
             (rs, rowNum) -> mapRecord(rs));
 
@@ -241,5 +246,58 @@ public class JdbcWorkRecordRepository implements WorkRecordRepository {
 
   private String blankJson(String raw) {
     return (raw == null || raw.isBlank()) ? "{}" : raw;
+  }
+
+  private void applyDynamicFilters(
+      StringBuilder where, Map<String, Object> params, RecordQuery query) {
+    if (query.dynamicFilters() == null || query.dynamicFilters().isEmpty()) {
+      return;
+    }
+
+    int index = 0;
+    for (RecordDynamicFilter filter : query.dynamicFilters()) {
+      FieldCodeRules.validate(filter.fieldCode());
+
+      String keyParam = "dfKey" + index;
+      String valueParam = "dfValue" + index;
+      params.put(keyParam, filter.fieldCode());
+
+      Object value = filter.value();
+      if (value instanceof List<?> list) {
+        String listParam = "dfList" + index;
+        params.put(listParam, list.stream().map(String::valueOf).toList());
+        where
+            .append(" and exists (select 1 from jsonb_array_elements_text(custom_data_json -> :")
+            .append(keyParam)
+            .append(") v where v in (:")
+            .append(listParam)
+            .append(")) ");
+      } else {
+        params.put(valueParam, String.valueOf(value));
+        where
+            .append(" and custom_data_json ->> :")
+            .append(keyParam)
+            .append(" = :")
+            .append(valueParam)
+            .append(" ");
+      }
+
+      index += 1;
+    }
+  }
+
+  private String orderBy(String sortBy, String sortDir) {
+    String dir = "asc".equalsIgnoreCase(sortDir) ? "asc" : "desc";
+    String column =
+        switch (sortBy == null ? "" : sortBy) {
+          case "title" -> "title";
+          case "status" -> "status";
+          case "ownerId" -> "owner_id";
+          case "creatorId" -> "creator_id";
+          case "createdAt" -> "created_at";
+          case "recordTime" -> "record_time";
+          default -> "record_time";
+        };
+    return " order by " + column + " " + dir + ", created_at desc ";
   }
 }

@@ -15,4 +15,43 @@ public record RecordQuery(
     String creatorId,
     String ownerId,
     boolean onlySelf,
-    String currentUserId) {}
+    String currentUserId,
+    List<RecordDynamicFilter> dynamicFilters,
+    String sortBy,
+    String sortDir,
+    String quickView,
+    Integer workdayCount) {
+
+  public RecordQuery(
+      int page,
+      int pageSize,
+      String templateId,
+      String templateVersionId,
+      List<String> statuses,
+      String keyword,
+      OffsetDateTime recordTimeFrom,
+      OffsetDateTime recordTimeTo,
+      String creatorId,
+      String ownerId,
+      boolean onlySelf,
+      String currentUserId) {
+    this(
+        page,
+        pageSize,
+        templateId,
+        templateVersionId,
+        statuses,
+        keyword,
+        recordTimeFrom,
+        recordTimeTo,
+        creatorId,
+        ownerId,
+        onlySelf,
+        currentUserId,
+        List.of(),
+        "recordTime",
+        "desc",
+        "all",
+        null);
+  }
+}

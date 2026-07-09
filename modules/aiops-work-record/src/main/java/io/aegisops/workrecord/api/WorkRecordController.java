@@ -1,5 +1,7 @@
 package io.aegisops.workrecord.api;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.aegisops.common.api.ApiResponse;
 import io.aegisops.common.tenant.TenantContext;
 import io.aegisops.security.UserPrincipal;
@@ -7,13 +9,16 @@ import io.aegisops.workrecord.api.dto.RecordRequests.CreateRecordRequest;
 import io.aegisops.workrecord.api.dto.RecordRequests.RecordQueryRequest;
 import io.aegisops.workrecord.api.dto.RecordRequests.UpdateRecordRequest;
 import io.aegisops.workrecord.application.command.CreateRecordCommand;
+import io.aegisops.workrecord.application.command.RecordDynamicFilter;
 import io.aegisops.workrecord.application.command.RecordQuery;
 import io.aegisops.workrecord.application.command.UpdateRecordCommand;
+import io.aegisops.workrecord.application.service.WorkRecordListMetaService;
 import io.aegisops.workrecord.application.service.WorkRecordQueryService;
 import io.aegisops.workrecord.application.service.WorkRecordService;
 import io.aegisops.workrecord.domain.model.WorkRecord;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeParseException;
+import java.util.List;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -23,10 +28,24 @@ import org.springframework.web.bind.annotation.*;
 public class WorkRecordController {
   private final WorkRecordService recordService;
   private final WorkRecordQueryService queryService;
+  private final WorkRecordListMetaService metaService;
+  private final ObjectMapper objectMapper;
 
-  public WorkRecordController(WorkRecordService recordService, WorkRecordQueryService queryService) {
+  public WorkRecordController(
+      WorkRecordService recordService,
+      WorkRecordQueryService queryService,
+      WorkRecordListMetaService metaService,
+      ObjectMapper objectMapper) {
     this.recordService = recordService;
     this.queryService = queryService;
+    this.metaService = metaService;
+    this.objectMapper = objectMapper;
+  }
+
+  @GetMapping("/meta")
+  @PreAuthorize("hasAuthority('work-record:read:all') or hasAuthority('work-record:read:self')")
+  public ApiResponse<?> meta() {
+    return ApiResponse.ok(metaService.meta(TenantContext.requireTenantId()));
   }
 
   @GetMapping
@@ -46,7 +65,12 @@ public class WorkRecordController {
             request.creatorId(),
             request.ownerId(),
             false,
-            user == null ? null : user.id());
+            user == null ? null : user.id(),
+            parseDynamicFilters(request.dynamicFilters()),
+            normalizeSortBy(request.sortBy()),
+            normalizeSortDir(request.sortDir()),
+            request.quickView(),
+            request.workdayCount());
     return ApiResponse.ok(queryService.page(TenantContext.requireTenantId(), query, user));
   }
 
@@ -121,11 +145,36 @@ public class WorkRecordController {
     return parseOffsetRecordTime(value);
   }
 
-  private OffsetDateTime parseOffsetRecordTime(String value) {
+  OffsetDateTime parseOffsetRecordTime(String value) {
     try {
       return OffsetDateTime.parse(value);
     } catch (DateTimeParseException ex) {
       throw new IllegalArgumentException("recordTime must be ISO offset datetime", ex);
     }
+  }
+
+  private List<RecordDynamicFilter> parseDynamicFilters(String raw) {
+    if (raw == null || raw.isBlank()) {
+      return List.of();
+    }
+    try {
+      return objectMapper.readValue(raw, new TypeReference<List<RecordDynamicFilter>>() {});
+    } catch (Exception ex) {
+      throw new IllegalArgumentException("invalid dynamicFilters", ex);
+    }
+  }
+
+  private String normalizeSortBy(String value) {
+    if (value == null || value.isBlank()) {
+      return "recordTime";
+    }
+    return value;
+  }
+
+  private String normalizeSortDir(String value) {
+    if ("asc".equalsIgnoreCase(value)) {
+      return "asc";
+    }
+    return "desc";
   }
 }

@@ -34,5 +34,10 @@ public final class RecordRequests {
       OffsetDateTime recordTimeFrom,
       OffsetDateTime recordTimeTo,
       String creatorId,
-      String ownerId) {}
+      String ownerId,
+      String quickView,
+      String dynamicFilters,
+      String sortBy,
+      String sortDir,
+      Integer workdayCount) {}
 }

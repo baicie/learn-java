@@ -14,4 +14,9 @@ public interface WorkRecordFieldIndexRepository {
   List<WorkRecordField> listByVersion(String tenantId, String templateVersionId);
 
   List<WorkRecordField> listEnabledByVersion(String tenantId, String templateVersionId);
+
+  List<WorkRecordField> listEnabledByVersions(String tenantId, List<String> templateVersionIds);
+
+  List<WorkRecordField> listFilterableByVersions(
+      String tenantId, List<String> templateVersionIds);
 }
