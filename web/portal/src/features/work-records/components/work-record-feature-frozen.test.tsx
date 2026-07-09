@@ -4,7 +4,7 @@ import { WorkRecordFeatureFrozen } from './work-record-feature-frozen'
 
 describe('WorkRecordFeatureFrozen', () => {
   it('renders frozen baseline message for list page', async () => {
-    render(<WorkRecordFeatureFrozen surface='list' />)
+    await render(<WorkRecordFeatureFrozen surface='list' />)
 
     expect(document.body.textContent).toContain('工作记录模块重做中')
     expect(document.body.textContent).toContain('记录列表')
@@ -13,7 +13,7 @@ describe('WorkRecordFeatureFrozen', () => {
   })
 
   it('renders frozen baseline message for designer page', async () => {
-    render(<WorkRecordFeatureFrozen surface='designer' />)
+    await render(<WorkRecordFeatureFrozen surface='designer' />)
 
     expect(document.body.textContent).toContain('工作记录模块重做中')
     expect(document.body.textContent).toContain('表单设计')

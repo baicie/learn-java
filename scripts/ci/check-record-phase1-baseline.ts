@@ -140,7 +140,6 @@ function checkRecordFeatureFrozen() {
     ['web/portal/src/features/work-records/new.tsx', "surface='new'"],
     ['web/portal/src/features/work-records/edit.tsx', "surface='edit'"],
     ['web/portal/src/features/work-records/detail.tsx', "surface='detail'"],
-    ['web/portal/src/features/work-records/designer.tsx', "surface='designer'"],
   ]
 
   for (const [path, surface] of frozenSurfaces) {

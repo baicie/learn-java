@@ -1,5 +1,5 @@
-import { WorkRecordFeatureFrozen } from './components/work-record-feature-frozen'
+import { WorkRecordDesignerPage } from './designer/work-record-designer-page'
 
 export function WorkRecordDesigner() {
-  return <WorkRecordFeatureFrozen surface='designer' />
+  return <WorkRecordDesignerPage />
 }
