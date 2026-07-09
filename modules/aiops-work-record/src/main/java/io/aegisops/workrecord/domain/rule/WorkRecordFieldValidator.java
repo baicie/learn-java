@@ -155,7 +155,7 @@ public final class WorkRecordFieldValidator {
    */
   private static void validateValueAndFormat(WorkRecordField field, JsonNode value) {
     String code = field.fieldCode();
-    String type = field.fieldType();
+    String type = field.fieldType().value();
 
     switch (type) {
       case "number":

@@ -1,0 +1,11 @@
+package io.aegisops.workrecord.application.command;
+
+import java.time.OffsetDateTime;
+
+public record UpdateRecordCommand(
+    String title,
+    String status,
+    String ownerId,
+    OffsetDateTime recordTime,
+    String builtinDataJson,
+    String customDataJson) {}

@@ -6,12 +6,15 @@ public record WorkRecord(
     String id,
     String tenantId,
     String templateId,
+    String templateVersionId,
     String title,
-    String status,
+    RecordStatus status,
     String ownerId,
     String creatorId,
     OffsetDateTime recordTime,
     String builtinDataJson,
     String customDataJson,
+    int rowVersion,
     OffsetDateTime createdAt,
-    OffsetDateTime updatedAt) {}
+    OffsetDateTime updatedAt,
+    OffsetDateTime deletedAt) {}

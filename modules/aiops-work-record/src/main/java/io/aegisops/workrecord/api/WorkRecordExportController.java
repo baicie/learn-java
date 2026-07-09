@@ -2,53 +2,45 @@ package io.aegisops.workrecord.api;
 
 import io.aegisops.common.tenant.TenantContext;
 import io.aegisops.security.UserPrincipal;
-import io.aegisops.workrecord.api.dto.WorkRecordExportRequest;
-import io.aegisops.workrecord.application.WorkRecordExportApplicationService;
-import jakarta.validation.Valid;
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
+import io.aegisops.workrecord.api.dto.RecordRequests.RecordQueryRequest;
+import io.aegisops.workrecord.application.command.RecordQuery;
+import io.aegisops.workrecord.application.service.WorkRecordExportService;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/work-record/records")
+@RequestMapping("/api/work-record")
 public class WorkRecordExportController {
-  private static final MediaType TEXT_CSV = new MediaType("text", "csv");
+  private final WorkRecordExportService exportService;
 
-  private final WorkRecordExportApplicationService service;
-
-  public WorkRecordExportController(WorkRecordExportApplicationService service) {
-    this.service = service;
+  public WorkRecordExportController(WorkRecordExportService exportService) {
+    this.exportService = exportService;
   }
 
   @PostMapping("/export")
   @PreAuthorize("hasAuthority('work-record:export')")
-  public ResponseEntity<byte[]> export(
-      @Valid @RequestBody WorkRecordExportRequest request,
-      @AuthenticationPrincipal UserPrincipal user) {
-    byte[] body =
-        service.exportCsv(
-            TenantContext.requireTenantId(),
+  public byte[] exportCsv(
+      @RequestBody RecordQueryRequest request, @AuthenticationPrincipal UserPrincipal user) {
+    RecordQuery query =
+        new RecordQuery(
+            request.page() != null ? request.page() : 1,
+            request.pageSize() != null ? request.pageSize() : 5000,
             request.templateId(),
-            request.status(),
+            request.templateVersionId(),
+            request.statuses(),
             request.keyword(),
             request.recordTimeFrom(),
             request.recordTimeTo(),
-            request.filters(),
-            request.columns(),
-            user);
-    String filename =
-        "work-records-" + LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE) + ".csv";
-    return ResponseEntity.ok()
-        .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + filename)
-        .contentType(TEXT_CSV)
-        .body(body);
+            request.creatorId(),
+            request.ownerId(),
+            false,
+            user == null ? null : user.id());
+
+    byte[] csv = exportService.exportCsv(TenantContext.requireTenantId(), query, user);
+
+    return csv;
   }
 }

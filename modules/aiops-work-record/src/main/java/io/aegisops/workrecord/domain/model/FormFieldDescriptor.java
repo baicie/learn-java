@@ -1,17 +1,10 @@
 package io.aegisops.workrecord.domain.model;
 
-import java.time.OffsetDateTime;
-
-public record WorkRecordField(
-    String id,
-    String tenantId,
-    String templateId,
-    String templateVersionId,
+public record FormFieldDescriptor(
     String fieldName,
     String fieldCode,
     FieldType fieldType,
     boolean required,
-    String defaultValue,
     OptionSource optionSource,
     String dictCode,
     String optionsJson,
@@ -20,7 +13,4 @@ public record WorkRecordField(
     boolean filterable,
     boolean exportable,
     boolean statistical,
-    int sortOrder,
-    boolean enabled,
-    OffsetDateTime createdAt,
-    OffsetDateTime updatedAt) {}
+    int sortOrder) {}

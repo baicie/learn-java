@@ -76,7 +76,7 @@ public final class WorkRecordFilterValidator {
       throw new IllegalArgumentException("operator is required for field '" + fieldCode + "'");
     }
 
-    Set<String> allowedOps = allowedOperators(field.fieldType());
+    Set<String> allowedOps = allowedOperators(field.fieldType().value());
     if (!allowedOps.contains(operator)) {
       throw new IllegalArgumentException(
           "operator '"
@@ -92,7 +92,7 @@ public final class WorkRecordFilterValidator {
   }
 
   private static void validateValueType(WorkRecordField field, DynamicFieldFilter filter) {
-    String type = field.fieldType();
+    String type = field.fieldType().value();
     String op = filter.operator();
 
     if ("exists".equals(op)) {

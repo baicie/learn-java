@@ -3,38 +3,38 @@ package io.aegisops.workrecord.api;
 import io.aegisops.common.api.ApiResponse;
 import io.aegisops.common.tenant.TenantContext;
 import io.aegisops.security.UserPrincipal;
-import io.aegisops.workrecord.api.dto.CreateFieldRequest;
-import io.aegisops.workrecord.api.dto.CreateTemplateRequest;
-import io.aegisops.workrecord.api.dto.TemplateSchemaRequest;
-import io.aegisops.workrecord.api.dto.UpdateFieldRequest;
-import io.aegisops.workrecord.api.dto.UpdateTemplateRequest;
-import io.aegisops.workrecord.application.WorkRecordTemplateApplicationService;
-import io.aegisops.workrecord.domain.model.WorkRecordField;
+import io.aegisops.workrecord.api.dto.TemplateRequests.CreateTemplateRequest;
+import io.aegisops.workrecord.api.dto.TemplateRequests.PublishTemplateRequest;
+import io.aegisops.workrecord.api.dto.TemplateRequests.UpdateTemplateDraftRequest;
+import io.aegisops.workrecord.application.command.CreateTemplateCommand;
+import io.aegisops.workrecord.application.command.PublishTemplateCommand;
+import io.aegisops.workrecord.application.command.UpdateTemplateDraftCommand;
+import io.aegisops.workrecord.application.service.WorkRecordTemplateService;
+import io.aegisops.workrecord.application.service.WorkRecordTemplateVersionService;
 import io.aegisops.workrecord.domain.model.WorkRecordTemplate;
+import io.aegisops.workrecord.domain.model.WorkRecordTemplateVersion;
 import java.util.List;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/work-record/templates")
 public class WorkRecordTemplateController {
-  private final WorkRecordTemplateApplicationService service;
+  private final WorkRecordTemplateService templateService;
+  private final WorkRecordTemplateVersionService versionService;
 
-  public WorkRecordTemplateController(WorkRecordTemplateApplicationService service) {
-    this.service = service;
+  public WorkRecordTemplateController(
+      WorkRecordTemplateService templateService,
+      WorkRecordTemplateVersionService versionService) {
+    this.templateService = templateService;
+    this.versionService = versionService;
   }
 
   @GetMapping
   @PreAuthorize("hasAuthority('work-record:template:read')")
   public ApiResponse<List<WorkRecordTemplate>> list() {
-    return ApiResponse.ok(service.listTemplates(TenantContext.requireTenantId()));
+    return ApiResponse.ok(templateService.list(TenantContext.requireTenantId()));
   }
 
   @PostMapping
@@ -42,71 +42,51 @@ public class WorkRecordTemplateController {
   public ApiResponse<WorkRecordTemplate> create(
       @RequestBody CreateTemplateRequest request, @AuthenticationPrincipal UserPrincipal user) {
     return ApiResponse.ok(
-        service.createTemplate(
-            TenantContext.requireTenantId(), request, user == null ? "system" : user.id()));
-  }
-
-  @PutMapping("/{templateId}")
-  @PreAuthorize("hasAuthority('work-record:template:write')")
-  public ApiResponse<WorkRecordTemplate> update(
-      @PathVariable String templateId,
-      @RequestBody UpdateTemplateRequest request,
-      @AuthenticationPrincipal UserPrincipal user) {
-    return ApiResponse.ok(
-        service.updateTemplate(
+        templateService.create(
             TenantContext.requireTenantId(),
-            templateId,
-            request,
+            new CreateTemplateCommand(
+                request.code(),
+                request.name(),
+                request.description(),
+                request.schemaJson(),
+                request.designerJson()),
             user == null ? "system" : user.id()));
   }
 
-  @PostMapping("/{templateId}/schema")
+  @PutMapping("/{templateId}/draft")
   @PreAuthorize("hasAuthority('work-record:template:write')")
-  public ApiResponse<WorkRecordTemplate> saveSchema(
+  public ApiResponse<WorkRecordTemplate> updateDraft(
       @PathVariable String templateId,
-      @RequestBody TemplateSchemaRequest request,
+      @RequestBody UpdateTemplateDraftRequest request,
       @AuthenticationPrincipal UserPrincipal user) {
     return ApiResponse.ok(
-        service.saveSchema(
+        templateService.updateDraft(
             TenantContext.requireTenantId(),
             templateId,
-            request,
+            new UpdateTemplateDraftCommand(
+                request.name(), request.description(), request.schemaJson(), request.designerJson()),
             user == null ? "system" : user.id()));
   }
 
-  @GetMapping("/{templateId}/fields")
-  @PreAuthorize("hasAuthority('work-record:template:read')")
-  public ApiResponse<List<WorkRecordField>> listFields(@PathVariable String templateId) {
-    return ApiResponse.ok(service.listFields(TenantContext.requireTenantId(), templateId));
-  }
-
-  @PostMapping("/{templateId}/fields")
+  @PostMapping("/{templateId}/publish")
   @PreAuthorize("hasAuthority('work-record:template:write')")
-  public ApiResponse<WorkRecordField> createField(
+  public ApiResponse<WorkRecordTemplateVersion> publish(
       @PathVariable String templateId,
-      @RequestBody CreateFieldRequest request,
+      @RequestBody PublishTemplateRequest request,
       @AuthenticationPrincipal UserPrincipal user) {
     return ApiResponse.ok(
-        service.createField(
+        versionService.publish(
             TenantContext.requireTenantId(),
-            templateId,
-            request,
+            new PublishTemplateCommand(templateId, request.versionName()),
             user == null ? "system" : user.id()));
   }
 
-  @PutMapping("/{templateId}/fields/{fieldId}")
+  @DeleteMapping("/{templateId}")
   @PreAuthorize("hasAuthority('work-record:template:write')")
-  public ApiResponse<WorkRecordField> updateField(
-      @PathVariable String templateId,
-      @PathVariable String fieldId,
-      @RequestBody UpdateFieldRequest request,
-      @AuthenticationPrincipal UserPrincipal user) {
-    return ApiResponse.ok(
-        service.updateField(
-            TenantContext.requireTenantId(),
-            templateId,
-            fieldId,
-            request,
-            user == null ? "system" : user.id()));
+  public ApiResponse<Void> disable(
+      @PathVariable String templateId, @AuthenticationPrincipal UserPrincipal user) {
+    templateService.disable(
+        TenantContext.requireTenantId(), templateId, user == null ? "system" : user.id());
+    return ApiResponse.ok(null);
   }
 }

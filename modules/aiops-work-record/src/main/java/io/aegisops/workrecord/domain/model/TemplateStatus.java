@@ -1,19 +1,19 @@
 package io.aegisops.workrecord.domain.model;
 
-public enum RecordStatus {
+public enum TemplateStatus {
   DRAFT,
-  PROCESSING,
-  DONE,
+  PUBLISHED,
+  DISABLED,
   ARCHIVED;
 
   public String value() {
     return name().toLowerCase();
   }
 
-  public static RecordStatus from(String value) {
+  public static TemplateStatus from(String value) {
     if (value == null || value.isBlank()) {
       return DRAFT;
     }
-    return RecordStatus.valueOf(value.trim().toUpperCase());
+    return TemplateStatus.valueOf(value.trim().toUpperCase());
   }
 }
