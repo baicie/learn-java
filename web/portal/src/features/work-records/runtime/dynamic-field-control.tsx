@@ -65,9 +65,15 @@ export function DynamicFieldControl({
         className={className}
         type='datetime-local'
         value={toDatetimeLocalValue(value)}
-        onChange={(event) =>
-          onChange(new Date(event.target.value).toISOString())
-        }
+        onChange={(event) => {
+          const raw = event.target.value
+          if (!raw) {
+            onChange(undefined)
+            return
+          }
+          const date = new Date(raw)
+          onChange(Number.isNaN(date.getTime()) ? undefined : date.toISOString())
+        }}
       />
     )
   }

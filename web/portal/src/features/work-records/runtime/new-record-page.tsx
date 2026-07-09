@@ -8,7 +8,7 @@ import {
   loadRuntimeDictOptions,
 } from './api'
 import { RecordRuntimeForm } from './record-runtime-form'
-import { buildInitialFormValue } from './schema'
+import { buildInitialFormValue, sanitizeCustomDataForSubmit } from './schema'
 import type {
   RuntimeDictOptions,
   WorkRecordField,
@@ -22,6 +22,7 @@ export function NewRecordPage() {
     queryFn: listPublishedTemplates,
   })
 
+  const [initialized, setInitialized] = useState(false)
   const [value, setValue] = useState<WorkRecordRuntimeFormValue>(
     buildInitialFormValue({})
   )
@@ -39,10 +40,13 @@ export function NewRecordPage() {
   })
 
   useEffect(() => {
-    if (!templatesQuery.data?.length) return
+    if (initialized || !templatesQuery.data?.length) return
     const templates = templatesQuery.data
-    queueMicrotask(() => setValue(buildInitialFormValue({ templates })))
-  }, [templatesQuery.data])
+    queueMicrotask(() => {
+      setInitialized(true)
+      setValue(buildInitialFormValue({ templates }))
+    })
+  }, [initialized, templatesQuery.data])
 
   useEffect(() => {
     if (!fieldsQuery.data) return
@@ -60,7 +64,9 @@ export function NewRecordPage() {
   })
 
   const changeTemplate = (templateId: string) => {
-    const template = templatesQuery.data?.find((item) => item.id === templateId)
+    const template = templatesQuery.data?.find(
+      (item) => item.id === templateId
+    )
     setValue({
       ...value,
       templateId,
@@ -70,14 +76,27 @@ export function NewRecordPage() {
   }
 
   const submitWithStatus = (status: 'draft' | 'done') => {
-    createMutation.mutate({
-      ...value,
-      status,
-    })
+    createMutation.mutate(
+      sanitizeCustomDataForSubmit(
+        {
+          ...value,
+          status,
+        },
+        fieldsQuery.data ?? []
+      )
+    )
   }
 
   if (templatesQuery.isLoading || fieldsQuery.isLoading) {
     return <main className='p-6 text-sm text-muted-foreground'>加载中...</main>
+  }
+
+  if (!templatesQuery.data?.length) {
+    return (
+      <main className='p-6 text-sm text-muted-foreground'>
+        暂无已发布模板，请先发布工作记录模板。
+      </main>
+    )
   }
 
   return (

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   buildInitialFormValue,
   fieldDisplayValue,
+  sanitizeCustomDataForSubmit,
   setCustomValue,
   validateRuntimeForm,
 } from './schema'
@@ -93,6 +94,92 @@ describe('work record runtime schema', () => {
     )
 
     expect(text).toBe('P1（已禁用）')
+  })
+
+  it('rejects invalid record time', () => {
+    const result = validateRuntimeForm(
+      {
+        title: '日报',
+        templateId: 'tpl1',
+        templateVersionId: 'v1',
+        status: 'draft',
+        ownerId: '',
+        recordTime: 'bad-time',
+        customData: {},
+      },
+      []
+    )
+
+    expect(result.valid).toBe(false)
+    expect(result.errors.join('\n')).toContain('记录时间格式不正确')
+  })
+
+  it('sanitizes disabled and unknown custom data before submit', () => {
+    const value = sanitizeCustomDataForSubmit(
+      {
+        title: '日报',
+        templateId: 'tpl1',
+        templateVersionId: 'v1',
+        status: 'draft',
+        ownerId: '',
+        recordTime: '2026-01-01T00:00',
+        customData: {
+          content: 'hello',
+          disabledField: 'old',
+          unknown: 'bad',
+        },
+      },
+      [
+        {
+          id: 'f-content',
+          tenantId: 't1',
+          templateId: 'tpl1',
+          templateVersionId: 'v1',
+          fieldName: '内容',
+          fieldCode: 'content',
+          fieldType: 'textarea',
+          required: false,
+          defaultValue: null,
+          optionSource: 'static',
+          dictCode: null,
+          optionsJson: '[]',
+          schemaPath: '.properties.content',
+          listVisible: true,
+          filterable: true,
+          exportable: true,
+          statistical: false,
+          sortOrder: 0,
+          enabled: true,
+          createdAt: '2026-01-01T00:00:00Z',
+          updatedAt: '2026-01-01T00:00:00Z',
+        },
+        {
+          id: 'f-disabled',
+          tenantId: 't1',
+          templateId: 'tpl1',
+          templateVersionId: 'v1',
+          fieldName: '旧字段',
+          fieldCode: 'disabledField',
+          fieldType: 'text',
+          required: false,
+          defaultValue: null,
+          optionSource: 'static',
+          dictCode: null,
+          optionsJson: '[]',
+          schemaPath: '.properties.disabledField',
+          listVisible: true,
+          filterable: true,
+          exportable: true,
+          statistical: false,
+          sortOrder: 1,
+          enabled: false,
+          createdAt: '2026-01-01T00:00:00Z',
+          updatedAt: '2026-01-01T00:00:00Z',
+        },
+      ]
+    )
+
+    expect(value.customData).toEqual({ content: 'hello' })
   })
 })
 

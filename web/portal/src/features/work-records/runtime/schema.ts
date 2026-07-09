@@ -1,4 +1,3 @@
-import { parseCustomData, toLocalDateTimeInput } from './api'
 import {
   type RuntimeDictOptions,
   type WorkRecord,
@@ -7,6 +6,7 @@ import {
   type WorkRecordRuntimeValidation,
   type WorkRecordStatus,
 } from './types'
+import { parseCustomData, toLocalDateTimeInput } from './api'
 
 export function buildInitialFormValue(input: {
   templates?: { id: string; currentVersionId: string | null }[]
@@ -57,6 +57,8 @@ export function validateRuntimeForm(
 
   if (!value.recordTime) {
     errors.push('记录时间不能为空')
+  } else if (Number.isNaN(new Date(value.recordTime).getTime())) {
+    errors.push('记录时间格式不正确')
   }
 
   for (const field of fields.filter((item) => item.enabled)) {
@@ -130,6 +132,27 @@ export function setCustomValue(
   }
 }
 
+export function sanitizeCustomDataForSubmit(
+  value: WorkRecordRuntimeFormValue,
+  fields: WorkRecordField[]
+): WorkRecordRuntimeFormValue {
+  const enabledCodes = new Set(
+    fields.filter((field) => field.enabled).map((field) => field.fieldCode)
+  )
+
+  const customData: Record<string, unknown> = {}
+  for (const [key, fieldValue] of Object.entries(value.customData)) {
+    if (enabledCodes.has(key) && !isEmptyValue(fieldValue)) {
+      customData[key] = fieldValue
+    }
+  }
+
+  return {
+    ...value,
+    customData,
+  }
+}
+
 export function statusLabel(status: WorkRecordStatus) {
   const labels: Record<WorkRecordStatus, string> = {
     draft: '草稿',
@@ -150,7 +173,9 @@ export function fieldDisplayValue(
   if (field.optionSource === 'dict' && field.dictCode) {
     const options = dictOptions[field.dictCode] ?? []
     if (Array.isArray(value)) {
-      return value.map((item) => optionLabel(options, String(item))).join('、')
+      return value
+        .map((item) => optionLabel(options, String(item)))
+        .join('、')
     }
     return optionLabel(options, String(value))
   }

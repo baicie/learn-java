@@ -8,8 +8,12 @@ import {
   updateWorkRecord,
 } from './api'
 import { RecordRuntimeForm } from './record-runtime-form'
-import { buildInitialFormValue } from './schema'
-import type { RuntimeDictOptions, WorkRecordRuntimeFormValue } from './types'
+import { buildInitialFormValue, sanitizeCustomDataForSubmit } from './schema'
+import type {
+  RuntimeDictOptions,
+  WorkRecordRuntimeFormValue,
+  WorkRecordTemplate,
+} from './types'
 
 export function EditRecordPage() {
   const navigate = useNavigate()
@@ -20,13 +24,17 @@ export function EditRecordPage() {
     queryFn: () => getWorkRecord(recordId),
   })
 
+  const [hydratedRecordId, setHydratedRecordId] = useState('')
   const [value, setValue] = useState<WorkRecordRuntimeFormValue>(
     buildInitialFormValue({})
   )
   const [dictOptions, setDictOptions] = useState<RuntimeDictOptions>({})
 
   const fieldsQuery = useQuery({
-    queryKey: ['work-record-runtime-fields', recordQuery.data],
+    queryKey: [
+      'work-record-runtime-fields',
+      recordQuery.data,
+    ],
     queryFn: () => {
       const record = recordQuery.data
       if (!record) throw new Error('record not loaded')
@@ -41,10 +49,13 @@ export function EditRecordPage() {
   })
 
   useEffect(() => {
-    if (!recordQuery.data) return
+    if (!recordQuery.data || hydratedRecordId === recordQuery.data.id) return
     const record = recordQuery.data
-    queueMicrotask(() => setValue(buildInitialFormValue({ record })))
-  }, [recordQuery.data])
+    queueMicrotask(() => {
+      setHydratedRecordId(record.id)
+      setValue(buildInitialFormValue({ record }))
+    })
+  }, [hydratedRecordId, recordQuery.data])
 
   useEffect(() => {
     if (!fieldsQuery.data) return
@@ -63,10 +74,15 @@ export function EditRecordPage() {
   })
 
   const submitWithStatus = (status: 'draft' | 'done') => {
-    updateMutation.mutate({
-      ...value,
-      status,
-    })
+    updateMutation.mutate(
+      sanitizeCustomDataForSubmit(
+        {
+          ...value,
+          status,
+        },
+        fieldsQuery.data ?? []
+      )
+    )
   }
 
   if (recordQuery.isLoading || fieldsQuery.isLoading) {
@@ -77,10 +93,27 @@ export function EditRecordPage() {
     return <main className='p-6 text-sm text-red-600'>记录不存在</main>
   }
 
+  const syntheticTemplate: WorkRecordTemplate = {
+    id: recordQuery.data.templateId,
+    tenantId: recordQuery.data.tenantId,
+    code: recordQuery.data.templateId,
+    name: recordQuery.data.templateId,
+    description: null,
+    status: 'published',
+    enabled: true,
+    currentVersionId: recordQuery.data.templateVersionId,
+    draftSchemaJson: '{}',
+    draftDesignerJson: '{}',
+    createdBy: recordQuery.data.creatorId,
+    createdAt: recordQuery.data.createdAt,
+    updatedAt: recordQuery.data.updatedAt,
+    deletedAt: null,
+  }
+
   return (
     <RecordRuntimeForm
       mode='edit'
-      templates={[]}
+      templates={[syntheticTemplate]}
       fields={fieldsQuery.data ?? []}
       dictOptions={dictOptions}
       value={value}

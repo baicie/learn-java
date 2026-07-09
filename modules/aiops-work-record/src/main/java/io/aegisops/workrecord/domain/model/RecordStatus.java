@@ -1,15 +1,20 @@
 package io.aegisops.workrecord.domain.model;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
+
 public enum RecordStatus {
   DRAFT,
   PROCESSING,
   DONE,
   ARCHIVED;
 
+  @JsonValue
   public String value() {
     return name().toLowerCase();
   }
 
+  @JsonCreator
   public static RecordStatus from(String value) {
     if (value == null || value.isBlank()) {
       return DRAFT;

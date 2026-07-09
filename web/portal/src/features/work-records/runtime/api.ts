@@ -13,8 +13,17 @@ import {
   type WorkRecordTemplate,
 } from './types'
 
-const statusSchema = z.enum(WORK_RECORD_STATUSES)
-const fieldTypeSchema = z.enum(WORK_RECORD_FIELD_TYPES)
+const lower = (value: unknown) =>
+  typeof value === 'string' ? value.toLowerCase() : value
+
+const statusSchema = z.preprocess(lower, z.enum(WORK_RECORD_STATUSES))
+const fieldTypeSchema = z.preprocess(lower, z.enum(WORK_RECORD_FIELD_TYPES))
+const optionSourceSchema = z.preprocess(lower, z.enum(['static', 'dict']))
+
+const templateStatusSchema = z.preprocess(
+  lower,
+  z.enum(['draft', 'published', 'disabled', 'archived'])
+)
 
 const templateSchema = z.object({
   id: z.string(),
@@ -22,7 +31,7 @@ const templateSchema = z.object({
   code: z.string(),
   name: z.string(),
   description: z.string().nullable(),
-  status: z.enum(['draft', 'published', 'disabled', 'archived']),
+  status: templateStatusSchema,
   enabled: z.boolean(),
   currentVersionId: z.string().nullable(),
   draftSchemaJson: z.string(),
@@ -43,7 +52,7 @@ const recordFieldSchema = z.object({
   fieldType: fieldTypeSchema,
   required: z.boolean(),
   defaultValue: z.string().nullable(),
-  optionSource: z.enum(['static', 'dict']),
+  optionSource: optionSourceSchema,
   dictCode: z.string().nullable(),
   optionsJson: z.string(),
   schemaPath: z.string().nullable(),
@@ -79,6 +88,7 @@ export async function listPublishedTemplates(): Promise<WorkRecordTemplate[]> {
   const { data } = await apiClient.get('/api/work-record/templates', {
     params: { includeDisabled: false },
   })
+
   return apiResponseSchema(z.array(templateSchema))
     .parse(data)
     .data.filter(
@@ -139,7 +149,6 @@ export async function loadRuntimeDictOptions(
   const dictCodes = Array.from(
     new Set(
       fields
-        .filter((field) => field.enabled)
         .map((field) => field.dictCode)
         .filter((value): value is string => Boolean(value))
     )
@@ -179,10 +188,18 @@ export function toLocalDateTimeInput(value?: string | null) {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return ''
   const pad = (n: number) => String(n).padStart(2, '0')
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(
+    date.getDate()
+  )}T${pad(date.getHours())}:${pad(date.getMinutes())}`
 }
 
 export function toOffsetDateTime(value: string) {
-  if (!value) return new Date().toISOString()
-  return new Date(value).toISOString()
+  if (!value) {
+    throw new Error('recordTime is required')
+  }
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) {
+    throw new Error('invalid recordTime')
+  }
+  return date.toISOString()
 }
