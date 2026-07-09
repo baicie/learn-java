@@ -1,4 +1,10 @@
-可以，既然当前基本不可用，那路线就不要“修修补补”，而是按 **企业级重做 / 重构落地** 来排。基于你现在的 portal-first 设计文档，现有目标是 `web/portal + portal 原生字段设计器 + Formily runtime + 字段索引 + 字典 + 工作日历 + 记录列表筛选导出` 这一套。
+---
+title: 工作记录阶段对话记录
+type: research
+status: draft
+created: 2026-07-09
+updated: 2026-07-09
+---
 
 # 企业级重做路线图
 
@@ -27,6 +33,28 @@
 4. docs/record/permission-contract.md
 5. docs/record/acceptance-checklist.md
 ```
+
+---
+
+1. 冻结 feat/record-doc-portal 当前实现
+2. 保留现有代码作为参考，不直接继续扩展
+3. 明确 web/portal 是唯一前端入口
+4. 明确 web/console 不再新增工作记录功能
+5. 明确第一版不做微前端、不做微服务、不做完整工单流
+6. 重新整理接口契约、权限码、表结构、前端路由
+7. 建立 record 模块验收清单
+
+````
+
+交付物：
+
+```text
+1. docs/record/enterprise-roadmap.md
+2. docs/record/api-contract.md
+3. docs/record/schema-contract.md
+4. docs/record/permission-contract.md
+5. docs/record/acceptance-checklist.md
+````
 
 ---
 

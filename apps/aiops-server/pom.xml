@@ -201,6 +201,83 @@
 
   <profiles>
     <profile>
+      <id>with-portal</id>
+
+      <properties>
+        <aiops.portal.skipInstall>false</aiops.portal.skipInstall>
+        <aiops.portal.skipBuild>false</aiops.portal.skipBuild>
+      </properties>
+
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-resources-plugin</artifactId>
+            <version>3.3.1</version>
+            <executions>
+              <execution>
+                <id>copy-portal-dist</id>
+                <phase>process-resources</phase>
+                <goals>
+                  <goal>copy-resources</goal>
+                </goals>
+                <configuration>
+                  <outputDirectory>${project.build.outputDirectory}/static</outputDirectory>
+                  <resources>
+                    <resource>
+                      <directory>${maven.multiModuleProjectDirectory}/web/portal/dist</directory>
+                      <filtering>false</filtering>
+                    </resource>
+                  </resources>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>exec-maven-plugin</artifactId>
+            <version>3.5.0</version>
+            <executions>
+              <execution>
+                <id>portal-pnpm-install</id>
+                <phase>generate-resources</phase>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+                <configuration>
+                  <skip>${aiops.portal.skipInstall}</skip>
+                  <workingDirectory>${maven.multiModuleProjectDirectory}</workingDirectory>
+                  <executable>pnpm</executable>
+                  <arguments>
+                    <argument>install</argument>
+                    <argument>--frozen-lockfile</argument>
+                  </arguments>
+                </configuration>
+              </execution>
+
+              <execution>
+                <id>portal-build</id>
+                <phase>generate-resources</phase>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+                <configuration>
+                  <skip>${aiops.portal.skipBuild}</skip>
+                  <workingDirectory>${maven.multiModuleProjectDirectory}/web/portal</workingDirectory>
+                  <executable>pnpm</executable>
+                  <arguments>
+                    <argument>build</argument>
+                  </arguments>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
+    <profile>
       <id>with-console</id>
 
       <properties>
@@ -210,7 +287,6 @@
 
       <build>
         <plugins>
-
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-resources-plugin</artifactId>
@@ -218,10 +294,10 @@
             <executions>
               <execution>
                 <id>copy-console-dist</id>
+                <phase>process-resources</phase>
                 <goals>
                   <goal>copy-resources</goal>
                 </goals>
-                <phase>process-resources</phase>
                 <configuration>
                   <outputDirectory>${project.build.outputDirectory}/static</outputDirectory>
                   <resources>
@@ -234,6 +310,7 @@
               </execution>
             </executions>
           </plugin>
+
           <plugin>
             <groupId>org.codehaus.mojo</groupId>
             <artifactId>exec-maven-plugin</artifactId>
@@ -241,10 +318,10 @@
             <executions>
               <execution>
                 <id>console-pnpm-install</id>
+                <phase>generate-resources</phase>
                 <goals>
                   <goal>exec</goal>
                 </goals>
-                <phase>generate-resources</phase>
                 <configuration>
                   <skip>${aiops.console.skipInstall}</skip>
                   <workingDirectory>${maven.multiModuleProjectDirectory}</workingDirectory>
@@ -258,10 +335,10 @@
 
               <execution>
                 <id>console-build</id>
+                <phase>generate-resources</phase>
                 <goals>
                   <goal>exec</goal>
                 </goals>
-                <phase>generate-resources</phase>
                 <configuration>
                   <skip>${aiops.console.skipBuild}</skip>
                   <workingDirectory>${maven.multiModuleProjectDirectory}/web/console</workingDirectory>

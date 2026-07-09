@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# Docs CI - validates docs structure, work-record Phase 0 contracts, and frontmatter.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -16,4 +15,5 @@ fi
 pnpm install --frozen-lockfile
 pnpm exec tsx scripts/ci/docs.ts
 pnpm exec tsx scripts/ci/check-record-phase0-contracts.ts
+pnpm exec tsx scripts/ci/check-record-phase1-baseline.ts
 pnpm exec tsx scripts/docs.ts check

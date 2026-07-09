@@ -1,10 +1,5 @@
-import { RecordForm } from './components/record-form'
-import { WorkRecordsLayout } from './components/work-records-layout'
+import { WorkRecordFeatureFrozen } from './components/work-record-feature-frozen'
 
 export function NewWorkRecord() {
-  return (
-    <WorkRecordsLayout titleKey='workRecords.new.title'>
-      <RecordForm />
-    </WorkRecordsLayout>
-  )
+  return <WorkRecordFeatureFrozen surface='new' />
 }
