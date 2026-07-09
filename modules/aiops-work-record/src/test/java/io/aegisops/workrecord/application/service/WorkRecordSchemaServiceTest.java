@@ -4,23 +4,30 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.aegisops.workrecord.domain.model.FieldType;
-import io.aegisops.workrecord.domain.model.OptionSource;
+import io.aegisops.workrecord.application.schema.WorkRecordSchemaNormalizer;
+import io.aegisops.workrecord.application.schema.WorkRecordSchemaParser;
+import io.aegisops.workrecord.application.schema.WorkRecordSchemaValidator;
 import org.junit.jupiter.api.Test;
 
 class WorkRecordSchemaServiceTest {
-  private final WorkRecordSchemaService service = new WorkRecordSchemaService(new ObjectMapper());
+  private final ObjectMapper objectMapper = new ObjectMapper();
+  private final WorkRecordSchemaValidator validator = new WorkRecordSchemaValidator();
+  private final WorkRecordSchemaParser parser = new WorkRecordSchemaParser(objectMapper, validator);
+  private final WorkRecordSchemaNormalizer normalizer =
+      new WorkRecordSchemaNormalizer(objectMapper);
+  private final WorkRecordSchemaService service =
+      new WorkRecordSchemaService(parser, validator, normalizer);
 
   @Test
-  void shouldExtractXWorkRecordFields() {
-    var fields =
-        service.extractFields(
+  void shouldPrepareSchemaForPublish() throws Exception {
+    var document =
+        service.prepareForPublish(
             """
             {
               "type": "object",
+              "required": ["priority"],
               "properties": {
                 "priority": {
-                  "type": "string",
                   "title": "优先级",
                   "x-component": "Select",
                   "x-work-record": {
@@ -30,41 +37,65 @@ class WorkRecordSchemaServiceTest {
                     "dictCode": "record_priority",
                     "listVisible": true,
                     "filterable": true,
-                    "exportable": true
+                    "exportable": true,
+                    "statistical": true
                   }
                 }
               }
             }
-            """);
+            """,
+            "{\"layout\":\"simple\"}");
 
-    assertThat(fields).hasSize(1);
-    assertThat(fields.get(0).fieldCode()).isEqualTo("priority");
-    assertThat(fields.get(0).fieldType()).isEqualTo(FieldType.SELECT);
-    assertThat(fields.get(0).optionSource()).isEqualTo(OptionSource.DICT);
-    assertThat(fields.get(0).dictCode()).isEqualTo("record_priority");
+    assertThat(document.schemaVersion()).isEqualTo(1);
+    assertThat(document.fields()).hasSize(1);
+    assertThat(document.fieldIndexJson()).contains("\"fieldCode\":\"priority\"");
+    assertThat(document.normalizedSchemaJson()).contains("\"x-work-record-schema-version\":1");
+
+    var designer = objectMapper.readTree(document.normalizedDesignerJson());
+    assertThat(designer.path("layout").asText()).isEqualTo("simple");
   }
 
   @Test
-  void shouldRejectDictFieldWithoutDictCode() {
+  void shouldRejectFlatProtocolBeforePublish() {
     assertThatThrownBy(
             () ->
-                service.extractFields(
+                service.prepareForPublish(
                     """
                     {
                       "type": "object",
                       "properties": {
                         "priority": {
                           "title": "优先级",
+                          "x-work-record-field-code": "priority"
+                        }
+                      }
+                    }
+                    """,
+                    "{}"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("flat work-record schema extension is forbidden");
+  }
+
+  @Test
+  void shouldRejectUnsupportedFieldType() {
+    assertThatThrownBy(
+            () ->
+                service.prepareForPublish(
+                    """
+                    {
+                      "type": "object",
+                      "properties": {
+                        "priority": {
                           "x-work-record": {
                             "fieldCode": "priority",
-                            "fieldType": "select",
-                            "optionSource": "dict"
+                            "fieldType": "radio"
                           }
                         }
                       }
                     }
-                    """))
+                    """,
+                    "{}"))
         .isInstanceOf(IllegalArgumentException.class)
-        .hasMessageContaining("dictCode is required");
+        .hasMessageContaining("unsupported fieldType");
   }
 }

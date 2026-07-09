@@ -3,10 +3,9 @@ package io.aegisops.workrecord.application.service;
 import io.aegisops.workrecord.application.command.PublishTemplateCommand;
 import io.aegisops.workrecord.application.port.WorkRecordTemplateRepository;
 import io.aegisops.workrecord.application.port.WorkRecordTemplateVersionRepository;
-import io.aegisops.workrecord.domain.model.FormFieldDescriptor;
+import io.aegisops.workrecord.application.schema.WorkRecordSchemaDocument;
 import io.aegisops.workrecord.domain.model.WorkRecordTemplate;
 import io.aegisops.workrecord.domain.model.WorkRecordTemplateVersion;
-import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,11 +38,9 @@ public class WorkRecordTemplateVersionService {
             .find(tenantId, command.templateId())
             .orElseThrow(() -> new IllegalArgumentException("template not found"));
 
-    String schema = schemaService.normalizeObject(template.draftSchemaJson(), "schemaJson");
-    String designer = schemaService.normalizeObject(template.draftDesignerJson(), "designerJson");
+    WorkRecordSchemaDocument document =
+        schemaService.prepareForPublish(template.draftSchemaJson(), template.draftDesignerJson());
 
-    List<FormFieldDescriptor> descriptors = schemaService.extractFields(schema);
-    String fieldIndexJson = schemaService.toFieldIndexJson(descriptors);
     int versionNo = versionRepository.nextVersionNo(tenantId, template.id());
 
     WorkRecordTemplateVersion version =
@@ -52,12 +49,12 @@ public class WorkRecordTemplateVersionService {
             template.id(),
             versionNo,
             command.versionName(),
-            schema,
-            designer,
-            fieldIndexJson,
+            document.normalizedSchemaJson(),
+            document.normalizedDesignerJson(),
+            document.fieldIndexJson(),
             actor);
 
-    fieldIndexService.createForVersion(tenantId, template.id(), version.id(), descriptors);
+    fieldIndexService.createForVersion(tenantId, template.id(), version.id(), document.fields());
     templateRepository.updateCurrentVersion(tenantId, template.id(), version.id());
 
     auditService.record(
@@ -68,7 +65,11 @@ public class WorkRecordTemplateVersionService {
         template.id(),
         "work_record.template.publish",
         actor,
-        "{\"versionNo\":" + version.versionNo() + "}");
+        "{\"versionNo\":"
+            + version.versionNo()
+            + ",\"schemaVersion\":"
+            + document.schemaVersion()
+            + "}");
     return version;
   }
 }

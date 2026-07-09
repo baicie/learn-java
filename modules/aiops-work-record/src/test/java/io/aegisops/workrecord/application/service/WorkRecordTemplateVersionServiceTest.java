@@ -25,7 +25,12 @@ class WorkRecordTemplateVersionServiceTest {
       Mockito.mock(WorkRecordTemplateVersionRepository.class);
   private final WorkRecordFieldIndexRepository fieldRepository =
       Mockito.mock(WorkRecordFieldIndexRepository.class);
-  private final WorkRecordSchemaService schemaService = new WorkRecordSchemaService(new ObjectMapper());
+  private final WorkRecordSchemaService schemaService =
+      new WorkRecordSchemaService(
+          new io.aegisops.workrecord.application.schema.WorkRecordSchemaParser(
+              new ObjectMapper(), new io.aegisops.workrecord.application.schema.WorkRecordSchemaValidator()),
+          new io.aegisops.workrecord.application.schema.WorkRecordSchemaValidator(),
+          new io.aegisops.workrecord.application.schema.WorkRecordSchemaNormalizer(new ObjectMapper()));
   private final WorkRecordFieldIndexService fieldIndexService =
       new WorkRecordFieldIndexService(fieldRepository);
   private final WorkRecordAuditService auditService =
