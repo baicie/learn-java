@@ -44,6 +44,7 @@ import { Route as AuthenticatedSettingsAppearanceRouteImport } from './routes/_a
 import { Route as AuthenticatedSettingsAccountRouteImport } from './routes/_authenticated/settings/account'
 import { Route as AuthenticatedPlatformRolesRouteImport } from './routes/_authenticated/platform/roles'
 import { Route as AuthenticatedPlatformDictionariesRouteImport } from './routes/_authenticated/platform/dictionaries'
+import { Route as AuthenticatedPlatformCalendarsRouteImport } from './routes/_authenticated/platform/calendars'
 import { Route as AuthenticatedErrorsErrorRouteImport } from './routes/_authenticated/errors/$error'
 import { Route as AuthenticatedWorkRecordsRecordIdEditRouteImport } from './routes/_authenticated/work-records/$recordId.edit'
 
@@ -233,6 +234,12 @@ const AuthenticatedPlatformDictionariesRoute =
     path: '/platform/dictionaries',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedPlatformCalendarsRoute =
+  AuthenticatedPlatformCalendarsRouteImport.update({
+    id: '/platform/calendars',
+    path: '/platform/calendars',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedErrorsErrorRoute =
   AuthenticatedErrorsErrorRouteImport.update({
     id: '/errors/$error',
@@ -261,6 +268,7 @@ export interface FileRoutesByFullPath {
   '/500': typeof errors500Route
   '/503': typeof errors503Route
   '/errors/$error': typeof AuthenticatedErrorsErrorRoute
+  '/platform/calendars': typeof AuthenticatedPlatformCalendarsRoute
   '/platform/dictionaries': typeof AuthenticatedPlatformDictionariesRoute
   '/platform/roles': typeof AuthenticatedPlatformRolesRoute
   '/settings/account': typeof AuthenticatedSettingsAccountRoute
@@ -296,6 +304,7 @@ export interface FileRoutesByTo {
   '/503': typeof errors503Route
   '/': typeof AuthenticatedIndexRoute
   '/errors/$error': typeof AuthenticatedErrorsErrorRoute
+  '/platform/calendars': typeof AuthenticatedPlatformCalendarsRoute
   '/platform/dictionaries': typeof AuthenticatedPlatformDictionariesRoute
   '/platform/roles': typeof AuthenticatedPlatformRolesRoute
   '/settings/account': typeof AuthenticatedSettingsAccountRoute
@@ -336,6 +345,7 @@ export interface FileRoutesById {
   '/(errors)/503': typeof errors503Route
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/errors/$error': typeof AuthenticatedErrorsErrorRoute
+  '/_authenticated/platform/calendars': typeof AuthenticatedPlatformCalendarsRoute
   '/_authenticated/platform/dictionaries': typeof AuthenticatedPlatformDictionariesRoute
   '/_authenticated/platform/roles': typeof AuthenticatedPlatformRolesRoute
   '/_authenticated/settings/account': typeof AuthenticatedSettingsAccountRoute
@@ -374,6 +384,7 @@ export interface FileRouteTypes {
     | '/500'
     | '/503'
     | '/errors/$error'
+    | '/platform/calendars'
     | '/platform/dictionaries'
     | '/platform/roles'
     | '/settings/account'
@@ -409,6 +420,7 @@ export interface FileRouteTypes {
     | '/503'
     | '/'
     | '/errors/$error'
+    | '/platform/calendars'
     | '/platform/dictionaries'
     | '/platform/roles'
     | '/settings/account'
@@ -448,6 +460,7 @@ export interface FileRouteTypes {
     | '/(errors)/503'
     | '/_authenticated/'
     | '/_authenticated/errors/$error'
+    | '/_authenticated/platform/calendars'
     | '/_authenticated/platform/dictionaries'
     | '/_authenticated/platform/roles'
     | '/_authenticated/settings/account'
@@ -732,6 +745,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPlatformDictionariesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/platform/calendars': {
+      id: '/_authenticated/platform/calendars'
+      path: '/platform/calendars'
+      fullPath: '/platform/calendars'
+      preLoaderRoute: typeof AuthenticatedPlatformCalendarsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/errors/$error': {
       id: '/_authenticated/errors/$error'
       path: '/errors/$error'
@@ -791,6 +811,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedSettingsRouteRoute: typeof AuthenticatedSettingsRouteRouteWithChildren
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedErrorsErrorRoute: typeof AuthenticatedErrorsErrorRoute
+  AuthenticatedPlatformCalendarsRoute: typeof AuthenticatedPlatformCalendarsRoute
   AuthenticatedPlatformDictionariesRoute: typeof AuthenticatedPlatformDictionariesRoute
   AuthenticatedPlatformRolesRoute: typeof AuthenticatedPlatformRolesRoute
   AuthenticatedWorkRecordsRecordIdRoute: typeof AuthenticatedWorkRecordsRecordIdRouteWithChildren
@@ -808,6 +829,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedSettingsRouteRoute: AuthenticatedSettingsRouteRouteWithChildren,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedErrorsErrorRoute: AuthenticatedErrorsErrorRoute,
+  AuthenticatedPlatformCalendarsRoute: AuthenticatedPlatformCalendarsRoute,
   AuthenticatedPlatformDictionariesRoute:
     AuthenticatedPlatformDictionariesRoute,
   AuthenticatedPlatformRolesRoute: AuthenticatedPlatformRolesRoute,
