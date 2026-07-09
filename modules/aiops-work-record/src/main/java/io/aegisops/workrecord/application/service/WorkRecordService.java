@@ -1,6 +1,8 @@
 package io.aegisops.workrecord.application.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.aegisops.security.UserPrincipal;
 import io.aegisops.workrecord.application.command.CreateRecordCommand;
 import io.aegisops.workrecord.application.command.UpdateRecordCommand;
 import io.aegisops.workrecord.application.port.WorkRecordFieldIndexRepository;
@@ -10,7 +12,6 @@ import io.aegisops.workrecord.domain.model.RecordStatus;
 import io.aegisops.workrecord.domain.model.WorkRecord;
 import io.aegisops.workrecord.domain.model.WorkRecordField;
 import io.aegisops.workrecord.domain.model.WorkRecordTemplateVersion;
-import io.aegisops.workrecord.domain.rule.WorkRecordValueValidator;
 import java.time.OffsetDateTime;
 import java.util.List;
 import org.springframework.stereotype.Service;
@@ -23,6 +24,7 @@ public class WorkRecordService {
   private final WorkRecordFieldIndexRepository fieldRepository;
   private final WorkRecordValueValidator valueValidator;
   private final WorkRecordAuditService auditService;
+  private final WorkRecordPermissionService permissionService;
   private final ObjectMapper objectMapper;
 
   public WorkRecordService(
@@ -31,17 +33,22 @@ public class WorkRecordService {
       WorkRecordFieldIndexRepository fieldRepository,
       WorkRecordValueValidator valueValidator,
       WorkRecordAuditService auditService,
+      WorkRecordPermissionService permissionService,
       ObjectMapper objectMapper) {
     this.recordRepository = recordRepository;
     this.versionRepository = versionRepository;
     this.fieldRepository = fieldRepository;
     this.valueValidator = valueValidator;
     this.auditService = auditService;
+    this.permissionService = permissionService;
     this.objectMapper = objectMapper;
   }
 
   @Transactional
-  public WorkRecord create(String tenantId, CreateRecordCommand command, String creatorId) {
+  public WorkRecord create(String tenantId, CreateRecordCommand command, UserPrincipal user) {
+    if (command == null) {
+      throw new IllegalArgumentException("record request is required");
+    }
     requireText(command.templateId(), "templateId");
     requireText(command.title(), "title");
 
@@ -64,7 +71,8 @@ public class WorkRecordService {
             builtin,
             custom);
 
-    WorkRecord record = recordRepository.create(tenantId, normalized, creatorId);
+    String actorId = actorId(user);
+    WorkRecord record = recordRepository.create(tenantId, normalized, actorId);
     auditService.record(
         tenantId,
         record.id(),
@@ -72,18 +80,24 @@ public class WorkRecordService {
         "work_record",
         record.id(),
         "work_record.record.create",
-        creatorId,
+        actorId,
         "{}");
     return record;
   }
 
   @Transactional
   public WorkRecord update(
-      String tenantId, String recordId, UpdateRecordCommand command, String actor) {
+      String tenantId, String recordId, UpdateRecordCommand command, UserPrincipal user) {
+    if (command == null) {
+      throw new IllegalArgumentException("update request is required");
+    }
+
     WorkRecord existing =
         recordRepository
             .find(tenantId, recordId)
             .orElseThrow(() -> new IllegalArgumentException("work record not found"));
+
+    permissionService.requireWrite(user, existing);
 
     String builtin =
         command.builtinDataJson() == null ? null : normalizeObject(command.builtinDataJson());
@@ -113,17 +127,20 @@ public class WorkRecordService {
         "work_record",
         updated.id(),
         "work_record.record.update",
-        actor,
+        actorId(user),
         "{}");
     return updated;
   }
 
   @Transactional
-  public void delete(String tenantId, String recordId, String actor) {
+  public void delete(String tenantId, String recordId, UserPrincipal user) {
     WorkRecord existing =
         recordRepository
             .find(tenantId, recordId)
             .orElseThrow(() -> new IllegalArgumentException("work record not found"));
+
+    permissionService.requireDelete(user, existing);
+
     recordRepository.softDelete(tenantId, recordId);
     auditService.record(
         tenantId,
@@ -132,7 +149,7 @@ public class WorkRecordService {
         "work_record",
         existing.id(),
         "work_record.record.delete",
-        actor,
+        actorId(user),
         "{}");
   }
 
@@ -145,9 +162,14 @@ public class WorkRecordService {
   private WorkRecordTemplateVersion resolveVersion(
       String tenantId, String templateId, String templateVersionId) {
     if (templateVersionId != null && !templateVersionId.isBlank()) {
-      return versionRepository
-          .find(tenantId, templateVersionId)
-          .orElseThrow(() -> new IllegalArgumentException("template version not found"));
+      WorkRecordTemplateVersion version =
+          versionRepository
+              .find(tenantId, templateVersionId)
+              .orElseThrow(() -> new IllegalArgumentException("template version not found"));
+      if (!templateId.equals(version.templateId())) {
+        throw new IllegalArgumentException("template version does not belong to template");
+      }
+      return version;
     }
     return versionRepository
         .findCurrent(tenantId, templateId)
@@ -157,8 +179,13 @@ public class WorkRecordService {
 
   private String normalizeObject(String json) {
     try {
-      return objectMapper.writeValueAsString(
-          objectMapper.readTree(json == null || json.isBlank() ? "{}" : json));
+      JsonNode node = objectMapper.readTree(json == null || json.isBlank() ? "{}" : json);
+      if (!node.isObject()) {
+        throw new IllegalArgumentException("json must be object");
+      }
+      return objectMapper.writeValueAsString(node);
+    } catch (IllegalArgumentException ex) {
+      throw ex;
     } catch (Exception ex) {
       throw new IllegalArgumentException("invalid json object", ex);
     }
@@ -168,5 +195,9 @@ public class WorkRecordService {
     if (value == null || value.isBlank()) {
       throw new IllegalArgumentException(field + " is required");
     }
+  }
+
+  private String actorId(UserPrincipal user) {
+    return user == null || user.id() == null || user.id().isBlank() ? "system" : user.id();
   }
 }

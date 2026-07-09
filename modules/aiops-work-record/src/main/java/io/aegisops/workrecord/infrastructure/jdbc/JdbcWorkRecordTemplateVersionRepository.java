@@ -6,6 +6,7 @@ import io.aegisops.workrecord.domain.model.WorkRecordTemplateVersion;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.OffsetDateTime;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -46,6 +47,19 @@ public class JdbcWorkRecordTemplateVersionRepository implements WorkRecordTempla
       String fieldIndexJson,
       String actor) {
     String id = Ids.newId();
+
+    Map<String, Object> params = new HashMap<>();
+    params.put("id", id);
+    params.put("tenantId", tenantId);
+    params.put("templateId", templateId);
+    params.put("versionNo", versionNo);
+    params.put("versionName", versionName);
+    params.put("schema", blankJson(schemaJson));
+    params.put("designer", blankJson(designerJson));
+    params.put(
+        "fieldIndex", fieldIndexJson == null || fieldIndexJson.isBlank() ? "[]" : fieldIndexJson);
+    params.put("actor", actorOrSystem(actor));
+
     jdbc.update(
         """
         insert into work_record.wr_template_version(
@@ -53,18 +67,9 @@ public class JdbcWorkRecordTemplateVersionRepository implements WorkRecordTempla
           schema_json, designer_json, field_index_json, published_by)
         values (
           :id, :tenantId, :templateId, :versionNo, :versionName,
-          :schema::jsonb, :designer::jsonb, :fieldIndex::jsonb, :actor)
+          cast(:schema as jsonb), cast(:designer as jsonb), cast(:fieldIndex as jsonb), :actor)
         """,
-        Map.of(
-            "id", id,
-            "tenantId", tenantId,
-            "templateId", templateId,
-            "versionNo", versionNo,
-            "versionName", nullable(versionName),
-            "schema", blankJson(schemaJson),
-            "designer", blankJson(designerJson),
-            "fieldIndex", fieldIndexJson == null || fieldIndexJson.isBlank() ? "[]" : fieldIndexJson,
-            "actor", actorOrSystem(actor)));
+        params);
     return find(tenantId, id).orElseThrow();
   }
 
@@ -134,10 +139,6 @@ public class JdbcWorkRecordTemplateVersionRepository implements WorkRecordTempla
         rs.getString("published_by"),
         rs.getObject("published_at", OffsetDateTime.class),
         rs.getObject("created_at", OffsetDateTime.class));
-  }
-
-  private Object nullable(Object value) {
-    return value == null ? null : value;
   }
 
   private String blankJson(String value) {

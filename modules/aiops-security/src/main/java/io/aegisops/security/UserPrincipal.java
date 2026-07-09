@@ -45,6 +45,7 @@ public record UserPrincipal(
           "work-record:read:self",
           "work-record:read:all",
           "work-record:write",
+          "work-record:delete",
           "work-record:template:read",
           "work-record:template:write",
           "work-record:export");
@@ -65,6 +66,7 @@ public record UserPrincipal(
           "platform:dict:read",
           "work-record:read:self",
           "work-record:write",
+          "work-record:delete",
           "work-record:template:read");
     }
     return Set.of();

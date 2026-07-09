@@ -135,9 +135,29 @@ public class JdbcWorkRecordRepository implements WorkRecordRepository {
       where.append(" and template_version_id = :templateVersionId ");
       params.put("templateVersionId", query.templateVersionId());
     }
+    if (query.statuses() != null && !query.statuses().isEmpty()) {
+      where.append(" and status in (:statuses) ");
+      params.put("statuses", query.statuses());
+    }
     if (query.keyword() != null && !query.keyword().isBlank()) {
       where.append(" and title ilike :keyword ");
       params.put("keyword", "%" + query.keyword() + "%");
+    }
+    if (query.recordTimeFrom() != null) {
+      where.append(" and record_time >= :recordTimeFrom ");
+      params.put("recordTimeFrom", query.recordTimeFrom());
+    }
+    if (query.recordTimeTo() != null) {
+      where.append(" and record_time <= :recordTimeTo ");
+      params.put("recordTimeTo", query.recordTimeTo());
+    }
+    if (query.creatorId() != null && !query.creatorId().isBlank()) {
+      where.append(" and creator_id = :creatorId ");
+      params.put("creatorId", query.creatorId());
+    }
+    if (query.ownerId() != null && !query.ownerId().isBlank()) {
+      where.append(" and owner_id = :ownerId ");
+      params.put("ownerId", query.ownerId());
     }
 
     Long total =

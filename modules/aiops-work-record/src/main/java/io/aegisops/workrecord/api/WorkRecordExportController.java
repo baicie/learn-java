@@ -5,14 +5,19 @@ import io.aegisops.security.UserPrincipal;
 import io.aegisops.workrecord.api.dto.RecordRequests.RecordQueryRequest;
 import io.aegisops.workrecord.application.command.RecordQuery;
 import io.aegisops.workrecord.application.service.WorkRecordExportService;
+import java.nio.charset.StandardCharsets;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/work-record")
+@RequestMapping("/api/work-record/records")
 public class WorkRecordExportController {
   private final WorkRecordExportService exportService;
 
@@ -22,7 +27,7 @@ public class WorkRecordExportController {
 
   @PostMapping("/export")
   @PreAuthorize("hasAuthority('work-record:export')")
-  public byte[] exportCsv(
+  public ResponseEntity<byte[]> exportCsv(
       @RequestBody RecordQueryRequest request, @AuthenticationPrincipal UserPrincipal user) {
     RecordQuery query =
         new RecordQuery(
@@ -41,6 +46,9 @@ public class WorkRecordExportController {
 
     byte[] csv = exportService.exportCsv(TenantContext.requireTenantId(), query, user);
 
-    return csv;
+    return ResponseEntity.ok()
+        .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"work-records.csv\"")
+        .contentType(new MediaType("text", "csv", StandardCharsets.UTF_8))
+        .body(csv);
   }
 }

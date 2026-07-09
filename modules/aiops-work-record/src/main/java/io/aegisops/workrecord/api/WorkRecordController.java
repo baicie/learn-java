@@ -71,7 +71,7 @@ public class WorkRecordController {
                 request.recordTime(),
                 request.builtinDataJson(),
                 request.customDataJson()),
-            user == null ? "system" : user.id()));
+            user));
   }
 
   @PutMapping("/{recordId}")
@@ -91,15 +91,14 @@ public class WorkRecordController {
                 request.recordTime(),
                 request.builtinDataJson(),
                 request.customDataJson()),
-            user == null ? "system" : user.id()));
+            user));
   }
 
   @DeleteMapping("/{recordId}")
   @PreAuthorize("hasAuthority('work-record:delete')")
   public ApiResponse<Void> delete(
       @PathVariable String recordId, @AuthenticationPrincipal UserPrincipal user) {
-    recordService.delete(
-        TenantContext.requireTenantId(), recordId, user == null ? "system" : user.id());
+    recordService.delete(TenantContext.requireTenantId(), recordId, user);
     return ApiResponse.ok(null);
   }
 }

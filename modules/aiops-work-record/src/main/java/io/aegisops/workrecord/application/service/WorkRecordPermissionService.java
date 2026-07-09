@@ -10,7 +10,8 @@ public class WorkRecordPermissionService {
     if (user == null) {
       return false;
     }
-    return user.getAuthorities().stream().anyMatch(item -> authority.equals(item.getAuthority()));
+    return user.getAuthorities().stream()
+        .anyMatch(item -> authority.equals(item.getAuthority()));
   }
 
   public boolean canReadAll(UserPrincipal user) {
@@ -47,16 +48,31 @@ public class WorkRecordPermissionService {
   }
 
   public void requireWrite(UserPrincipal user, WorkRecord record) {
+    if (user == null || !canWrite(user)) {
+      throw new SecurityException("not allowed to update this work record");
+    }
     if (canReadAll(user)) {
       return;
     }
-    if (user != null
-        && canWrite(user)
-        && user.id() != null
+    if (user.id() != null
         && (user.id().equals(record.creatorId()) || user.id().equals(record.ownerId()))) {
       return;
     }
     throw new SecurityException("not allowed to update this work record");
+  }
+
+  public void requireDelete(UserPrincipal user, WorkRecord record) {
+    if (user == null || !canDelete(user)) {
+      throw new SecurityException("not allowed to delete this work record");
+    }
+    if (canReadAll(user)) {
+      return;
+    }
+    if (user.id() != null
+        && (user.id().equals(record.creatorId()) || user.id().equals(record.ownerId()))) {
+      return;
+    }
+    throw new SecurityException("not allowed to delete this work record");
   }
 
   public void requireExport(UserPrincipal user) {

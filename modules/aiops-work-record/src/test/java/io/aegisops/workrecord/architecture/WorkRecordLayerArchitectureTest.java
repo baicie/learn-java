@@ -10,13 +10,17 @@ class WorkRecordLayerArchitectureTest {
       new ClassFileImporter().importPackages("io.aegisops.workrecord");
 
   @Test
-  void domainShouldNotDependOnSpring() {
+  void domainShouldNotDependOnSpringApplicationApiOrInfrastructure() {
     noClasses()
         .that()
         .resideInAPackage("..workrecord.domain..")
         .should()
         .dependOnClassesThat()
-        .resideInAnyPackage("org.springframework..")
+        .resideInAnyPackage(
+            "org.springframework..",
+            "..workrecord.application..",
+            "..workrecord.api..",
+            "..workrecord.infrastructure..")
         .allowEmptyShould(true)
         .check(classes);
   }

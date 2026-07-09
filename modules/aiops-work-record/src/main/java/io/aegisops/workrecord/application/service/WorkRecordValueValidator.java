@@ -1,4 +1,4 @@
-package io.aegisops.workrecord.domain.rule;
+package io.aegisops.workrecord.application.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -11,12 +11,15 @@ import java.time.OffsetDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.springframework.stereotype.Service;
 
+@Service
 public class WorkRecordValueValidator {
   private final ObjectMapper objectMapper;
   private final WorkRecordDictionaryPort dictionaryPort;
 
-  public WorkRecordValueValidator(ObjectMapper objectMapper, WorkRecordDictionaryPort dictionaryPort) {
+  public WorkRecordValueValidator(
+      ObjectMapper objectMapper, WorkRecordDictionaryPort dictionaryPort) {
     this.objectMapper = objectMapper;
     this.dictionaryPort = dictionaryPort;
   }
@@ -35,18 +38,18 @@ public class WorkRecordValueValidator {
         fieldMap.put(field.fieldCode(), field);
       }
 
-      root.fieldNames()
-          .forEachRemaining(
-              code -> {
-                WorkRecordField field = fieldMap.get(code);
-                if (field == null) {
-                  throw new IllegalArgumentException("unknown field: " + code);
-                }
-                if (!field.enabled()) {
-                  throw new IllegalArgumentException("field is disabled: " + code);
-                }
-                validateValue(tenantId, field, root.get(code));
-              });
+      var names = root.fieldNames();
+      while (names.hasNext()) {
+        String code = names.next();
+        WorkRecordField field = fieldMap.get(code);
+        if (field == null) {
+          throw new IllegalArgumentException("unknown field: " + code);
+        }
+        if (!field.enabled()) {
+          throw new IllegalArgumentException("field is disabled: " + code);
+        }
+        validateValue(tenantId, field, root.get(code));
+      }
 
       for (WorkRecordField field : fields) {
         if (field.enabled() && field.required()) {
@@ -96,13 +99,12 @@ public class WorkRecordValueValidator {
         if (!value.isArray()) {
           throw new IllegalArgumentException("field must be array: " + field.fieldCode());
         }
-        value.forEach(
-            item -> {
-              if (!item.isTextual()) {
-                throw new IllegalArgumentException(
-                    "multi_select item must be string: " + field.fieldCode());
-              }
-            });
+        for (JsonNode item : value) {
+          if (!item.isTextual()) {
+            throw new IllegalArgumentException(
+                "multi_select item must be string: " + field.fieldCode());
+          }
+        }
       }
     }
 
@@ -112,11 +114,17 @@ public class WorkRecordValueValidator {
   }
 
   private void validateDictValue(String tenantId, WorkRecordField field, JsonNode value) {
+    if (field.dictCode() == null || field.dictCode().isBlank()) {
+      throw new IllegalArgumentException("dictCode is required: " + field.fieldCode());
+    }
+
     if (field.fieldType() == FieldType.MULTI_SELECT) {
-      value.forEach(
-          item -> dictionaryPort.requireEnabledItem(tenantId, field.dictCode(), item.asText()));
+      for (JsonNode item : value) {
+        dictionaryPort.requireEnabledItem(tenantId, field.dictCode(), item.asText());
+      }
       return;
     }
+
     dictionaryPort.requireEnabledItem(tenantId, field.dictCode(), value.asText());
   }
 
