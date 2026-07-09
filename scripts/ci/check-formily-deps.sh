@@ -1,39 +1,7 @@
 #!/usr/bin/env bash
 # scripts/ci/check-formily-deps.sh
-# -----------------------------------
-# 检查 web/portal/package.json 中是否意外引入了禁用包。
-# 退出 0 = 通过，退出 1 = 发现禁用包。
-#
-# 用法：
-#   bash scripts/ci/check-formily-deps.sh
-#   # 或在 CI 中：
-#   pnpm run check:formily-deps
-#
-# 禁用包清单（ADR-0005）：
-#   @formily/antd
-#   @formily/antd-icons
-#   @formily/antd-setters
-#   @formily/antd-x
-#   @formily/arco
-#   @formily/arco-setters
-#   @formily/next
-#   @formily/next-setters
-#   @formily/element-plus
-#   @formily/element-plus-setters
-#   @formily/fusion
-#   @formily/fusion-setters
-#   @formily/fusion-scoped
-#   @formily/next-scoped
-#   @formily/vant
-#   @formily/vant-setters
-#   @formily/naive
-#   @formily/naive-setters
-#   @formily/primevue
-#   @formily/designable-setters
-#   @formily/designable-formily
-#   @formily/react-formily
-#   @formily/antd-component-playground
-
+# Validates that web/portal does not use forbidden Formily UI packages.
+# See ADR-0005: docs/adr/0005-work-record-designer-formily-core-only.md
 set -euo pipefail
 
 FORBIDDEN=(
@@ -75,57 +43,51 @@ fi
 echo "--- Checking Formily dependency compliance (ADR-0005) ---"
 
 FOUND=0
-SCAN_TARGETS=("$PACKAGE_JSON")
-if [[ -f "$LOCK_FILE" ]]; then
-  SCAN_TARGETS+=("$LOCK_FILE")
-fi
 
-# Scan package.json for forbidden entries in dependencies / devDependencies.
-for field in '"dependencies"' '"devDependencies"'; do
-  while IFS= read -r pkg; do
-    pkg_name="${pkg%:*}"; pkg_name="${pkg_name//\"/}"; pkg_name="${pkg_name// }"
+# Check package.json dependencies
+while IFS= read -r pkg_name; do
+  [[ -z "$pkg_name" ]] && continue
+  for forbidden in "${FORBIDDEN[@]}"; do
+    if [[ "$pkg_name" == "$forbidden" ]]; then
+      echo "FORBIDDEN: $pkg_name found in $PACKAGE_JSON" >&2
+      FOUND=1
+    fi
+  done
+done < <(
+  node -e "
+    const fs = require('fs')
+    const pkg = JSON.parse(fs.readFileSync('$PACKAGE_JSON', 'utf8'))
+    const deps = {
+      ...(pkg.dependencies || {}),
+      ...(pkg.devDependencies || {}),
+      ...(pkg.optionalDependencies || {}),
+      ...(pkg.peerDependencies || {})
+    }
+    Object.keys(deps).forEach((name) => console.log(name))
+  "
+)
+
+# Check pnpm-lock.yaml
+if [[ -f "$LOCK_FILE" ]]; then
+  while IFS= read -r pkg_name; do
     [[ -z "$pkg_name" ]] && continue
     for forbidden in "${FORBIDDEN[@]}"; do
       if [[ "$pkg_name" == "$forbidden" ]]; then
-        echo "FORBIDDEN: $pkg_name found in $PACKAGE_JSON ($field)" >&2
-        FOUND=1
-      fi
-    done
-  done < <(node -e "
-    const fs = require('fs');
-    const pkg = JSON.parse(fs.readFileSync('$PACKAGE_JSON', 'utf8'));
-    const section = $field;
-    if (!section) process.exit(0);
-    Object.keys(section).forEach(k => console.log(k + ':' + section[k]));
-  " 2>/dev/null || true)
-done
-
-# Best-effort scan of pnpm-lock.yaml when it exists. pnpm-lock uses
-# `/<pkg>@<version>:` blocks so we strip the leading slash and trailing
-# version to get the package name.
-if [[ -f "$LOCK_FILE" ]]; then
-  while IFS= read -r pkg; do
-    [[ -z "$pkg" ]] && continue
-    for forbidden in "${FORBIDDEN[@]}"; do
-      if [[ "$pkg" == "$forbidden" ]]; then
-        echo "FORBIDDEN: $pkg found in $LOCK_FILE" >&2
+        echo "FORBIDDEN: $pkg_name found in $LOCK_FILE" >&2
         FOUND=1
       fi
     done
   done < <(
     node -e "
-      const fs = require('fs');
-      const lines = fs.readFileSync('$LOCK_FILE', 'utf8').split(/\r?\n/);
-      const seen = new Set();
-      for (const line of lines) {
-        // Match a section header like '  /@formily/antd@2.3.7:'
-        const m = line.match(/^\s+\/(@formily\/[^@]+)@[^:]+:/);
-        if (m && !seen.has(m[1])) {
-          seen.add(m[1]);
-          console.log(m[1]);
-        }
+      const fs = require('fs')
+      const content = fs.readFileSync('$LOCK_FILE', 'utf8')
+      const seen = new Set()
+      const re = /@formily\/[A-Za-z0-9._-]+/g
+      for (const match of content.matchAll(re)) {
+        seen.add(match[0])
       }
-    " 2>/dev/null || true
+      Array.from(seen).sort().forEach((name) => console.log(name))
+    "
   )
 fi
 
@@ -139,4 +101,3 @@ if [[ $FOUND -eq 1 ]]; then
 fi
 
 echo "PASS: No forbidden Formily packages found in web/portal."
-exit 0

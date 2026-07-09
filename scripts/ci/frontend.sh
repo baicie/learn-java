@@ -6,7 +6,7 @@ echo "==> Frontend CI"
 PORTAL_DIR="web/portal"
 CONSOLE_DIR="web/console"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+ROOT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 # Prefer system pnpm (CI restores it via setup-node cache). corepack may try
 # to refetch a tarball offline and fail, so it's only a best-effort fallback.
@@ -19,15 +19,16 @@ fi
 # ---- Formily ADR guard (applies to portal only) ----
 "$SCRIPT_DIR/check-formily-deps.sh"
 
-# ---- Portal ----
 run_frontend() {
   local dir="$1"
-  if [ ! -f "${dir}/package.json" ]; then
+  local abs_dir="$ROOT_DIR/$dir"
+
+  if [ ! -f "$abs_dir/package.json" ]; then
     echo "Skip frontend: ${dir}/package.json not found."
     return 0
   fi
 
-  cd "$ROOT_DIR/${dir}"
+  cd "$abs_dir"
 
   if [ -f "pnpm-lock.yaml" ]; then
     pnpm install --frozen-lockfile
