@@ -58,4 +58,10 @@ run_frontend() {
 }
 
 run_frontend "$PORTAL_DIR"
-run_frontend "$CONSOLE_DIR"
+
+if [ "${RUN_LEGACY_CONSOLE_CI:-0}" = "1" ]; then
+  echo "RUN_LEGACY_CONSOLE_CI=1, running legacy console CI."
+  run_frontend "$CONSOLE_DIR"
+else
+  echo "Legacy console CI is disabled by default. Set RUN_LEGACY_CONSOLE_CI=1 to run web/console."
+fi

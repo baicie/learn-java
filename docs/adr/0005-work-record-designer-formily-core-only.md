@@ -5,8 +5,8 @@ status: accepted
 phase: work-record
 owner: ai
 created: 2026-07-08
-updated: 2026-07-08
-status: accepted-and-implemented
+updated: 2026-07-09
+implementation-status: implemented
 related:
   - .agents/skills/aegisops/SKILL.md
   - .agents/skills/aegisops/SKILL.md §4.1
