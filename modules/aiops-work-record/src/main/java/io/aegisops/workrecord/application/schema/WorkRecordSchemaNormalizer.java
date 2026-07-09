@@ -6,6 +6,7 @@ import static io.aegisops.workrecord.application.schema.WorkRecordSchemaContract
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import io.aegisops.workrecord.application.command.TemplateFieldIndexEntry;
 import io.aegisops.workrecord.domain.model.FormFieldDescriptor;
 import java.util.Comparator;
 import java.util.List;
@@ -70,6 +71,20 @@ public class WorkRecordSchemaNormalizer {
       return objectMapper.writeValueAsString(sorted);
     } catch (Exception ex) {
       throw new IllegalArgumentException("failed to serialize field index", ex);
+    }
+  }
+
+  public String fieldIndexEntryJson(List<TemplateFieldIndexEntry> fields) {
+    try {
+      List<TemplateFieldIndexEntry> sorted =
+          fields.stream()
+              .sorted(
+                  Comparator.comparingInt(TemplateFieldIndexEntry::sortOrder)
+                      .thenComparing(TemplateFieldIndexEntry::fieldCode))
+              .toList();
+      return objectMapper.writeValueAsString(sorted);
+    } catch (Exception ex) {
+      throw new IllegalArgumentException("failed to serialize template field index entries", ex);
     }
   }
 

@@ -8,6 +8,7 @@ import io.aegisops.workrecord.application.port.WorkRecordTemplateRepository;
 import io.aegisops.workrecord.application.port.WorkRecordTemplateUsageRepository;
 import io.aegisops.workrecord.application.port.WorkRecordTemplateVersionRepository;
 import io.aegisops.workrecord.application.schema.WorkRecordSchemaDocument;
+import io.aegisops.workrecord.application.schema.WorkRecordSchemaNormalizer;
 import io.aegisops.workrecord.domain.model.TemplateStatus;
 import io.aegisops.workrecord.domain.model.WorkRecordField;
 import io.aegisops.workrecord.domain.model.WorkRecordTemplate;
@@ -24,6 +25,7 @@ public class WorkRecordTemplateVersionService {
   private final WorkRecordFieldIndexRepository fieldRepository;
   private final WorkRecordTemplateUsageRepository usageRepository;
   private final WorkRecordSchemaService schemaService;
+  private final WorkRecordSchemaNormalizer schemaNormalizer;
   private final WorkRecordFieldIndexService fieldIndexService;
   private final WorkRecordTemplatePublishGuard publishGuard;
   private final WorkRecordAuditService auditService;
@@ -34,6 +36,7 @@ public class WorkRecordTemplateVersionService {
       WorkRecordFieldIndexRepository fieldRepository,
       WorkRecordTemplateUsageRepository usageRepository,
       WorkRecordSchemaService schemaService,
+      WorkRecordSchemaNormalizer schemaNormalizer,
       WorkRecordFieldIndexService fieldIndexService,
       WorkRecordTemplatePublishGuard publishGuard,
       WorkRecordAuditService auditService) {
@@ -42,6 +45,7 @@ public class WorkRecordTemplateVersionService {
     this.fieldRepository = fieldRepository;
     this.usageRepository = usageRepository;
     this.schemaService = schemaService;
+    this.schemaNormalizer = schemaNormalizer;
     this.fieldIndexService = fieldIndexService;
     this.publishGuard = publishGuard;
     this.auditService = auditService;
@@ -77,13 +81,20 @@ public class WorkRecordTemplateVersionService {
         return TemplatePublishValidationResult.failed(errors);
       }
 
+      List<WorkRecordField> previousFields = previousFields(tenantId, template);
       long referenced = currentVersionReferencedCount(tenantId, template);
+      boolean currentVersionReferenced = referenced > 0;
+      List<TemplateFieldIndexEntry> fieldEntries =
+          publishGuard.buildFieldIndexEntries(
+              previousFields, document.fields(), currentVersionReferenced);
+
       List<String> warnings = new ArrayList<>();
       if (referenced > 0) {
         warnings.add("current template version is referenced by " + referenced + " records");
       }
+
       return TemplatePublishValidationResult.ok(
-          document.schemaVersion(), document.fields().size(), referenced, warnings);
+          document.schemaVersion(), fieldEntries.size(), referenced, warnings);
     } catch (IllegalArgumentException | IllegalStateException ex) {
       return TemplatePublishValidationResult.failed(List.of(ex.getMessage()));
     }
@@ -108,6 +119,8 @@ public class WorkRecordTemplateVersionService {
     List<TemplateFieldIndexEntry> fieldEntries =
         publishGuard.buildFieldIndexEntries(previousFields, document.fields(), referenced);
 
+    String effectiveFieldIndexJson = schemaNormalizer.fieldIndexEntryJson(fieldEntries);
+
     int versionNo = versionRepository.nextVersionNo(tenantId, template.id());
     WorkRecordTemplateVersion version =
         versionRepository.create(
@@ -117,7 +130,7 @@ public class WorkRecordTemplateVersionService {
             command.versionName(),
             document.normalizedSchemaJson(),
             document.normalizedDesignerJson(),
-            document.fieldIndexJson(),
+            effectiveFieldIndexJson,
             actor);
 
     fieldIndexService.createForVersion(tenantId, template.id(), version.id(), fieldEntries);

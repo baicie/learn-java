@@ -198,10 +198,10 @@ public class JdbcWorkRecordTemplateRepository implements WorkRecordTemplateRepos
         """
         update work_record.wr_template
            set enabled = false,
-               status = 'archived',
-               deleted_at = coalesce(deleted_at, now())
+               status = 'archived'
          where tenant_id = :tenantId
            and id = :templateId
+           and deleted_at is null
         """,
         Map.of("tenantId", tenantId, "templateId", templateId));
   }

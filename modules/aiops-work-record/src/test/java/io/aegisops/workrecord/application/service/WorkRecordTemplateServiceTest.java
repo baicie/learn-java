@@ -1,5 +1,6 @@
 package io.aegisops.workrecord.application.service;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.*;
 
@@ -77,6 +78,23 @@ class WorkRecordTemplateServiceTest {
     service.copy("t1", new CopyTemplateCommand("tpl1", "daily_copy", "日报副本", "copy"), "u1");
 
     verify(repository).create(eq("t1"), any(CreateTemplateCommand.class), eq("u1"));
+  }
+
+  @Test
+  void shouldArchiveUnreferencedTemplateAndReturnArchivedTemplate() {
+    WorkRecordTemplate active = template("tpl1", TemplateStatus.PUBLISHED, true);
+    WorkRecordTemplate archived = template("tpl1", TemplateStatus.ARCHIVED, false);
+
+    when(repository.find("t1", "tpl1"))
+        .thenReturn(Optional.of(active))
+        .thenReturn(Optional.of(archived));
+    when(usageRepository.countRecordsByTemplate("t1", "tpl1")).thenReturn(0L);
+
+    WorkRecordTemplate result = service.archive("t1", "tpl1", "u1");
+
+    assertThat(result.status()).isEqualTo(TemplateStatus.ARCHIVED);
+    assertThat(result.enabled()).isFalse();
+    verify(repository).archive("t1", "tpl1");
   }
 
   private WorkRecordTemplate template(String id, TemplateStatus status, boolean enabled) {
