@@ -12,6 +12,8 @@ import io.aegisops.workrecord.application.command.UpdateRecordCommand;
 import io.aegisops.workrecord.application.service.WorkRecordQueryService;
 import io.aegisops.workrecord.application.service.WorkRecordService;
 import io.aegisops.workrecord.domain.model.WorkRecord;
+import java.time.OffsetDateTime;
+import java.time.format.DateTimeParseException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -68,7 +70,7 @@ public class WorkRecordController {
                 request.title(),
                 request.status(),
                 request.ownerId(),
-                request.recordTime(),
+                parseRequiredRecordTime(request.recordTime()),
                 request.builtinDataJson(),
                 request.customDataJson()),
             user));
@@ -88,7 +90,7 @@ public class WorkRecordController {
                 request.title(),
                 request.status(),
                 request.ownerId(),
-                request.recordTime(),
+                parseOptionalRecordTime(request.recordTime()),
                 request.builtinDataJson(),
                 request.customDataJson()),
             user));
@@ -100,5 +102,30 @@ public class WorkRecordController {
       @PathVariable String recordId, @AuthenticationPrincipal UserPrincipal user) {
     recordService.delete(TenantContext.requireTenantId(), recordId, user);
     return ApiResponse.ok(null);
+  }
+
+  OffsetDateTime parseRequiredRecordTime(String value) {
+    if (value == null || value.isBlank()) {
+      throw new IllegalArgumentException("recordTime is required");
+    }
+    return parseOffsetRecordTime(value);
+  }
+
+  OffsetDateTime parseOptionalRecordTime(String value) {
+    if (value == null) {
+      return null;
+    }
+    if (value.isBlank()) {
+      throw new IllegalArgumentException("recordTime must not be blank");
+    }
+    return parseOffsetRecordTime(value);
+  }
+
+  private OffsetDateTime parseOffsetRecordTime(String value) {
+    try {
+      return OffsetDateTime.parse(value);
+    } catch (DateTimeParseException ex) {
+      throw new IllegalArgumentException("recordTime must be ISO offset datetime", ex);
+    }
   }
 }

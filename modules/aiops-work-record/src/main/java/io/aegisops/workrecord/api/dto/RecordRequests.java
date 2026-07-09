@@ -12,7 +12,7 @@ public final class RecordRequests {
       String title,
       String status,
       String ownerId,
-      OffsetDateTime recordTime,
+      String recordTime,
       String builtinDataJson,
       String customDataJson) {}
 
@@ -20,7 +20,7 @@ public final class RecordRequests {
       String title,
       String status,
       String ownerId,
-      OffsetDateTime recordTime,
+      String recordTime,
       String builtinDataJson,
       String customDataJson) {}
 

@@ -206,9 +206,6 @@ public class WorkRecordService {
     if (value == null) {
       throw new IllegalArgumentException("recordTime is required");
     }
-    if (value.getOffset() == null) {
-      throw new IllegalArgumentException("recordTime offset is required");
-    }
   }
 
   private void requireText(String value, String field) {

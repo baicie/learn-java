@@ -72,12 +72,11 @@ public class WorkRecordValueValidator {
       }
 
       for (WorkRecordField field : fields) {
-        validateFieldOwnership(tenantId, templateVersionId, field);
-        FieldCodeRules.validate(field.fieldCode());
+        validateFieldDefinition(tenantId, templateVersionId, field);
 
         if (field.enabled() && field.required()) {
           JsonNode value = root.get(field.fieldCode());
-          if (isEmpty(value)) {
+          if (isMissingRequiredValue(value)) {
             throw new IllegalArgumentException(
                 "required field is missing: " + field.fieldCode());
           }
@@ -96,8 +95,7 @@ public class WorkRecordValueValidator {
     Set<String> seen = new HashSet<>();
 
     for (WorkRecordField field : fields) {
-      validateFieldOwnership(tenantId, templateVersionId, field);
-      FieldCodeRules.validate(field.fieldCode());
+      validateFieldDefinition(tenantId, templateVersionId, field);
 
       if (!seen.add(field.fieldCode())) {
         throw new IllegalArgumentException("duplicated fieldCode: " + field.fieldCode());
@@ -109,7 +107,7 @@ public class WorkRecordValueValidator {
     return fieldMap;
   }
 
-  private void validateFieldOwnership(
+  private void validateFieldDefinition(
       String tenantId, String templateVersionId, WorkRecordField field) {
     if (!tenantId.equals(field.tenantId())) {
       throw new IllegalArgumentException("field tenant mismatch: " + field.fieldCode());
@@ -118,10 +116,25 @@ public class WorkRecordValueValidator {
       throw new IllegalArgumentException(
           "field templateVersion mismatch: " + field.fieldCode());
     }
+
+    FieldCodeRules.validate(field.fieldCode());
+
+    boolean optionField =
+        field.fieldType() == FieldType.SELECT || field.fieldType() == FieldType.MULTI_SELECT;
+
+    if (field.optionSource() == OptionSource.DICT && !optionField) {
+      throw new IllegalArgumentException(
+          "dict optionSource is only allowed for select/multi_select: " + field.fieldCode());
+    }
+
+    if (field.dictCode() != null && !field.dictCode().isBlank() && !optionField) {
+      throw new IllegalArgumentException(
+          "dictCode is only allowed for select/multi_select: " + field.fieldCode());
+    }
   }
 
   private void validateValue(String tenantId, WorkRecordField field, JsonNode value) {
-    if (isEmpty(value)) {
+    if (value == null || value.isNull()) {
       return;
     }
 
@@ -171,6 +184,10 @@ public class WorkRecordValueValidator {
   private void validateSelect(String tenantId, WorkRecordField field, JsonNode value) {
     requireText(field, value);
 
+    if (value.asText().isBlank()) {
+      throw new IllegalArgumentException("field must not be blank: " + field.fieldCode());
+    }
+
     if (field.optionSource() == OptionSource.DICT) {
       validateDictValue(tenantId, field, value.asText());
       return;
@@ -190,6 +207,11 @@ public class WorkRecordValueValidator {
             "multi_select item must be string: " + field.fieldCode());
       }
 
+      if (item.asText().isBlank()) {
+        throw new IllegalArgumentException(
+            "multi_select item must not be blank: " + field.fieldCode());
+      }
+
       if (field.optionSource() == OptionSource.DICT) {
         validateDictValue(tenantId, field, item.asText());
       } else {
@@ -200,6 +222,9 @@ public class WorkRecordValueValidator {
 
   private void validateUserValue(String tenantId, WorkRecordField field, JsonNode value) {
     requireText(field, value);
+    if (value.asText().isBlank()) {
+      throw new IllegalArgumentException("field must not be blank: " + field.fieldCode());
+    }
     userPort.requireActiveUser(tenantId, value.asText());
   }
 
@@ -267,7 +292,7 @@ public class WorkRecordValueValidator {
     }
   }
 
-  private boolean isEmpty(JsonNode value) {
+  private boolean isMissingRequiredValue(JsonNode value) {
     return value == null
         || value.isNull()
         || (value.isTextual() && value.asText().isBlank())

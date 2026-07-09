@@ -244,6 +244,72 @@ class WorkRecordValueValidatorPhase9Test {
         .hasMessageContaining("field tenant mismatch: content");
   }
 
+  @Test
+  void shouldRejectBlankStringForOptionalNumber() {
+    assertThatThrownBy(
+            () ->
+                validator.validate(
+                    "t1",
+                    "v1",
+                    List.of(field("cost", FieldType.NUMBER, false)),
+                    "{\"cost\":\"\"}"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("field must be number: cost");
+  }
+
+  @Test
+  void shouldRejectBlankStringForOptionalBoolean() {
+    assertThatThrownBy(
+            () ->
+                validator.validate(
+                    "t1",
+                    "v1",
+                    List.of(field("ok", FieldType.BOOLEAN, false)),
+                    "{\"ok\":\"\"}"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("field must be boolean: ok");
+  }
+
+  @Test
+  void shouldRejectBlankStringForOptionalSelect() {
+    WorkRecordField priority =
+        field("priority", FieldType.SELECT, false, OptionSource.STATIC, null, "[\"P0\",\"P1\"]");
+
+    assertThatThrownBy(
+            () -> validator.validate("t1", "v1", List.of(priority), "{\"priority\":\"\"}"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("field must not be blank: priority");
+  }
+
+  @Test
+  void shouldRejectDictOptionSourceOnTextField() {
+    WorkRecordField invalid =
+        field("priority", FieldType.TEXT, false, OptionSource.DICT, "record_priority", "[]");
+
+    assertThatThrownBy(
+            () -> validator.validate("t1", "v1", List.of(invalid), "{\"priority\":\"P1\"}"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("dict optionSource is only allowed");
+  }
+
+  @Test
+  void shouldAllowEmptyArrayForOptionalMultiSelect() {
+    WorkRecordField tags =
+        field("tags", FieldType.MULTI_SELECT, false, OptionSource.STATIC, null, "[\"a\",\"b\"]");
+
+    validator.validate("t1", "v1", List.of(tags), "{\"tags\":[]}");
+  }
+
+  @Test
+  void shouldRejectEmptyArrayForRequiredMultiSelect() {
+    WorkRecordField tags =
+        field("tags", FieldType.MULTI_SELECT, true, OptionSource.STATIC, null, "[\"a\",\"b\"]");
+
+    assertThatThrownBy(() -> validator.validate("t1", "v1", List.of(tags), "{\"tags\":[]}"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("required field is missing: tags");
+  }
+
   private WorkRecordField field(String code, FieldType type, boolean required) {
     return field(code, type, required, OptionSource.STATIC, null, "[]");
   }
