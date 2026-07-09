@@ -7,6 +7,7 @@ import static org.mockito.Mockito.verify;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.aegisops.workrecord.application.port.WorkRecordDictionaryPort;
+import io.aegisops.workrecord.application.port.WorkRecordUserPort;
 import io.aegisops.workrecord.domain.model.FieldType;
 import io.aegisops.workrecord.domain.model.OptionSource;
 import io.aegisops.workrecord.domain.model.WorkRecordField;
@@ -15,21 +16,25 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 /**
- * 覆盖 Phase 8 设计稿“运行态”侧重点：required 缺失、未知字段、datetime 类型、dict 启用项校验。既有
+ * 覆盖 Phase 8/9 设计稿“运行态”侧重点：required 缺失、未知字段、datetime 类型、dict 启用项校验。既有
  * {@link WorkRecordValueValidatorTest} 已覆盖了大部分规则，这里只补运行态关键路径，避免重复。
  */
 class WorkRecordValueValidatorRuntimeTest {
   private final ObjectMapper objectMapper = new ObjectMapper();
   private final WorkRecordDictionaryPort dictionaryPort = mock(WorkRecordDictionaryPort.class);
+  private final WorkRecordUserPort userPort = mock(WorkRecordUserPort.class);
   private final WorkRecordValueValidator validator =
-      new WorkRecordValueValidator(objectMapper, dictionaryPort);
+      new WorkRecordValueValidator(objectMapper, dictionaryPort, userPort);
 
   @Test
   void shouldValidateRequiredField() {
     assertThatThrownBy(
             () ->
                 validator.validate(
-                    "t1", List.of(field("content", FieldType.TEXTAREA, true)), "{}"))
+                    "t1",
+                    "v1",
+                    List.of(field("content", FieldType.TEXTAREA, true)),
+                    "{}"))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("required field is missing: content");
   }
@@ -40,6 +45,7 @@ class WorkRecordValueValidatorRuntimeTest {
             () ->
                 validator.validate(
                     "t1",
+                    "v1",
                     List.of(field("content", FieldType.TEXTAREA, false)),
                     "{\"bad\":\"x\"}"))
         .isInstanceOf(IllegalArgumentException.class)
@@ -52,6 +58,7 @@ class WorkRecordValueValidatorRuntimeTest {
             () ->
                 validator.validate(
                     "t1",
+                    "v1",
                     List.of(field("startedAt", FieldType.DATETIME, true)),
                     "{\"startedAt\":\"2026-01-01T00:00:00Z\"}"))
         .doesNotThrowAnyException();
@@ -84,7 +91,9 @@ class WorkRecordValueValidatorRuntimeTest {
             OffsetDateTime.now());
 
     assertThatCode(
-            () -> validator.validate("t1", List.of(selectField), "{\"priority\":\"P1\"}"))
+            () ->
+                validator.validate(
+                    "t1", "v1", List.of(selectField), "{\"priority\":\"P1\"}"))
         .doesNotThrowAnyException();
     verify(dictionaryPort).requireEnabledItem("t1", "record_priority", "P1");
   }

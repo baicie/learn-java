@@ -1,6 +1,7 @@
 package io.aegisops.workrecord.application.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -13,6 +14,7 @@ import io.aegisops.workrecord.application.command.CreateRecordCommand;
 import io.aegisops.workrecord.application.port.WorkRecordFieldIndexRepository;
 import io.aegisops.workrecord.application.port.WorkRecordRepository;
 import io.aegisops.workrecord.application.port.WorkRecordTemplateVersionRepository;
+import io.aegisops.workrecord.application.port.WorkRecordUserPort;
 import io.aegisops.workrecord.domain.model.RecordStatus;
 import io.aegisops.workrecord.domain.model.WorkRecord;
 import io.aegisops.workrecord.domain.model.WorkRecordTemplateVersion;
@@ -32,6 +34,7 @@ class WorkRecordServiceRuntimeTest {
   private final WorkRecordValueValidator valueValidator = mock(WorkRecordValueValidator.class);
   private final WorkRecordAuditService auditService = mock(WorkRecordAuditService.class);
   private final WorkRecordPermissionService permissionService = new WorkRecordPermissionService();
+  private final WorkRecordUserPort userPort = mock(WorkRecordUserPort.class);
 
   private final WorkRecordService service =
       new WorkRecordService(
@@ -41,10 +44,11 @@ class WorkRecordServiceRuntimeTest {
           valueValidator,
           auditService,
           permissionService,
+          userPort,
           new ObjectMapper());
 
   @Test
-  void shouldCreateDraftRecordWithCurrentTemplateVersionAndValidateCustomData() {
+  void shouldCreateRecordWithExplicitTemplateVersionAndValidateCustomData() {
     WorkRecordTemplateVersion version =
         new WorkRecordTemplateVersion(
             "v1",
@@ -77,8 +81,9 @@ class WorkRecordServiceRuntimeTest {
             OffsetDateTime.now(),
             null);
 
-    when(versionRepository.findCurrent("t1", "tpl1")).thenReturn(Optional.of(version));
-    when(fieldRepository.listEnabledByVersion("t1", "v1")).thenReturn(List.of());
+    when(versionRepository.findByTemplateAndVersion("t1", "tpl1", "v1"))
+        .thenReturn(Optional.of(version));
+    when(fieldRepository.listByVersion("t1", "v1")).thenReturn(List.of());
     when(recordRepository.create(eq("t1"), any(), eq("u1"))).thenReturn(saved);
 
     WorkRecord result =
@@ -86,7 +91,7 @@ class WorkRecordServiceRuntimeTest {
             "t1",
             new CreateRecordCommand(
                 "tpl1",
-                null,
+                "v1",
                 "日报",
                 "draft",
                 "u1",
@@ -98,12 +103,13 @@ class WorkRecordServiceRuntimeTest {
     assertThat(result.id()).isEqualTo("r1");
 
     ArgumentCaptor<String> customJson = ArgumentCaptor.forClass(String.class);
-    verify(valueValidator).validate(eq("t1"), eq(List.of()), customJson.capture());
+    verify(valueValidator).validate(eq("t1"), eq("v1"), eq(List.of()), customJson.capture());
     assertThat(customJson.getValue()).contains("content");
+    verify(userPort).requireActiveUser("t1", "u1");
   }
 
   @Test
-  void shouldResolveExplicitTemplateVersionWhenProvided() {
+  void shouldResolveExplicitTemplateVersionByTenantTemplateAndVersion() {
     WorkRecordTemplateVersion version =
         new WorkRecordTemplateVersion(
             "v2",
@@ -126,7 +132,7 @@ class WorkRecordServiceRuntimeTest {
             "v2",
             "周报",
             RecordStatus.DRAFT,
-            "u1",
+            null,
             "u1",
             OffsetDateTime.now(),
             "{}",
@@ -136,8 +142,9 @@ class WorkRecordServiceRuntimeTest {
             OffsetDateTime.now(),
             null);
 
-    when(versionRepository.find("t1", "v2")).thenReturn(Optional.of(version));
-    when(fieldRepository.listEnabledByVersion("t1", "v2")).thenReturn(List.of());
+    when(versionRepository.findByTemplateAndVersion("t1", "tpl1", "v2"))
+        .thenReturn(Optional.of(version));
+    when(fieldRepository.listByVersion("t1", "v2")).thenReturn(List.of());
     when(recordRepository.create(eq("t1"), any(), eq("u1"))).thenReturn(saved);
 
     WorkRecord result =
@@ -148,13 +155,56 @@ class WorkRecordServiceRuntimeTest {
                 "v2",
                 "周报",
                 "draft",
-                "u1",
+                null,
                 OffsetDateTime.parse("2026-02-01T00:00:00Z"),
                 "{}",
                 "{}"),
             user("u1"));
 
     assertThat(result.templateVersionId()).isEqualTo("v2");
+  }
+
+  @Test
+  void shouldRejectCreateWithoutTemplateVersionId() {
+    assertThatThrownBy(
+            () ->
+                service.create(
+                    "t1",
+                    new CreateRecordCommand(
+                        "tpl1",
+                        null,
+                        "日报",
+                        "draft",
+                        null,
+                        OffsetDateTime.parse("2026-01-01T00:00:00Z"),
+                        "{}",
+                        "{}"),
+                    user("u1")))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("templateVersionId is required");
+  }
+
+  @Test
+  void shouldRejectCreateWhenVersionNotFound() {
+    when(versionRepository.findByTemplateAndVersion("t1", "tpl1", "missing"))
+        .thenReturn(Optional.empty());
+
+    assertThatThrownBy(
+            () ->
+                service.create(
+                    "t1",
+                    new CreateRecordCommand(
+                        "tpl1",
+                        "missing",
+                        "日报",
+                        "draft",
+                        null,
+                        OffsetDateTime.parse("2026-01-01T00:00:00Z"),
+                        "{}",
+                        "{}"),
+                    user("u1")))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("template version not found");
   }
 
   private UserPrincipal user(String id) {

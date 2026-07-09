@@ -8,6 +8,7 @@ import io.aegisops.workrecord.application.command.UpdateRecordCommand;
 import io.aegisops.workrecord.application.port.WorkRecordFieldIndexRepository;
 import io.aegisops.workrecord.application.port.WorkRecordRepository;
 import io.aegisops.workrecord.application.port.WorkRecordTemplateVersionRepository;
+import io.aegisops.workrecord.application.port.WorkRecordUserPort;
 import io.aegisops.workrecord.domain.model.RecordStatus;
 import io.aegisops.workrecord.domain.model.WorkRecord;
 import io.aegisops.workrecord.domain.model.WorkRecordField;
@@ -25,6 +26,7 @@ public class WorkRecordService {
   private final WorkRecordValueValidator valueValidator;
   private final WorkRecordAuditService auditService;
   private final WorkRecordPermissionService permissionService;
+  private final WorkRecordUserPort userPort;
   private final ObjectMapper objectMapper;
 
   public WorkRecordService(
@@ -34,6 +36,7 @@ public class WorkRecordService {
       WorkRecordValueValidator valueValidator,
       WorkRecordAuditService auditService,
       WorkRecordPermissionService permissionService,
+      WorkRecordUserPort userPort,
       ObjectMapper objectMapper) {
     this.recordRepository = recordRepository;
     this.versionRepository = versionRepository;
@@ -41,6 +44,7 @@ public class WorkRecordService {
     this.valueValidator = valueValidator;
     this.auditService = auditService;
     this.permissionService = permissionService;
+    this.userPort = userPort;
     this.objectMapper = objectMapper;
   }
 
@@ -49,16 +53,21 @@ public class WorkRecordService {
     if (command == null) {
       throw new IllegalArgumentException("record request is required");
     }
+    requireText(tenantId, "tenantId");
     requireText(command.templateId(), "templateId");
+    requireText(command.templateVersionId(), "templateVersionId");
     requireText(command.title(), "title");
+    requireRecordTime(command.recordTime());
 
     WorkRecordTemplateVersion version =
         resolveVersion(tenantId, command.templateId(), command.templateVersionId());
 
-    List<WorkRecordField> fields = fieldRepository.listEnabledByVersion(tenantId, version.id());
+    List<WorkRecordField> fields = fieldRepository.listByVersion(tenantId, version.id());
     String builtin = normalizeObject(command.builtinDataJson());
     String custom = normalizeObject(command.customDataJson());
-    valueValidator.validate(tenantId, fields, custom);
+    valueValidator.validate(tenantId, version.id(), fields, custom);
+
+    validateOwner(tenantId, command.ownerId());
 
     CreateRecordCommand normalized =
         new CreateRecordCommand(
@@ -66,8 +75,8 @@ public class WorkRecordService {
             version.id(),
             command.title(),
             RecordStatus.from(command.status()).value(),
-            command.ownerId(),
-            command.recordTime() == null ? OffsetDateTime.now() : command.recordTime(),
+            blankToNull(command.ownerId()),
+            command.recordTime(),
             builtin,
             custom);
 
@@ -106,15 +115,21 @@ public class WorkRecordService {
 
     if (custom != null) {
       List<WorkRecordField> fields =
-          fieldRepository.listEnabledByVersion(tenantId, existing.templateVersionId());
-      valueValidator.validate(tenantId, fields, custom);
+          fieldRepository.listByVersion(tenantId, existing.templateVersionId());
+      valueValidator.validate(tenantId, existing.templateVersionId(), fields, custom);
     }
+
+    if (command.recordTime() != null) {
+      requireRecordTime(command.recordTime());
+    }
+
+    validateOwner(tenantId, command.ownerId());
 
     UpdateRecordCommand normalized =
         new UpdateRecordCommand(
             command.title(),
             command.status() == null ? null : RecordStatus.from(command.status()).value(),
-            command.ownerId(),
+            blankToNull(command.ownerId()),
             command.recordTime(),
             builtin,
             custom);
@@ -161,20 +176,9 @@ public class WorkRecordService {
 
   private WorkRecordTemplateVersion resolveVersion(
       String tenantId, String templateId, String templateVersionId) {
-    if (templateVersionId != null && !templateVersionId.isBlank()) {
-      WorkRecordTemplateVersion version =
-          versionRepository
-              .find(tenantId, templateVersionId)
-              .orElseThrow(() -> new IllegalArgumentException("template version not found"));
-      if (!templateId.equals(version.templateId())) {
-        throw new IllegalArgumentException("template version does not belong to template");
-      }
-      return version;
-    }
     return versionRepository
-        .findCurrent(tenantId, templateId)
-        .orElseThrow(
-            () -> new IllegalArgumentException("published template version not found"));
+        .findByTemplateAndVersion(tenantId, templateId, templateVersionId)
+        .orElseThrow(() -> new IllegalArgumentException("template version not found"));
   }
 
   private String normalizeObject(String json) {
@@ -191,10 +195,30 @@ public class WorkRecordService {
     }
   }
 
+  private void validateOwner(String tenantId, String ownerId) {
+    if (ownerId == null || ownerId.isBlank()) {
+      return;
+    }
+    userPort.requireActiveUser(tenantId, ownerId);
+  }
+
+  private void requireRecordTime(OffsetDateTime value) {
+    if (value == null) {
+      throw new IllegalArgumentException("recordTime is required");
+    }
+    if (value.getOffset() == null) {
+      throw new IllegalArgumentException("recordTime offset is required");
+    }
+  }
+
   private void requireText(String value, String field) {
     if (value == null || value.isBlank()) {
       throw new IllegalArgumentException(field + " is required");
     }
+  }
+
+  private String blankToNull(String value) {
+    return value == null || value.isBlank() ? null : value;
   }
 
   private String actorId(UserPrincipal user) {

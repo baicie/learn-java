@@ -8,6 +8,7 @@ import static org.mockito.Mockito.verify;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.aegisops.workrecord.application.port.WorkRecordDictionaryPort;
+import io.aegisops.workrecord.application.port.WorkRecordUserPort;
 import io.aegisops.workrecord.domain.model.FieldType;
 import io.aegisops.workrecord.domain.model.OptionSource;
 import io.aegisops.workrecord.domain.model.WorkRecordField;
@@ -18,15 +19,19 @@ import org.junit.jupiter.api.Test;
 class WorkRecordValueValidatorTest {
   private final ObjectMapper objectMapper = new ObjectMapper();
   private final WorkRecordDictionaryPort dictionaryPort = mock(WorkRecordDictionaryPort.class);
+  private final WorkRecordUserPort userPort = mock(WorkRecordUserPort.class);
   private final WorkRecordValueValidator validator =
-      new WorkRecordValueValidator(objectMapper, dictionaryPort);
+      new WorkRecordValueValidator(objectMapper, dictionaryPort, userPort);
 
-  private WorkRecordField selectField(String code, String dictCode) {
+  private static final String TENANT = "tenant1";
+  private static final String VERSION = "v1";
+
+  private WorkRecordField selectDictField(String code, String dictCode) {
     return new WorkRecordField(
         "f1",
-        "tenant1",
+        TENANT,
         "tpl1",
-        "v1",
+        VERSION,
         "优先级",
         code,
         FieldType.SELECT,
@@ -46,16 +51,16 @@ class WorkRecordValueValidatorTest {
         OffsetDateTime.now());
   }
 
-  private WorkRecordField numberField(String code) {
+  private WorkRecordField textField(String code, boolean required) {
     return new WorkRecordField(
         "f1",
-        "tenant1",
+        TENANT,
         "tpl1",
-        "v1",
+        VERSION,
         "数量",
         code,
-        FieldType.NUMBER,
-        false,
+        FieldType.TEXTAREA,
+        required,
         null,
         OptionSource.STATIC,
         null,
@@ -73,7 +78,8 @@ class WorkRecordValueValidatorTest {
 
   @Test
   void shouldAcceptEmptyCustomData() {
-    assertThatCode(() -> validator.validate("tenant1", List.of(), "{}")).doesNotThrowAnyException();
+    assertThatCode(() -> validator.validate(TENANT, VERSION, List.of(), "{}"))
+        .doesNotThrowAnyException();
   }
 
   @Test
@@ -81,8 +87,9 @@ class WorkRecordValueValidatorTest {
     assertThatThrownBy(
             () ->
                 validator.validate(
-                    "tenant1",
-                    List.of(numberField("count")),
+                    TENANT,
+                    VERSION,
+                    List.of(textField("count", false)),
                     "{\"unknown\":\"v\"}"))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("unknown field: unknown");
@@ -93,17 +100,17 @@ class WorkRecordValueValidatorTest {
     WorkRecordField disabled =
         new WorkRecordField(
             "f1",
-            "tenant1",
+            TENANT,
             "tpl1",
-            "v1",
+            VERSION,
             "数量",
             "count",
             FieldType.NUMBER,
             false,
             null,
-OptionSource.STATIC,
-        null,
-        "[]",
+            OptionSource.STATIC,
+            null,
+            "[]",
             ".properties.count",
             true,
             true,
@@ -114,64 +121,109 @@ OptionSource.STATIC,
             OffsetDateTime.now(),
             OffsetDateTime.now());
     assertThatThrownBy(
-            () -> validator.validate("tenant1", List.of(disabled), "{\"count\":1}"))
+            () -> validator.validate(TENANT, VERSION, List.of(disabled), "{\"count\":1}"))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("disabled: count");
   }
 
   @Test
   void shouldRejectNumberTypeMismatch() {
+    WorkRecordField numberField =
+        new WorkRecordField(
+            "f1",
+            TENANT,
+            "tpl1",
+            VERSION,
+            "数量",
+            "count",
+            FieldType.NUMBER,
+            false,
+            null,
+            OptionSource.STATIC,
+            null,
+            "[]",
+            ".properties.count",
+            true,
+            true,
+            true,
+            false,
+            0,
+            true,
+            OffsetDateTime.now(),
+            OffsetDateTime.now());
     assertThatThrownBy(
-            () -> validator.validate("tenant1", List.of(numberField("count")), "{\"count\":\"x\"}"))
+            () -> validator.validate(TENANT, VERSION, List.of(numberField), "{\"count\":\"x\"}"))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("number: count");
   }
 
   @Test
   void shouldAcceptNumberValue() {
+    WorkRecordField numberField =
+        new WorkRecordField(
+            "f1",
+            TENANT,
+            "tpl1",
+            VERSION,
+            "数量",
+            "count",
+            FieldType.NUMBER,
+            false,
+            null,
+            OptionSource.STATIC,
+            null,
+            "[]",
+            ".properties.count",
+            true,
+            true,
+            true,
+            false,
+            0,
+            true,
+            OffsetDateTime.now(),
+            OffsetDateTime.now());
     assertThatCode(
-            () -> validator.validate("tenant1", List.of(numberField("count")), "{\"count\":3}"))
+            () -> validator.validate(TENANT, VERSION, List.of(numberField), "{\"count\":3}"))
         .doesNotThrowAnyException();
   }
 
   @Test
   void shouldValidateDictValueViaPort() {
-    WorkRecordField field = selectField("priority", "record_priority");
+    WorkRecordField field = selectDictField("priority", "record_priority");
     assertThatCode(
-            () -> validator.validate("tenant1", List.of(field), "{\"priority\":\"P1\"}"))
+            () -> validator.validate(TENANT, VERSION, List.of(field), "{\"priority\":\"P1\"}"))
         .doesNotThrowAnyException();
-    verify(dictionaryPort).requireEnabledItem("tenant1", "record_priority", "P1");
+    verify(dictionaryPort).requireEnabledItem(TENANT, "record_priority", "P1");
   }
 
   @Test
   void shouldRejectMissingDictCode() {
-    WorkRecordField field = selectField("priority", null);
+    WorkRecordField field = selectDictField("priority", null);
     assertThatThrownBy(
-            () -> validator.validate("tenant1", List.of(field), "{\"priority\":\"P1\"}"))
+            () -> validator.validate(TENANT, VERSION, List.of(field), "{\"priority\":\"P1\"}"))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("dictCode is required");
-    verify(dictionaryPort, never()).requireEnabledItem("tenant1", null, "P1");
+    verify(dictionaryPort, never()).requireEnabledItem(TENANT, null, "P1");
   }
 
   @Test
   void shouldRejectMissingRequiredField() {
     assertThatThrownBy(
-            () -> validator.validate("tenant1", List.of(selectField("priority", "dict")), "{}"))
+            () -> validator.validate(TENANT, VERSION, List.of(textField("content", true)), "{}"))
         .isInstanceOf(IllegalArgumentException.class)
-        .hasMessageContaining("required field is missing: priority");
+        .hasMessageContaining("required field is missing: content");
   }
 
   @Test
   void shouldRejectInvalidJson() {
-    assertThatThrownBy(
-            () -> validator.validate("tenant1", List.of(), "not-a-json"))
+    assertThatThrownBy(() -> validator.validate(TENANT, VERSION, List.of(), "not-a-json"))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("invalid customDataJson");
   }
 
   @Test
   void shouldRejectNonObjectRoot() {
-    assertThatThrownBy(() -> validator.validate("tenant1", List.of(), "[1,2,3]"))
+    assertThatThrownBy(() -> validator.validate(TENANT, VERSION, List.of(), "[1,2,3]"))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("must be object");
   }
