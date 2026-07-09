@@ -6,16 +6,17 @@ describe('WorkRecordFeatureFrozen', () => {
   it('renders frozen baseline message for list page', async () => {
     render(<WorkRecordFeatureFrozen surface='list' />)
 
-    const title = document.querySelector('h2, [class*="CardTitle"]')
-    expect(title?.textContent).toContain('工作记录模块重做中')
-    expect(document.body.textContent).toMatch(/记录列表/)
-    expect(document.body.textContent).toMatch(/Phase 0/)
+    expect(document.body.textContent).toContain('工作记录模块重做中')
+    expect(document.body.textContent).toContain('记录列表')
+    expect(document.body.textContent).toContain('Phase 0')
+    expect(document.body.textContent).toContain('不可用的 record 实现')
   })
 
   it('renders frozen baseline message for designer page', async () => {
     render(<WorkRecordFeatureFrozen surface='designer' />)
 
-    expect(document.body.textContent).toMatch(/工作记录模块重做中/)
-    expect(document.body.textContent).toMatch(/表单设计/)
+    expect(document.body.textContent).toContain('工作记录模块重做中')
+    expect(document.body.textContent).toContain('表单设计')
+    expect(document.body.textContent).toContain('enterprise roadmap')
   })
 })

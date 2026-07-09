@@ -8,7 +8,7 @@
  * - aiops-server has both with-portal and with-console profiles
  * - frontend CI makes console opt-in
  * - backend CI explicitly tests platform/work-record/server modules
- * - record feature pages are frozen
+ * - record feature pages and routes are frozen
  * - backend boundary tests exist
  */
 
@@ -42,6 +42,14 @@ function includes(path: string, expected: string) {
   )
 }
 
+function notIncludes(path: string, forbidden: string) {
+  const content = file(path)
+  assert(
+    !content.includes(forbidden),
+    `${path} must not include forbidden text: ${forbidden}`
+  )
+}
+
 function checkRootPackageScripts() {
   const pkg = JSON.parse(file('package.json')) as {
     scripts?: Record<string, string>
@@ -55,6 +63,7 @@ function checkRootPackageScripts() {
       `package.json scripts.${scriptName} must reference web/portal`
     )
   }
+
   console.log('✓ package.json scripts reference web/portal')
 }
 
@@ -74,6 +83,7 @@ function checkServerProfiles() {
       `apps/aiops-server/pom.xml must include ${required}`
     )
   }
+
   console.log('✓ aiops-server has both with-portal and with-console profiles')
 }
 
@@ -88,6 +98,7 @@ function checkFrontendCi() {
   ]) {
     assert(script.includes(required), `frontend.sh must include ${required}`)
   }
+
   console.log('✓ frontend.sh makes console opt-in')
 }
 
@@ -101,6 +112,7 @@ function checkBackendCi() {
   ]) {
     assert(script.includes(required), `backend.sh must include ${required}`)
   }
+
   console.log(
     '✓ backend.sh explicitly tests platform/work-record/server modules'
   )
@@ -122,7 +134,61 @@ function checkRecordFeatureFrozen() {
     'web/portal/src/features/work-records/components/work-record-feature-frozen.tsx',
     '工作记录模块重做中'
   )
+
+  const frozenSurfaces: Array<[string, string]> = [
+    ['web/portal/src/features/work-records/index.tsx', "surface='list'"],
+    ['web/portal/src/features/work-records/new.tsx', "surface='new'"],
+    ['web/portal/src/features/work-records/edit.tsx', "surface='edit'"],
+    ['web/portal/src/features/work-records/detail.tsx', "surface='detail'"],
+    ['web/portal/src/features/work-records/designer.tsx', "surface='designer'"],
+  ]
+
+  for (const [path, surface] of frozenSurfaces) {
+    includes(path, 'WorkRecordFeatureFrozen')
+    includes(path, surface)
+  }
+
   console.log('✓ record feature pages are frozen')
+}
+
+function checkRecordRoutesFrozen() {
+  const routeToComponent: Array<[string, string]> = [
+    [
+      'web/portal/src/routes/_authenticated/work-records/index.tsx',
+      '@/features/work-records',
+    ],
+    [
+      'web/portal/src/routes/_authenticated/work-records/new.tsx',
+      '@/features/work-records/new',
+    ],
+    [
+      'web/portal/src/routes/_authenticated/work-records/$recordId.tsx',
+      '@/features/work-records/detail',
+    ],
+    [
+      'web/portal/src/routes/_authenticated/work-records/$recordId.edit.tsx',
+      '@/features/work-records/edit',
+    ],
+    [
+      'web/portal/src/routes/_authenticated/work-records/designer.tsx',
+      '@/features/work-records/designer',
+    ],
+  ]
+
+  for (const [path, expectedImport] of routeToComponent) {
+    includes(path, expectedImport)
+  }
+
+  notIncludes(
+    'web/portal/src/routes/_authenticated/work-records/designer.tsx',
+    'TemplateDesignerPage'
+  )
+  notIncludes(
+    'web/portal/src/routes/_authenticated/work-records/designer.tsx',
+    'components/template-designer-page'
+  )
+
+  console.log('✓ record routes point to frozen feature entrypoints')
 }
 
 function checkBackendBoundaryTests() {
@@ -133,6 +199,7 @@ function checkBackendBoundaryTests() {
   ]) {
     file(path)
   }
+
   console.log('✓ backend boundary tests exist')
 }
 
@@ -149,6 +216,7 @@ function main() {
   checkFrontendCi()
   checkBackendCi()
   checkRecordFeatureFrozen()
+  checkRecordRoutesFrozen()
   checkBackendBoundaryTests()
   checkPhase1Doc()
 

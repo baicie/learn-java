@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { TemplateDesignerPage } from '@/features/work-records/components/template-designer-page'
+import { WorkRecordDesigner } from '@/features/work-records/designer'
 
 export const Route = createFileRoute('/_authenticated/work-records/designer')({
-  component: TemplateDesignerPage,
+  component: WorkRecordDesigner,
 })
