@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { listDictTypes } from '@/features/dictionaries/api'
 import {
@@ -32,6 +32,7 @@ export function useWorkRecordDesigner() {
   const [previewOpen, setPreviewOpen] = useState(true)
   const [publishValidation, setPublishValidation] =
     useState<TemplatePublishValidationResult | null>(null)
+  const [hydratedTemplateKey, setHydratedTemplateKey] = useState('')
 
   const templatesQuery = useQuery({
     queryKey: ['work-record-templates'],
@@ -68,7 +69,6 @@ export function useWorkRecordDesigner() {
     () => validateDesignerFields(fields),
     [fields]
   )
-
   const schemaJson = useMemo(() => schemaToJson(fields), [fields])
   const designerJson = useMemo(() => designerToJson(fields), [fields])
 
@@ -82,39 +82,68 @@ export function useWorkRecordDesigner() {
     [fields, selectedFieldId]
   )
 
-  const loadTemplate = (templateId: string) => {
-    setSelectedTemplateId(templateId)
-    setPublishValidation(null)
-    const template = templatesQuery.data?.find((item) => item.id === templateId)
-    if (!template) return
-
-    const parsed = parseDraftSchema(template.draftSchemaJson)
-    setFields(normalizeSortOrder(parsed))
-    setSelectedFieldId(parsed[0]?.id ?? '')
-  }
-
-  const hydrateCurrentTemplate = () => {
+  useEffect(() => {
     if (!selectedTemplate) return
-    const parsed = parseDraftSchema(selectedTemplate.draftSchemaJson)
+
+    const key = [
+      selectedTemplate.id,
+      selectedTemplate.updatedAt,
+      selectedTemplate.draftSchemaJson,
+      selectedTemplate.draftDesignerJson,
+      selectedTemplate.currentVersionId ?? '',
+      currentVersionFieldsQuery.dataUpdatedAt,
+      publishValidation?.referencedRecordCount ?? 0,
+    ].join('|')
+
+    if (hydratedTemplateKey === key) return
+
+    const parsed = parseDraftSchema(
+      selectedTemplate.draftSchemaJson,
+      selectedTemplate.draftDesignerJson
+    )
     const merged = mergePublishedLocks(
       parsed,
       currentVersionFieldsQuery.data,
       publishValidation?.referencedRecordCount ?? 0
     )
-    setFields(merged)
-    setSelectedFieldId(merged[0]?.id ?? '')
+
+    queueMicrotask(() => {
+      setFields(merged)
+      setSelectedFieldId((current) => {
+        if (current && merged.some((item) => item.id === current))
+          return current
+        return merged[0]?.id ?? ''
+      })
+      setHydratedTemplateKey(key)
+    })
+  }, [
+    selectedTemplate,
+    currentVersionFieldsQuery.data,
+    currentVersionFieldsQuery.dataUpdatedAt,
+    hydratedTemplateKey,
+    publishValidation?.referencedRecordCount,
+  ])
+
+  const markDirty = (next: DesignerField[]) => {
+    setPublishValidation(null)
+    setFields(normalizeSortOrder(next))
+  }
+
+  const loadTemplate = (templateId: string) => {
+    setSelectedTemplateId(templateId)
+    setPublishValidation(null)
+    setHydratedTemplateKey('')
+    setSelectedFieldId('')
   }
 
   const addField = (fieldType: WorkRecordFieldType) => {
-    const next = normalizeSortOrder([
-      ...fields,
-      newDesignerField(fieldType, fields.length),
-    ])
-    setFields(next)
+    const next = [...fields, newDesignerField(fieldType, fields.length)]
+    markDirty(next)
     setSelectedFieldId(next[next.length - 1]?.id ?? '')
   }
 
   const updateField = (fieldId: string, patch: Partial<DesignerField>) => {
+    setPublishValidation(null)
     setFields((current) =>
       current.map((field) => {
         if (field.id !== fieldId) return field
@@ -140,7 +169,7 @@ export function useWorkRecordDesigner() {
     const next = [...fields]
     const [item] = next.splice(index, 1)
     next.splice(target, 0, item)
-    setFields(normalizeSortOrder(next))
+    markDirty(next)
   }
 
   const duplicateField = (fieldId: string) => {
@@ -149,16 +178,16 @@ export function useWorkRecordDesigner() {
 
     const copy: DesignerField = {
       ...field,
-      id: crypto.randomUUID?.() ?? `${field.id}_copy`,
+      id: `${field.id}_copy_${Date.now().toString(36)}`,
       fieldName: `${field.fieldName} 副本`,
-      fieldCode: `${field.fieldCode}_copy`,
+      fieldCode: uniqueCopyCode(field.fieldCode, fields),
       locked: false,
       referenced: false,
+      enabled: true,
       sortOrder: fields.length,
     }
 
-    const next = normalizeSortOrder([...fields, copy])
-    setFields(next)
+    markDirty([...fields, copy])
     setSelectedFieldId(copy.id)
   }
 
@@ -167,36 +196,34 @@ export function useWorkRecordDesigner() {
     if (!field) return
 
     if (field.locked || field.referenced) {
-      setFields((current) =>
-        normalizeSortOrder(
-          current.map((item) =>
-            item.id === fieldId ? { ...item, enabled: false } : item
-          )
+      markDirty(
+        fields.map((item) =>
+          item.id === fieldId ? { ...item, enabled: false } : item
         )
       )
       return
     }
 
-    const next = normalizeSortOrder(
-      fields.filter((item) => item.id !== fieldId)
-    )
-    setFields(next)
+    const next = fields.filter((item) => item.id !== fieldId)
+    markDirty(next)
     setSelectedFieldId(next[0]?.id ?? '')
   }
 
+  const persistDraft = async () => {
+    if (!selectedTemplate) throw new Error('请先选择模板')
+    if (validationErrors.length) {
+      throw new Error(validationErrors[0])
+    }
+    return saveTemplateDraft(selectedTemplate.id, {
+      name: selectedTemplate.name,
+      description: selectedTemplate.description ?? undefined,
+      schemaJson,
+      designerJson,
+    })
+  }
+
   const saveDraftMutation = useMutation({
-    mutationFn: async () => {
-      if (!selectedTemplate) throw new Error('请先选择模板')
-      if (validationErrors.length) {
-        throw new Error(validationErrors[0])
-      }
-      return saveTemplateDraft(selectedTemplate.id, {
-        name: selectedTemplate.name,
-        description: selectedTemplate.description ?? undefined,
-        schemaJson,
-        designerJson,
-      })
-    },
+    mutationFn: persistDraft,
     onSuccess: async () => {
       await queryClient.invalidateQueries({
         queryKey: ['work-record-templates'],
@@ -207,15 +234,7 @@ export function useWorkRecordDesigner() {
   const validatePublishMutation = useMutation({
     mutationFn: async () => {
       if (!selectedTemplate) throw new Error('请先选择模板')
-      if (validationErrors.length) {
-        throw new Error(validationErrors[0])
-      }
-      await saveTemplateDraft(selectedTemplate.id, {
-        name: selectedTemplate.name,
-        description: selectedTemplate.description ?? undefined,
-        schemaJson,
-        designerJson,
-      })
+      await persistDraft()
       return validateTemplatePublish(selectedTemplate.id)
     },
     onSuccess: async (result) => {
@@ -229,21 +248,23 @@ export function useWorkRecordDesigner() {
   const publishMutation = useMutation({
     mutationFn: async () => {
       if (!selectedTemplate) throw new Error('请先选择模板')
-      if (validationErrors.length) {
-        throw new Error(validationErrors[0])
-      }
-      const result =
-        publishValidation ??
-        (await validateTemplatePublish(selectedTemplate.id))
+
+      await persistDraft()
+      const result = await validateTemplatePublish(selectedTemplate.id)
+      setPublishValidation(result)
+
       if (!result.valid) {
         throw new Error(result.errors[0] ?? '发布校验失败')
       }
+
       return publishTemplate(
         selectedTemplate.id,
         `v${new Date().toISOString().slice(0, 19).replace('T', ' ')}`
       )
     },
     onSuccess: async () => {
+      setPublishValidation(null)
+      setHydratedTemplateKey('')
       await queryClient.invalidateQueries({
         queryKey: ['work-record-templates'],
       })
@@ -283,7 +304,6 @@ export function useWorkRecordDesigner() {
     setPreviewOpen,
     setSelectedFieldId,
     loadTemplate,
-    hydrateCurrentTemplate,
     addField,
     updateField,
     moveField,
@@ -293,4 +313,15 @@ export function useWorkRecordDesigner() {
     validatePublish: () => validatePublishMutation.mutateAsync(),
     publish: () => publishMutation.mutateAsync(),
   }
+}
+
+function uniqueCopyCode(baseCode: string, fields: DesignerField[]) {
+  const existing = new Set(fields.map((field) => field.fieldCode))
+  let index = 1
+  let candidate = `${baseCode}_copy`
+  while (existing.has(candidate)) {
+    index += 1
+    candidate = `${baseCode}_copy_${index}`
+  }
+  return candidate
 }

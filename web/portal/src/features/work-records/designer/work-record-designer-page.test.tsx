@@ -3,6 +3,8 @@ import { describe, expect, it, vi } from 'vitest'
 import { render } from 'vitest-browser-react'
 import { WorkRecordDesignerPage } from './work-record-designer-page'
 
+const calls: string[] = []
+
 vi.mock('./api', () => ({
   listTemplates: async () => [
     {
@@ -43,43 +45,52 @@ vi.mock('./api', () => ({
   saveTemplateDraft: async (
     _templateId: string,
     input: { schemaJson: string; designerJson: string }
-  ) => ({
-    id: 'tpl1',
-    tenantId: 't1',
-    code: 'daily',
-    name: '日报',
-    description: null,
-    status: 'draft',
-    enabled: true,
-    currentVersionId: null,
-    draftSchemaJson: input.schemaJson,
-    draftDesignerJson: input.designerJson,
-    createdBy: 'u1',
-    createdAt: '2026-01-01T00:00:00Z',
-    updatedAt: '2026-01-01T00:00:00Z',
-    deletedAt: null,
-  }),
-  validateTemplatePublish: async () => ({
-    valid: true,
-    schemaVersion: 1,
-    fieldCount: 1,
-    referencedRecordCount: 0,
-    errors: [],
-    warnings: [],
-  }),
-  publishTemplate: async () => ({
-    id: 'v1',
-    tenantId: 't1',
-    templateId: 'tpl1',
-    versionNo: 1,
-    versionName: 'v1',
-    schemaJson: '{}',
-    designerJson: '{}',
-    fieldIndexJson: '[]',
-    publishedBy: 'u1',
-    publishedAt: '2026-01-01T00:00:00Z',
-    createdAt: '2026-01-01T00:00:00Z',
-  }),
+  ) => {
+    calls.push('save')
+    return {
+      id: 'tpl1',
+      tenantId: 't1',
+      code: 'daily',
+      name: '日报',
+      description: null,
+      status: 'draft',
+      enabled: true,
+      currentVersionId: null,
+      draftSchemaJson: input.schemaJson,
+      draftDesignerJson: input.designerJson,
+      createdBy: 'u1',
+      createdAt: '2026-01-01T00:00:00Z',
+      updatedAt: '2026-01-01T00:00:00Z',
+      deletedAt: null,
+    }
+  },
+  validateTemplatePublish: async () => {
+    calls.push('validate')
+    return {
+      valid: true,
+      schemaVersion: 1,
+      fieldCount: 1,
+      referencedRecordCount: 0,
+      errors: [],
+      warnings: [],
+    }
+  },
+  publishTemplate: async () => {
+    calls.push('publish')
+    return {
+      id: 'v1',
+      tenantId: 't1',
+      templateId: 'tpl1',
+      versionNo: 1,
+      versionName: 'v1',
+      schemaJson: '{}',
+      designerJson: '{}',
+      fieldIndexJson: '[]',
+      publishedBy: 'u1',
+      publishedAt: '2026-01-01T00:00:00Z',
+      createdAt: '2026-01-01T00:00:00Z',
+    }
+  },
 }))
 
 vi.mock('@/features/dictionaries/api', () => ({
@@ -102,6 +113,7 @@ vi.mock('@/features/dictionaries/api', () => ({
 
 describe('WorkRecordDesignerPage', () => {
   it('renders designer layout', async () => {
+    calls.length = 0
     const screen = await render(
       <QueryClientProvider client={new QueryClient()}>
         <WorkRecordDesignerPage />
@@ -121,5 +133,22 @@ describe('WorkRecordDesignerPage', () => {
     await expect
       .element(screen.getByText('实时预览', { exact: true }))
       .toBeVisible()
+  })
+
+  it('publishes by saving current draft first', async () => {
+    calls.length = 0
+
+    const screen = await render(
+      <QueryClientProvider client={new QueryClient()}>
+        <WorkRecordDesignerPage />
+      </QueryClientProvider>
+    )
+
+    await expect.element(screen.getByText('工作记录表单设计器')).toBeVisible()
+    await screen.getByText('发布', { exact: true }).click()
+
+    await vi.waitFor(() => {
+      expect(calls).toEqual(['save', 'validate', 'publish'])
+    })
   })
 })

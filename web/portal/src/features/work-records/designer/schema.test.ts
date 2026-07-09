@@ -141,6 +141,79 @@ describe('work record designer schema', () => {
     expect(diff.map((item) => item.type)).toContain('type_changed')
     expect(diff.map((item) => item.type)).toContain('added')
   })
+
+  it('ignores plain properties without x-work-record', () => {
+    const fields = parseDraftSchema(
+      JSON.stringify({
+        type: 'object',
+        properties: {
+          plain: {
+            type: 'string',
+            title: '普通字段',
+          },
+          content: {
+            title: '内容',
+            'x-work-record': {
+              fieldCode: 'content',
+              fieldType: 'textarea',
+            },
+          },
+        },
+      })
+    )
+
+    expect(fields).toHaveLength(1)
+    expect(fields[0].fieldCode).toBe('content')
+  })
+
+  it('restores disabled fields from designer json', () => {
+    const fields = parseDraftSchema(
+      JSON.stringify({
+        type: 'object',
+        properties: {},
+      }),
+      JSON.stringify({
+        version: 1,
+        fields: [
+          {
+            id: 'f-priority',
+            fieldName: '优先级',
+            fieldCode: 'priority',
+            fieldType: 'select',
+            optionSource: 'static',
+            sortOrder: 0,
+            enabled: false,
+            locked: true,
+            referenced: true,
+          },
+        ],
+      })
+    )
+
+    expect(fields).toHaveLength(1)
+    expect(fields[0]).toMatchObject({
+      fieldCode: 'priority',
+      enabled: false,
+      locked: true,
+      referenced: true,
+    })
+  })
+
+  it('keeps published field type when merging locks', () => {
+    const draft: DesignerField[] = [
+      {
+        ...newDesignerField('text', 0),
+        fieldCode: 'priority',
+        fieldType: 'text',
+      },
+    ]
+    const published = [versionField('priority', 'select')]
+
+    const merged = mergePublishedLocks(draft, published, 1)
+
+    expect(merged[0].fieldType).toBe('select')
+    expect(merged[0].locked).toBe(true)
+  })
 })
 
 function versionField(

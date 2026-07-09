@@ -1,4 +1,3 @@
-import { useEffect } from 'react'
 import { ArrowLeft, Eye, Rocket, Save, ShieldCheck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -11,22 +10,6 @@ import { useWorkRecordDesigner } from './use-work-record-designer'
 
 export function WorkRecordDesignerPage() {
   const designer = useWorkRecordDesigner()
-
-  useEffect(() => {
-    if (!designer.selectedTemplateId && designer.templates[0]) {
-      designer.loadTemplate(designer.templates[0].id)
-    }
-  }, [designer])
-
-  useEffect(() => {
-    designer.hydrateCurrentTemplate()
-    // hydrate should run when selected template or current fields response changes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    designer.selectedTemplate?.id,
-    designer.selectedTemplate?.draftSchemaJson,
-    designer.publishValidation?.referencedRecordCount,
-  ])
 
   if (designer.loading) {
     return <main className='p-6 text-sm text-muted-foreground'>加载中...</main>

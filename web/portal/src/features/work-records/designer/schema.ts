@@ -26,13 +26,19 @@ export const RESERVED_FIELD_CODES = new Set([
   'deleted_at',
 ])
 
+function newId(fallback: string): string {
+  const browserCrypto =
+    typeof globalThis !== 'undefined' ? globalThis.crypto : undefined
+  return browserCrypto?.randomUUID?.() ?? fallback
+}
+
 export function newDesignerField(
   fieldType: WorkRecordFieldType,
   index: number
 ): DesignerField {
   const base = `${fieldType}_${Date.now().toString(36)}_${index}`
   return {
-    id: crypto.randomUUID?.() ?? base,
+    id: newId(base),
     fieldName: defaultFieldName(fieldType),
     fieldCode: base.replace(/[^a-zA-Z0-9_]/g, '_'),
     fieldType,
@@ -167,39 +173,132 @@ export function designerToJson(fields: DesignerField[]) {
   return JSON.stringify(buildDesignerJson(fields), null, 2)
 }
 
-export function parseDraftSchema(schemaJson: string): DesignerField[] {
+function safeParseObject(json: string) {
+  try {
+    const parsed = JSON.parse(json || '{}')
+    return parsed && typeof parsed === 'object'
+      ? (parsed as Record<string, unknown>)
+      : {}
+  } catch {
+    return {}
+  }
+}
+
+export function parseDraftSchema(
+  schemaJson: string,
+  designerJson = '{}'
+): DesignerField[] {
   if (!schemaJson?.trim()) return []
 
-  const root = JSON.parse(schemaJson)
-  const properties = root?.properties
-  if (!properties || typeof properties !== 'object') return []
+  const root = safeParseObject(schemaJson)
+  const designer = safeParseObject(designerJson)
+  const designerFields = Array.isArray(designer.fields) ? designer.fields : []
 
-  return Object.entries(properties).map(([propertyName, raw], index) => {
+  const designerByCode = new Map<string, Record<string, unknown>>()
+  for (const raw of designerFields) {
+    if (raw && typeof raw === 'object') {
+      const item = raw as Record<string, unknown>
+      const code = String(item.fieldCode ?? '')
+      if (code) {
+        designerByCode.set(code, item)
+      }
+    }
+  }
+
+  const properties = root.properties
+  if (!properties || typeof properties !== 'object') {
+    return restoreDisabledDesignerFields(designerByCode)
+  }
+
+  const parsed: DesignerField[] = []
+
+  for (const [propertyName, raw] of Object.entries(
+    properties as Record<string, unknown>
+  )) {
+    if (!raw || typeof raw !== 'object') continue
+
     const fieldNode = raw as Record<string, unknown>
-    const ext = (fieldNode['x-work-record'] ?? {}) as Record<string, unknown>
-    const fieldType = String(ext.fieldType ?? 'text') as WorkRecordFieldType
+    const ext = fieldNode['x-work-record']
 
-    return {
-      id: String(ext.fieldCode ?? propertyName),
-      fieldName: String(fieldNode.title ?? ext.fieldCode ?? propertyName),
-      fieldCode: String(ext.fieldCode ?? propertyName),
+    if (!ext || typeof ext !== 'object') {
+      continue
+    }
+
+    const extNode = ext as Record<string, unknown>
+    const fieldCode = String(extNode.fieldCode ?? propertyName)
+    const designerField = designerByCode.get(fieldCode)
+    const fieldType = String(extNode.fieldType ?? 'text') as WorkRecordFieldType
+
+    parsed.push({
+      id: String(designerField?.id ?? fieldCode),
+      fieldName: String(fieldNode.title ?? extNode.fieldName ?? fieldCode),
+      fieldCode,
       fieldType: WORK_RECORD_FIELD_TYPES.includes(fieldType)
         ? fieldType
         : 'text',
       required:
         Array.isArray(root.required) && root.required.includes(propertyName),
-      optionSource: ext.optionSource === 'dict' ? 'dict' : 'static',
-      dictCode: String(ext.dictCode ?? ''),
-      listVisible: Boolean(ext.listVisible),
-      filterable: Boolean(ext.filterable),
-      exportable: ext.exportable === undefined ? true : Boolean(ext.exportable),
-      statistical: Boolean(ext.statistical),
-      sortOrder: Number(ext.sortOrder ?? index),
-      enabled: true,
-      locked: false,
-      referenced: false,
+      optionSource: extNode.optionSource === 'dict' ? 'dict' : 'static',
+      dictCode: String(extNode.dictCode ?? ''),
+      listVisible: Boolean(extNode.listVisible),
+      filterable: Boolean(extNode.filterable),
+      exportable:
+        extNode.exportable === undefined ? true : Boolean(extNode.exportable),
+      statistical: Boolean(extNode.statistical),
+      sortOrder: Number(
+        extNode.sortOrder ?? designerField?.sortOrder ?? parsed.length
+      ),
+      enabled:
+        designerField?.enabled === undefined
+          ? true
+          : Boolean(designerField.enabled),
+      locked: Boolean(designerField?.locked),
+      referenced: Boolean(designerField?.referenced),
+    })
+  }
+
+  const activeCodes = new Set(parsed.map((field) => field.fieldCode))
+  for (const field of restoreDisabledDesignerFields(designerByCode)) {
+    if (!activeCodes.has(field.fieldCode)) {
+      parsed.push(field)
     }
-  })
+  }
+
+  return normalizeSortOrder(parsed)
+}
+
+function restoreDisabledDesignerFields(
+  designerByCode: Map<string, Record<string, unknown>>
+): DesignerField[] {
+  const result: DesignerField[] = []
+
+  for (const item of designerByCode.values()) {
+    if (item.enabled !== false) continue
+
+    const fieldType = String(item.fieldType ?? 'text') as WorkRecordFieldType
+    result.push({
+      id: String(item.id ?? item.fieldCode),
+      fieldName: String(item.fieldName ?? item.fieldCode),
+      fieldCode: String(item.fieldCode),
+      fieldType: WORK_RECORD_FIELD_TYPES.includes(fieldType)
+        ? fieldType
+        : 'text',
+      required: Boolean(item.required),
+      optionSource: item.optionSource === 'dict' ? 'dict' : 'static',
+      dictCode: String(item.dictCode ?? ''),
+      listVisible: Boolean(item.listVisible),
+      filterable: Boolean(item.filterable),
+      exportable:
+        item.exportable === undefined ? true : Boolean(item.exportable),
+      statistical: Boolean(item.statistical),
+      sortOrder: Number(item.sortOrder ?? result.length),
+      enabled: false,
+      locked: Boolean(item.locked),
+      referenced: Boolean(item.referenced),
+    })
+  }
+
+  return result
 }
 
 export function mergePublishedLocks(
@@ -207,7 +306,7 @@ export function mergePublishedLocks(
   currentVersionFields: WorkRecordVersionField[] | undefined,
   referencedRecordCount: number
 ): DesignerField[] {
-  if (!currentVersionFields?.length) return draftFields
+  if (!currentVersionFields?.length) return normalizeSortOrder(draftFields)
 
   const publishedByCode = new Map(
     currentVersionFields.map((field) => [field.fieldCode, field])
@@ -219,6 +318,7 @@ export function mergePublishedLocks(
 
     return {
       ...field,
+      fieldType: published.fieldType,
       locked: true,
       referenced: referencedRecordCount > 0,
       enabled: published.enabled ? field.enabled : false,
