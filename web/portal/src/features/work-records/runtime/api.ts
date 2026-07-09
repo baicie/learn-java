@@ -1,0 +1,188 @@
+import { z } from 'zod'
+import { apiClient } from '@/lib/api-client'
+import { apiResponseSchema } from '@/lib/api-response'
+import { listDictItems } from '@/features/dictionaries/api'
+import {
+  WORK_RECORD_FIELD_TYPES,
+  WORK_RECORD_STATUSES,
+  type DictItemOption,
+  type RuntimeDictOptions,
+  type WorkRecord,
+  type WorkRecordField,
+  type WorkRecordRuntimeFormValue,
+  type WorkRecordTemplate,
+} from './types'
+
+const statusSchema = z.enum(WORK_RECORD_STATUSES)
+const fieldTypeSchema = z.enum(WORK_RECORD_FIELD_TYPES)
+
+const templateSchema = z.object({
+  id: z.string(),
+  tenantId: z.string(),
+  code: z.string(),
+  name: z.string(),
+  description: z.string().nullable(),
+  status: z.enum(['draft', 'published', 'disabled', 'archived']),
+  enabled: z.boolean(),
+  currentVersionId: z.string().nullable(),
+  draftSchemaJson: z.string(),
+  draftDesignerJson: z.string(),
+  createdBy: z.string(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  deletedAt: z.string().nullable(),
+})
+
+const recordFieldSchema = z.object({
+  id: z.string(),
+  tenantId: z.string(),
+  templateId: z.string(),
+  templateVersionId: z.string(),
+  fieldName: z.string(),
+  fieldCode: z.string(),
+  fieldType: fieldTypeSchema,
+  required: z.boolean(),
+  defaultValue: z.string().nullable(),
+  optionSource: z.enum(['static', 'dict']),
+  dictCode: z.string().nullable(),
+  optionsJson: z.string(),
+  schemaPath: z.string().nullable(),
+  listVisible: z.boolean(),
+  filterable: z.boolean(),
+  exportable: z.boolean(),
+  statistical: z.boolean(),
+  sortOrder: z.number(),
+  enabled: z.boolean(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+})
+
+const recordSchema = z.object({
+  id: z.string(),
+  tenantId: z.string(),
+  templateId: z.string(),
+  templateVersionId: z.string(),
+  title: z.string(),
+  status: statusSchema,
+  ownerId: z.string().nullable(),
+  creatorId: z.string(),
+  recordTime: z.string(),
+  builtinDataJson: z.string(),
+  customDataJson: z.string(),
+  rowVersion: z.number(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  deletedAt: z.string().nullable(),
+})
+
+export async function listPublishedTemplates(): Promise<WorkRecordTemplate[]> {
+  const { data } = await apiClient.get('/api/work-record/templates', {
+    params: { includeDisabled: false },
+  })
+  return apiResponseSchema(z.array(templateSchema))
+    .parse(data)
+    .data.filter(
+      (item) =>
+        item.enabled && item.status === 'published' && item.currentVersionId
+    )
+}
+
+export async function listTemplateVersionFields(
+  templateId: string,
+  versionId: string
+): Promise<WorkRecordField[]> {
+  const { data } = await apiClient.get(
+    `/api/work-record/templates/${templateId}/versions/${versionId}/fields`
+  )
+  return apiResponseSchema(z.array(recordFieldSchema)).parse(data).data
+}
+
+export async function getWorkRecord(recordId: string): Promise<WorkRecord> {
+  const { data } = await apiClient.get(`/api/work-record/records/${recordId}`)
+  return apiResponseSchema(recordSchema).parse(data).data
+}
+
+export async function createWorkRecord(
+  value: WorkRecordRuntimeFormValue
+): Promise<WorkRecord> {
+  const { data } = await apiClient.post('/api/work-record/records', {
+    templateId: value.templateId,
+    templateVersionId: value.templateVersionId,
+    title: value.title,
+    status: value.status,
+    ownerId: value.ownerId || undefined,
+    recordTime: toOffsetDateTime(value.recordTime),
+    builtinDataJson: '{}',
+    customDataJson: JSON.stringify(value.customData ?? {}),
+  })
+  return apiResponseSchema(recordSchema).parse(data).data
+}
+
+export async function updateWorkRecord(
+  recordId: string,
+  value: WorkRecordRuntimeFormValue
+): Promise<WorkRecord> {
+  const { data } = await apiClient.put(`/api/work-record/records/${recordId}`, {
+    title: value.title,
+    status: value.status,
+    ownerId: value.ownerId || undefined,
+    recordTime: toOffsetDateTime(value.recordTime),
+    builtinDataJson: '{}',
+    customDataJson: JSON.stringify(value.customData ?? {}),
+  })
+  return apiResponseSchema(recordSchema).parse(data).data
+}
+
+export async function loadRuntimeDictOptions(
+  fields: WorkRecordField[]
+): Promise<RuntimeDictOptions> {
+  const dictCodes = Array.from(
+    new Set(
+      fields
+        .filter((field) => field.enabled)
+        .map((field) => field.dictCode)
+        .filter((value): value is string => Boolean(value))
+    )
+  )
+
+  const entries = await Promise.all(
+    dictCodes.map(async (dictCode) => {
+      const items = await listDictItems(dictCode, true)
+      const options: DictItemOption[] = items.map((item) => ({
+        id: item.id,
+        itemLabel: item.itemLabel,
+        itemValue: item.itemValue,
+        color: item.color,
+        enabled: item.enabled,
+      }))
+      return [dictCode, options] as const
+    })
+  )
+
+  return Object.fromEntries(entries)
+}
+
+export function parseCustomData(record?: WorkRecord): Record<string, unknown> {
+  if (!record?.customDataJson) return {}
+  try {
+    const parsed = JSON.parse(record.customDataJson)
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+      ? parsed
+      : {}
+  } catch {
+    return {}
+  }
+}
+
+export function toLocalDateTimeInput(value?: string | null) {
+  if (!value) return ''
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
+}
+
+export function toOffsetDateTime(value: string) {
+  if (!value) return new Date().toISOString()
+  return new Date(value).toISOString()
+}

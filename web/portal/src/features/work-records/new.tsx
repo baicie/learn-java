@@ -1,5 +1,5 @@
-import { WorkRecordFeatureFrozen } from './components/work-record-feature-frozen'
+import { NewRecordPage } from './runtime/new-record-page'
 
 export function NewWorkRecord() {
-  return <WorkRecordFeatureFrozen surface='new' />
+  return <NewRecordPage />
 }

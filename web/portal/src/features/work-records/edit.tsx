@@ -1,5 +1,5 @@
-import { WorkRecordFeatureFrozen } from './components/work-record-feature-frozen'
+import { EditRecordPage } from './runtime/edit-record-page'
 
 export function EditWorkRecord() {
-  return <WorkRecordFeatureFrozen surface='edit' />
+  return <EditRecordPage />
 }

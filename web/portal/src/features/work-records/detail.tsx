@@ -1,5 +1,5 @@
-import { WorkRecordFeatureFrozen } from './components/work-record-feature-frozen'
+import { DetailRecordPage } from './runtime/detail-record-page'
 
 export function WorkRecordDetail() {
-  return <WorkRecordFeatureFrozen surface='detail' />
+  return <DetailRecordPage />
 }
