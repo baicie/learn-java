@@ -7,6 +7,7 @@ import io.aegisops.security.UserPrincipal;
 import io.aegisops.workrecord.api.dto.CreateWorkRecordRequest;
 import io.aegisops.workrecord.api.dto.UpdateWorkRecordRequest;
 import io.aegisops.workrecord.api.dto.WorkRecordListRequest;
+import io.aegisops.workrecord.application.WorkRecordApplicationService;
 import io.aegisops.workrecord.application.WorkRecordQueryApplicationService;
 import io.aegisops.workrecord.domain.model.WorkRecord;
 import jakarta.validation.Valid;

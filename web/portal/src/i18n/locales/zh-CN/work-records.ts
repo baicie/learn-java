@@ -102,7 +102,8 @@ export const workRecords = {
   'workRecords.designer.property.empty': '在画布中选择一个字段以编辑属性',
   'workRecords.designer.property.title': '标题',
   'workRecords.designer.property.fieldCode': '字段编码',
-  'workRecords.designer.property.fieldCodeLockedHint': '该字段已存在记录，编码被锁定',
+  'workRecords.designer.property.fieldCodeLockedHint':
+    '该字段已存在记录，编码被锁定',
   'workRecords.designer.property.fieldType': '字段类型',
   'workRecords.designer.property.optionSource': '选项来源',
   'workRecords.designer.property.optionSourceStatic': '静态选项',
@@ -120,4 +121,10 @@ export const workRecords = {
   'workRecords.designer.toolbar.save': '保存模板',
   'workRecords.designer.toolbar.saving': '保存中…',
   'workRecords.designer.toolbar.dirty': '有未保存修改',
+  'workRecords.designer.toolbar.offline': '未连接后端，显示示例数据',
+  'workRecords.designer.toolbar.templateLabel': '当前模板',
+  'workRecords.designer.toolbar.empty': '暂无可用模板，可从示例开始',
+  'workRecords.designer.toolbar.retry': '重试加载模板',
+  // Empty / fallback placeholder (was hardcoded, see designer-design §14.4)
+  'workRecords.designer.dict.empty': '暂无可用字典',
 } as const

@@ -65,6 +65,7 @@ FORBIDDEN=(
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 PACKAGE_JSON="$ROOT_DIR/web/portal/package.json"
+LOCK_FILE="$ROOT_DIR/web/portal/pnpm-lock.yaml"
 
 if [[ ! -f "$PACKAGE_JSON" ]]; then
   echo "ERROR: $PACKAGE_JSON not found" >&2
@@ -74,17 +75,19 @@ fi
 echo "--- Checking Formily dependency compliance (ADR-0005) ---"
 
 FOUND=0
+SCAN_TARGETS=("$PACKAGE_JSON")
+if [[ -f "$LOCK_FILE" ]]; then
+  SCAN_TARGETS+=("$LOCK_FILE")
+fi
 
-# Check both dependencies and devDependencies
+# Scan package.json for forbidden entries in dependencies / devDependencies.
 for field in '"dependencies"' '"devDependencies"'; do
-  # Extract the section and pipe through node to check for each forbidden package
   while IFS= read -r pkg; do
     pkg_name="${pkg%:*}"; pkg_name="${pkg_name//\"/}"; pkg_name="${pkg_name// }"
-    # Skip empty
     [[ -z "$pkg_name" ]] && continue
     for forbidden in "${FORBIDDEN[@]}"; do
       if [[ "$pkg_name" == "$forbidden" ]]; then
-        echo "FORBIDDEN: $pkg_name found in $field" >&2
+        echo "FORBIDDEN: $pkg_name found in $PACKAGE_JSON ($field)" >&2
         FOUND=1
       fi
     done
@@ -96,6 +99,35 @@ for field in '"dependencies"' '"devDependencies"'; do
     Object.keys(section).forEach(k => console.log(k + ':' + section[k]));
   " 2>/dev/null || true)
 done
+
+# Best-effort scan of pnpm-lock.yaml when it exists. pnpm-lock uses
+# `/<pkg>@<version>:` blocks so we strip the leading slash and trailing
+# version to get the package name.
+if [[ -f "$LOCK_FILE" ]]; then
+  while IFS= read -r pkg; do
+    [[ -z "$pkg" ]] && continue
+    for forbidden in "${FORBIDDEN[@]}"; do
+      if [[ "$pkg" == "$forbidden" ]]; then
+        echo "FORBIDDEN: $pkg found in $LOCK_FILE" >&2
+        FOUND=1
+      fi
+    done
+  done < <(
+    node -e "
+      const fs = require('fs');
+      const lines = fs.readFileSync('$LOCK_FILE', 'utf8').split(/\r?\n/);
+      const seen = new Set();
+      for (const line of lines) {
+        // Match a section header like '  /@formily/antd@2.3.7:'
+        const m = line.match(/^\s+\/(@formily\/[^@]+)@[^:]+:/);
+        if (m && !seen.has(m[1])) {
+          seen.add(m[1]);
+          console.log(m[1]);
+        }
+      }
+    " 2>/dev/null || true
+  )
+fi
 
 if [[ $FOUND -eq 1 ]]; then
   echo "" >&2

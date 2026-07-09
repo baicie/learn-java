@@ -1,4 +1,5 @@
 import { useId } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Label } from '@/components/ui/label'
 import {
   Select,
@@ -26,6 +27,7 @@ export function DictSetter({
   required,
   placeholder = '—',
 }: DictSetterProps) {
+  const { t } = useTranslation()
   const id = useId()
   return (
     <div className='grid gap-1.5'>
@@ -41,7 +43,7 @@ export function DictSetter({
         <SelectContent>
           {dictCodes.length === 0 ? (
             <SelectItem value='__empty__' disabled>
-              暂无可用字典
+              {t('workRecords.designer.dict.empty')}
             </SelectItem>
           ) : (
             dictCodes.map((code) => (

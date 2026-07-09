@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef } from 'react'
 import { createForm, type Form } from '@formily/core'
 import { Schema } from '@formily/json-schema'
 import { FormProvider, createSchemaField } from '@formily/react'
+import { useTranslation } from 'react-i18next'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import {
   Select,
@@ -109,6 +111,37 @@ const FormilySelect = (props: {
   </Select>
 )
 
+const FormilyMultiSelect = (props: {
+  value?: Array<string>
+  onChange?: (v: string[]) => void
+  enum?: Array<{ label: string; value: unknown }>
+  [key: string]: unknown
+}) => {
+  const selected = Array.isArray(props.value) ? props.value : []
+  function toggle(next: string, checked: boolean) {
+    const set = new Set(selected)
+    if (checked) set.add(next)
+    else set.delete(next)
+    props.onChange?.(Array.from(set))
+  }
+  return (
+    <div className='grid gap-2' data-testid='formily-multi-select'>
+      {(props.enum ?? []).map((opt, i) => {
+        const v = String(opt.value)
+        return (
+          <label key={i} className='flex items-center gap-2 text-sm'>
+            <Checkbox
+              checked={selected.includes(v)}
+              onCheckedChange={(checked) => toggle(v, Boolean(checked))}
+            />
+            <span>{String(opt.label)}</span>
+          </label>
+        )
+      })}
+    </div>
+  )
+}
+
 const FormilyBoolean = (props: {
   value?: boolean
   onChange?: (v: boolean) => void
@@ -120,9 +153,29 @@ const FormilyBoolean = (props: {
   />
 )
 
-const FormilyUnknown = () => (
-  <span className='text-sm text-muted-foreground'>未知控件</span>
+// Per ADR-0005 §决策 5 the runtime ships a thin user field (value = userId).
+// This intentionally avoids depending on a /users lookup API in the first cut
+// and stays compatible with the existing `work-record:user` validation path.
+const FormilyUser = (props: {
+  value?: string
+  onChange?: (v: string) => void
+  [key: string]: unknown
+}) => (
+  <Input
+    value={props.value ?? ''}
+    placeholder='userId'
+    onChange={(e) => props.onChange?.(e.target.value)}
+  />
 )
+
+const FormilyUnknown = () => {
+  const { t } = useTranslation()
+  return (
+    <span className='text-sm text-muted-foreground'>
+      {t('common.unknownField')}
+    </span>
+  )
+}
 
 const SchemaField = createSchemaField({
   components: {
@@ -132,6 +185,8 @@ const SchemaField = createSchemaField({
     Date: FormilyDate,
     DateTime: FormilyDateTime,
     Select: FormilySelect,
+    MultiSelect: FormilyMultiSelect,
+    UserPicker: FormilyUser,
     Switch: FormilyBoolean,
     Unknown: FormilyUnknown,
   },
@@ -146,9 +201,9 @@ const FIELD_TYPE_TO_COMPONENT: Record<string, string> = {
   date: 'Date',
   datetime: 'DateTime',
   select: 'Select',
-  multi_select: 'Textarea',
+  multi_select: 'MultiSelect',
   boolean: 'Switch',
-  user: 'Input',
+  user: 'UserPicker',
 }
 
 function normalizeField(

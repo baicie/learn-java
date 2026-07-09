@@ -13,4 +13,5 @@ export const common = {
   'common.preview': '预览',
   'common.enabled': '启用',
   'common.disabled': '禁用',
+  'common.unknownField': '未知控件',
 } as const

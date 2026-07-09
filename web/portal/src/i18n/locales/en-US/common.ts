@@ -13,4 +13,5 @@ export const common = {
   'common.preview': 'Preview',
   'common.enabled': 'Enabled',
   'common.disabled': 'Disabled',
+  'common.unknownField': 'Unknown field',
 } as const

@@ -77,7 +77,8 @@ export const workRecords = {
   'workRecords.designer.palette.text': 'Text',
   'workRecords.designer.palette.textDescription': 'Single line of text',
   'workRecords.designer.palette.textarea': 'Multi-line text',
-  'workRecords.designer.palette.textareaDescription': 'Paragraphs and line breaks',
+  'workRecords.designer.palette.textareaDescription':
+    'Paragraphs and line breaks',
   'workRecords.designer.palette.number': 'Number',
   'workRecords.designer.palette.numberDescription': 'Integer or decimal',
   'workRecords.designer.palette.date': 'Date',
@@ -85,7 +86,8 @@ export const workRecords = {
   'workRecords.designer.palette.datetime': 'Date & time',
   'workRecords.designer.palette.datetimeDescription': 'YYYY-MM-DD HH:mm:ss',
   'workRecords.designer.palette.select': 'Select',
-  'workRecords.designer.palette.selectDescription': 'Static options or dictionary',
+  'workRecords.designer.palette.selectDescription':
+    'Static options or dictionary',
   'workRecords.designer.palette.multiSelect': 'Multi-select',
   'workRecords.designer.palette.multiSelectDescription': 'Multiple values',
   'workRecords.designer.palette.user': 'User',
@@ -99,10 +101,12 @@ export const workRecords = {
   'workRecords.designer.canvas.remove': 'Remove',
   // Property panel
   'workRecords.designer.property.region': 'Field properties',
-  'workRecords.designer.property.empty': 'Select a field on the canvas to edit its properties',
+  'workRecords.designer.property.empty':
+    'Select a field on the canvas to edit its properties',
   'workRecords.designer.property.title': 'Title',
   'workRecords.designer.property.fieldCode': 'Field code',
-  'workRecords.designer.property.fieldCodeLockedHint': 'Code is locked because records already use this field',
+  'workRecords.designer.property.fieldCodeLockedHint':
+    'Code is locked because records already use this field',
   'workRecords.designer.property.fieldType': 'Field type',
   'workRecords.designer.property.optionSource': 'Option source',
   'workRecords.designer.property.optionSourceStatic': 'Static options',
@@ -116,8 +120,17 @@ export const workRecords = {
   // Preview
   'workRecords.designer.preview.region': 'Runtime preview',
   'workRecords.designer.preview.title': 'Runtime preview (read-only)',
-  'workRecords.designer.preview.empty': 'Add a field to see the runtime preview',
+  'workRecords.designer.preview.empty':
+    'Add a field to see the runtime preview',
   'workRecords.designer.toolbar.save': 'Save template',
   'workRecords.designer.toolbar.saving': 'Saving…',
   'workRecords.designer.toolbar.dirty': 'Unsaved changes',
+  'workRecords.designer.toolbar.offline':
+    'Backend unavailable — showing sample data',
+  'workRecords.designer.toolbar.templateLabel': 'Active template',
+  'workRecords.designer.toolbar.empty':
+    'No templates available — starting from sample',
+  'workRecords.designer.toolbar.retry': 'Retry loading templates',
+  // Empty / fallback placeholder (was hardcoded, see designer-design §14.4)
+  'workRecords.designer.dict.empty': 'No dictionaries available',
 } as const

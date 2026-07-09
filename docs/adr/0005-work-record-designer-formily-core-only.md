@@ -6,6 +6,7 @@ phase: work-record
 owner: ai
 created: 2026-07-08
 updated: 2026-07-08
+status: accepted-and-implemented
 related:
   - .agents/skills/aegisops/SKILL.md
   - .agents/skills/aegisops/SKILL.md §4.1
@@ -107,10 +108,79 @@ related:
 - `FormilyRuntimeForm` 不需要修改，但需要在 `formily-schema.ts` 暴露 `addField / removeField / moveField / updateField / setDictionaryCode` 等纯函数，供画布与属性面板复用。
 - 不动后端、不动数据库 migration、不动运行态测试。
 
+> 实现注：本 ADR 状态被接受后，`FormilyRuntimeForm` 内的 `multi_select` 与 `user` 字段被映射到 shadcn/ui `Checkbox` 组与单行 `Input`，未引入额外的 user picker 依赖，属于"决策 5 不做复杂低代码/选人控件"边界内的最瘦封装。该限制属于 runtime 而非 designer，designer 仍按本 ADR §决策 1–6 暴露 9 类字段。具体同步见 `docs/record/phase-05-record-runtime.md` 与 `web/portal/src/features/work-records/components/formily-runtime-form.tsx`。
+
 ## 验证
 
 - `pnpm --filter web/portal build` 通过：编译期 `@formily/antd*` 等被禁包不被引用。
-- 新增 `scripts/ci/check-formily-deps.sh`：扫描 `web/portal/package.json` 与 `pnpm-lock.yaml`，匹配禁止列表；本地与 CI 任一命中即非零退出。
+- 新增 `scripts/ci/check-formily-deps.sh`：扫描 `web/portal/package.json` 与 `pnpm-lock.yaml`（存在时），匹配禁止列表；本地与 CI 任一命中即非零退出。
 - 单元测试覆盖 `field-types.ts`、`schema-builder.ts` 纯函数。
 - 组件测试覆盖 `designer-canvas.tsx` / `designer-palette.tsx` / `designer-property-panel.tsx` 的渲染、状态、回调。
+- `FormilyRuntimeForm` 通过 `formily-runtime-form.test.tsx` 覆盖运行时 select / multi_select(checkbox 组) / user(input) 的薄封装映射。
 - E2E（后续接入 vitest + Playwright 后）覆盖"新建模板 → 拖入 9 类字段 → 编辑属性 → 保存 → 在 `/work-records/new` 加载 → 提交记录"全链路。
+
+## 实施状态（落地证据 · 2026-07-08）
+
+```text
+package.json (web/portal) 启用包：
+  @formily/core       ^2.3.7
+  @formily/json-schema ^2.3.7
+  @formily/react      ^2.3.7
+  @formily/validator  ^2.3.7
+
+禁用包零命中：FORBIDDEN_HITS=0（依赖 + devDependencies）
+
+portal 内代码引用统计：
+  @formily/core / @formily/react / @formily/json-schema 引用文件：
+    web/portal/src/features/work-records/components/formily-runtime-form.tsx
+    （仅运行时，未引入 designable / setters）
+  禁用前缀（antd|antd-components|antd-setters|designable-setters|
+        antd-icons|icons|fusion|element-plus|next|naive|primevue|
+        vant|arco）零命中
+
+设计器与运行时目录：
+  web/portal/src/features/work-records/components/formily-designer-shell.tsx           四区布局
+  web/portal/src/features/work-records/components/designer/designer-{canvas,palette,
+    property-panel,preview}.tsx                                                       左中右组件
+  web/portal/src/features/work-records/components/designer/setter/{text,number,
+    boolean,select,dict}-setter.tsx                                                   shadcn/ui setter
+  web/portal/src/features/work-records/data/designer/{field-types,palette,
+    schema-builder}.ts                                                                纯函数 + 9 类字段映射
+  web/portal/src/features/work-records/data/formily-schema.ts                          字段索引抽取
+  web/portal/src/features/work-records/components/dict-schema-injector.ts              字典注入纯函数
+  web/portal/src/features/work-records/components/formily-runtime-form.tsx            运行时（select / multi_select / user / 5 类文本控件）
+
+后端：
+  modules/aiops-work-record 与 V0012–V0014 migration 与 SKILL.md §6.15 对齐，
+  本 ADR 不修改后端契约，未引入新 migration。
+
+测试：
+  data/designer/field-types.test.ts、schema-builder.test.ts、palette.test.ts
+  components/designer/{canvas,palette,property-panel,preview}.test.tsx
+  components/designer/setter/setter.test.tsx
+  components/formily-designer-shell.test.tsx
+  components/dict-schema-injector.test.ts
+  components/formily-runtime-form.test.tsx（新增）
+
+CI 守卫：
+  scripts/ci/check-formily-deps.sh
+    - 扫描 package.json (dependencies / devDependencies)
+    - 存在时扫描 pnpm-lock.yaml（pnpm 输出格式 '  /<pkg>@<ver>:'）
+    - 命中即非零退出，受 scripts/ci/frontend.sh first-class 调用
+```
+
+### 已知薄封装
+
+```text
+1. multi_select 在 FormilyRuntimeForm 渲染为 shadcn/ui Checkbox 组（不接 async multi combobox）。
+   原因：决策 5 禁止复杂组件，第一版未引入 cmdk/multi-select 组合。
+   后续若提出"远程搜索 + 多选"，需要新 ADR。
+
+2. user 在 FormilyRuntimeForm 渲染为单行 Input（value = userId）。
+   原因：决策 5 不做选人控件，第一版不依赖 /users API、不引入新依赖。
+   后续若提出"实时选人 + 头像"，需要新 ADR 评估是否保留 <shadcn Command+User> 或独立 UserPicker 组件。
+
+3. ADR §影响第四点中的"FormilyRuntimeForm 不需要修改"已被运行时映射修补取代
+   （multi_select / user 各占一行实现注），参见上文"实现注"段落；其余纯函数与
+   schema builder 的接口要求保持不变。
+```
