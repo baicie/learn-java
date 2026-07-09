@@ -23,7 +23,7 @@ class DictionaryControllerTest {
   @Test
   void listTypes_shouldReturnTypes() {
     DictionaryService service = Mockito.mock(DictionaryService.class);
-    when(service.listTypes("tenant_1"))
+    when(service.listTypes("tenant_1", false))
         .thenReturn(
             List.of(
                 new DictTypeRecord(
@@ -42,12 +42,12 @@ class DictionaryControllerTest {
     TenantContext.setTenantId("tenant_1");
     DictionaryController controller = new DictionaryController(service);
 
-    var response = controller.listTypes();
+    var response = controller.listTypes(false);
 
     assertThat(response.success()).isTrue();
     assertThat(response.data()).hasSize(1);
     assertThat(response.data().getFirst().dictCode()).isEqualTo("record_status");
-    verify(service).listTypes("tenant_1");
+    verify(service).listTypes("tenant_1", false);
   }
 
   @Test

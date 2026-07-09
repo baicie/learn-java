@@ -18,16 +18,22 @@ public class DictionaryRepository {
   }
 
   public List<DictTypeRecord> listTypes(String tenantId) {
+    return listTypes(tenantId, false);
+  }
+
+  public List<DictTypeRecord> listTypes(String tenantId, boolean includeDisabled) {
     return jdbc.query(
         """
             select id, tenant_id, dict_code, dict_name, description, system_builtin,
                    enabled, sort_order, created_by, created_at, updated_at
             from platform_dict_type
             where tenant_id = ?
+              and (? = true or enabled = true)
             order by sort_order asc, created_at asc
             """,
         (rs, rowNum) -> mapType(rs),
-        tenantId);
+        tenantId,
+        includeDisabled);
   }
 
   public Optional<DictTypeRecord> findType(String tenantId, String dictCode) {
@@ -108,8 +114,32 @@ public class DictionaryRepository {
             tenantId,
             dictCode);
     if (rows == 0 && !existing.systemBuiltin()) {
-      // System builtins skip update; treat as no-op.
       return Optional.of(existing);
+    }
+    return findType(tenantId, dictCode);
+  }
+
+  public Optional<DictTypeRecord> disableType(String tenantId, String dictCode) {
+    DictTypeRecord existing =
+        findType(tenantId, dictCode)
+            .orElseThrow(() -> new IllegalArgumentException("dict type not found"));
+    if (existing.systemBuiltin()) {
+      throw new IllegalArgumentException("system builtin dict type cannot be disabled");
+    }
+
+    int rows =
+        jdbc.update(
+            """
+                update platform_dict_type
+                   set enabled = false,
+                       updated_at = now()
+                 where tenant_id = ? and dict_code = ?
+                """,
+            tenantId,
+            dictCode);
+
+    if (rows == 0) {
+      return Optional.empty();
     }
     return findType(tenantId, dictCode);
   }
@@ -198,6 +228,32 @@ public class DictionaryRepository {
       return Optional.empty();
     }
     return listItems(tenantId, dictCode).stream()
+        .filter(item -> item.id().equals(itemId))
+        .findFirst();
+  }
+
+  public Optional<DictItemRecord> disableItem(String tenantId, String dictCode, String itemId) {
+    DictTypeRecord type =
+        findType(tenantId, dictCode)
+            .orElseThrow(() -> new IllegalArgumentException("dict type not found"));
+
+    int rows =
+        jdbc.update(
+            """
+                update platform_dict_item
+                   set enabled = false,
+                       updated_at = now()
+                 where tenant_id = ? and dict_type_id = ? and id = ?
+                """,
+            tenantId,
+            type.id(),
+            itemId);
+
+    if (rows == 0) {
+      return Optional.empty();
+    }
+
+    return listItems(tenantId, dictCode, true).stream()
         .filter(item -> item.id().equals(itemId))
         .findFirst();
   }

@@ -6,6 +6,7 @@ import io.aegisops.security.UserPrincipal;
 import java.util.List;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -26,8 +27,9 @@ public class DictionaryController {
 
   @GetMapping
   @PreAuthorize("hasAuthority('platform:dict:read')")
-  public ApiResponse<List<DictTypeRecord>> listTypes() {
-    return ApiResponse.ok(service.listTypes(TenantContext.requireTenantId()));
+  public ApiResponse<List<DictTypeRecord>> listTypes(
+      @RequestParam(defaultValue = "false") boolean includeDisabled) {
+    return ApiResponse.ok(service.listTypes(TenantContext.requireTenantId(), includeDisabled));
   }
 
   @PostMapping
@@ -47,10 +49,16 @@ public class DictionaryController {
       @AuthenticationPrincipal UserPrincipal user) {
     return ApiResponse.ok(
         service.updateType(
-            TenantContext.requireTenantId(),
-            dictCode,
-            request,
-            user == null ? "system" : user.id()));
+            TenantContext.requireTenantId(), dictCode, request, user == null ? "system" : user.id()));
+  }
+
+  @DeleteMapping("/{dictCode}")
+  @PreAuthorize("hasAuthority('platform:dict:write')")
+  public ApiResponse<DictTypeRecord> disableType(
+      @PathVariable String dictCode, @AuthenticationPrincipal UserPrincipal user) {
+    return ApiResponse.ok(
+        service.disableType(
+            TenantContext.requireTenantId(), dictCode, user == null ? "system" : user.id()));
   }
 
   @GetMapping("/{dictCode}/items")
@@ -70,10 +78,7 @@ public class DictionaryController {
       @AuthenticationPrincipal UserPrincipal user) {
     return ApiResponse.ok(
         service.createItem(
-            TenantContext.requireTenantId(),
-            dictCode,
-            request,
-            user == null ? "system" : user.id()));
+            TenantContext.requireTenantId(), dictCode, request, user == null ? "system" : user.id()));
   }
 
   @PutMapping("/{dictCode}/items/{itemId}")
@@ -89,6 +94,20 @@ public class DictionaryController {
             dictCode,
             itemId,
             request,
+            user == null ? "system" : user.id()));
+  }
+
+  @DeleteMapping("/{dictCode}/items/{itemId}")
+  @PreAuthorize("hasAuthority('platform:dict:write')")
+  public ApiResponse<DictItemRecord> disableItem(
+      @PathVariable String dictCode,
+      @PathVariable String itemId,
+      @AuthenticationPrincipal UserPrincipal user) {
+    return ApiResponse.ok(
+        service.disableItem(
+            TenantContext.requireTenantId(),
+            dictCode,
+            itemId,
             user == null ? "system" : user.id()));
   }
 }

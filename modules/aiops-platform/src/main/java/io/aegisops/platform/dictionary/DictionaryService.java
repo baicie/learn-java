@@ -17,7 +17,11 @@ public class DictionaryService {
   }
 
   public List<DictTypeRecord> listTypes(String tenantId) {
-    return repository.listTypes(tenantId);
+    return repository.listTypes(tenantId, false);
+  }
+
+  public List<DictTypeRecord> listTypes(String tenantId, boolean includeDisabled) {
+    return repository.listTypes(tenantId, includeDisabled);
   }
 
   public DictTypeRecord createType(
@@ -58,6 +62,24 @@ public class DictionaryService {
             updated.id(),
             auditDetail("dictCode", dictCode, "enabled", String.valueOf(updated.enabled()))));
     return updated;
+  }
+
+  public DictTypeRecord disableType(String tenantId, String dictCode, String actor) {
+    requireText(dictCode, "dictCode");
+    DictTypeRecord disabled =
+        repository
+            .disableType(tenantId, dictCode)
+            .orElseThrow(() -> new IllegalArgumentException("dict type not found"));
+
+    audit.record(
+        new AuditRecordCommand(
+            tenantId,
+            defaultActor(actor),
+            "platform.dict_type.disable",
+            "platform_dict_type",
+            disabled.id(),
+            auditDetail("dictCode", dictCode)));
+    return disabled;
   }
 
   public List<DictItemRecord> listItems(String tenantId, String dictCode) {
@@ -133,6 +155,26 @@ public class DictionaryService {
             updated.id(),
             auditDetail("dictCode", dictCode, "enabled", String.valueOf(updated.enabled()))));
     return updated;
+  }
+
+  public DictItemRecord disableItem(String tenantId, String dictCode, String itemId, String actor) {
+    requireText(dictCode, "dictCode");
+    requireText(itemId, "itemId");
+
+    DictItemRecord disabled =
+        repository
+            .disableItem(tenantId, dictCode, itemId)
+            .orElseThrow(() -> new IllegalArgumentException("dict item not found"));
+
+    audit.record(
+        new AuditRecordCommand(
+            tenantId,
+            defaultActor(actor),
+            "platform.dict_item.disable",
+            "platform_dict_item",
+            disabled.id(),
+            auditDetail("dictCode", dictCode, "itemId", itemId)));
+    return disabled;
   }
 
   private void requireText(String value, String field) {
