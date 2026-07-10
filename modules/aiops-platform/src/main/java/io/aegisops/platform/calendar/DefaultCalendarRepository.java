@@ -45,9 +45,7 @@ public class DefaultCalendarRepository {
               and b.calendar_year = :year
               and c.enabled = true
             """,
-            Map.of(
-                "tenantId", tenantId,
-                "year", year),
+            Map.of("tenantId", tenantId, "year", year),
             this::mapCalendar);
 
     return rows.stream().findFirst();
@@ -125,10 +123,7 @@ public class DefaultCalendarRepository {
         order by d.calendar_date desc
         limit :limit
         """,
-        Map.of(
-            "tenantId", tenantId,
-            "anchorDate", anchorDate,
-            "limit", limit),
+        Map.of("tenantId", tenantId, "anchorDate", anchorDate, "limit", limit),
         (rs, rowNumber) -> rs.getObject("calendar_date", LocalDate.class));
   }
 
@@ -166,14 +161,11 @@ public class DefaultCalendarRepository {
           and d.calendar_date <= :end
         order by d.calendar_date asc
         """,
-        Map.of(
-            "tenantId", tenantId,
-            "start", start,
-            "end", end),
+        Map.of("tenantId", tenantId, "start", start, "end", end),
         this::mapDay);
   }
 
-  private Optional<CalendarRecord> findCalendar(String tenantId, String calendarId) {
+  public Optional<CalendarRecord> findCalendar(String tenantId, String calendarId) {
     List<CalendarRecord> rows =
         jdbc.query(
             """
@@ -195,12 +187,31 @@ public class DefaultCalendarRepository {
             where tenant_id = :tenantId
               and id = :calendarId
             """,
-            Map.of(
-                "tenantId", tenantId,
-                "calendarId", calendarId),
+            Map.of("tenantId", tenantId, "calendarId", calendarId),
             this::mapCalendar);
 
     return rows.stream().findFirst();
+  }
+
+  public int countCalendarDays(String tenantId, String calendarId, LocalDate start, LocalDate end) {
+    Integer count =
+        jdbc.queryForObject(
+            """
+            select count(*)
+            from platform_calendar_day
+            where tenant_id = :tenantId
+              and calendar_id = :calendarId
+              and calendar_date >= :start
+              and calendar_date <= :end
+            """,
+            Map.of(
+                "tenantId", tenantId,
+                "calendarId", calendarId,
+                "start", start,
+                "end", end),
+            Integer.class);
+
+    return count == null ? 0 : count;
   }
 
   private CalendarRecord mapCalendar(ResultSet rs, int rowNumber) throws SQLException {

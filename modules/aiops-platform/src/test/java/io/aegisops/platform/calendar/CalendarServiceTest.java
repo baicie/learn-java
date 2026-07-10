@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -334,5 +335,19 @@ class CalendarServiceTest {
                     "tenant-1", "cal-1", new ImportCalendarCsvRequest(csv.toString()), "u1"))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("1000");
+  }
+
+  @Test
+  void createCalendarShouldRejectInvalidTimezone() {
+    CreateCalendarRequest request =
+        new CreateCalendarRequest(
+            "CN_2026", "2026 工作日历", "CN", "Asia/Not-Exists", 2026, true, "manual", null);
+
+    assertThatThrownBy(() -> service.createCalendar("tenant-1", request, "u1"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("invalid timezone");
+
+    verify(repository, never()).createCalendar(any(), any(), any());
+    verify(audit, never()).recordChange(any(), any(), any(), any(), any(), any(), any(), any());
   }
 }

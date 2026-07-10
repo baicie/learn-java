@@ -38,18 +38,34 @@ public class CalendarService {
     if (request == null) {
       throw new IllegalArgumentException("calendar request is required");
     }
+
     requireText(request.calendarCode(), "calendarCode");
     requireText(request.calendarName(), "calendarName");
     if (request.year() == null || request.year() < 2000 || request.year() > 2100) {
       throw new IllegalArgumentException("year must be between 2000 and 2100");
     }
 
-    CalendarRecord record = repository.createCalendar(tenantId, request, defaultActor(actor));
-    initializeYearDays(tenantId, record.id(), request.year(), defaultActor(actor));
+    String timezone = normalizeTimezone(request.timezone());
+
+    CreateCalendarRequest normalized =
+        new CreateCalendarRequest(
+            request.calendarCode(),
+            request.calendarName(),
+            request.regionCode(),
+            timezone,
+            request.year(),
+            request.enabled(),
+            request.sourceType(),
+            request.description());
+
+    String effectiveActor = defaultActor(actor);
+
+    CalendarRecord record = repository.createCalendar(tenantId, normalized, effectiveActor);
+    initializeYearDays(tenantId, record.id(), normalized.year(), effectiveActor);
 
     audit.recordChange(
         tenantId,
-        defaultActor(actor),
+        effectiveActor,
         "platform.calendar.create",
         "platform_calendar",
         record.id(),
@@ -360,6 +376,17 @@ public class CalendarService {
   private void requireText(String value, String field) {
     if (value == null || value.isBlank()) {
       throw new IllegalArgumentException(field + " is required");
+    }
+  }
+
+  private String normalizeTimezone(String value) {
+    String timezone = value == null || value.isBlank() ? "Asia/Shanghai" : value.trim();
+
+    try {
+      java.time.ZoneId.of(timezone);
+      return timezone;
+    } catch (java.time.DateTimeException ex) {
+      throw new IllegalArgumentException("invalid timezone: " + timezone, ex);
     }
   }
 

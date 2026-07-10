@@ -99,3 +99,19 @@ export async function importCalendarCsv(calendarId: string, csv: string) {
   )
   return apiResponseSchema(z.number()).parse(data).data
 }
+
+export async function getDefaultCalendar(year: number): Promise<Calendar> {
+  const { data } = await apiClient.get('/api/platform/calendars/default', {
+    params: { year },
+  })
+  return apiResponseSchema(calendarSchema).parse(data).data
+}
+
+export async function setDefaultCalendar(
+  calendarId: string
+): Promise<Calendar> {
+  const { data } = await apiClient.put(
+    `/api/platform/calendars/${calendarId}/default`
+  )
+  return apiResponseSchema(calendarSchema).parse(data).data
+}

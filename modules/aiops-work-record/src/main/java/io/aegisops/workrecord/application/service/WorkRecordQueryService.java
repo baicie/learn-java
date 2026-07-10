@@ -71,7 +71,8 @@ public class WorkRecordQueryService {
     boolean canReadAll = permissionService.canReadAll(user);
 
     if (!canReadAll && !permissionService.canReadSelf(user)) {
-      throw new SecurityException("not allowed to read work records");
+      throw new org.springframework.security.access.AccessDeniedException(
+          "not allowed to read work records");
     }
 
     RecordQuickView view = RecordQuickView.from(query.quickView());
@@ -221,7 +222,11 @@ public class WorkRecordQueryService {
       return DEFAULT_WORKDAY_COUNT;
     }
 
-    return Math.min(Math.max(requested, 1), MAX_WORKDAY_COUNT);
+    if (requested < 1 || requested > MAX_WORKDAY_COUNT) {
+      throw new IllegalArgumentException("workdayCount must be between 1 and " + MAX_WORKDAY_COUNT);
+    }
+
+    return requested;
   }
 
   private WorkRecordCalendarPort requireCalendarPort() {

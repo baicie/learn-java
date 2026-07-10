@@ -76,8 +76,7 @@ class WorkRecordQueryServiceQuickViewTest {
             calendarPort,
             clock);
 
-    when(repository.page(eq("t1"), any()))
-        .thenReturn(new PageResult<>(0, 1, 20, List.of()));
+    when(repository.page(eq("t1"), any())).thenReturn(new PageResult<>(0, 1, 20, List.of()));
 
     fixedService.page("t1", query("recent_workdays", 5), user());
 

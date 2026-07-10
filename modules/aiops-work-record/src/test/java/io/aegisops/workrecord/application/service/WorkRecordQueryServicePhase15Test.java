@@ -1,6 +1,7 @@
 package io.aegisops.workrecord.application.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -85,6 +86,14 @@ class WorkRecordQueryServicePhase15Test {
     assertThat(effective.recordTimeFrom().toLocalDate()).isEqualTo(LocalDate.of(2026, 7, 1));
 
     assertThat(effective.recordTimeTo().toLocalDate()).isEqualTo(LocalDate.of(2026, 8, 1));
+  }
+
+  @Test
+  void shouldRejectInvalidWorkdayCount() {
+    assertThatThrownBy(
+            () -> service.prepareEffectiveQuery("t1", query("recent_workdays", 61), admin()))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("between 1 and 60");
   }
 
   private RecordQuery query(String quickView, Integer count) {

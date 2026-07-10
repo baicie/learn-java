@@ -8,8 +8,8 @@ import { QuickViewTabs } from './quick-view-tabs'
 import { RecordTable } from './record-table'
 import type { ListQueryState } from './types'
 import { useWorkRecordList } from './use-work-record-list'
-import { WorkdaySummaryCard } from './workday-summary-card'
 import { WorkRecordExportDialog } from './work-record-export-dialog'
+import { WorkdaySummaryCard } from './workday-summary-card'
 
 type Props = {
   query: ListQueryState
@@ -72,20 +72,14 @@ export function WorkRecordListPage({ query, onQueryChange }: Props) {
         <QuickViewTabs
           value={list.query.quickView}
           available={list.meta?.quickViews ?? []}
-          onChange={(quickView) =>
-            list.patchQuery({ quickView })
-          }
+          onChange={(quickView) => list.patchQuery({ quickView })}
         />
 
         {list.query.quickView === 'this_work_month' ? (
           <WorkdaySummaryCard
             summary={list.workdaySummary}
             loading={list.workdaySummaryLoading}
-            error={
-              list.workdaySummaryError
-                ? (list.workdaySummaryError as Error)
-                : null
-            }
+            error={list.workdaySummaryError}
           />
         ) : null}
 
