@@ -4,6 +4,8 @@ import { Check, Plus, Upload } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { notify } from '@/components/feedback/app-toaster'
+import { useConfirm } from '@/components/feedback/confirm-provider'
 import { PermissionGate } from '@/components/permission-gate'
 import {
   createCalendar,
@@ -24,6 +26,7 @@ function monthRange(year: number, month: number) {
 
 export function CalendarsPage() {
   const queryClient = useQueryClient()
+  const confirm = useConfirm()
   const now = new Date()
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth() + 1)
@@ -72,8 +75,10 @@ export function CalendarsPage() {
     enabled: Boolean(selectedCalendar?.id),
   })
 
-  const refresh = async () => {
-    await queryClient.invalidateQueries({ queryKey: ['platform-calendars'] })
+  const invalidate = async () => {
+    await queryClient.invalidateQueries({
+      queryKey: ['platform-calendars'],
+    })
     await queryClient.invalidateQueries({
       queryKey: ['platform-calendar-days'],
     })
@@ -90,7 +95,11 @@ export function CalendarsPage() {
         enabled: true,
         sourceType: 'manual',
       }),
-    onSuccess: refresh,
+    onSuccess: async () => {
+      notify.success('年度日历创建成功')
+      await invalidate()
+    },
+    onError: (error) => notify.error(error, '年度日历创建失败'),
   })
 
   const importMutation = useMutation({
@@ -101,12 +110,17 @@ export function CalendarsPage() {
 ${year}-01-01,HOLIDAY,false,元旦,
 `
       ),
-    onSuccess: refresh,
+    onSuccess: async () => {
+      notify.success('工作日历导入成功')
+      await invalidate()
+    },
+    onError: (error) => notify.error(error, '工作日历导入失败'),
   })
 
   const defaultMutation = useMutation({
     mutationFn: (calendarId: string) => setDefaultCalendar(calendarId),
     onSuccess: async () => {
+      notify.success('默认日历已更新')
       await queryClient.invalidateQueries({
         queryKey: ['platform-default-calendar'],
       })
@@ -117,16 +131,81 @@ ${year}-01-01,HOLIDAY,false,元旦,
         queryKey: ['work-record-list'],
       })
     },
+    onError: (error) => notify.error(error, '默认日历更新失败'),
   })
 
+  const updateDayMutation = useMutation({
+    mutationFn: ({
+      calendarId,
+      date,
+      input,
+    }: {
+      calendarId: string
+      date: string
+      input: Parameters<typeof updateCalendarDay>[2]
+    }) => updateCalendarDay(calendarId, date, input),
+
+    onSuccess: async () => {
+      notify.success('日期状态更新成功')
+      await queryClient.invalidateQueries({
+        queryKey: ['platform-calendar-days'],
+      })
+      await queryClient.invalidateQueries({
+        queryKey: ['work-record-workday-summary'],
+      })
+      await queryClient.invalidateQueries({
+        queryKey: ['work-record-list'],
+      })
+    },
+
+    onError: (error) => notify.error(error, '日期状态更新失败'),
+  })
+
+  const submitUpdateDay = async (
+    calendarId: string,
+    day: {
+      calendarDate: string
+      workday: boolean
+    }
+  ) => {
+    const accepted = await confirm({
+      title: '修改日期状态',
+      description: '该修改会影响最近工作日、工作日统计和后续日报缺失判断。',
+      details: (
+        <div>
+          {day.calendarDate}：
+          {day.workday ? '工作日 → 非工作日' : '非工作日 → 工作日'}
+        </div>
+      ),
+      confirmText: '确认修改',
+      variant: 'warning',
+    })
+
+    if (!accepted) return
+
+    updateDayMutation.mutate({
+      calendarId,
+      date: day.calendarDate,
+      input: {
+        dayType: day.workday ? 'HOLIDAY' : 'ADJUSTED_WORKDAY',
+        workday: !day.workday,
+        holidayName: day.workday ? '手工设置假期' : undefined,
+        sourceType: 'manual',
+        remark: 'portal override',
+      },
+    })
+  }
+
   return (
-    <main className='grid gap-4 p-6'>
-      <div>
-        <h1 className='text-2xl font-semibold'>工作日历</h1>
-        <p className='text-sm text-muted-foreground'>
-          维护工作日、节假日和调休工作日，供日报、月报、值班和统计使用。
-        </p>
-      </div>
+    <main className='grid gap-4 p-4 md:gap-6 md:p-6'>
+      <header className='flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between'>
+        <div>
+          <h1 className='text-xl font-semibold md:text-2xl'>工作日历</h1>
+          <p className='text-sm text-muted-foreground'>
+            维护工作日、节假日和调休工作日，供日报、月报、值班和统计使用。
+          </p>
+        </div>
+      </header>
 
       <Card>
         <CardHeader className='flex flex-row items-center justify-between'>
@@ -156,7 +235,11 @@ ${year}-01-01,HOLIDAY,false,元旦,
               ))}
             </select>
             <PermissionGate any={['platform:calendar:write']}>
-              <Button size='sm' onClick={() => createMutation.mutate()}>
+              <Button
+                size='sm'
+                onClick={() => createMutation.mutate()}
+                disabled={createMutation.isPending}
+              >
                 <Plus className='mr-1 size-4' />
                 创建年度日历
               </Button>
@@ -167,6 +250,7 @@ ${year}-01-01,HOLIDAY,false,元旦,
                   size='sm'
                   variant='outline'
                   onClick={() => importMutation.mutate(selectedCalendar.id)}
+                  disabled={importMutation.isPending}
                 >
                   <Upload className='mr-1 size-4' />
                   导入示例 CSV
@@ -253,20 +337,9 @@ ${year}-01-01,HOLIDAY,false,元旦,
                           <Button
                             size='sm'
                             variant='outline'
+                            disabled={updateDayMutation.isPending}
                             onClick={() =>
-                              updateCalendarDay(
-                                selectedCalendar.id,
-                                day.calendarDate,
-                                {
-                                  dayType: day.workday ? 'HOLIDAY' : 'WORKDAY',
-                                  workday: !day.workday,
-                                  holidayName: day.workday
-                                    ? '手工设置假期'
-                                    : undefined,
-                                  sourceType: 'manual',
-                                  remark: 'portal override',
-                                }
-                              ).then(refresh)
+                              void submitUpdateDay(selectedCalendar.id, day)
                             }
                           >
                             切换

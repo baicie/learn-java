@@ -3,24 +3,58 @@ import axios from 'axios'
 type ApiErrorBody = {
   errorCode?: string | null
   message?: string | null
+  errors?: Record<string, string> | null
 }
 
-export function apiErrorMessage(error: unknown, fallback: string) {
+export type AppError = {
+  code: string | null
+  message: string
+  fieldErrors: Record<string, string>
+  cause: unknown
+}
+
+const DEFAULT_FALLBACK = '操作失败，请稍后重试'
+
+export function toAppError(
+  error: unknown,
+  fallback: string = DEFAULT_FALLBACK
+): AppError {
   if (axios.isAxiosError<ApiErrorBody>(error)) {
-    return error.response?.data?.message ?? error.message ?? fallback
+    const body = error.response?.data
+
+    return {
+      code: body?.errorCode ?? null,
+      message: body?.message?.trim() || error.message || fallback,
+      fieldErrors: body?.errors ?? {},
+      cause: error,
+    }
   }
 
   if (error instanceof Error) {
-    return error.message
+    return {
+      code: null,
+      message: error.message || fallback,
+      fieldErrors: {},
+      cause: error,
+    }
   }
 
-  return fallback
+  return {
+    code: null,
+    message: fallback,
+    fieldErrors: {},
+    cause: error,
+  }
 }
 
-export function apiErrorCode(error: unknown) {
-  if (axios.isAxiosError<ApiErrorBody>(error)) {
-    return error.response?.data?.errorCode ?? null
-  }
+export function apiErrorMessage(error: unknown, fallback?: string): string {
+  return toAppError(error, fallback).message
+}
 
-  return null
+export function apiErrorCode(error: unknown): string | null {
+  return toAppError(error).code
+}
+
+export function apiFieldErrors(error: unknown): Record<string, string> {
+  return toAppError(error).fieldErrors
 }

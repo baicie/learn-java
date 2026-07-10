@@ -7,11 +7,12 @@ import {
   QueryClientProvider,
 } from '@tanstack/react-query'
 import { RouterProvider, createRouter } from '@tanstack/react-router'
+import { i18n } from '@/i18n'
 import { I18nextProvider } from 'react-i18next'
 import { toast } from 'sonner'
 import { useAuthStore } from '@/stores/auth-store'
 import { handleServerError } from '@/lib/handle-server-error'
-import { i18n } from '@/i18n'
+import { AppProviders } from './app/app-providers'
 import { DirectionProvider } from './context/direction-provider'
 import { FontProvider } from './context/font-provider'
 import { ThemeProvider } from './context/theme-provider'
@@ -97,13 +98,15 @@ if (!rootElement.innerHTML) {
     <StrictMode>
       <I18nextProvider i18n={i18n} defaultNS='translation'>
         <QueryClientProvider client={queryClient}>
-          <ThemeProvider>
-            <FontProvider>
-              <DirectionProvider>
-                <RouterProvider router={router} />
-              </DirectionProvider>
-            </FontProvider>
-          </ThemeProvider>
+          <AppProviders>
+            <ThemeProvider>
+              <FontProvider>
+                <DirectionProvider>
+                  <RouterProvider router={router} />
+                </DirectionProvider>
+              </FontProvider>
+            </ThemeProvider>
+          </AppProviders>
         </QueryClientProvider>
       </I18nextProvider>
     </StrictMode>

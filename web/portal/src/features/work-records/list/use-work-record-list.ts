@@ -1,12 +1,13 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { listDictItems } from '@/features/dictionaries/api'
+import { notify } from '@/components/feedback/app-toaster'
+import { useDictionaryOptions } from '@/features/dictionaries/dictionary-query'
 import {
   fetchRecordList,
   fetchRecordListMeta,
   fetchWorkdaySummary,
 } from './api'
-import type { DictOptionMap, ListQueryState } from './types'
+import type { ListQueryState } from './types'
 
 export function useWorkRecordList(
   query: ListQueryState,
@@ -20,29 +21,28 @@ export function useWorkRecordList(
   const listQuery = useQuery({
     queryKey: ['work-record-list', query],
     queryFn: () => fetchRecordList(query),
+    placeholderData: (previous) => previous,
   })
 
-  const dictQuery = useQuery({
-    queryKey: ['work-record-list-dicts', metaQuery.data?.dictCodes ?? []],
-    enabled: Boolean(metaQuery.data?.dictCodes.length),
-    queryFn: async (): Promise<DictOptionMap> => {
-      const entries = await Promise.all(
-        (metaQuery.data?.dictCodes ?? []).map(async (dictCode) => {
-          const items = await listDictItems(dictCode, true)
-          return [
-            dictCode,
-            items.map((item) => ({
-              value: item.itemValue,
-              label: item.itemLabel,
-              enabled: item.enabled,
-            })),
-          ] as const
-        })
+  const dictionaryQuery = useDictionaryOptions(
+    metaQuery.data?.dictCodes ?? [],
+    true
+  )
+
+  const notifiedDictError = useRef<unknown>(null)
+
+  useEffect(() => {
+    if (
+      dictionaryQuery.error &&
+      dictionaryQuery.error !== notifiedDictError.current
+    ) {
+      notifiedDictError.current = dictionaryQuery.error
+      notify.error(
+        dictionaryQuery.error,
+        '字典标签加载失败，当前暂时显示原始值'
       )
-
-      return Object.fromEntries(entries)
-    },
-  })
+    }
+  }, [dictionaryQuery.error])
 
   const workdaySummaryQuery = useQuery({
     queryKey: ['work-record-workday-summary', 'current'],
@@ -74,6 +74,7 @@ export function useWorkRecordList(
       patch.templateId !== query.templateId
     ) {
       next.dynamicFilters = []
+      next.visibleColumns = []
     }
 
     onQueryChange(next)
@@ -82,15 +83,27 @@ export function useWorkRecordList(
   return {
     query,
     patchQuery,
+
     meta: metaQuery.data,
     records: listQuery.data?.items ?? [],
     total: listQuery.data?.total ?? 0,
-    dictOptions: dictQuery.data ?? {},
+
+    dictOptions: dictionaryQuery.options,
     effectiveColumns,
-    loading: metaQuery.isLoading || listQuery.isLoading || dictQuery.isLoading,
-    // 工作日统计错误不应让整个列表消失，
-    // 因此不合并进顶部 error 字段，由统计卡片单独展示。
-    error: metaQuery.error ?? listQuery.error ?? dictQuery.error,
+
+    initialLoading: metaQuery.isLoading && !metaQuery.data,
+
+    pageError: metaQuery.error,
+
+    tableLoading: listQuery.isLoading && !listQuery.data,
+
+    tableRefreshing: listQuery.isFetching && Boolean(listQuery.data),
+
+    tableError: listQuery.error,
+
+    retryPage: () => metaQuery.refetch(),
+    retryTable: () => listQuery.refetch(),
+
     workdaySummary: workdaySummaryQuery.data,
     workdaySummaryLoading: workdaySummaryQuery.isLoading,
     workdaySummaryError: workdaySummaryQuery.error,
