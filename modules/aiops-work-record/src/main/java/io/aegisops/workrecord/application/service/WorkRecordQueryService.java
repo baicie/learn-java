@@ -43,16 +43,37 @@ public class WorkRecordQueryService {
   }
 
   public PageResult<WorkRecord> page(String tenantId, RecordQuery query, UserPrincipal user) {
-    boolean permissionOnlySelf = !permissionService.canReadAll(user);
-    if (permissionOnlySelf && !permissionService.canReadSelf(user)) {
-      throw new SecurityException("not allowed to read work records");
+    return repository.page(
+        tenantId,
+        prepareEffectiveQuery(tenantId, query, user));
+  }
+
+  public RecordQuery prepareEffectiveQuery(
+      String tenantId,
+      RecordQuery query,
+      UserPrincipal user) {
+    if (query == null) {
+      throw new IllegalArgumentException("record query is required");
     }
 
-    RecordQuickView view = RecordQuickView.from(query.quickView());
-    RecordQuery quickQuery = applyQuickView(query, view);
+    boolean permissionOnlySelf =
+        !permissionService.canReadAll(user);
+
+    if (permissionOnlySelf
+        && !permissionService.canReadSelf(user)) {
+      throw new SecurityException(
+          "not allowed to read work records");
+    }
+
+    RecordQuickView view =
+        RecordQuickView.from(query.quickView());
+
+    RecordQuery quickQuery =
+        applyQuickView(query, view);
 
     boolean effectiveOnlySelf =
-        permissionOnlySelf || view == RecordQuickView.MINE;
+        permissionOnlySelf
+            || view == RecordQuickView.MINE;
 
     List<RecordDynamicFilter> normalizedFilters =
         normalizeDynamicFilters(
@@ -60,27 +81,24 @@ public class WorkRecordQueryService {
             quickQuery.templateId(),
             quickQuery.dynamicFilters());
 
-    RecordQuery effective =
-        new RecordQuery(
-            Math.max(1, quickQuery.page()),
-            Math.min(Math.max(1, quickQuery.pageSize()), 200),
-            quickQuery.templateId(),
-            quickQuery.templateVersionId(),
-            quickQuery.statuses(),
-            quickQuery.keyword(),
-            quickQuery.recordTimeFrom(),
-            quickQuery.recordTimeTo(),
-            quickQuery.creatorId(),
-            quickQuery.ownerId(),
-            effectiveOnlySelf,
-            user == null ? null : user.id(),
-            normalizedFilters,
-            quickQuery.sortBy(),
-            quickQuery.sortDir(),
-            view.value(),
-            quickQuery.workdayCount());
-
-    return repository.page(tenantId, effective);
+    return new RecordQuery(
+        Math.max(1, quickQuery.page()),
+        Math.min(Math.max(1, quickQuery.pageSize()), 200),
+        quickQuery.templateId(),
+        quickQuery.templateVersionId(),
+        quickQuery.statuses(),
+        quickQuery.keyword(),
+        quickQuery.recordTimeFrom(),
+        quickQuery.recordTimeTo(),
+        quickQuery.creatorId(),
+        quickQuery.ownerId(),
+        effectiveOnlySelf,
+        user == null ? null : user.id(),
+        normalizedFilters,
+        quickQuery.sortBy(),
+        quickQuery.sortDir(),
+        view.value(),
+        quickQuery.workdayCount());
   }
 
   public WorkRecord get(String tenantId, String recordId, UserPrincipal user) {

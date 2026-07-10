@@ -6,19 +6,27 @@ import io.aegisops.common.api.ApiResponse;
 import io.aegisops.common.tenant.TenantContext;
 import io.aegisops.security.UserPrincipal;
 import io.aegisops.workrecord.api.dto.RecordRequests.CreateRecordRequest;
+import io.aegisops.workrecord.api.dto.RecordRequests.ExportRecordRequest;
 import io.aegisops.workrecord.api.dto.RecordRequests.RecordQueryRequest;
 import io.aegisops.workrecord.api.dto.RecordRequests.UpdateRecordRequest;
 import io.aegisops.workrecord.application.command.CreateRecordCommand;
 import io.aegisops.workrecord.application.command.RecordDynamicFilter;
 import io.aegisops.workrecord.application.command.RecordQuery;
 import io.aegisops.workrecord.application.command.UpdateRecordCommand;
+import io.aegisops.workrecord.application.command.WorkRecordExportResult;
+import io.aegisops.workrecord.application.service.WorkRecordExportService;
 import io.aegisops.workrecord.application.service.WorkRecordListMetaService;
 import io.aegisops.workrecord.application.service.WorkRecordQueryService;
 import io.aegisops.workrecord.application.service.WorkRecordService;
 import io.aegisops.workrecord.domain.model.WorkRecord;
+import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeParseException;
 import java.util.List;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -29,16 +37,19 @@ public class WorkRecordController {
   private final WorkRecordService recordService;
   private final WorkRecordQueryService queryService;
   private final WorkRecordListMetaService metaService;
+  private final WorkRecordExportService exportService;
   private final ObjectMapper objectMapper;
 
   public WorkRecordController(
       WorkRecordService recordService,
       WorkRecordQueryService queryService,
       WorkRecordListMetaService metaService,
+      WorkRecordExportService exportService,
       ObjectMapper objectMapper) {
     this.recordService = recordService;
     this.queryService = queryService;
     this.metaService = metaService;
+    this.exportService = exportService;
     this.objectMapper = objectMapper;
   }
 
@@ -130,6 +141,64 @@ public class WorkRecordController {
       @PathVariable String recordId, @AuthenticationPrincipal UserPrincipal user) {
     recordService.delete(TenantContext.requireTenantId(), recordId, user);
     return ApiResponse.ok(null);
+  }
+
+  @PostMapping(
+      value = "/export",
+      produces = "text/csv;charset=UTF-8")
+  @PreAuthorize("hasAuthority('work-record:export')")
+  public ResponseEntity<byte[]> export(
+      @RequestBody ExportRecordRequest request,
+      @AuthenticationPrincipal UserPrincipal user) {
+    RecordQuery query =
+        new RecordQuery(
+            1,
+            200,
+            request.templateId(),
+            request.templateVersionId(),
+            request.statuses(),
+            request.keyword(),
+            request.recordTimeFrom(),
+            request.recordTimeTo(),
+            request.creatorId(),
+            request.ownerId(),
+            false,
+            user == null ? null : user.id(),
+            request.dynamicFilters() == null
+                ? List.of()
+                : request.dynamicFilters(),
+            normalizeSortBy(request.sortBy()),
+            normalizeSortDir(request.sortDir()),
+            request.quickView(),
+            request.workdayCount());
+
+    WorkRecordExportResult result =
+        exportService.export(
+            TenantContext.requireTenantId(),
+            query,
+            request.columns(),
+            user);
+
+    ContentDisposition disposition =
+        ContentDisposition.attachment()
+            .filename(
+                result.fileName(),
+                StandardCharsets.UTF_8)
+            .build();
+
+    return ResponseEntity.ok()
+        .contentType(
+            new MediaType(
+                "text",
+                "csv",
+                StandardCharsets.UTF_8))
+        .header(
+            HttpHeaders.CONTENT_DISPOSITION,
+            disposition.toString())
+        .header(
+            "X-Export-Row-Count",
+            String.valueOf(result.rowCount()))
+        .body(result.content());
   }
 
   OffsetDateTime parseRequiredRecordTime(String value) {

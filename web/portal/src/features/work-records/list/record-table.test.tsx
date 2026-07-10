@@ -96,7 +96,8 @@ function column(
   source: 'builtin' | 'custom',
   fieldCode: string | null,
   fieldType = 'text',
-  dictCode: string | null = null
+  dictCode: string | null = null,
+  exportable = true
 ): RecordListColumn {
   return {
     key,
@@ -109,6 +110,7 @@ function column(
     optionsJson: '[]',
     visibleByDefault: true,
     sortable: true,
+    exportable,
     sortOrder: 1,
   }
 }

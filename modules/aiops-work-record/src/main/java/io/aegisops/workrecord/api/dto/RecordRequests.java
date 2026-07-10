@@ -1,5 +1,6 @@
 package io.aegisops.workrecord.api.dto;
 
+import io.aegisops.workrecord.application.command.RecordDynamicFilter;
 import java.time.OffsetDateTime;
 import java.util.List;
 
@@ -40,4 +41,20 @@ public final class RecordRequests {
       String sortBy,
       String sortDir,
       Integer workdayCount) {}
+
+  public record ExportRecordRequest(
+      String templateId,
+      String templateVersionId,
+      List<String> statuses,
+      String keyword,
+      OffsetDateTime recordTimeFrom,
+      OffsetDateTime recordTimeTo,
+      String creatorId,
+      String ownerId,
+      String quickView,
+      List<RecordDynamicFilter> dynamicFilters,
+      String sortBy,
+      String sortDir,
+      Integer workdayCount,
+      List<String> columns) {}
 }

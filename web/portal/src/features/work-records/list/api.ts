@@ -49,6 +49,7 @@ const columnSchema = z.object({
   optionsJson: z.string(),
   visibleByDefault: z.boolean(),
   sortable: z.boolean(),
+  exportable: z.boolean(),
   sortOrder: z.number(),
 })
 

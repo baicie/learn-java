@@ -11,4 +11,5 @@ public record RecordListColumn(
     String optionsJson,
     boolean visibleByDefault,
     boolean sortable,
+    boolean exportable,
     int sortOrder) {}

@@ -12,6 +12,7 @@ import io.aegisops.workrecord.domain.model.WorkRecordField;
 import io.aegisops.workrecord.domain.model.WorkRecordTemplate;
 import java.time.OffsetDateTime;
 import java.util.List;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
@@ -20,9 +21,16 @@ class WorkRecordListMetaServiceTest {
       Mockito.mock(WorkRecordTemplateRepository.class);
   private final WorkRecordFieldIndexRepository fieldRepository =
       Mockito.mock(WorkRecordFieldIndexRepository.class);
+  private final WorkRecordExportPolicy exportPolicy =
+      Mockito.mock(WorkRecordExportPolicy.class);
 
   private final WorkRecordListMetaService service =
-      new WorkRecordListMetaService(templateRepository, fieldRepository);
+      new WorkRecordListMetaService(templateRepository, fieldRepository, exportPolicy);
+
+  @BeforeEach
+  void setUp() {
+    when(exportPolicy.maxRows()).thenReturn(5000);
+  }
 
   @Test
   void shouldBuildMetaWithDynamicColumnsAndFilterFields() {

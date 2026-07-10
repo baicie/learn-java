@@ -1,11 +1,22 @@
 export type WorkRecordStatus = 'draft' | 'processing' | 'done' | 'archived'
 
-export type DynamicFilterOperator = 'eq' | 'in' | 'contains' | 'gte' | 'lte'
+export type DynamicFilterOperator =
+  | 'eq'
+  | 'in'
+  | 'contains'
+  | 'gte'
+  | 'lte'
+  | 'between'
+  | 'contains_any'
+  | 'contains_all'
+  | 'exists'
+  | 'not_exists'
 
 export type DynamicFilter = {
   fieldCode: string
   operator: DynamicFilterOperator
-  value: string | number | boolean | Array<string | number | boolean>
+  value?: string | number | boolean | Array<string | number | boolean>
+  values?: Array<string | number | boolean>
 }
 
 export type WorkRecord = {
@@ -46,6 +57,7 @@ export type RecordListColumn = {
   optionsJson: string
   visibleByDefault: boolean
   sortable: boolean
+  exportable: boolean
   sortOrder: number
 }
 

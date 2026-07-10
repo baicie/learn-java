@@ -20,16 +20,17 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class WorkRecordListMetaService {
-  private static final int MAX_EXPORT_ROWS = 5000;
-
   private final WorkRecordTemplateRepository templateRepository;
   private final WorkRecordFieldIndexRepository fieldRepository;
+  private final WorkRecordExportPolicy exportPolicy;
 
   public WorkRecordListMetaService(
       WorkRecordTemplateRepository templateRepository,
-      WorkRecordFieldIndexRepository fieldRepository) {
+      WorkRecordFieldIndexRepository fieldRepository,
+      WorkRecordExportPolicy exportPolicy) {
     this.templateRepository = templateRepository;
     this.fieldRepository = fieldRepository;
+    this.exportPolicy = exportPolicy;
   }
 
   public RecordListMeta meta(String tenantId, String selectedTemplateId) {
@@ -42,10 +43,10 @@ public class WorkRecordListMetaService {
                         && !template.currentVersionId().isBlank())
             .toList();
 
-    List<String> versionIds;
     boolean templateScoped =
         selectedTemplateId != null && !selectedTemplateId.isBlank();
 
+    List<String> versionIds;
     if (templateScoped) {
       WorkRecordTemplate selected =
           templates.stream()
@@ -93,7 +94,7 @@ public class WorkRecordListMetaService {
         columns,
         filterFields,
         dictCodes,
-        MAX_EXPORT_ROWS,
+        exportPolicy.maxRows(),
         List.of(
             RecordQuickView.MINE.value(),
             RecordQuickView.ALL.value(),
@@ -125,7 +126,8 @@ public class WorkRecordListMetaService {
                   field ->
                       field.fieldType() == first.fieldType()
                           && field.optionSource() == first.optionSource()
-                          && Objects.equals(field.dictCode(), first.dictCode()));
+                          && Objects.equals(field.dictCode(), first.dictCode())
+                          && field.exportable() == first.exportable());
 
       if (templateScoped || compatible) {
         result.add(
@@ -143,13 +145,13 @@ public class WorkRecordListMetaService {
 
   private List<RecordListColumn> builtinColumns() {
     return List.of(
-        builtin("title", "标题", "text", true, true, 10),
-        builtin("status", "状态", "select", true, true, 20),
-        builtin("templateId", "模板", "text", true, false, 30),
-        builtin("ownerId", "负责人", "user", true, true, 40),
-        builtin("creatorId", "创建人", "user", false, true, 50),
-        builtin("recordTime", "记录时间", "datetime", true, true, 60),
-        builtin("createdAt", "创建时间", "datetime", false, true, 70));
+        builtin("title", "标题", "text", true, true, true, 10),
+        builtin("status", "状态", "select", true, true, true, 20),
+        builtin("templateId", "模板", "text", true, false, true, 30),
+        builtin("ownerId", "负责人", "user", true, true, true, 40),
+        builtin("creatorId", "创建人", "user", false, true, true, 50),
+        builtin("recordTime", "记录时间", "datetime", true, true, true, 60),
+        builtin("createdAt", "创建时间", "datetime", false, true, true, 70));
   }
 
   private RecordListColumn builtin(
@@ -158,6 +160,7 @@ public class WorkRecordListMetaService {
       String type,
       boolean visible,
       boolean sortable,
+      boolean exportable,
       int order) {
     return new RecordListColumn(
         key,
@@ -170,6 +173,7 @@ public class WorkRecordListMetaService {
         "[]",
         visible,
         sortable,
+        exportable,
         order);
   }
 
@@ -193,6 +197,7 @@ public class WorkRecordListMetaService {
         field.optionsJson(),
         true,
         false,
+        field.exportable(),
         1000 + field.sortOrder());
   }
 }

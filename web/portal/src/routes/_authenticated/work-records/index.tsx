@@ -10,8 +10,20 @@ const scalarValueSchema = z.union([z.string(), z.number(), z.boolean()])
 
 const dynamicFilterSchema = z.object({
   fieldCode: z.string(),
-  operator: z.enum(['eq', 'in', 'contains', 'gte', 'lte']),
-  value: z.union([scalarValueSchema, z.array(scalarValueSchema)]),
+  operator: z.enum([
+    'eq',
+    'in',
+    'contains',
+    'gte',
+    'lte',
+    'between',
+    'contains_any',
+    'contains_all',
+    'exists',
+    'not_exists',
+  ]),
+  value: z.union([scalarValueSchema, z.array(scalarValueSchema)]).optional(),
+  values: z.array(scalarValueSchema).optional(),
 })
 
 const recordsSearchSchema = z.object({

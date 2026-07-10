@@ -16,6 +16,8 @@ import io.aegisops.workrecord.api.dto.RecordRequests.CreateRecordRequest;
 import io.aegisops.workrecord.api.dto.RecordRequests.UpdateRecordRequest;
 import io.aegisops.workrecord.application.command.CreateRecordCommand;
 import io.aegisops.workrecord.application.command.UpdateRecordCommand;
+import io.aegisops.workrecord.application.command.WorkRecordExportResult;
+import io.aegisops.workrecord.application.service.WorkRecordExportService;
 import io.aegisops.workrecord.application.service.WorkRecordListMetaService;
 import io.aegisops.workrecord.application.service.WorkRecordQueryService;
 import io.aegisops.workrecord.application.service.WorkRecordService;
@@ -32,9 +34,10 @@ class WorkRecordControllerRecordTimeTest {
   private final WorkRecordService recordService = mock(WorkRecordService.class);
   private final WorkRecordQueryService queryService = mock(WorkRecordQueryService.class);
   private final WorkRecordListMetaService metaService = mock(WorkRecordListMetaService.class);
+  private final WorkRecordExportService exportService = mock(WorkRecordExportService.class);
   private final ObjectMapper objectMapper = new ObjectMapper();
   private final WorkRecordController controller =
-      new WorkRecordController(recordService, queryService, metaService, objectMapper);
+      new WorkRecordController(recordService, queryService, metaService, exportService, objectMapper);
 
   @BeforeEach
   void setUp() {
