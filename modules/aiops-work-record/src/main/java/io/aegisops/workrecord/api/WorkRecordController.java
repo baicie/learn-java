@@ -44,8 +44,12 @@ public class WorkRecordController {
 
   @GetMapping("/meta")
   @PreAuthorize("hasAuthority('work-record:read:all') or hasAuthority('work-record:read:self')")
-  public ApiResponse<?> meta() {
-    return ApiResponse.ok(metaService.meta(TenantContext.requireTenantId()));
+  public ApiResponse<?> meta(
+      @RequestParam(required = false) String templateId) {
+    return ApiResponse.ok(
+        metaService.meta(
+            TenantContext.requireTenantId(),
+            templateId));
   }
 
   @GetMapping

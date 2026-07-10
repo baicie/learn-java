@@ -1,5 +1,13 @@
 export type WorkRecordStatus = 'draft' | 'processing' | 'done' | 'archived'
 
+export type DynamicFilterOperator = 'eq' | 'in' | 'contains' | 'gte' | 'lte'
+
+export type DynamicFilter = {
+  fieldCode: string
+  operator: DynamicFilterOperator
+  value: string | number | boolean | Array<string | number | boolean>
+}
+
 export type WorkRecord = {
   id: string
   tenantId: string
@@ -33,6 +41,9 @@ export type RecordListColumn = {
   source: 'builtin' | 'custom'
   fieldCode: string | null
   fieldType: string
+  optionSource: string | null
+  dictCode: string | null
+  optionsJson: string
   visibleByDefault: boolean
   sortable: boolean
   sortOrder: number
@@ -47,6 +58,14 @@ export type RecordListMeta = {
   quickViews: string[]
 }
 
+export type DictListOption = {
+  value: string
+  label: string
+  enabled: boolean
+}
+
+export type DictOptionMap = Record<string, DictListOption[]>
+
 export type PageResult<T> = {
   total: number
   page: number
@@ -54,16 +73,11 @@ export type PageResult<T> = {
   items: T[]
 }
 
-export type DynamicFilter = {
-  fieldCode: string
-  operator: 'eq' | 'in'
-  value: unknown
-}
-
 export type ListQueryState = {
   page: number
   pageSize: number
   quickView: string
+  workdayCount: number
   templateId: string
   statuses: string[]
   ownerId: string

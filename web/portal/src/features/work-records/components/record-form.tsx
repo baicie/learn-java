@@ -270,7 +270,28 @@ export function RecordForm({ record }: RecordFormProps) {
         <Button
           type='button'
           variant='outline'
-          onClick={() => navigate({ to: '/work-records' })}
+          onClick={() =>
+            navigate({
+              to: '/work-records',
+              search: {
+                page: 1,
+                pageSize: 20,
+                quickView: 'all',
+                workdayCount: 5,
+                templateId: '',
+                statuses: [],
+                ownerId: '',
+                creatorId: '',
+                keyword: '',
+                recordTimeFrom: '',
+                recordTimeTo: '',
+                sortBy: 'recordTime',
+                sortDir: 'desc',
+                dynamicFilters: [],
+                visibleColumns: [],
+              },
+            })
+          }
         >
           {t('common.cancel')}
         </Button>

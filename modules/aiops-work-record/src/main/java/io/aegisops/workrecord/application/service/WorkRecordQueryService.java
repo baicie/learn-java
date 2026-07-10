@@ -2,51 +2,84 @@ package io.aegisops.workrecord.application.service;
 
 import io.aegisops.common.api.PageResult;
 import io.aegisops.security.UserPrincipal;
+import io.aegisops.workrecord.application.command.RecordDynamicFilter;
 import io.aegisops.workrecord.application.command.RecordQuery;
 import io.aegisops.workrecord.application.command.RecordQuickView;
 import io.aegisops.workrecord.application.port.WorkRecordRepository;
 import io.aegisops.workrecord.domain.model.WorkRecord;
+import java.time.Clock;
+import java.time.DayOfWeek;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.ZonedDateTime;
+import java.util.List;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
 @Service
 public class WorkRecordQueryService {
   private final WorkRecordRepository repository;
   private final WorkRecordPermissionService permissionService;
+  private final WorkRecordDynamicFilterService dynamicFilterService;
+  private final Clock clock;
 
+  @Autowired
   public WorkRecordQueryService(
-      WorkRecordRepository repository, WorkRecordPermissionService permissionService) {
+      WorkRecordRepository repository,
+      WorkRecordPermissionService permissionService,
+      WorkRecordDynamicFilterService dynamicFilterService,
+      @Qualifier("workRecordClock") Clock clock) {
     this.repository = repository;
     this.permissionService = permissionService;
+    this.dynamicFilterService = dynamicFilterService;
+    this.clock = clock;
+  }
+
+  WorkRecordQueryService(
+      WorkRecordRepository repository,
+      WorkRecordPermissionService permissionService) {
+    this(repository, permissionService, null, Clock.systemUTC());
   }
 
   public PageResult<WorkRecord> page(String tenantId, RecordQuery query, UserPrincipal user) {
-    boolean onlySelf = !permissionService.canReadAll(user);
-    if (onlySelf && !permissionService.canReadSelf(user)) {
+    boolean permissionOnlySelf = !permissionService.canReadAll(user);
+    if (permissionOnlySelf && !permissionService.canReadSelf(user)) {
       throw new SecurityException("not allowed to read work records");
     }
 
-    RecordQuery quick = applyQuickView(query, user);
+    RecordQuickView view = RecordQuickView.from(query.quickView());
+    RecordQuery quickQuery = applyQuickView(query, view);
+
+    boolean effectiveOnlySelf =
+        permissionOnlySelf || view == RecordQuickView.MINE;
+
+    List<RecordDynamicFilter> normalizedFilters =
+        normalizeDynamicFilters(
+            tenantId,
+            quickQuery.templateId(),
+            quickQuery.dynamicFilters());
 
     RecordQuery effective =
         new RecordQuery(
-            Math.max(1, quick.page()),
-            Math.min(Math.max(1, quick.pageSize()), 200),
-            quick.templateId(),
-            quick.templateVersionId(),
-            quick.statuses(),
-            quick.keyword(),
-            quick.recordTimeFrom(),
-            quick.recordTimeTo(),
-            quick.creatorId(),
-            quick.ownerId(),
-            onlySelf,
+            Math.max(1, quickQuery.page()),
+            Math.min(Math.max(1, quickQuery.pageSize()), 200),
+            quickQuery.templateId(),
+            quickQuery.templateVersionId(),
+            quickQuery.statuses(),
+            quickQuery.keyword(),
+            quickQuery.recordTimeFrom(),
+            quickQuery.recordTimeTo(),
+            quickQuery.creatorId(),
+            quickQuery.ownerId(),
+            effectiveOnlySelf,
             user == null ? null : user.id(),
-            quick.dynamicFilters(),
-            quick.sortBy(),
-            quick.sortDir(),
-            quick.quickView(),
-            quick.workdayCount());
+            normalizedFilters,
+            quickQuery.sortBy(),
+            quickQuery.sortDir(),
+            view.value(),
+            quickQuery.workdayCount());
+
     return repository.page(tenantId, effective);
   }
 
@@ -54,41 +87,64 @@ public class WorkRecordQueryService {
     WorkRecord record =
         repository
             .find(tenantId, recordId)
-            .orElseThrow(() -> new IllegalArgumentException("work record not found"));
+            .orElseThrow(
+                () -> new IllegalArgumentException("work record not found"));
+
     permissionService.requireRead(user, record);
     return record;
   }
 
-  private RecordQuery applyQuickView(RecordQuery query, UserPrincipal user) {
-    String nowUserId = user == null ? null : user.id();
-    OffsetDateTime now = OffsetDateTime.now();
+  private List<RecordDynamicFilter> normalizeDynamicFilters(
+      String tenantId,
+      String templateId,
+      List<RecordDynamicFilter> filters) {
+    if (filters == null || filters.isEmpty()) {
+      return List.of();
+    }
+
+    if (dynamicFilterService == null) {
+      throw new IllegalStateException("dynamic filter service is unavailable");
+    }
+
+    return dynamicFilterService.validateAndNormalize(
+        tenantId, templateId, filters);
+  }
+
+  private RecordQuery applyQuickView(RecordQuery query, RecordQuickView view) {
+    ZonedDateTime now = ZonedDateTime.now(clock);
     OffsetDateTime from = query.recordTimeFrom();
     OffsetDateTime to = query.recordTimeTo();
-    String ownerId = query.ownerId();
-    String creatorId = query.creatorId();
 
-    switch (RecordQuickView.from(query.quickView())) {
-      case MINE -> ownerId = nowUserId;
+    switch (view) {
+      case MINE, ALL -> {
+        // MINE 由 effectiveOnlySelf 统一实现 owner OR creator。
+      }
       case TODAY -> {
-        from = now.toLocalDate().atStartOfDay().atOffset(now.getOffset());
-        to = from.plusDays(1).minusNanos(1);
+        from = now.toLocalDate().atStartOfDay(clock.getZone()).toOffsetDateTime();
+        to = from.plusDays(1);
       }
       case THIS_WEEK -> {
-        var start = now.toLocalDate().minusDays(now.getDayOfWeek().getValue() - 1L);
-        from = start.atStartOfDay().atOffset(now.getOffset());
-        to = from.plusDays(7).minusNanos(1);
+        LocalDate start =
+            now.toLocalDate().minusDays(now.getDayOfWeek().getValue() - 1L);
+        from = start.atStartOfDay(clock.getZone()).toOffsetDateTime();
+        to = from.plusWeeks(1);
       }
       case THIS_MONTH -> {
-        var start = now.toLocalDate().withDayOfMonth(1);
-        from = start.atStartOfDay().atOffset(now.getOffset());
-        to = from.plusMonths(1).minusNanos(1);
+        LocalDate start = now.toLocalDate().withDayOfMonth(1);
+        from = start.atStartOfDay(clock.getZone()).toOffsetDateTime();
+        to = start.plusMonths(1).atStartOfDay(clock.getZone()).toOffsetDateTime();
       }
       case RECENT_WORKDAYS -> {
-        int days = query.workdayCount() == null ? 5 : Math.max(1, Math.min(query.workdayCount(), 60));
-        from = now.minusDays(days * 2L);
-        to = now;
+        int count =
+            query.workdayCount() == null
+                ? 5
+                : Math.max(1, Math.min(query.workdayCount(), 60));
+
+        LocalDate start = recentWorkdayStart(now.toLocalDate(), count);
+
+        from = start.atStartOfDay(clock.getZone()).toOffsetDateTime();
+        to = now.toOffsetDateTime();
       }
-      case ALL -> {}
     }
 
     return new RecordQuery(
@@ -100,14 +156,32 @@ public class WorkRecordQueryService {
         query.keyword(),
         from,
         to,
-        creatorId,
-        ownerId,
+        query.creatorId(),
+        query.ownerId(),
         query.onlySelf(),
         query.currentUserId(),
         query.dynamicFilters(),
         query.sortBy(),
         query.sortDir(),
-        query.quickView(),
+        view.value(),
         query.workdayCount());
+  }
+
+  private LocalDate recentWorkdayStart(LocalDate today, int count) {
+    LocalDate cursor = today;
+    int remaining = count;
+
+    while (remaining > 0) {
+      DayOfWeek day = cursor.getDayOfWeek();
+      if (day != DayOfWeek.SATURDAY && day != DayOfWeek.SUNDAY) {
+        remaining -= 1;
+      }
+
+      if (remaining > 0) {
+        cursor = cursor.minusDays(1);
+      }
+    }
+
+    return cursor;
   }
 }

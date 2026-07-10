@@ -1,11 +1,15 @@
 package io.aegisops.workrecord.api;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.aegisops.common.tenant.TenantContext;
 import io.aegisops.security.UserPrincipal;
 import io.aegisops.workrecord.api.dto.RecordRequests.RecordQueryRequest;
+import io.aegisops.workrecord.application.command.RecordDynamicFilter;
 import io.aegisops.workrecord.application.command.RecordQuery;
 import io.aegisops.workrecord.application.service.WorkRecordExportService;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -20,9 +24,12 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/work-record/records")
 public class WorkRecordExportController {
   private final WorkRecordExportService exportService;
+  private final ObjectMapper objectMapper;
 
-  public WorkRecordExportController(WorkRecordExportService exportService) {
+  public WorkRecordExportController(
+      WorkRecordExportService exportService, ObjectMapper objectMapper) {
     this.exportService = exportService;
+    this.objectMapper = objectMapper;
   }
 
   @PostMapping("/export")
@@ -42,7 +49,12 @@ public class WorkRecordExportController {
             request.creatorId(),
             request.ownerId(),
             false,
-            user == null ? null : user.id());
+            user == null ? null : user.id(),
+            parseDynamicFilters(request.dynamicFilters()),
+            normalizeSortBy(request.sortBy()),
+            normalizeSortDir(request.sortDir()),
+            request.quickView(),
+            request.workdayCount());
 
     byte[] csv = exportService.exportCsv(TenantContext.requireTenantId(), query, user);
 
@@ -50,5 +62,30 @@ public class WorkRecordExportController {
         .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"work-records.csv\"")
         .contentType(new MediaType("text", "csv", StandardCharsets.UTF_8))
         .body(csv);
+  }
+
+  private List<RecordDynamicFilter> parseDynamicFilters(String raw) {
+    if (raw == null || raw.isBlank()) {
+      return List.of();
+    }
+    try {
+      return objectMapper.readValue(raw, new TypeReference<List<RecordDynamicFilter>>() {});
+    } catch (Exception ex) {
+      throw new IllegalArgumentException("invalid dynamicFilters", ex);
+    }
+  }
+
+  private String normalizeSortBy(String value) {
+    if (value == null || value.isBlank()) {
+      return "recordTime";
+    }
+    return value;
+  }
+
+  private String normalizeSortDir(String value) {
+    if ("asc".equalsIgnoreCase(value)) {
+      return "asc";
+    }
+    return "desc";
   }
 }

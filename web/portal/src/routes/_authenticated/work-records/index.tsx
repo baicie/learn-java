@@ -1,20 +1,56 @@
-import z from 'zod'
+import { z } from 'zod'
 import { createFileRoute } from '@tanstack/react-router'
 import { WorkRecords } from '@/features/work-records'
-import { dynamicFilterSchema } from '@/features/work-records/data/schema'
+import {
+  normalizeListSearch,
+  toRouteSearch,
+} from '@/features/work-records/list/search'
+
+const scalarValueSchema = z.union([z.string(), z.number(), z.boolean()])
+
+const dynamicFilterSchema = z.object({
+  fieldCode: z.string(),
+  operator: z.enum(['eq', 'in', 'contains', 'gte', 'lte']),
+  value: z.union([scalarValueSchema, z.array(scalarValueSchema)]),
+})
 
 const recordsSearchSchema = z.object({
-  page: z.number().optional().catch(1),
-  pageSize: z.number().optional().catch(20),
-  templateId: z.string().optional().catch(''),
-  status: z.array(z.string()).optional().catch([]),
-  keyword: z.string().optional().catch(''),
-  recordTimeFrom: z.string().optional().catch(''),
-  recordTimeTo: z.string().optional().catch(''),
-  filters: z.array(dynamicFilterSchema).optional().catch([]),
+  page: z.coerce.number().int().min(1).catch(1),
+  pageSize: z.coerce.number().int().min(1).max(200).catch(20),
+  quickView: z.string().catch('all'),
+  workdayCount: z.coerce.number().int().min(1).max(60).catch(5),
+  templateId: z.string().catch(''),
+  statuses: z.array(z.string()).catch([]),
+  ownerId: z.string().catch(''),
+  creatorId: z.string().catch(''),
+  keyword: z.string().catch(''),
+  recordTimeFrom: z.string().catch(''),
+  recordTimeTo: z.string().catch(''),
+  sortBy: z.string().catch('recordTime'),
+  sortDir: z.enum(['asc', 'desc']).catch('desc'),
+  dynamicFilters: z.array(dynamicFilterSchema).catch([]),
+  visibleColumns: z.array(z.string()).catch([]),
 })
 
 export const Route = createFileRoute('/_authenticated/work-records/')({
   validateSearch: recordsSearchSchema,
-  component: WorkRecords,
+  component: Component,
 })
+
+// eslint-disable-next-line react-refresh/only-export-components -- TanStack Router requires component inline with createFileRoute
+function Component() {
+  const search = Route.useSearch()
+  const navigate = Route.useNavigate()
+
+  return (
+    <WorkRecords
+      query={normalizeListSearch(search)}
+      onQueryChange={(next) =>
+        navigate({
+          search: toRouteSearch(next),
+          replace: true,
+        })
+      }
+    />
+  )
+}

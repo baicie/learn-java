@@ -6,6 +6,9 @@ public record RecordListColumn(
     String source,
     String fieldCode,
     String fieldType,
+    String optionSource,
+    String dictCode,
+    String optionsJson,
     boolean visibleByDefault,
     boolean sortable,
     int sortOrder) {}

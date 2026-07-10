@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { describe, expect, it, vi } from 'vitest'
 import { render } from 'vitest-browser-react'
+import type { ListQueryState } from './types'
 import { WorkRecordListPage } from './work-record-list-page'
 
 vi.mock('@tanstack/react-router', () => ({
@@ -8,6 +9,10 @@ vi.mock('@tanstack/react-router', () => ({
     <a {...props}>{children}</a>
   ),
   useNavigate: () => vi.fn(),
+}))
+
+vi.mock('@/features/dictionaries/api', () => ({
+  listDictItems: async () => [],
 }))
 
 vi.mock('./api', () => ({
@@ -29,6 +34,9 @@ vi.mock('./api', () => ({
         source: 'builtin',
         fieldCode: null,
         fieldType: 'text',
+        optionSource: null,
+        dictCode: null,
+        optionsJson: '[]',
         visibleByDefault: true,
         sortable: true,
         sortOrder: 1,
@@ -39,6 +47,9 @@ vi.mock('./api', () => ({
         source: 'custom',
         fieldCode: 'priority',
         fieldType: 'select',
+        optionSource: 'dict',
+        dictCode: 'record_priority',
+        optionsJson: '[]',
         visibleByDefault: true,
         sortable: false,
         sortOrder: 2,
@@ -51,6 +62,9 @@ vi.mock('./api', () => ({
         source: 'custom',
         fieldCode: 'priority',
         fieldType: 'select',
+        optionSource: 'dict',
+        dictCode: 'record_priority',
+        optionsJson: '[]',
         visibleByDefault: true,
         sortable: false,
         sortOrder: 2,
@@ -86,20 +100,44 @@ vi.mock('./api', () => ({
   }),
 }))
 
+const initialQuery: ListQueryState = {
+  page: 1,
+  pageSize: 20,
+  quickView: 'all',
+  workdayCount: 5,
+  templateId: '',
+  statuses: [],
+  ownerId: '',
+  creatorId: '',
+  keyword: '',
+  recordTimeFrom: '',
+  recordTimeTo: '',
+  sortBy: 'recordTime',
+  sortDir: 'desc',
+  dynamicFilters: [],
+  visibleColumns: [],
+}
+
 describe('WorkRecordListPage', () => {
   it('renders enterprise list page', async () => {
     const screen = await render(
       <QueryClientProvider client={new QueryClient()}>
-        <WorkRecordListPage />
-      </QueryClientProvider>,
+        <WorkRecordListPage query={initialQuery} onQueryChange={vi.fn()} />
+      </QueryClientProvider>
     )
 
     await expect.element(screen.getByText('工作记录')).toBeVisible()
-    await expect.element(screen.getByRole('cell', { name: '日报' })).toBeVisible()
+    await expect
+      .element(screen.getByRole('cell', { name: '日报' }))
+      .toBeVisible()
     await expect.element(screen.getByText('P1')).toBeVisible()
     await expect.element(screen.getByText('我的记录')).toBeVisible()
 
-    expect(screen.getByText('动态字段筛选', { exact: true }).element()).toBeTruthy()
-    expect(screen.getByText('列显示控制', { exact: true }).element()).toBeTruthy()
+    expect(
+      screen.getByText('动态字段筛选', { exact: true }).element()
+    ).toBeTruthy()
+    expect(
+      screen.getByText('列显示控制', { exact: true }).element()
+    ).toBeTruthy()
   })
 })

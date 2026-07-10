@@ -1,23 +1,22 @@
 import { useNavigate } from '@tanstack/react-router'
-import { useEffect } from 'react'
 import { ColumnControl } from './column-control'
 import { DynamicFilterPanel } from './dynamic-filter-panel'
 import { ListToolbar } from './list-toolbar'
 import { QuickViewTabs } from './quick-view-tabs'
 import { RecordTable } from './record-table'
-import { stringifyListSearch } from './search'
+import type { ListQueryState } from './types'
 import { useWorkRecordList } from './use-work-record-list'
 
-export function WorkRecordListPage() {
+type Props = {
+  query: ListQueryState
+  onQueryChange: (next: ListQueryState) => void
+}
+
+export function WorkRecordListPage({ query, onQueryChange }: Props) {
   const navigate = useNavigate()
-  const list = useWorkRecordList()
+  const list = useWorkRecordList(query, onQueryChange)
 
-  useEffect(() => {
-    const search = stringifyListSearch(list.query).toString()
-    window.history.replaceState(null, '', `${window.location.pathname}?${search}`)
-  }, [list.query])
-
-  if (list.loading) {
+  if (list.loading && !list.meta) {
     return <main className='p-6 text-sm text-muted-foreground'>加载中...</main>
   }
 
@@ -55,7 +54,30 @@ export function WorkRecordListPage() {
         onChange={(quickView) => list.patchQuery({ quickView })}
       />
 
-      <ListToolbar meta={list.meta} query={list.query} onChange={list.patchQuery} />
+      {list.query.quickView === 'recent_workdays' ? (
+        <label className='flex items-center gap-2 text-sm'>
+          最近
+          <input
+            className='w-20 rounded-md border px-2 py-1'
+            type='number'
+            min={1}
+            max={60}
+            value={list.query.workdayCount}
+            onChange={(event) =>
+              list.patchQuery({
+                workdayCount: Number(event.target.value),
+              })
+            }
+          />
+          个工作日
+        </label>
+      ) : null}
+
+      <ListToolbar
+        meta={list.meta}
+        query={list.query}
+        onChange={list.patchQuery}
+      />
 
       <DynamicFilterPanel
         fields={list.meta?.filterFields ?? []}
@@ -72,6 +94,7 @@ export function WorkRecordListPage() {
       <RecordTable
         records={list.records}
         columns={list.effectiveColumns}
+        dictOptions={list.dictOptions}
         sortBy={list.query.sortBy}
         sortDir={list.query.sortDir}
         onSort={(sortBy, sortDir) => list.patchQuery({ sortBy, sortDir })}
@@ -80,6 +103,18 @@ export function WorkRecordListPage() {
       <div className='flex items-center justify-between text-sm'>
         <div>共 {list.total} 条</div>
         <div className='flex items-center gap-2'>
+          <select
+            className='rounded-md border px-2 py-1'
+            value={list.query.pageSize}
+            onChange={(event) =>
+              list.patchQuery({ pageSize: Number(event.target.value) })
+            }
+          >
+            <option value={20}>20 条/页</option>
+            <option value={50}>50 条/页</option>
+            <option value={100}>100 条/页</option>
+          </select>
+
           <button
             type='button'
             className='rounded-md border px-3 py-1.5'

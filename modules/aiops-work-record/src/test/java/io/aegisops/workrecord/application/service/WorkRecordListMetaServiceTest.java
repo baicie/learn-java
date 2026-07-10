@@ -20,16 +20,17 @@ class WorkRecordListMetaServiceTest {
       Mockito.mock(WorkRecordTemplateRepository.class);
   private final WorkRecordFieldIndexRepository fieldRepository =
       Mockito.mock(WorkRecordFieldIndexRepository.class);
+
   private final WorkRecordListMetaService service =
       new WorkRecordListMetaService(templateRepository, fieldRepository);
 
   @Test
   void shouldBuildMetaWithDynamicColumnsAndFilterFields() {
-    when(templateRepository.list("t1", false)).thenReturn(List.of(template()));
+    when(templateRepository.list("t1", true)).thenReturn(List.of(template("tpl1", "v1", true)));
     when(fieldRepository.listEnabledByVersions("t1", List.of("v1")))
-        .thenReturn(List.of(field("priority", true, true, "record_priority")));
+        .thenReturn(List.of(field("tpl1", "v1", "priority", true, true, FieldType.SELECT)));
 
-    var meta = service.meta("t1");
+    var meta = service.meta("t1", "tpl1");
 
     assertThat(meta.templates()).hasSize(1);
     assertThat(meta.columns()).anyMatch(column -> column.key().equals("custom.priority"));
@@ -39,17 +40,64 @@ class WorkRecordListMetaServiceTest {
         .contains("mine", "all", "today", "this_week", "this_month", "recent_workdays");
   }
 
-  private WorkRecordTemplate template() {
+  @Test
+  void shouldDeduplicateCompatibleColumnsAcrossTemplates() {
+    when(templateRepository.list("t1", true))
+        .thenReturn(
+            List.of(template("tpl1", "v1", true), template("tpl2", "v2", true)));
+
+    when(fieldRepository.listEnabledByVersions("t1", List.of("v1", "v2")))
+        .thenReturn(
+            List.of(
+                field("tpl1", "v1", "priority", true, true, FieldType.SELECT),
+                field("tpl2", "v2", "priority", true, true, FieldType.SELECT)));
+
+    var meta = service.meta("t1", null);
+
+    assertThat(
+            meta.columns().stream()
+                .filter(column -> "custom.priority".equals(column.key())))
+        .hasSize(1);
+  }
+
+  @Test
+  void shouldIncludeDisabledTemplateForHistoricalFiltering() {
+    when(templateRepository.list("t1", true))
+        .thenReturn(List.of(template("tpl1", "v1", false)));
+
+    when(fieldRepository.listEnabledByVersions("t1", List.of("v1")))
+        .thenReturn(List.of());
+
+    var meta = service.meta("t1", null);
+
+    assertThat(meta.templates()).extracting(WorkRecordTemplate::id).contains("tpl1");
+  }
+
+  @Test
+  void shouldProvideEmptyFilterFieldsWhenTemplateNotScoped() {
+    when(templateRepository.list("t1", true))
+        .thenReturn(List.of(template("tpl1", "v1", true)));
+
+    when(fieldRepository.listEnabledByVersions("t1", List.of("v1")))
+        .thenReturn(
+            List.of(field("tpl1", "v1", "priority", true, true, FieldType.SELECT)));
+
+    var meta = service.meta("t1", null);
+
+    assertThat(meta.filterFields()).isEmpty();
+  }
+
+  private WorkRecordTemplate template(String id, String versionId, boolean enabled) {
     OffsetDateTime now = OffsetDateTime.now();
     return new WorkRecordTemplate(
-        "tpl1",
+        id,
         "t1",
-        "daily",
-        "日报",
+        id + "-code",
+        id,
         null,
-        TemplateStatus.PUBLISHED,
-        true,
-        "v1",
+        enabled ? TemplateStatus.PUBLISHED : TemplateStatus.DISABLED,
+        enabled,
+        versionId,
         "{}",
         "{}",
         "u1",
@@ -59,20 +107,25 @@ class WorkRecordListMetaServiceTest {
   }
 
   private WorkRecordField field(
-      String code, boolean listVisible, boolean filterable, String dictCode) {
+      String templateId,
+      String versionId,
+      String code,
+      boolean listVisible,
+      boolean filterable,
+      FieldType type) {
     OffsetDateTime now = OffsetDateTime.now();
     return new WorkRecordField(
         "f-" + code,
         "t1",
-        "tpl1",
-        "v1",
+        templateId,
+        versionId,
         code,
         code,
-        FieldType.SELECT,
+        type,
         false,
         null,
         OptionSource.DICT,
-        dictCode,
+        "record_priority",
         "[]",
         ".properties." + code,
         listVisible,

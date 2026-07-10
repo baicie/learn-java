@@ -1,15 +1,23 @@
 import { Link } from '@tanstack/react-router'
-import type { RecordListColumn, WorkRecord } from './types'
+import type { DictOptionMap, RecordListColumn, WorkRecord } from './types'
 
 type Props = {
   records: WorkRecord[]
   columns: RecordListColumn[]
+  dictOptions?: DictOptionMap
   sortBy: string
   sortDir: 'asc' | 'desc'
   onSort: (sortBy: string, sortDir: 'asc' | 'desc') => void
 }
 
-export function RecordTable({ records, columns, sortBy, sortDir, onSort }: Props) {
+export function RecordTable({
+  records,
+  columns,
+  dictOptions = {},
+  sortBy,
+  sortDir,
+  onSort,
+}: Props) {
   if (!records.length) {
     return (
       <div className='rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground'>
@@ -31,12 +39,16 @@ export function RecordTable({ records, columns, sortBy, sortDir, onSort }: Props
                   onClick={() =>
                     onSort(
                       column.key,
-                      sortBy === column.key && sortDir === 'desc' ? 'asc' : 'desc',
+                      sortBy === column.key && sortDir === 'desc'
+                        ? 'asc'
+                        : 'desc'
                     )
                   }
                 >
                   {column.title}
-                  {sortBy === column.key ? ` ${sortDir === 'asc' ? '↑' : '↓'}` : ''}
+                  {sortBy === column.key
+                    ? ` ${sortDir === 'asc' ? '↑' : '↓'}`
+                    : ''}
                 </button>
               </th>
             ))}
@@ -48,7 +60,7 @@ export function RecordTable({ records, columns, sortBy, sortDir, onSort }: Props
             <tr key={record.id} className='border-t'>
               {columns.map((column) => (
                 <td key={column.key} className='px-3 py-2'>
-                  {renderCell(record, column)}
+                  {renderCell(record, column, dictOptions)}
                 </td>
               ))}
               <td className='px-3 py-2'>
@@ -68,9 +80,14 @@ export function RecordTable({ records, columns, sortBy, sortDir, onSort }: Props
   )
 }
 
-function renderCell(record: WorkRecord, column: RecordListColumn) {
+function renderCell(
+  record: WorkRecord,
+  column: RecordListColumn,
+  dictOptions: DictOptionMap
+) {
   if (column.source === 'custom' && column.fieldCode) {
-    return String(parseCustom(record.customDataJson)[column.fieldCode] ?? '-')
+    const value = parseCustom(record.customDataJson)[column.fieldCode]
+    return renderDynamicValue(value, column, dictOptions)
   }
 
   switch (column.key) {
@@ -91,6 +108,37 @@ function renderCell(record: WorkRecord, column: RecordListColumn) {
     default:
       return '-'
   }
+}
+
+function renderDynamicValue(
+  value: unknown,
+  column: RecordListColumn,
+  dictOptions: DictOptionMap
+) {
+  if (value === null || value === undefined || value === '') {
+    return '-'
+  }
+
+  const labels = column.dictCode
+    ? new Map(
+        (dictOptions[column.dictCode] ?? []).map((item) => [
+          item.value,
+          item.enabled ? item.label : `${item.label}（已禁用）`,
+        ])
+      )
+    : new Map<string, string>()
+
+  const label = (item: unknown) => labels.get(String(item)) ?? String(item)
+
+  if (Array.isArray(value)) {
+    return value.map(label).join('、')
+  }
+
+  if (column.fieldType === 'boolean') {
+    return value === true ? '是' : '否'
+  }
+
+  return label(value)
 }
 
 function parseCustom(json: string) {

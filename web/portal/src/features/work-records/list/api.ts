@@ -1,7 +1,17 @@
 import { z } from 'zod'
 import { apiClient } from '@/lib/api-client'
 import { apiResponseSchema } from '@/lib/api-response'
-import type { DynamicFilter, PageResult, RecordListMeta, WorkRecord } from './types'
+import type {
+  ListQueryState,
+  PageResult,
+  RecordListMeta,
+  WorkRecord,
+} from './types'
+
+const recordStatusSchema = z.preprocess(
+  (value) => (typeof value === 'string' ? value.toLowerCase() : value),
+  z.enum(['draft', 'processing', 'done', 'archived'])
+)
 
 const recordSchema = z.object({
   id: z.string(),
@@ -9,10 +19,7 @@ const recordSchema = z.object({
   templateId: z.string(),
   templateVersionId: z.string(),
   title: z.string(),
-  status: z
-    .enum(['draft', 'processing', 'done', 'archived'])
-    .or(z.string())
-    .transform((v) => v.toLowerCase() as WorkRecord['status']),
+  status: recordStatusSchema,
   ownerId: z.string().nullable(),
   creatorId: z.string(),
   recordTime: z.string(),
@@ -31,26 +38,49 @@ const pageSchema = z.object({
   items: z.array(recordSchema),
 })
 
-export async function fetchRecordList(params: {
-  page: number
-  pageSize: number
-  quickView: string
-  templateId?: string
-  statuses?: string[]
-  ownerId?: string
-  creatorId?: string
-  keyword?: string
-  recordTimeFrom?: string
-  recordTimeTo?: string
-  sortBy?: string
-  sortDir?: string
-  dynamicFilters?: DynamicFilter[]
-}): Promise<PageResult<WorkRecord>> {
+const columnSchema = z.object({
+  key: z.string(),
+  title: z.string(),
+  source: z.enum(['builtin', 'custom']),
+  fieldCode: z.string().nullable(),
+  fieldType: z.string(),
+  optionSource: z.string().nullable(),
+  dictCode: z.string().nullable(),
+  optionsJson: z.string(),
+  visibleByDefault: z.boolean(),
+  sortable: z.boolean(),
+  sortOrder: z.number(),
+})
+
+const templateSchema = z
+  .object({
+    id: z.string(),
+    code: z.string(),
+    name: z.string(),
+    status: z.enum(['draft', 'published', 'disabled', 'archived']),
+    enabled: z.boolean(),
+    currentVersionId: z.string().nullable(),
+  })
+  .passthrough()
+
+const metaSchema = z.object({
+  templates: z.array(templateSchema),
+  columns: z.array(columnSchema),
+  filterFields: z.array(columnSchema),
+  dictCodes: z.array(z.string()),
+  maxExportRows: z.number(),
+  quickViews: z.array(z.string()),
+})
+
+export async function fetchRecordList(
+  params: ListQueryState
+): Promise<PageResult<WorkRecord>> {
   const { data } = await apiClient.get('/api/work-record/records', {
     params: {
       page: params.page,
       pageSize: params.pageSize,
       quickView: params.quickView,
+      workdayCount: params.workdayCount,
       templateId: blank(params.templateId),
       statuses: params.statuses,
       ownerId: blank(params.ownerId),
@@ -60,26 +90,33 @@ export async function fetchRecordList(params: {
       recordTimeTo: toOffset(params.recordTimeTo),
       sortBy: params.sortBy,
       sortDir: params.sortDir,
-      dynamicFilters: params.dynamicFilters?.length
+      dynamicFilters: params.dynamicFilters.length
         ? JSON.stringify(params.dynamicFilters)
         : undefined,
     },
   })
+
   return apiResponseSchema(pageSchema).parse(data).data
 }
 
-export async function fetchRecordListMeta(): Promise<RecordListMeta> {
-  const { data } = await apiClient.get('/api/work-record/records/meta')
-  return apiResponseSchema(z.any()).parse(data).data
+export async function fetchRecordListMeta(
+  templateId?: string
+): Promise<RecordListMeta> {
+  const { data } = await apiClient.get('/api/work-record/records/meta', {
+    params: {
+      templateId: blank(templateId),
+    },
+  })
+
+  return apiResponseSchema(metaSchema).parse(data).data
 }
 
 function blank(value?: string) {
-  return value && value.trim() ? value : undefined
+  return value?.trim() || undefined
 }
 
 function toOffset(value?: string) {
   if (!value) return undefined
   const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return undefined
-  return date.toISOString()
+  return Number.isNaN(date.getTime()) ? undefined : date.toISOString()
 }
