@@ -157,9 +157,14 @@ public class WorkRecordController {
     }
   }
 
+  private static final int MAX_DYNAMIC_FILTERS_RAW_LENGTH = 16_384;
+
   private List<RecordDynamicFilter> parseDynamicFilters(String raw) {
     if (raw == null || raw.isBlank()) {
       return List.of();
+    }
+    if (raw.length() > MAX_DYNAMIC_FILTERS_RAW_LENGTH) {
+      throw new IllegalArgumentException("dynamicFilters payload is too large");
     }
     try {
       return objectMapper.readValue(raw, new TypeReference<List<RecordDynamicFilter>>() {});

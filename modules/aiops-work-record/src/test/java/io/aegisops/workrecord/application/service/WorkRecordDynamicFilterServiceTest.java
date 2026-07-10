@@ -8,6 +8,7 @@ import io.aegisops.workrecord.application.command.DynamicFilterOperator;
 import io.aegisops.workrecord.application.command.RecordDynamicFilter;
 import io.aegisops.workrecord.application.port.WorkRecordFieldIndexRepository;
 import io.aegisops.workrecord.application.port.WorkRecordTemplateRepository;
+import io.aegisops.workrecord.application.port.WorkRecordTemplateVersionRepository;
 import io.aegisops.workrecord.domain.model.FieldType;
 import io.aegisops.workrecord.domain.model.OptionSource;
 import io.aegisops.workrecord.domain.model.TemplateStatus;
@@ -20,7 +21,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 /**
- * Phase 10 验收测试：覆盖当前已实现的动态筛选白名单行为。
+ * Phase 11 验收测试：覆盖当前已实现的动态筛选白名单行为。
  *
  * <p>已由 {@link WorkRecordDynamicFilterPolicyServiceTest} 覆盖更多 Phase 11 新操作符场景，
  * 本测试保留以确保 Phase 10 已有行为不退化。
@@ -28,10 +29,12 @@ import org.mockito.Mockito;
 class WorkRecordDynamicFilterServiceTest {
   private final WorkRecordTemplateRepository templateRepository =
       Mockito.mock(WorkRecordTemplateRepository.class);
+  private final WorkRecordTemplateVersionRepository versionRepository =
+      Mockito.mock(WorkRecordTemplateVersionRepository.class);
   private final WorkRecordFieldIndexRepository fieldRepository =
       Mockito.mock(WorkRecordFieldIndexRepository.class);
   private final WorkRecordDynamicFilterPolicyService service =
-      new WorkRecordDynamicFilterPolicyService(templateRepository, fieldRepository);
+      new WorkRecordDynamicFilterPolicyService(templateRepository, versionRepository, fieldRepository);
 
   @Test
   void shouldRejectFilterWithoutTemplate() {
@@ -156,6 +159,92 @@ class WorkRecordDynamicFilterServiceTest {
                     List.of(RecordDynamicFilter.raw("summary", "between", "x"))))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("operator between is not allowed for text");
+  }
+
+  @Test
+  void shouldRejectNumberAsTextForTextField() {
+    prepare(List.of(field("content", FieldType.TEXT, true)));
+
+    assertThatThrownBy(
+            () ->
+                service.normalize(
+                    "t1",
+                    "tpl1",
+                    List.of(RecordDynamicFilter.raw("content", "eq", 123))))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("text filter value must be string");
+  }
+
+  @Test
+  void shouldRejectNonStringMultiSelectItems() {
+    prepare(List.of(field("tags", FieldType.MULTI_SELECT, true)));
+
+    assertThatThrownBy(
+            () ->
+                service.normalize(
+                    "t1",
+                    "tpl1",
+                    List.of(
+                        RecordDynamicFilter.normalized(
+                            "tags",
+                            DynamicFilterOperator.CONTAINS_ALL,
+                            FieldType.MULTI_SELECT,
+                            null,
+                            List.of("a", 1)))))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("text filter value must be string");
+  }
+
+  @Test
+  void shouldRejectAmbiguousValueAndValues() {
+    prepare(List.of(field("tags", FieldType.MULTI_SELECT, true)));
+
+    RecordDynamicFilter raw =
+        new RecordDynamicFilter(
+            "tags",
+            DynamicFilterOperator.CONTAINS_ANY,
+            FieldType.MULTI_SELECT,
+            List.of("a"),
+            List.of("b"));
+
+    assertThatThrownBy(
+            () -> service.normalize("t1", "tpl1", List.of(raw)))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("must not contain both");
+  }
+
+  @Test
+  void shouldRejectDescendingBetweenBounds() {
+    prepare(List.of(field("cost", FieldType.NUMBER, true)));
+
+    assertThatThrownBy(
+            () ->
+                service.normalize(
+                    "t1",
+                    "tpl1",
+                    List.of(
+                        RecordDynamicFilter.normalized(
+                            "cost",
+                            DynamicFilterOperator.BETWEEN,
+                            FieldType.NUMBER,
+                            null,
+                            List.of(100, 10)))))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("lower bound must not exceed upper bound");
+  }
+
+  @Test
+  void shouldRejectExistsWithValue() {
+    prepare(List.of(field("priority", FieldType.SELECT, true)));
+
+    assertThatThrownBy(
+            () ->
+                service.normalize(
+                    "t1",
+                    "tpl1",
+                    List.of(RecordDynamicFilter.raw("priority", "exists", "ignored"))))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("must not contain value");
   }
 
   private void prepare(List<WorkRecordField> fields) {
