@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
+import { PermissionGate } from '@/components/permission-gate'
 import { ColumnControl } from './column-control'
 import { DynamicFilterPanel } from './dynamic-filter-panel'
 import { ListToolbar } from './list-toolbar'
@@ -45,21 +46,25 @@ export function WorkRecordListPage({ query, onQueryChange }: Props) {
           </div>
 
           <div className='flex items-center gap-2'>
-            <button
-              type='button'
-              className='rounded-md border px-3 py-2 text-sm'
-              onClick={() => setExportOpen(true)}
-            >
-              导出
-            </button>
+            <PermissionGate any={['work-record:export']}>
+              <button
+                type='button'
+                className='rounded-md border px-3 py-2 text-sm'
+                onClick={() => setExportOpen(true)}
+              >
+                导出
+              </button>
+            </PermissionGate>
 
-            <button
-              type='button'
-              className='rounded-md bg-primary px-3 py-2 text-sm text-primary-foreground'
-              onClick={() => navigate({ to: '/work-records/new' })}
-            >
-              新建记录
-            </button>
+            <PermissionGate any={['work-record:write']}>
+              <button
+                type='button'
+                className='rounded-md bg-primary px-3 py-2 text-sm text-primary-foreground'
+                onClick={() => navigate({ to: '/work-records/new' })}
+              >
+                新建记录
+              </button>
+            </PermissionGate>
           </div>
         </div>
 

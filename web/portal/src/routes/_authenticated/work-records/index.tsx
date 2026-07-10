@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { createFileRoute } from '@tanstack/react-router'
+import { requireAnyPermission } from '@/features/auth/permission'
 import { WorkRecords } from '@/features/work-records'
 import {
   normalizeListSearch,
@@ -46,6 +47,8 @@ const recordsSearchSchema = z.object({
 })
 
 export const Route = createFileRoute('/_authenticated/work-records/')({
+  beforeLoad: () =>
+    requireAnyPermission(['work-record:read:self', 'work-record:read:all']),
   validateSearch: recordsSearchSchema,
   component: Component,
 })

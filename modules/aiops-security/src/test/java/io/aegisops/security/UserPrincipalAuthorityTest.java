@@ -1,25 +1,60 @@
 package io.aegisops.security;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.Map;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 class UserPrincipalAuthorityTest {
+
   @Test
-  void adminRoleIncludesSecurityAuthoritiesAndPermissions() {
+  void shouldExposeDatabaseRolesAndPermissionsAsAuthorities() {
     UserPrincipal principal =
-        new UserPrincipal("user_1", "tenant_1", "admin", "Admin", Set.of("admin"));
+        new UserPrincipal(
+            "u1",
+            "t1",
+            "alice",
+            "Alice",
+            Set.of(
+                BuiltInRoleCodes.NORMAL_USER),
+            Set.of(
+                PermissionCodes
+                    .WORK_RECORD_READ_SELF,
+                PermissionCodes
+                    .WORK_RECORD_WRITE),
+            Map.of(
+                "work-record",
+                DataScope.SELF));
 
-    Set<String> authorities =
-        principal.getAuthorities().stream()
-            .map(authority -> authority.getAuthority())
-            .collect(java.util.stream.Collectors.toSet());
+    assertThat(
+            principal.getAuthorities())
+        .extracting(
+            authority ->
+                authority.getAuthority())
+        .containsExactlyInAnyOrder(
+            "ROLE_NORMAL_USER",
+            "work-record:read:self",
+            "work-record:write");
+  }
 
-    assertTrue(authorities.contains("ROLE_admin"));
-    assertTrue(authorities.contains("admin:manage"));
-    assertTrue(authorities.contains("automation:approve"));
-    assertTrue(authorities.contains("automation:execute"));
-    assertTrue(authorities.contains("runbook:write"));
+  @Test
+  void roleMustNotImplicitlyGrantHardcodedPermissions() {
+    UserPrincipal principal =
+        new UserPrincipal(
+            "u1",
+            "t1",
+            "alice",
+            "Alice",
+            Set.of(
+                BuiltInRoleCodes.SYSTEM_ADMIN),
+            Set.of(),
+            Map.of());
+
+    assertThat(
+            principal.hasPermission(
+                PermissionCodes
+                    .WORK_RECORD_EXPORT))
+        .isFalse();
   }
 }

@@ -25,10 +25,11 @@ public class SecurityConfig {
       HttpSecurity http,
       JwtTokenService tokenService,
       UserService userService,
+      UserPrincipalFactory principalFactory,
       SecurityFilters filters)
       throws Exception {
     JwtAuthenticationFilter jwtAuthenticationFilter =
-        new JwtAuthenticationFilter(tokenService, userService);
+        new JwtAuthenticationFilter(tokenService, userService, principalFactory);
 
     return http.csrf(AbstractHttpConfigurer::disable)
         .cors(cors -> {})

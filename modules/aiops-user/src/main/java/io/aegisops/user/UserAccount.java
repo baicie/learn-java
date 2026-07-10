@@ -1,7 +1,6 @@
 package io.aegisops.user;
 
 import java.time.OffsetDateTime;
-import java.util.Set;
 
 public record UserAccount(
     String id,
@@ -11,6 +10,5 @@ public record UserAccount(
     String email,
     String passwordHash,
     String status,
-    Set<String> roles,
     OffsetDateTime createdAt,
     OffsetDateTime updatedAt) {}

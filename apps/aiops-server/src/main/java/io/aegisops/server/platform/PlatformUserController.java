@@ -21,21 +21,6 @@ public class PlatformUserController {
   @GetMapping("/users")
   public ApiResponse<List<UserAccount>> listUsers() {
     String tenantId = TenantContext.requireTenantId();
-    return ApiResponse.ok(
-        userService.listByTenant(tenantId).stream().map(this::hidePassword).toList());
-  }
-
-  private UserAccount hidePassword(UserAccount user) {
-    return new UserAccount(
-        user.id(),
-        user.tenantId(),
-        user.username(),
-        user.displayName(),
-        user.email(),
-        null,
-        user.status(),
-        user.roles(),
-        user.createdAt(),
-        user.updatedAt());
+    return ApiResponse.ok(userService.listByTenant(tenantId));
   }
 }

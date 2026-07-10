@@ -25,7 +25,7 @@ public class JwtTokenService {
                 "{\"sub\":\"%s\",\"tid\":\"%s\",\"name\":\"%s\",\"exp\":%d}",
                 escape(principal.id()),
                 escape(principal.tenantId()),
-                escape(principal.username()),
+                escape(principal.getUsername()),
                 exp));
     String signature = sign(header + "." + payload);
     return header + "." + payload + "." + signature;

@@ -59,7 +59,7 @@ public class WorkRecordQueryService {
     boolean permissionOnlySelf =
         !permissionService.canReadAll(user);
 
-    if (permissionOnlySelf
+    if (!permissionService.canReadAll(user)
         && !permissionService.canReadSelf(user)) {
       throw new SecurityException(
           "not allowed to read work records");

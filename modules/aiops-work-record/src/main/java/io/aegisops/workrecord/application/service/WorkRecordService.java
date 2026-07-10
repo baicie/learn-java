@@ -69,6 +69,8 @@ public class WorkRecordService {
 
     validateOwner(tenantId, command.ownerId());
 
+    permissionService.requireCreate(user);
+
     CreateRecordCommand normalized =
         new CreateRecordCommand(
             command.templateId(),

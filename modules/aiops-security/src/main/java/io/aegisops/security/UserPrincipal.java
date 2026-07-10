@@ -2,84 +2,136 @@ package io.aegisops.security;
 
 import java.util.Collection;
 import java.util.LinkedHashSet;
-import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
-public record UserPrincipal(
-    String id, String tenantId, String username, String displayName, Set<String> roles)
-    implements UserDetails {
+public final class UserPrincipal implements UserDetails {
+  private final String id;
+  private final String tenantId;
+  private final String username;
+  private final String displayName;
+  private final Set<String> roles;
+  private final Set<String> permissions;
+  private final Map<String, DataScope> dataScopes;
+
+  public UserPrincipal(
+      String id,
+      String tenantId,
+      String username,
+      String displayName,
+      Set<String> roles,
+      Set<String> permissions,
+      Map<String, DataScope> dataScopes) {
+    this.id = requireText(id, "id");
+    this.tenantId = requireText(
+        tenantId,
+        "tenantId");
+    this.username = requireText(
+        username,
+        "username");
+    this.displayName =
+        displayName == null || displayName.isBlank()
+            ? username
+            : displayName;
+
+    this.roles = roles == null
+        ? Set.of()
+        : Set.copyOf(roles);
+
+    this.permissions = permissions == null
+        ? Set.of()
+        : Set.copyOf(permissions);
+
+    this.dataScopes = dataScopes == null
+        ? Map.of()
+        : Map.copyOf(dataScopes);
+  }
+
+  public String id() {
+    return id;
+  }
+
+  public String tenantId() {
+    return tenantId;
+  }
+
+  public String displayName() {
+    return displayName;
+  }
+
+  public Set<String> roles() {
+    return roles;
+  }
+
+  public Set<String> permissions() {
+    return permissions;
+  }
+
+  public Map<String, DataScope> dataScopes() {
+    return dataScopes;
+  }
+
+  public boolean hasPermission(
+      String permissionCode) {
+    return permissions.contains(permissionCode);
+  }
+
+  public boolean hasAnyPermission(
+      String... permissionCodes) {
+    if (permissionCodes == null) {
+      return false;
+    }
+
+    for (String code : permissionCodes) {
+      if (permissions.contains(code)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  public DataScope dataScope(
+      String resourceCode) {
+    return dataScopes.getOrDefault(
+        resourceCode,
+        DataScope.SELF);
+  }
+
   @Override
-  public Collection<? extends GrantedAuthority> getAuthorities() {
-    Set<String> authorities = new LinkedHashSet<>();
+  public Collection<? extends GrantedAuthority>
+      getAuthorities() {
+    Set<GrantedAuthority> authorities =
+        new LinkedHashSet<>();
+
     for (String role : roles) {
-      String normalizedRole = role.toLowerCase(Locale.ROOT);
-      authorities.add("ROLE_" + normalizedRole);
-      authorities.addAll(permissionsForRole(normalizedRole));
+      authorities.add(
+          new SimpleGrantedAuthority(
+              "ROLE_"
+                  + role
+                      .replace('-', '_')
+                      .toUpperCase()));
     }
-    return authorities.stream().map(SimpleGrantedAuthority::new).toList();
-  }
 
-  private Set<String> permissionsForRole(String role) {
-    if ("admin".equals(role)) {
-      return Set.of(
-          "datasource:read",
-          "datasource:write",
-          "asset:read",
-          "alert:read",
-          "alert:write",
-          "incident:read",
-          "incident:write",
-          "incident:diagnose",
-          "runbook:read",
-          "runbook:write",
-          "automation:read",
-          "automation:approve",
-          "automation:execute",
-          "audit:read",
-          "admin:manage",
-          "platform:dict:read",
-          "platform:dict:write",
-          "work-record:read:self",
-          "work-record:read:all",
-          "work-record:write",
-          "work-record:delete",
-          "work-record:template:read",
-          "work-record:template:write",
-          "work-record:export");
+    for (String permission : permissions) {
+      authorities.add(
+          new SimpleGrantedAuthority(permission));
     }
-    if ("operator".equals(role)) {
-      return Set.of(
-          "datasource:read",
-          "asset:read",
-          "alert:read",
-          "alert:write",
-          "incident:read",
-          "incident:write",
-          "incident:diagnose",
-          "runbook:read",
-          "automation:read",
-          "automation:execute",
-          "audit:read",
-          "platform:dict:read",
-          "work-record:read:self",
-          "work-record:write",
-          "work-record:delete",
-          "work-record:template:read");
-    }
-    return Set.of();
-  }
 
-  @Override
-  public String getUsername() {
-    return username;
+    return Set.copyOf(authorities);
   }
 
   @Override
   public String getPassword() {
     return "";
+  }
+
+  @Override
+  public String getUsername() {
+    return username;
   }
 
   @Override
@@ -100,5 +152,16 @@ public record UserPrincipal(
   @Override
   public boolean isEnabled() {
     return true;
+  }
+
+  private static String requireText(
+      String value,
+      String name) {
+    if (value == null || value.isBlank()) {
+      throw new IllegalArgumentException(
+          name + " is required");
+    }
+
+    return value;
   }
 }

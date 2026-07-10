@@ -1,21 +1,21 @@
 import { create } from 'zustand'
-import { getCookie, setCookie, removeCookie } from '@/lib/cookies'
+import { getCookie, removeCookie, setCookie } from '@/lib/cookies'
+import type { AuthorizationPrincipal } from '@/features/auth/authorization-types'
 
 const ACCESS_TOKEN = 'thisisjustarandomstring'
 
-interface AuthUser {
-  accountNo: string
-  email: string
-  role: string[]
-  exp: number
-}
-
-interface AuthState {
+type AuthState = {
   auth: {
-    user: AuthUser | null
-    setUser: (user: AuthUser | null) => void
     accessToken: string
+    principal: AuthorizationPrincipal | null
+    authorizationLoaded: boolean
+
     setAccessToken: (accessToken: string) => void
+
+    setPrincipal: (principal: AuthorizationPrincipal | null) => void
+
+    setAuthorizationLoaded: (loaded: boolean) => void
+
     resetAccessToken: () => void
     reset: () => void
   }
@@ -23,29 +23,74 @@ interface AuthState {
 
 export const useAuthStore = create<AuthState>()((set) => {
   const cookieState = getCookie(ACCESS_TOKEN)
+
   const initToken = cookieState ? JSON.parse(cookieState) : ''
+
   return {
     auth: {
-      user: null,
-      setUser: (user) =>
-        set((state) => ({ ...state, auth: { ...state.auth, user } })),
       accessToken: initToken,
+      principal: null,
+      authorizationLoaded: false,
+
       setAccessToken: (accessToken) =>
         set((state) => {
           setCookie(ACCESS_TOKEN, JSON.stringify(accessToken))
-          return { ...state, auth: { ...state.auth, accessToken } }
+
+          return {
+            ...state,
+            auth: {
+              ...state.auth,
+              accessToken,
+              authorizationLoaded: false,
+            },
+          }
         }),
+
+      setPrincipal: (principal) =>
+        set((state) => ({
+          ...state,
+          auth: {
+            ...state.auth,
+            principal,
+          },
+        })),
+
+      setAuthorizationLoaded: (loaded) =>
+        set((state) => ({
+          ...state,
+          auth: {
+            ...state.auth,
+            authorizationLoaded: loaded,
+          },
+        })),
+
       resetAccessToken: () =>
         set((state) => {
           removeCookie(ACCESS_TOKEN)
-          return { ...state, auth: { ...state.auth, accessToken: '' } }
+
+          return {
+            ...state,
+            auth: {
+              ...state.auth,
+              accessToken: '',
+              principal: null,
+              authorizationLoaded: true,
+            },
+          }
         }),
+
       reset: () =>
         set((state) => {
           removeCookie(ACCESS_TOKEN)
+
           return {
             ...state,
-            auth: { ...state.auth, user: null, accessToken: '' },
+            auth: {
+              ...state.auth,
+              accessToken: '',
+              principal: null,
+              authorizationLoaded: true,
+            },
           }
         }),
     },

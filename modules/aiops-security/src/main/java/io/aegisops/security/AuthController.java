@@ -7,6 +7,7 @@ import io.aegisops.user.UserAccount;
 import io.aegisops.user.UserService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import io.aegisops.security.api.CurrentAuthorizationResponse;
 import java.util.Set;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -21,12 +22,17 @@ public class AuthController {
   private final UserService userService;
   private final JwtTokenService tokenService;
   private final AuditService auditService;
+  private final UserPrincipalFactory principalFactory;
 
   public AuthController(
-      UserService userService, JwtTokenService tokenService, AuditService auditService) {
+      UserService userService,
+      JwtTokenService tokenService,
+      AuditService auditService,
+      UserPrincipalFactory principalFactory) {
     this.userService = userService;
     this.tokenService = tokenService;
     this.auditService = auditService;
+    this.principalFactory = principalFactory;
   }
 
   @PostMapping("/login")
@@ -38,29 +44,30 @@ public class AuthController {
             .filter(candidate -> "active".equals(candidate.status()))
             .orElseThrow(
                 () -> new AppException("INVALID_CREDENTIALS", "Invalid username or password"));
-    UserPrincipal principal =
-        new UserPrincipal(
-            user.id(), user.tenantId(), user.username(), user.displayName(), user.roles());
+    UserPrincipal principal = principalFactory.create(user);
     String token = tokenService.issue(principal);
     auditService.record(
         new io.aegisops.audit.AuditRecordCommand(
             user.tenantId(), user.id(), "auth.login", "user", user.id(), "{}"));
+    Set<String> roles = principal.roles();
     return ApiResponse.ok(
         new LoginResponse(
             token,
             new MeResponse(
-                user.id(), user.tenantId(), user.username(), user.displayName(), user.roles())));
+                principal.id(),
+                principal.tenantId(),
+                principal.getUsername(),
+                principal.displayName(),
+                roles)));
   }
 
   @GetMapping("/me")
-  public ApiResponse<MeResponse> me(@AuthenticationPrincipal UserPrincipal principal) {
-    return ApiResponse.ok(
-        new MeResponse(
-            principal.id(),
-            principal.tenantId(),
-            principal.username(),
-            principal.displayName(),
-            principal.roles()));
+  public ApiResponse<CurrentAuthorizationResponse> me(
+      @AuthenticationPrincipal UserPrincipal principal) {
+    if (principal == null) {
+      throw new SecurityException("authentication is required");
+    }
+    return ApiResponse.ok(CurrentAuthorizationResponse.from(principal));
   }
 
   public record LoginRequest(@NotBlank String username, @NotBlank String password) {}

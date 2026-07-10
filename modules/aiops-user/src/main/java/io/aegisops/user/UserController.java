@@ -21,20 +21,6 @@ public class UserController {
   @PreAuthorize("hasAuthority('admin:manage')")
   public ApiResponse<List<UserAccount>> list() {
     String tenantId = TenantContext.requireTenantId();
-    return ApiResponse.ok(service.listByTenant(tenantId).stream().map(this::safe).toList());
-  }
-
-  private UserAccount safe(UserAccount user) {
-    return new UserAccount(
-        user.id(),
-        user.tenantId(),
-        user.username(),
-        user.displayName(),
-        user.email(),
-        null,
-        user.status(),
-        user.roles(),
-        user.createdAt(),
-        user.updatedAt());
+    return ApiResponse.ok(service.listByTenant(tenantId));
   }
 }

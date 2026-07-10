@@ -1,83 +1,139 @@
 package io.aegisops.workrecord.application.service;
 
+import io.aegisops.security.DataScope;
+import io.aegisops.security.PermissionCodes;
 import io.aegisops.security.UserPrincipal;
 import io.aegisops.workrecord.domain.model.WorkRecord;
 import org.springframework.stereotype.Service;
 
 @Service
 public class WorkRecordPermissionService {
-  public boolean hasAuthority(UserPrincipal user, String authority) {
-    if (user == null) {
-      return false;
-    }
-    return user.getAuthorities().stream()
-        .anyMatch(item -> authority.equals(item.getAuthority()));
+  private static final String RESOURCE_CODE =
+      "work-record";
+
+  public boolean canReadAll(
+      UserPrincipal principal) {
+    return principal != null
+        && principal.hasPermission(
+            PermissionCodes.WORK_RECORD_READ_ALL)
+        && principal.dataScope(RESOURCE_CODE)
+            == DataScope.ALL;
   }
 
-  public boolean canReadAll(UserPrincipal user) {
-    return hasAuthority(user, "work-record:read:all");
+  public boolean canReadSelf(
+      UserPrincipal principal) {
+    return principal != null
+        && principal.hasAnyPermission(
+            PermissionCodes.WORK_RECORD_READ_SELF,
+            PermissionCodes.WORK_RECORD_READ_ALL);
   }
 
-  public boolean canReadSelf(UserPrincipal user) {
-    return hasAuthority(user, "work-record:read:self");
+  public void requireCreate(
+      UserPrincipal principal) {
+    requirePermission(
+        principal,
+        PermissionCodes.WORK_RECORD_WRITE,
+        "not allowed to create work records");
   }
 
-  public boolean canWrite(UserPrincipal user) {
-    return hasAuthority(user, "work-record:write");
-  }
-
-  public boolean canDelete(UserPrincipal user) {
-    return hasAuthority(user, "work-record:delete");
-  }
-
-  public boolean canExport(UserPrincipal user) {
-    return hasAuthority(user, "work-record:export");
-  }
-
-  public void requireRead(UserPrincipal user, WorkRecord record) {
-    if (canReadAll(user)) {
+  public void requireRead(
+      UserPrincipal principal,
+      WorkRecord record) {
+    if (canReadAll(principal)) {
       return;
     }
-    if (user != null
-        && canReadSelf(user)
-        && user.id() != null
-        && (user.id().equals(record.creatorId()) || user.id().equals(record.ownerId()))) {
-      return;
+
+    if (!canReadSelf(principal)) {
+      throw new SecurityException(
+          "not allowed to read work records");
     }
-    throw new SecurityException("not allowed to read this work record");
+
+    requireSelfRecord(
+        principal,
+        record,
+        "not allowed to read this work record");
   }
 
-  public void requireWrite(UserPrincipal user, WorkRecord record) {
-    if (user == null || !canWrite(user)) {
-      throw new SecurityException("not allowed to update this work record");
-    }
-    if (canReadAll(user)) {
+  public void requireEdit(
+      UserPrincipal principal,
+      WorkRecord record) {
+    requirePermission(
+        principal,
+        PermissionCodes.WORK_RECORD_WRITE,
+        "not allowed to edit work records");
+
+    if (hasAllDataScope(principal)) {
       return;
     }
-    if (user.id() != null
-        && (user.id().equals(record.creatorId()) || user.id().equals(record.ownerId()))) {
-      return;
-    }
-    throw new SecurityException("not allowed to update this work record");
+
+    requireSelfRecord(
+        principal,
+        record,
+        "not allowed to edit this work record");
   }
 
-  public void requireDelete(UserPrincipal user, WorkRecord record) {
-    if (user == null || !canDelete(user)) {
-      throw new SecurityException("not allowed to delete this work record");
-    }
-    if (canReadAll(user)) {
+  public void requireDelete(
+      UserPrincipal principal,
+      WorkRecord record) {
+    requirePermission(
+        principal,
+        PermissionCodes.WORK_RECORD_DELETE,
+        "not allowed to delete work records");
+
+    if (hasAllDataScope(principal)) {
       return;
     }
-    if (user.id() != null
-        && (user.id().equals(record.creatorId()) || user.id().equals(record.ownerId()))) {
-      return;
-    }
-    throw new SecurityException("not allowed to delete this work record");
+
+    requireSelfRecord(
+        principal,
+        record,
+        "not allowed to delete this work record");
   }
 
-  public void requireExport(UserPrincipal user) {
-    if (!canExport(user)) {
-      throw new SecurityException("not allowed to export work records");
+  public void requireExport(
+      UserPrincipal principal) {
+    requirePermission(
+        principal,
+        PermissionCodes.WORK_RECORD_EXPORT,
+        "not allowed to export work records");
+  }
+
+  public boolean hasAllDataScope(
+      UserPrincipal principal) {
+    return principal != null
+        && principal.dataScope(RESOURCE_CODE)
+            == DataScope.ALL;
+  }
+
+  private void requireSelfRecord(
+      UserPrincipal principal,
+      WorkRecord record,
+      String message) {
+    if (principal == null || record == null) {
+      throw new SecurityException(message);
+    }
+
+    String userId = principal.id();
+
+    boolean creator =
+        userId.equals(record.creatorId());
+
+    boolean owner =
+        record.ownerId() != null
+            && userId.equals(record.ownerId());
+
+    if (!creator && !owner) {
+      throw new SecurityException(message);
+    }
+  }
+
+  private void requirePermission(
+      UserPrincipal principal,
+      String permission,
+      String message) {
+    if (principal == null
+        || !principal.hasPermission(permission)) {
+      throw new SecurityException(message);
     }
   }
 }

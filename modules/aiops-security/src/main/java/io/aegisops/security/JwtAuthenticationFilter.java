@@ -15,10 +15,15 @@ import org.springframework.web.filter.OncePerRequestFilter;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
   private final JwtTokenService tokenService;
   private final UserService userService;
+  private final UserPrincipalFactory principalFactory;
 
-  public JwtAuthenticationFilter(JwtTokenService tokenService, UserService userService) {
+  public JwtAuthenticationFilter(
+      JwtTokenService tokenService,
+      UserService userService,
+      UserPrincipalFactory principalFactory) {
     this.tokenService = tokenService;
     this.userService = userService;
+    this.principalFactory = principalFactory;
   }
 
   @Override
@@ -31,8 +36,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         JwtTokenService.JwtClaims claims = tokenService.verify(auth.substring("Bearer ".length()));
         UserAccount user = userService.getById(claims.userId());
         UserPrincipal principal =
-            new UserPrincipal(
-                user.id(), user.tenantId(), user.username(), user.displayName(), user.roles());
+            principalFactory.create(user);
         SecurityContextHolder.getContext()
             .setAuthentication(
                 new UsernamePasswordAuthenticationToken(
