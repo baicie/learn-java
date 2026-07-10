@@ -75,6 +75,31 @@ public class WorkRecordFieldAuditService {
             after.fieldCode());
       }
     }
+
+    // 发布守卫只在旧版本被记录引用时才会把删除字段复制成 enabled=false 留在新版本里。
+    // 当旧版本无引用、新版本又不再包含该字段时，必须仍然产生 FIELD_DISABLE 审计，
+    // 否则删除操作对审计完全不可见。
+    for (WorkRecordField before : previous.values()) {
+      if (!before.enabled() || current.containsKey(before.fieldCode())) {
+        continue;
+      }
+
+      Map<String, Object> after = new LinkedHashMap<>(snapshots.field(before));
+      after.put("templateVersionId", currentVersionId);
+      after.put("enabled", false);
+      after.put("removed", true);
+
+      record(
+          tenantId,
+          templateId,
+          previousVersionId,
+          currentVersionId,
+          WorkRecordAuditActions.FIELD_DISABLE,
+          actorId,
+          snapshots.field(before),
+          after,
+          before.fieldCode());
+    }
   }
 
   private void record(

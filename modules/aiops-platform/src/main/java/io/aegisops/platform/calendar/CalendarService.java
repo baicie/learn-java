@@ -1,9 +1,14 @@
 package io.aegisops.platform.calendar;
 
-import io.aegisops.audit.AuditRecordCommand;
-import io.aegisops.audit.AuditService;
+import io.aegisops.platform.audit.PlatformAuditService;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HexFormat;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.stereotype.Service;
@@ -11,11 +16,14 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class CalendarService {
+  private static final int MAX_IMPORT_ROWS = 1000;
+  private static final int CHANGED_DATE_LIMIT = 200;
+
   private final CalendarRepository repository;
-  private final AuditService audit;
+  private final PlatformAuditService audit;
   private final CalendarCsvImporter csvImporter = new CalendarCsvImporter();
 
-  public CalendarService(CalendarRepository repository, AuditService audit) {
+  public CalendarService(CalendarRepository repository, PlatformAuditService audit) {
     this.repository = repository;
     this.audit = audit;
   }
@@ -39,14 +47,15 @@ public class CalendarService {
     CalendarRecord record = repository.createCalendar(tenantId, request, defaultActor(actor));
     initializeYearDays(tenantId, record.id(), request.year(), defaultActor(actor));
 
-    audit.record(
-        new AuditRecordCommand(
-            tenantId,
-            defaultActor(actor),
-            "platform.calendar.create",
-            "platform_calendar",
-            record.id(),
-            detail("calendarCode", record.calendarCode(), "year", String.valueOf(record.year()))));
+    audit.recordChange(
+        tenantId,
+        defaultActor(actor),
+        "platform.calendar.create",
+        "platform_calendar",
+        record.id(),
+        Map.of(),
+        record,
+        Map.of("calendarCode", record.calendarCode(), "year", String.valueOf(record.year())));
     return record;
   }
 
@@ -75,19 +84,28 @@ public class CalendarService {
       UpdateCalendarDayRequest request,
       String actor) {
     requireText(calendarId, "calendarId");
+
     if (date == null) {
       throw new IllegalArgumentException("date is required");
     }
+
     if (request == null) {
       throw new IllegalArgumentException("calendar day request is required");
     }
+
     requireText(request.dayType(), "dayType");
     validateDayType(request.dayType());
+
     if (request.workday() == null) {
       throw new IllegalArgumentException("workday is required");
     }
 
-    CalendarDayRecord record =
+    CalendarDayRecord before =
+        repository
+            .findDay(tenantId, calendarId, date)
+            .orElseGet(() -> derivedDay(tenantId, calendarId, date));
+
+    CalendarDayRecord after =
         repository.upsertDay(
             tenantId,
             calendarId,
@@ -100,55 +118,118 @@ public class CalendarService {
             request.remark(),
             defaultActor(actor));
 
-    audit.record(
-        new AuditRecordCommand(
-            tenantId,
-            defaultActor(actor),
-            "platform.calendar.day.update",
-            "platform_calendar_day",
-            record.id(),
-            detail(
-                "calendarId",
-                calendarId,
-                "date",
-                date.toString(),
-                "workday",
-                String.valueOf(record.workday()))));
-    return record;
+    audit.recordChange(
+        tenantId,
+        defaultActor(actor),
+        "platform.calendar.day.override",
+        "platform_calendar_day",
+        after.id(),
+        semanticDay(before),
+        semanticDay(after),
+        Map.of("calendarId", calendarId, "date", date.toString(), "source", "manual"));
+
+    return after;
   }
 
   @Transactional
   public int importCsv(
       String tenantId, String calendarId, ImportCalendarCsvRequest request, String actor) {
     requireText(calendarId, "calendarId");
+
     if (request == null) {
       throw new IllegalArgumentException("calendar import request is required");
     }
 
+    repository
+        .findCalendar(tenantId, calendarId)
+        .orElseThrow(() -> new IllegalArgumentException("calendar not found"));
+
     List<CalendarCsvImporter.CalendarCsvRow> rows = csvImporter.parse(request.csv());
 
-    for (CalendarCsvImporter.CalendarCsvRow row : rows) {
-      repository.upsertDay(
-          tenantId,
-          calendarId,
-          row.date(),
-          row.dayType(),
-          row.workday(),
-          null,
-          row.holidayName(),
-          "csv",
-          row.remark(),
-          defaultActor(actor));
+    if (rows.size() > MAX_IMPORT_ROWS) {
+      throw new IllegalArgumentException("calendar import exceeds " + MAX_IMPORT_ROWS + " rows");
     }
 
-    audit.record(
-        new AuditRecordCommand(
+    String effectiveActor = defaultActor(actor);
+
+    int createdCount = 0;
+    int overwrittenCount = 0;
+    int unchangedCount = 0;
+    List<String> changedDates = new ArrayList<>();
+
+    for (CalendarCsvImporter.CalendarCsvRow row : rows) {
+      CalendarDayRecord before = repository.findDay(tenantId, calendarId, row.date()).orElse(null);
+
+      CalendarDayRecord after =
+          repository.upsertDay(
+              tenantId,
+              calendarId,
+              row.date(),
+              row.dayType(),
+              row.workday(),
+              null,
+              row.holidayName(),
+              "csv",
+              row.remark(),
+              effectiveActor);
+
+      Map<String, Object> afterSnapshot = semanticDay(after);
+
+      if (before == null) {
+        createdCount++;
+        appendChangedDate(changedDates, row.date());
+
+        audit.recordChange(
             tenantId,
-            defaultActor(actor),
-            "platform.calendar.import",
-            "platform_calendar",
-            calendarId,
-            detail("calendarId", calendarId, "rows", String.valueOf(rows.size()))));
+            effectiveActor,
+            "platform.calendar.day.import_create",
+            "platform_calendar_day",
+            after.id(),
+            Map.of(),
+            afterSnapshot,
+            Map.of("calendarId", calendarId, "date", row.date().toString()));
+        continue;
+      }
+
+      Map<String, Object> beforeSnapshot = semanticDay(before);
+
+      if (beforeSnapshot.equals(afterSnapshot)) {
+        unchangedCount++;
+        continue;
+      }
+
+      overwrittenCount++;
+      appendChangedDate(changedDates, row.date());
+
+      audit.recordChange(
+          tenantId,
+          effectiveActor,
+          "platform.calendar.day.import_overwrite",
+          "platform_calendar_day",
+          after.id(),
+          beforeSnapshot,
+          afterSnapshot,
+          Map.of("calendarId", calendarId, "date", row.date().toString()));
+    }
+
+    Map<String, Object> summary = new LinkedHashMap<>();
+    summary.put("rowCount", rows.size());
+    summary.put("createdCount", createdCount);
+    summary.put("overwrittenCount", overwrittenCount);
+    summary.put("unchangedCount", unchangedCount);
+    summary.put("changedDates", changedDates);
+    summary.put("changedDatesTruncated", (createdCount + overwrittenCount) > changedDates.size());
+    summary.put("csvSha256", sha256(request.csv()));
+
+    audit.recordChange(
+        tenantId,
+        effectiveActor,
+        "platform.calendar.import",
+        "platform_calendar",
+        calendarId,
+        Map.of(),
+        summary,
+        Map.of("calendarId", calendarId, "source", "csv"));
 
     return rows.size();
   }
@@ -224,6 +305,35 @@ public class CalendarService {
         null);
   }
 
+  private Map<String, Object> semanticDay(CalendarDayRecord day) {
+    Map<String, Object> result = new LinkedHashMap<>();
+    result.put("calendarId", day.calendarId());
+    result.put("calendarDate", day.calendarDate());
+    result.put("dayOfWeek", day.dayOfWeek());
+    result.put("dayType", day.dayType());
+    result.put("workday", day.workday());
+    result.put("holidayCode", day.holidayCode());
+    result.put("holidayName", day.holidayName());
+    result.put("sourceType", day.sourceType());
+    result.put("remark", day.remark());
+    return result;
+  }
+
+  private void appendChangedDate(List<String> target, LocalDate date) {
+    if (target.size() < CHANGED_DATE_LIMIT) {
+      target.add(date.toString());
+    }
+  }
+
+  private String sha256(String value) {
+    try {
+      MessageDigest digest = MessageDigest.getInstance("SHA-256");
+      return HexFormat.of().formatHex(digest.digest(value.getBytes(StandardCharsets.UTF_8)));
+    } catch (NoSuchAlgorithmException ex) {
+      throw new IllegalStateException("SHA-256 is unavailable", ex);
+    }
+  }
+
   private void validateDayType(String dayType) {
     switch (dayType) {
       case "WORKDAY":
@@ -255,25 +365,5 @@ public class CalendarService {
 
   private String defaultActor(String actor) {
     return actor == null || actor.isBlank() ? "system" : actor;
-  }
-
-  private String detail(String... keyValues) {
-    StringBuilder sb = new StringBuilder("{");
-    for (int i = 0; i + 1 < keyValues.length; i += 2) {
-      if (i > 0) {
-        sb.append(',');
-      }
-      String key = keyValues[i];
-      String val = keyValues[i + 1];
-      sb.append('"').append(escape(key)).append('"');
-      sb.append(':');
-      sb.append('"').append(escape(val == null ? "" : val)).append('"');
-    }
-    sb.append('}');
-    return sb.toString();
-  }
-
-  private String escape(String value) {
-    return value.replace("\\", "\\\\").replace("\"", "\\\"");
   }
 }

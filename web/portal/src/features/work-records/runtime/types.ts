@@ -120,3 +120,22 @@ export type WorkRecordRuntimeValidation = {
   valid: boolean
   errors: string[]
 }
+
+export type AuditChange = {
+  path: string
+  beforeValue: unknown
+  afterValue: unknown
+}
+
+export type AuditEvent = {
+  id: string
+  tenantId: string
+  actorId: string
+  action: string
+  resourceType: string
+  resourceId: string
+  beforeJson: string
+  afterJson: string
+  detailJson: string
+  createdAt: string
+}

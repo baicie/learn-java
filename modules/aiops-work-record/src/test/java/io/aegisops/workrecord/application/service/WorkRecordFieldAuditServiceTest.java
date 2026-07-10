@@ -120,6 +120,31 @@ class WorkRecordFieldAuditServiceTest {
     Mockito.verifyNoInteractions(auditService);
   }
 
+  @Test
+  void removedFieldMustEmitDisableEvenWhenMissingFromCurrentVersion() {
+    WorkRecordField before = field("title", true, true, true);
+
+    fieldAuditService.recordPublishedChanges(
+        "t1", "tpl1", "v1", "v2", List.of(before), List.of(), "u1");
+
+    ArgumentCaptor<String> action = ArgumentCaptor.forClass(String.class);
+
+    Mockito.verify(auditService)
+        .recordChange(
+            Mockito.eq("t1"),
+            Mockito.isNull(),
+            Mockito.eq("tpl1"),
+            Mockito.eq("work_record_template_field"),
+            Mockito.eq("tpl1:title"),
+            action.capture(),
+            Mockito.eq("u1"),
+            Mockito.any(),
+            Mockito.any(),
+            Mockito.any());
+
+    assertThat(action.getValue()).isEqualTo(WorkRecordAuditActions.FIELD_DISABLE);
+  }
+
   private WorkRecordField field(String code, boolean required, boolean visible, boolean enabled) {
     OffsetDateTime now = OffsetDateTime.now();
     return new WorkRecordField(

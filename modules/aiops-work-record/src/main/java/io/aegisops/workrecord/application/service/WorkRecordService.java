@@ -166,8 +166,8 @@ public class WorkRecordService {
 
     permissionService.requireDelete(user, existing);
 
-    recordRepository.softDelete(tenantId, recordId);
-    OffsetDateTime deletedAt = OffsetDateTime.now();
+    WorkRecord deleted = recordRepository.softDelete(tenantId, recordId);
+
     auditService.recordChange(
         tenantId,
         existing.id(),
@@ -177,8 +177,8 @@ public class WorkRecordService {
         WorkRecordAuditActions.RECORD_DELETE,
         actorId(user),
         auditSnapshots.record(existing),
-        auditSnapshots.recordTombstone(existing, deletedAt),
-        Map.of());
+        auditSnapshots.record(deleted),
+        Map.of("softDelete", true));
   }
 
   public WorkRecord get(String tenantId, String recordId) {

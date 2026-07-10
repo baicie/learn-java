@@ -93,4 +93,46 @@ class AuditServiceTest {
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("action");
   }
+
+  @Test
+  void recordShouldRejectBeforeJsonThatIsNotObject() {
+    AuditRepository repository = new AuditRepository(jdbc);
+    AuditJson auditJson = new AuditJson(new com.fasterxml.jackson.databind.ObjectMapper());
+    AuditService service = new AuditService(repository, auditJson);
+    AuditRecordCommand cmd =
+        new AuditRecordCommand(
+            "tenant-1", "user-1", "module.view", "MODULE", "platform", "[]", "{}", "{}");
+
+    assertThatThrownBy(() -> service.record(cmd))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("beforeJson");
+  }
+
+  @Test
+  void recordShouldRejectAfterJsonThatIsNotObject() {
+    AuditRepository repository = new AuditRepository(jdbc);
+    AuditJson auditJson = new AuditJson(new com.fasterxml.jackson.databind.ObjectMapper());
+    AuditService service = new AuditService(repository, auditJson);
+    AuditRecordCommand cmd =
+        new AuditRecordCommand(
+            "tenant-1", "user-1", "module.view", "MODULE", "platform", "{}", "\"oops\"", "{}");
+
+    assertThatThrownBy(() -> service.record(cmd))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("afterJson");
+  }
+
+  @Test
+  void recordShouldRejectDetailJsonThatIsNotObject() {
+    AuditRepository repository = new AuditRepository(jdbc);
+    AuditJson auditJson = new AuditJson(new com.fasterxml.jackson.databind.ObjectMapper());
+    AuditService service = new AuditService(repository, auditJson);
+    AuditRecordCommand cmd =
+        new AuditRecordCommand(
+            "tenant-1", "user-1", "module.view", "MODULE", "platform", "{}", "{}", "[]");
+
+    assertThatThrownBy(() -> service.record(cmd))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("detailJson");
+  }
 }

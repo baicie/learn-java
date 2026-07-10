@@ -15,7 +15,7 @@ public interface WorkRecordRepository {
 
   WorkRecord update(String tenantId, String recordId, UpdateRecordCommand command);
 
-  void softDelete(String tenantId, String recordId);
+  WorkRecord softDelete(String tenantId, String recordId);
 
   PageResult<WorkRecord> page(String tenantId, RecordQuery query);
 

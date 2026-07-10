@@ -4,7 +4,13 @@ import io.aegisops.common.id.Ids;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Core audit recorder. The {@link #record(AuditRecordCommand)} method is transactional so that an
+ * audit row is written in the same transaction as the business mutation, guaranteeing that a
+ * successful business write always produces an audit event.
+ */
 @Service
 public class AuditService {
   private final AuditRepository repository;
@@ -15,6 +21,7 @@ public class AuditService {
     this.auditJson = auditJson;
   }
 
+  @Transactional
   public AuditEvent record(AuditRecordCommand command) {
     if (command == null) {
       throw new IllegalArgumentException("audit command is required");
@@ -33,9 +40,9 @@ public class AuditService {
             command.action(),
             command.resourceType(),
             command.resourceId(),
-            auditJson.normalizeJson(command.beforeJson()),
-            auditJson.normalizeJson(command.afterJson()),
-            auditJson.normalizeJson(command.detailJson()),
+            auditJson.normalizeObject(command.beforeJson(), "beforeJson"),
+            auditJson.normalizeObject(command.afterJson(), "afterJson"),
+            auditJson.normalizeObject(command.detailJson(), "detailJson"),
             OffsetDateTime.now(ZoneOffset.UTC));
 
     repository.insert(event);

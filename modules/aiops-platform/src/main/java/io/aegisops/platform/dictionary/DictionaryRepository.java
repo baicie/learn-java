@@ -202,6 +202,12 @@ public class DictionaryRepository {
         .orElseThrow();
   }
 
+  public Optional<DictItemRecord> findItem(String tenantId, String dictCode, String itemId) {
+    return listItems(tenantId, dictCode, true).stream()
+        .filter(item -> item.id().equals(itemId))
+        .findFirst();
+  }
+
   public Optional<DictItemRecord> updateItem(
       String tenantId, String dictCode, String itemId, UpdateDictItemRequest request) {
     DictTypeRecord type =

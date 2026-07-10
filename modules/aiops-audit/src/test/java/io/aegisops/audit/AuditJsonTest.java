@@ -3,7 +3,10 @@ package io.aegisops.audit;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
@@ -12,16 +15,37 @@ class AuditJsonTest {
   private final AuditJson json = new AuditJson(mapper);
 
   @Test
-  void normalizeJsonShouldReturnEmptyObjectForBlank() {
-    assertThat(json.normalizeJson(null)).isEqualTo("{}");
-    assertThat(json.normalizeJson("")).isEqualTo("{}");
-    assertThat(json.normalizeJson("   ")).isEqualTo("{}");
+  void normalizeObjectShouldReturnEmptyObjectForBlank() {
+    assertThat(json.normalizeObject(null, "beforeJson")).isEqualTo("{}");
+    assertThat(json.normalizeObject("", "beforeJson")).isEqualTo("{}");
+    assertThat(json.normalizeObject("   ", "beforeJson")).isEqualTo("{}");
   }
 
   @Test
-  void normalizeJsonShouldRejectInvalidJson() {
-    assertThatThrownBy(() -> json.normalizeJson("{invalid"))
+  void normalizeObjectShouldRejectInvalidJson() {
+    assertThatThrownBy(() -> json.normalizeObject("{invalid", "beforeJson"))
         .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void normalizeObjectShouldRejectArray() {
+    assertThatThrownBy(() -> json.normalizeObject("[]", "beforeJson"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("JSON object");
+  }
+
+  @Test
+  void normalizeObjectShouldRejectString() {
+    assertThatThrownBy(() -> json.normalizeObject("\"hello\"", "afterJson"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("must be a JSON object");
+  }
+
+  @Test
+  void writeShouldRejectNonObject() {
+    assertThatThrownBy(() -> json.write(List.of(1, 2, 3)))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("audit snapshot must be a JSON object");
   }
 
   @Test
@@ -79,31 +103,42 @@ class AuditJsonTest {
   }
 
   @Test
-  void diffShouldMaskSensitiveKeysInBeforeAndAfter() {
-    Map<String, Object> before = Map.of("password", "old");
-    Map<String, Object> after = Map.of("password", "new");
-    // Both before/after are redacted to "***" before diff, so they appear equal.
-    // The real change stays in the raw event, but the diff entry is suppressed to
-    // avoid leaking "the password changed but we won't tell you from what".
-    var changes = json.diff(before, after);
-    assertThat(changes).isEmpty();
+  void sensitiveFieldChangeShouldRemainVisible() {
+    var changes = json.diff(Map.of("password", "old-password"), Map.of("password", "new-password"));
+
+    assertThat(changes)
+        .singleElement()
+        .satisfies(
+            change -> {
+              assertThat(change.path()).isEqualTo("/password");
+              assertThat(change.beforeValue().asText()).isEqualTo("***");
+              assertThat(change.afterValue().asText()).isEqualTo("***");
+            });
   }
 
   @Test
-  void diffShouldStillDetectChangeWhenOneSideIsSensitiveAndOtherIsNot() {
-    Map<String, Object> before = Map.of("password", "old", "name", "alice");
-    Map<String, Object> after = Map.of("password", "new", "name", "alice");
-    var changes = json.diff(before, after);
-    // name unchanged, password redacted to "***" on both sides -> no diff
-    assertThat(changes).isEmpty();
-  }
-
-  @Test
-  void detailShouldIncludeChangesAndAttributes() {
+  void detailShouldIncludeChangesAndAttributes() throws Exception {
     String out =
         json.detail(Map.of("templateId", "t1"), Map.of("title", "old"), Map.of("title", "new"));
-    assertThat(out).contains("\"templateId\":\"t1\"");
-    assertThat(out).contains("\"changes\"");
-    assertThat(out).contains("/title");
+    JsonNode detail = mapper.readTree(out);
+    assertThat(detail.get("templateId").asText()).isEqualTo("t1");
+    assertThat(detail.get("changes").isArray()).isTrue();
+    assertThat(detail.get("changes").get(0).get("path").asText()).isEqualTo("/title");
+    assertThat(detail.get("changesTruncated").asBoolean()).isFalse();
+  }
+
+  @Test
+  void detailShouldMarkTruncatedChanges() throws Exception {
+    Map<String, Object> before = new LinkedHashMap<>();
+    Map<String, Object> after = new LinkedHashMap<>();
+    for (int i = 0; i < 250; i++) {
+      before.put("field" + i, 0);
+      after.put("field" + i, 1);
+    }
+
+    JsonNode detail = mapper.readTree(json.detail(Map.of(), before, after));
+
+    assertThat(detail.get("changes").size()).isEqualTo(200);
+    assertThat(detail.get("changesTruncated").asBoolean()).isTrue();
   }
 }

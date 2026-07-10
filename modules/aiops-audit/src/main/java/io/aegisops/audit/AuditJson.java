@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.NullNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.databind.node.TextNode;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -17,12 +18,14 @@ import org.springframework.stereotype.Component;
 
 /**
  * Audit-side JSON utilities: serialization, sensitive-field redaction, change diff, size limits.
- * The audit module must not depend on ad-hoc JSON string concatenation.
+ *
+ * <p>All audit snapshots MUST be a JSON object so that the database {@code jsonb_typeof(...)} =
+ * 'object'} constraints and the append-only trigger never reject a real audit event at insert time.
+ * {@link #normalizeObject(String, String)} is the canonical entry for that contract.
  */
 @Component
 public class AuditJson {
   private static final int MAX_JSON_BYTES = 1024 * 1024;
-
   private static final int MAX_CHANGE_COUNT = 200;
 
   private static final Set<String> SENSITIVE_KEYS =
@@ -45,22 +48,40 @@ public class AuditJson {
 
   public String write(Object value) {
     JsonNode node = toNode(value);
+
+    if (!node.isObject()) {
+      throw new IllegalArgumentException("audit snapshot must be a JSON object");
+    }
+
     return serialize(redact(node));
   }
 
+  /**
+   * Backwards-compatible alias of {@link #normalizeObject(String, String)} that defaults the field
+   * name to {@code auditJson}. Throws {@link IllegalArgumentException} if the payload is not a JSON
+   * object, preventing database constraint failures at INSERT time.
+   */
   public String normalizeJson(String raw) {
+    return normalizeObject(raw, "auditJson");
+  }
+
+  public String normalizeObject(String raw, String fieldName) {
     if (raw == null || raw.isBlank()) {
       return "{}";
     }
 
     try {
       JsonNode node = objectMapper.readTree(raw);
-      if (node == null) {
-        return "{}";
+
+      if (node == null || !node.isObject()) {
+        throw new IllegalArgumentException(fieldName + " must be a JSON object");
       }
+
       return serialize(redact(node));
+    } catch (IllegalArgumentException ex) {
+      throw ex;
     } catch (JsonProcessingException ex) {
-      throw new IllegalArgumentException("invalid audit json", ex);
+      throw new IllegalArgumentException("invalid " + fieldName, ex);
     }
   }
 
@@ -71,56 +92,50 @@ public class AuditJson {
       attributes.forEach((key, value) -> root.set(key, toNode(value)));
     }
 
-    ArrayNode changes = objectMapper.createArrayNode();
+    DiffAccumulator accumulator = calculateDiff(before, after);
 
-    for (AuditChange change : diff(before, after)) {
+    ArrayNode changes = objectMapper.createArrayNode();
+    for (AuditChange change : accumulator.changes) {
       changes.add(objectMapper.valueToTree(change));
     }
 
     root.set("changes", changes);
+    root.put("changesTruncated", accumulator.truncated);
+
     return serialize(redact(root));
   }
 
   public List<AuditChange> diff(Object before, Object after) {
-    JsonNode beforeNode = redact(toNode(before));
-    JsonNode afterNode = redact(toNode(after));
-
-    List<AuditChange> changes = new ArrayList<>();
-
-    collectChanges("", beforeNode, afterNode, changes);
-
-    return List.copyOf(changes);
+    return List.copyOf(calculateDiff(before, after).changes);
   }
 
-  public ObjectNode readObject(String raw) {
-    if (raw == null || raw.isBlank()) {
-      return objectMapper.createObjectNode();
-    }
+  private DiffAccumulator calculateDiff(Object before, Object after) {
+    JsonNode beforeNode = toNode(before);
+    JsonNode afterNode = toNode(after);
 
-    try {
-      JsonNode node = objectMapper.readTree(raw);
+    DiffAccumulator accumulator = new DiffAccumulator();
 
-      if (node == null || !node.isObject()) {
-        return objectMapper.createObjectNode();
-      }
+    collectChanges("", beforeNode, afterNode, false, accumulator);
 
-      return (ObjectNode) node;
-    } catch (JsonProcessingException ex) {
-      throw new IllegalArgumentException("invalid audit object json", ex);
-    }
+    return accumulator;
   }
 
   private void collectChanges(
-      String path, JsonNode before, JsonNode after, List<AuditChange> changes) {
-    if (changes.size() >= MAX_CHANGE_COUNT) {
-      return;
-    }
-
+      String path,
+      JsonNode before,
+      JsonNode after,
+      boolean inheritedSensitive,
+      DiffAccumulator accumulator) {
     if (before.equals(after)) {
       return;
     }
 
-    if (before.isObject() && after.isObject()) {
+    if (accumulator.changes.size() >= MAX_CHANGE_COUNT) {
+      accumulator.truncated = true;
+      return;
+    }
+
+    if (!inheritedSensitive && before.isObject() && after.isObject()) {
       Set<String> names = new LinkedHashSet<>();
 
       before.fieldNames().forEachRemaining(names::add);
@@ -131,9 +146,11 @@ public class AuditJson {
             path + "/" + escapePath(name),
             valueOrNull(before.get(name)),
             valueOrNull(after.get(name)),
-            changes);
+            isSensitive(name),
+            accumulator);
 
-        if (changes.size() >= MAX_CHANGE_COUNT) {
+        if (accumulator.changes.size() >= MAX_CHANGE_COUNT) {
+          accumulator.truncated = true;
           return;
         }
       }
@@ -141,9 +158,23 @@ public class AuditJson {
       return;
     }
 
-    // Arrays are treated as a single value to avoid noisy multi-select reorder diffs.
-    changes.add(
-        new AuditChange(path.isBlank() ? "/" : path, valueOrNull(before), valueOrNull(after)));
+    accumulator.changes.add(
+        new AuditChange(
+            path.isBlank() ? "/" : path,
+            auditValue(before, inheritedSensitive),
+            auditValue(after, inheritedSensitive)));
+  }
+
+  private JsonNode auditValue(JsonNode value, boolean sensitive) {
+    if (value == null || value.isNull()) {
+      return NullNode.getInstance();
+    }
+
+    if (sensitive) {
+      return TextNode.valueOf("***");
+    }
+
+    return redact(value);
   }
 
   private JsonNode redact(JsonNode source) {
@@ -180,6 +211,10 @@ public class AuditJson {
   }
 
   private boolean isSensitive(String key) {
+    if (key == null) {
+      return false;
+    }
+
     String normalized = key.toLowerCase(Locale.ROOT).replace("_", "").replace("-", "");
 
     return SENSITIVE_KEYS.contains(normalized);
@@ -217,5 +252,28 @@ public class AuditJson {
 
   private String escapePath(String value) {
     return value.replace("~", "~0").replace("/", "~1");
+  }
+
+  public ObjectNode readObject(String raw) {
+    if (raw == null || raw.isBlank()) {
+      return objectMapper.createObjectNode();
+    }
+
+    try {
+      JsonNode node = objectMapper.readTree(raw);
+
+      if (node == null || !node.isObject()) {
+        throw new IllegalArgumentException("audit object json must be a JSON object");
+      }
+
+      return (ObjectNode) node;
+    } catch (JsonProcessingException ex) {
+      throw new IllegalArgumentException("invalid audit object json", ex);
+    }
+  }
+
+  private static final class DiffAccumulator {
+    private final List<AuditChange> changes = new ArrayList<>();
+    private boolean truncated;
   }
 }

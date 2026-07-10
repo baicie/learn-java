@@ -1,8 +1,10 @@
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { DynamicFieldControl } from './dynamic-field-control'
+import { RecordHistoryCard } from './record-history-card'
 import { statusLabel } from './schema'
 import type {
+  AuditEvent,
   RuntimeDictOptions,
   WorkRecord,
   WorkRecordField,
@@ -16,6 +18,9 @@ type RecordReadonlyViewProps = {
   dictOptions: RuntimeDictOptions
   customData: Record<string, unknown>
   canEdit?: boolean
+  history?: AuditEvent[]
+  historyLoading?: boolean
+  historyError?: Error | null
   onBack: () => void
   onEdit: () => void
 }
@@ -27,6 +32,9 @@ export function RecordReadonlyView({
   dictOptions,
   customData,
   canEdit = true,
+  history = [],
+  historyLoading = false,
+  historyError = null,
   onBack,
   onEdit,
 }: RecordReadonlyViewProps) {
@@ -79,6 +87,12 @@ export function RecordReadonlyView({
             ))}
           </CardContent>
         </Card>
+
+        <RecordHistoryCard
+          events={history}
+          loading={historyLoading}
+          error={historyError}
+        />
       </section>
 
       <aside className='grid content-start gap-3'>

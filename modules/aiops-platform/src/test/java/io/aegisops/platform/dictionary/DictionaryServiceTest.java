@@ -1,21 +1,24 @@
 package io.aegisops.platform.dictionary;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import io.aegisops.audit.AuditRecordCommand;
-import io.aegisops.audit.AuditService;
+import io.aegisops.platform.audit.PlatformAuditService;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 class DictionaryServiceTest {
   private final DictionaryRepository repository = mock(DictionaryRepository.class);
-  private final AuditService audit = mock(AuditService.class);
+  private final PlatformAuditService audit = mock(PlatformAuditService.class);
   private final DictionaryService service = new DictionaryService(repository, audit);
 
   @Test
@@ -65,7 +68,16 @@ class DictionaryServiceTest {
     service.createType("t1", request, "u1");
 
     verify(repository).createType("t1", request, "u1");
-    verify(audit).record(any(AuditRecordCommand.class));
+    verify(audit)
+        .recordChange(
+            eq("t1"),
+            eq("u1"),
+            eq("platform.dict_type.create"),
+            eq("platform_dict_type"),
+            eq("dt1"),
+            eq(Map.of()),
+            eq(stored),
+            anyMap());
   }
 
   @Test
@@ -156,7 +168,16 @@ class DictionaryServiceTest {
             Mockito.eq("record_status"),
             Mockito.any(CreateDictItemRequest.class),
             Mockito.eq("u1"));
-    verify(audit).record(any(AuditRecordCommand.class));
+    verify(audit)
+        .recordChange(
+            eq("t1"),
+            eq("u1"),
+            eq("platform.dict_item.create"),
+            eq("platform_dict_item"),
+            eq("di1"),
+            eq(Map.of()),
+            eq(item),
+            anyMap());
   }
 
   @Test
@@ -189,14 +210,89 @@ class DictionaryServiceTest {
 
     var items = service.listItems("t1", "record_priority", true);
 
-    org.assertj.core.api.Assertions.assertThat(items)
-        .extracting(DictItemRecord::itemValue)
-        .containsExactly("P2");
+    assertThat(items).extracting(DictItemRecord::itemValue).containsExactly("P2");
     verify(repository).listItems("t1", "record_priority", true);
   }
 
   @Test
+  void updateItemShouldAuditBeforeAndAfter() {
+    DictItemRecord before =
+        new DictItemRecord(
+            "i1",
+            "t1",
+            "dt1",
+            "旧标签",
+            "P2",
+            null,
+            null,
+            null,
+            false,
+            true,
+            10,
+            "{}",
+            "u1",
+            OffsetDateTime.now(),
+            OffsetDateTime.now());
+    DictItemRecord after =
+        new DictItemRecord(
+            "i1",
+            "t1",
+            "dt1",
+            "新标签",
+            "P2",
+            null,
+            null,
+            null,
+            false,
+            true,
+            10,
+            "{}",
+            "u1",
+            OffsetDateTime.now(),
+            OffsetDateTime.now());
+
+    when(repository.findItem("t1", "priority", "i1")).thenReturn(java.util.Optional.of(before));
+    when(repository.updateItem(eq("t1"), eq("priority"), eq("i1"), any()))
+        .thenReturn(java.util.Optional.of(after));
+
+    service.updateItem(
+        "t1",
+        "priority",
+        "i1",
+        new UpdateDictItemRequest("新标签", null, null, null, null, null),
+        "u1");
+
+    verify(audit)
+        .recordChange(
+            eq("t1"),
+            eq("u1"),
+            eq("platform.dict_item.update"),
+            eq("platform_dict_item"),
+            eq("i1"),
+            eq(before),
+            eq(after),
+            eq(Map.of("dictCode", "priority", "itemValue", after.itemValue())));
+  }
+
+  @Test
   void disableItem_shouldReturnDisabledItemAndAudit() {
+    DictItemRecord before =
+        new DictItemRecord(
+            "item-1",
+            "tenant-1",
+            "dict-1",
+            "P2",
+            "P2",
+            null,
+            null,
+            null,
+            false,
+            true,
+            20,
+            "{}",
+            "u1",
+            OffsetDateTime.now(),
+            OffsetDateTime.now());
     DictItemRecord disabled =
         new DictItemRecord(
             "item-1",
@@ -215,12 +311,23 @@ class DictionaryServiceTest {
             OffsetDateTime.now(),
             OffsetDateTime.now());
 
+    when(repository.findItem("tenant-1", "record_priority", "item-1"))
+        .thenReturn(java.util.Optional.of(before));
     when(repository.disableItem("tenant-1", "record_priority", "item-1"))
         .thenReturn(java.util.Optional.of(disabled));
 
     DictItemRecord result = service.disableItem("tenant-1", "record_priority", "item-1", "u1");
 
-    org.assertj.core.api.Assertions.assertThat(result.enabled()).isFalse();
-    verify(audit).record(any(AuditRecordCommand.class));
+    assertThat(result.enabled()).isFalse();
+    verify(audit)
+        .recordChange(
+            eq("tenant-1"),
+            eq("u1"),
+            eq("platform.dict_item.disable"),
+            eq("platform_dict_item"),
+            eq("item-1"),
+            eq(before),
+            eq(disabled),
+            anyMap());
   }
 }

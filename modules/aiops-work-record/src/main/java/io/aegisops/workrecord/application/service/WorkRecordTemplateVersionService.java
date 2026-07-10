@@ -144,7 +144,18 @@ public class WorkRecordTemplateVersionService {
     fieldIndexService.createForVersion(tenantId, template.id(), version.id(), fieldEntries);
     templateRepository.updateCurrentVersion(tenantId, template.id(), version.id());
 
+    WorkRecordTemplate updatedTemplate = requireTemplate(tenantId, template.id());
+
+    Map<String, Object> beforeSnapshot = new LinkedHashMap<>();
+    beforeSnapshot.put("template", auditSnapshots.template(template));
+
+    Map<String, Object> afterSnapshot = new LinkedHashMap<>();
+    afterSnapshot.put("template", auditSnapshots.template(updatedTemplate));
+    afterSnapshot.put("version", auditSnapshots.version(version));
+
     Map<String, Object> attributes = new LinkedHashMap<>();
+    attributes.put("previousVersionId", template.currentVersionId());
+    attributes.put("currentVersionId", version.id());
     attributes.put("versionNo", version.versionNo());
     attributes.put("schemaVersion", document.schemaVersion());
     attributes.put("fieldCount", fieldEntries.size());
@@ -157,9 +168,11 @@ public class WorkRecordTemplateVersionService {
         template.id(),
         WorkRecordAuditActions.TEMPLATE_PUBLISH,
         actor,
-        Map.of(),
-        auditSnapshots.version(version),
+        beforeSnapshot,
+        afterSnapshot,
         attributes);
+
+    List<WorkRecordField> currentFields = fieldRepository.listByVersion(tenantId, version.id());
 
     fieldAuditService.recordPublishedChanges(
         tenantId,
@@ -167,7 +180,7 @@ public class WorkRecordTemplateVersionService {
         template.currentVersionId(),
         version.id(),
         previousFields,
-        fieldRepository.listByVersion(tenantId, version.id()),
+        currentFields,
         actor);
     return version;
   }

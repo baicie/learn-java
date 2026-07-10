@@ -106,6 +106,7 @@ vi.mock('./api', () => ({
     deletedAt: null,
   }),
   loadRuntimeDictOptions: async () => ({}),
+  listWorkRecordHistory: async () => [],
   parseCustomData: (record?: { customDataJson?: string }) => {
     if (!record?.customDataJson) return {}
     try {

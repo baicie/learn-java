@@ -113,14 +113,39 @@ public class JdbcWorkRecordRepository implements WorkRecordRepository {
   }
 
   @Override
-  public void softDelete(String tenantId, String recordId) {
-    jdbc.update(
-        """
-        update work_record.wr_record
-           set deleted_at = coalesce(deleted_at, now())
-         where tenant_id = :tenantId and id = :id
-        """,
-        Map.of("tenantId", tenantId, "id", recordId));
+  public WorkRecord softDelete(String tenantId, String recordId) {
+    List<WorkRecord> rows =
+        jdbc.query(
+            """
+            update work_record.wr_record
+               set deleted_at = now(),
+                   updated_at = now(),
+                   row_version = row_version + 1
+             where tenant_id = :tenantId
+               and id = :id
+               and deleted_at is null
+            returning
+               id,
+               tenant_id,
+               template_id,
+               template_version_id,
+               title,
+               status,
+               owner_id,
+               creator_id,
+               record_time,
+               builtin_data_json::text,
+               custom_data_json::text,
+               row_version,
+               created_at,
+               updated_at,
+               deleted_at
+            """,
+            Map.of("tenantId", tenantId, "id", recordId),
+            (rs, rowNum) -> mapRecord(rs));
+    return rows.stream()
+        .findFirst()
+        .orElseThrow(() -> new IllegalStateException("work record was not deleted: " + recordId));
   }
 
   @Override
