@@ -26,8 +26,7 @@ class PermissionCodesTest {
                 })
             .collect(Collectors.toSet());
 
-    assertThat(reflected)
-        .containsExactlyInAnyOrderElementsOf(PermissionCodes.ALL_PERMISSIONS);
+    assertThat(reflected).containsExactlyInAnyOrderElementsOf(PermissionCodes.ALL_PERMISSIONS);
 
     assertThat(reflected).hasSize(27);
   }

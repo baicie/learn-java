@@ -71,7 +71,8 @@ public final class PermissionCodes {
           WORK_RECORD_DELETE,
           WORK_RECORD_EXPORT);
 
-  public static final Set<String> ALL_PERMISSIONS = union(LEGACY_AIOPS_PERMISSIONS, PHASE_13_PERMISSIONS);
+  public static final Set<String> ALL_PERMISSIONS =
+      union(LEGACY_AIOPS_PERMISSIONS, PHASE_13_PERMISSIONS);
 
   public static void requireKnown(String permissionCode) {
     if (!ALL_PERMISSIONS.contains(permissionCode)) {

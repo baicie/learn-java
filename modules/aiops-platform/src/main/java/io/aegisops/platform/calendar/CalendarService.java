@@ -61,7 +61,8 @@ public class CalendarService {
       byDate.put(day.calendarDate(), day);
     }
 
-    return start.datesUntil(end.plusDays(1))
+    return start
+        .datesUntil(end.plusDays(1))
         .map(date -> byDate.getOrDefault(date, derivedDay(tenantId, calendarId, date)))
         .toList();
   }
@@ -159,7 +160,9 @@ public class CalendarService {
     }
 
     CalendarDayRecord day =
-        repository.findDay(tenantId, calendarId, date).orElseGet(() -> derivedDay(tenantId, calendarId, date));
+        repository
+            .findDay(tenantId, calendarId, date)
+            .orElseGet(() -> derivedDay(tenantId, calendarId, date));
 
     return new WorkdayCheckResponse(date, day.workday(), day.dayType(), day.holidayName());
   }
@@ -170,9 +173,10 @@ public class CalendarService {
     requireRange(start, end);
 
     int count =
-        (int) listDays(tenantId, calendarId, start, end).stream()
-            .filter(CalendarDayRecord::workday)
-            .count();
+        (int)
+            listDays(tenantId, calendarId, start, end).stream()
+                .filter(CalendarDayRecord::workday)
+                .count();
 
     return new WorkdayCountResponse(start, end, count);
   }
@@ -181,7 +185,8 @@ public class CalendarService {
     LocalDate start = LocalDate.of(year, 1, 1);
     LocalDate end = LocalDate.of(year, 12, 31);
 
-    start.datesUntil(end.plusDays(1))
+    start
+        .datesUntil(end.plusDays(1))
         .forEach(
             date -> {
               CalendarDayRecord derived = derivedDay(tenantId, calendarId, date);

@@ -15,43 +15,27 @@ import org.junit.jupiter.api.Test;
 import org.springframework.security.access.AccessDeniedException;
 
 class WorkRecordPermissionServiceTest {
-  private final WorkRecordPermissionService service =
-      new WorkRecordPermissionService();
+  private final WorkRecordPermissionService service = new WorkRecordPermissionService();
 
   @Test
   void recordAdminCanReadAllRecords() {
     assertThat(
             service.canReadAll(
-                principal(
-                    "admin",
-                    Set.of(
-                        PermissionCodes
-                            .WORK_RECORD_READ_ALL),
-                    DataScope.ALL)))
+                principal("admin", Set.of(PermissionCodes.WORK_RECORD_READ_ALL), DataScope.ALL)))
         .isTrue();
   }
 
   @Test
   void normalUserCanReadOwnedRecord() {
     service.requireRead(
-        principal(
-            "u1",
-            Set.of(
-                PermissionCodes
-                    .WORK_RECORD_READ_SELF),
-            DataScope.SELF),
+        principal("u1", Set.of(PermissionCodes.WORK_RECORD_READ_SELF), DataScope.SELF),
         record("u2", "u1"));
   }
 
   @Test
   void normalUserCanReadCreatedRecord() {
     service.requireRead(
-        principal(
-            "u1",
-            Set.of(
-                PermissionCodes
-                    .WORK_RECORD_READ_SELF),
-            DataScope.SELF),
+        principal("u1", Set.of(PermissionCodes.WORK_RECORD_READ_SELF), DataScope.SELF),
         record("u1", "u2"));
   }
 
@@ -60,15 +44,9 @@ class WorkRecordPermissionServiceTest {
     assertThatThrownBy(
             () ->
                 service.requireRead(
-                    principal(
-                        "u1",
-                        Set.of(
-                            PermissionCodes
-                                .WORK_RECORD_READ_SELF),
-                        DataScope.SELF),
+                    principal("u1", Set.of(PermissionCodes.WORK_RECORD_READ_SELF), DataScope.SELF),
                     record("u2", "u3")))
-        .isInstanceOf(
-            AccessDeniedException.class);
+        .isInstanceOf(AccessDeniedException.class);
   }
 
   @Test
@@ -76,26 +54,15 @@ class WorkRecordPermissionServiceTest {
     assertThatThrownBy(
             () ->
                 service.requireEdit(
-                    principal(
-                        "u1",
-                        Set.of(
-                            PermissionCodes
-                                .WORK_RECORD_WRITE),
-                        DataScope.SELF),
+                    principal("u1", Set.of(PermissionCodes.WORK_RECORD_WRITE), DataScope.SELF),
                     record("u2", "u3")))
-        .isInstanceOf(
-            AccessDeniedException.class);
+        .isInstanceOf(AccessDeniedException.class);
   }
 
   @Test
   void allScopeAllowsEditingOthersRecord() {
     service.requireEdit(
-        principal(
-            "admin",
-            Set.of(
-                PermissionCodes
-                    .WORK_RECORD_WRITE),
-            DataScope.ALL),
+        principal("admin", Set.of(PermissionCodes.WORK_RECORD_WRITE), DataScope.ALL),
         record("u2", "u3"));
   }
 
@@ -104,15 +71,9 @@ class WorkRecordPermissionServiceTest {
     assertThatThrownBy(
             () ->
                 service.requireEdit(
-                    principal(
-                        "u1",
-                        Set.of(
-                            PermissionCodes
-                                .WORK_RECORD_READ_SELF),
-                        DataScope.SELF),
+                    principal("u1", Set.of(PermissionCodes.WORK_RECORD_READ_SELF), DataScope.SELF),
                     record("u1", "u1")))
-        .isInstanceOf(
-            AccessDeniedException.class);
+        .isInstanceOf(AccessDeniedException.class);
   }
 
   @Test
@@ -120,38 +81,16 @@ class WorkRecordPermissionServiceTest {
     assertThatThrownBy(
             () ->
                 service.requireExport(
-                    principal(
-                        "u1",
-                        Set.of(
-                            PermissionCodes
-                                .WORK_RECORD_READ_ALL),
-                        DataScope.ALL)))
-        .isInstanceOf(
-            AccessDeniedException.class);
+                    principal("u1", Set.of(PermissionCodes.WORK_RECORD_READ_ALL), DataScope.ALL)))
+        .isInstanceOf(AccessDeniedException.class);
   }
 
-  private UserPrincipal principal(
-      String id,
-      Set<String> permissions,
-      DataScope scope) {
-    return new UserPrincipal(
-        id,
-        "t1",
-        id,
-        id,
-        Set.of(),
-        permissions,
-        Map.of(
-            "work-record",
-            scope));
+  private UserPrincipal principal(String id, Set<String> permissions, DataScope scope) {
+    return new UserPrincipal(id, "t1", id, id, Set.of(), permissions, Map.of("work-record", scope));
   }
 
-  private WorkRecord record(
-      String creatorId,
-      String ownerId) {
-    OffsetDateTime now =
-        OffsetDateTime.parse(
-            "2026-07-10T10:00:00+08:00");
+  private WorkRecord record(String creatorId, String ownerId) {
+    OffsetDateTime now = OffsetDateTime.parse("2026-07-10T10:00:00+08:00");
 
     return new WorkRecord(
         "r1",

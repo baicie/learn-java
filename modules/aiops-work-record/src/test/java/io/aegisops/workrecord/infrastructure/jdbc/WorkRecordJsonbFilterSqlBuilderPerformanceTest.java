@@ -28,10 +28,16 @@ class WorkRecordJsonbFilterSqlBuilderPerformanceTest {
             RecordDynamicFilter.normalized(
                 "cost", DynamicFilterOperator.GTE, FieldType.NUMBER, "100", List.of()),
             RecordDynamicFilter.normalized(
-                "tags", DynamicFilterOperator.CONTAINS_ALL, FieldType.MULTI_SELECT, null,
+                "tags",
+                DynamicFilterOperator.CONTAINS_ALL,
+                FieldType.MULTI_SELECT,
+                null,
                 List.of("a", "b")),
             RecordDynamicFilter.normalized(
-                "startedAt", DynamicFilterOperator.BETWEEN, FieldType.DATETIME, null,
+                "startedAt",
+                DynamicFilterOperator.BETWEEN,
+                FieldType.DATETIME,
+                null,
                 List.of("2026-01-01T00:00Z", "2026-02-01T00:00Z")));
 
     Instant start = Instant.now();
@@ -43,11 +49,17 @@ class WorkRecordJsonbFilterSqlBuilderPerformanceTest {
       builder.appendFilters(where, params, filters);
 
       assertThat(where).isNotEmpty();
-      assertThat(params).containsKeys(
-          "dfKey0", "dfValue0",
-          "dfKey1", "dfValue1",
-          "dfKey2", "dfJson2",
-          "dfKey3", "dfFrom3", "dfTo3");
+      assertThat(params)
+          .containsKeys(
+              "dfKey0",
+              "dfValue0",
+              "dfKey1",
+              "dfValue1",
+              "dfKey2",
+              "dfJson2",
+              "dfKey3",
+              "dfFrom3",
+              "dfTo3");
     }
 
     Duration elapsed = Duration.between(start, Instant.now());

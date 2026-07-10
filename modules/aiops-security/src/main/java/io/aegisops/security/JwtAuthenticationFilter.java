@@ -35,8 +35,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
       try {
         JwtTokenService.JwtClaims claims = tokenService.verify(auth.substring("Bearer ".length()));
         UserAccount user = userService.getById(claims.userId());
-        UserPrincipal principal =
-            principalFactory.create(user);
+        UserPrincipal principal = principalFactory.create(user);
         SecurityContextHolder.getContext()
             .setAuthentication(
                 new UsernamePasswordAuthenticationToken(

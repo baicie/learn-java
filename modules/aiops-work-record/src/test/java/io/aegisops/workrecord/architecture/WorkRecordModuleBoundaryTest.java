@@ -6,10 +6,9 @@ import com.tngtech.archunit.core.importer.ClassFileImporter;
 import org.junit.jupiter.api.Test;
 
 /**
- * Module-level boundary contract test, complementary to {@link
- * WorkRecordLayerArchitectureTest}. Phase 1 baseline check requires a test in
- * this exact path to enforce that the work-record module stays self-contained
- * and does not reach into alert/incident/inspection persistence packages.
+ * Module-level boundary contract test, complementary to {@link WorkRecordLayerArchitectureTest}.
+ * Phase 1 baseline check requires a test in this exact path to enforce that the work-record module
+ * stays self-contained and does not reach into alert/incident/inspection persistence packages.
  */
 class WorkRecordModuleBoundaryTest {
 
@@ -24,9 +23,7 @@ class WorkRecordModuleBoundaryTest {
         .should()
         .dependOnClassesThat()
         .resideInAnyPackage(
-            "..workrecord.application..",
-            "..workrecord.api..",
-            "..workrecord.infrastructure..")
+            "..workrecord.application..", "..workrecord.api..", "..workrecord.infrastructure..")
         .allowEmptyShould(true)
         .check(classes);
   }

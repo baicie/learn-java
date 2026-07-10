@@ -15,6 +15,7 @@ import io.aegisops.workrecord.domain.model.WorkRecordField;
 import io.aegisops.workrecord.domain.model.WorkRecordTemplateVersion;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,6 +26,7 @@ public class WorkRecordService {
   private final WorkRecordFieldIndexRepository fieldRepository;
   private final WorkRecordValueValidator valueValidator;
   private final WorkRecordAuditService auditService;
+  private final WorkRecordAuditSnapshots auditSnapshots;
   private final WorkRecordPermissionService permissionService;
   private final WorkRecordUserPort userPort;
   private final ObjectMapper objectMapper;
@@ -35,6 +37,7 @@ public class WorkRecordService {
       WorkRecordFieldIndexRepository fieldRepository,
       WorkRecordValueValidator valueValidator,
       WorkRecordAuditService auditService,
+      WorkRecordAuditSnapshots auditSnapshots,
       WorkRecordPermissionService permissionService,
       WorkRecordUserPort userPort,
       ObjectMapper objectMapper) {
@@ -43,6 +46,7 @@ public class WorkRecordService {
     this.fieldRepository = fieldRepository;
     this.valueValidator = valueValidator;
     this.auditService = auditService;
+    this.auditSnapshots = auditSnapshots;
     this.permissionService = permissionService;
     this.userPort = userPort;
     this.objectMapper = objectMapper;
@@ -84,15 +88,17 @@ public class WorkRecordService {
 
     String actorId = actorId(user);
     WorkRecord record = recordRepository.create(tenantId, normalized, actorId);
-    auditService.record(
+    auditService.recordChange(
         tenantId,
         record.id(),
         record.templateId(),
         "work_record",
         record.id(),
-        "work_record.record.create",
+        WorkRecordAuditActions.RECORD_CREATE,
         actorId,
-        "{}");
+        Map.of(),
+        auditSnapshots.record(record),
+        Map.of());
     return record;
   }
 
@@ -137,15 +143,17 @@ public class WorkRecordService {
             custom);
 
     WorkRecord updated = recordRepository.update(tenantId, recordId, normalized);
-    auditService.record(
+    auditService.recordChange(
         tenantId,
         updated.id(),
         updated.templateId(),
         "work_record",
         updated.id(),
-        "work_record.record.update",
+        WorkRecordAuditActions.RECORD_UPDATE,
         actorId(user),
-        "{}");
+        auditSnapshots.record(existing),
+        auditSnapshots.record(updated),
+        Map.of());
     return updated;
   }
 
@@ -159,15 +167,18 @@ public class WorkRecordService {
     permissionService.requireDelete(user, existing);
 
     recordRepository.softDelete(tenantId, recordId);
-    auditService.record(
+    OffsetDateTime deletedAt = OffsetDateTime.now();
+    auditService.recordChange(
         tenantId,
         existing.id(),
         existing.templateId(),
         "work_record",
         existing.id(),
-        "work_record.record.delete",
+        WorkRecordAuditActions.RECORD_DELETE,
         actorId(user),
-        "{}");
+        auditSnapshots.record(existing),
+        auditSnapshots.recordTombstone(existing, deletedAt),
+        Map.of());
   }
 
   public WorkRecord get(String tenantId, String recordId) {

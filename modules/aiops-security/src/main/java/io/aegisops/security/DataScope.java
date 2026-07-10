@@ -24,9 +24,7 @@ public enum DataScope {
     return valueOf(raw.trim().toUpperCase(Locale.ROOT));
   }
 
-  public static DataScope max(
-      DataScope left,
-      DataScope right) {
+  public static DataScope max(DataScope left, DataScope right) {
     if (left == null) {
       return right == null ? SELF : right;
     }
@@ -34,8 +32,6 @@ public enum DataScope {
       return left;
     }
 
-    return left.priority >= right.priority
-        ? left
-        : right;
+    return left.priority >= right.priority ? left : right;
   }
 }

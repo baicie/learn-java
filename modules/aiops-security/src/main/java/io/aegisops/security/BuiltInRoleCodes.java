@@ -11,9 +11,5 @@ public final class BuiltInRoleCodes {
   public static final String READONLY_USER = "readonly_user";
 
   public static final Set<String> ALL =
-      Set.of(
-          SYSTEM_ADMIN,
-          RECORD_ADMIN,
-          NORMAL_USER,
-          READONLY_USER);
+      Set.of(SYSTEM_ADMIN, RECORD_ADMIN, NORMAL_USER, READONLY_USER);
 }

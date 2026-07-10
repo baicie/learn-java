@@ -16,6 +16,14 @@
   <description>可配置工作记录模块：动态表单模板、字段设计与工作记录填写</description>
 
   <dependencies>
+
+    <dependency>
+      <groupId>org.testcontainers</groupId>
+      <artifactId>testcontainers-bom</artifactId>
+      <version>${testcontainers.version}</version>
+      <type>pom</type>
+      <scope>import</scope>
+    </dependency>
     <dependency>
       <groupId>io.aegisops</groupId>
       <artifactId>aiops-audit</artifactId>
@@ -28,12 +36,12 @@
     </dependency>
     <dependency>
       <groupId>io.aegisops</groupId>
-      <artifactId>aiops-security</artifactId>
+      <artifactId>aiops-platform</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>io.aegisops</groupId>
-      <artifactId>aiops-platform</artifactId>
+      <artifactId>aiops-security</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
@@ -57,19 +65,16 @@
       <version>1.4.2</version>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.postgresql</groupId>
+      <artifactId>postgresql</artifactId>
+      <scope>test</scope>
+    </dependency>
 
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-test</artifactId>
       <scope>test</scope>
-    </dependency>
-
-    <dependency>
-      <groupId>org.testcontainers</groupId>
-      <artifactId>testcontainers-bom</artifactId>
-      <version>${testcontainers.version}</version>
-      <type>pom</type>
-      <scope>import</scope>
     </dependency>
     <dependency>
       <groupId>org.testcontainers</groupId>
@@ -78,11 +83,6 @@
     </dependency>
     <dependency>
       <groupId>org.testcontainers</groupId>
-      <artifactId>postgresql</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.postgresql</groupId>
       <artifactId>postgresql</artifactId>
       <scope>test</scope>
     </dependency>

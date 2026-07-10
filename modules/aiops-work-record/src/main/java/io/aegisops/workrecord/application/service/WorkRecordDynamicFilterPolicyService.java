@@ -32,9 +32,8 @@ import org.springframework.stereotype.Service;
  *   <li>校验 fieldCode 符合命名规则
  *   <li>校验字段存在于模板且 enabled=true、filterable=true
  *   <li>校验 operator 是否在字段类型允许的白名单内
- *   <li>严格按字段类型校验值：text/select/user/multi_select 必须为字符串，number
- *       必须为数字或数字字符串，date 必须为 ISO 日期字符串，datetime 必须为 ISO offset
- *       datetime 字符串，boolean 必须为布尔或 "true"/"false"
+ *   <li>严格按字段类型校验值：text/select/user/multi_select 必须为字符串，number 必须为数字或数字字符串，date 必须为 ISO
+ *       日期字符串，datetime 必须为 ISO offset datetime 字符串，boolean 必须为布尔或 "true"/"false"
  *   <li>拒绝 value 和 values 同时存在的歧义 DTO
  *   <li>拒绝 exists/not_exists 携带 value 或 values
  *   <li>拒绝 scalar 操作符携带 values
@@ -42,8 +41,8 @@ import org.springframework.stereotype.Service;
  *   <li>拒绝超过上限的 filter 数量和列表值数量
  * </ul>
  *
- * <p>标准化后的 filter 携带 {@link DynamicFilterOperator} enum 和 {@link FieldType} enum，
- * 交由 {@link WorkRecordJsonbFilterSqlBuilder} 生成参数化 SQL。
+ * <p>标准化后的 filter 携带 {@link DynamicFilterOperator} enum 和 {@link FieldType} enum， 交由 {@link
+ * WorkRecordJsonbFilterSqlBuilder} 生成参数化 SQL。
  */
 @Service
 public class WorkRecordDynamicFilterPolicyService {
@@ -73,9 +72,7 @@ public class WorkRecordDynamicFilterPolicyService {
    * @return 标准化后的筛选列表
    */
   public List<RecordDynamicFilter> normalize(
-      String tenantId,
-      String templateId,
-      List<RecordDynamicFilter> rawFilters) {
+      String tenantId, String templateId, List<RecordDynamicFilter> rawFilters) {
     return normalize(tenantId, templateId, null, rawFilters);
   }
 
@@ -102,8 +99,7 @@ public class WorkRecordDynamicFilterPolicyService {
     }
 
     if (templateId == null || templateId.isBlank()) {
-      throw new IllegalArgumentException(
-          "templateId is required when dynamic filters are used");
+      throw new IllegalArgumentException("templateId is required when dynamic filters are used");
     }
 
     WorkRecordTemplate template =
@@ -111,8 +107,7 @@ public class WorkRecordDynamicFilterPolicyService {
             .find(tenantId, templateId)
             .orElseThrow(() -> new IllegalArgumentException("template not found"));
 
-    String effectiveVersionId =
-        resolveVersionId(tenantId, template, templateVersionId);
+    String effectiveVersionId = resolveVersionId(tenantId, template, templateVersionId);
 
     Map<String, WorkRecordField> filterableFields =
         loadFilterableFields(tenantId, effectiveVersionId);
@@ -127,8 +122,7 @@ public class WorkRecordDynamicFilterPolicyService {
 
       WorkRecordField field = filterableFields.get(raw.fieldCode());
       if (field == null) {
-        throw new IllegalArgumentException(
-            "field is not filterable: " + raw.fieldCode());
+        throw new IllegalArgumentException("field is not filterable: " + raw.fieldCode());
       }
 
       DynamicFilterOperator operator =
@@ -141,16 +135,11 @@ public class WorkRecordDynamicFilterPolicyService {
           || operator == DynamicFilterOperator.NOT_EXISTS) {
         normalized.add(
             RecordDynamicFilter.normalized(
-                field.fieldCode(),
-                operator,
-                field.fieldType(),
-                null,
-                List.of()));
+                field.fieldCode(), operator, field.fieldType(), null, List.of()));
         continue;
       }
 
-      NormalizedValue normalizedValue =
-          normalizeValue(field.fieldType(), operator, raw);
+      NormalizedValue normalizedValue = normalizeValue(field.fieldType(), operator, raw);
 
       normalized.add(
           RecordDynamicFilter.normalized(
@@ -164,12 +153,9 @@ public class WorkRecordDynamicFilterPolicyService {
     return List.copyOf(normalized);
   }
 
-  private Map<String, WorkRecordField> loadFilterableFields(
-      String tenantId,
-      String versionId) {
+  private Map<String, WorkRecordField> loadFilterableFields(String tenantId, String versionId) {
     List<WorkRecordField> fields =
-        fieldRepository.listFilterableByVersions(
-            tenantId, List.of(versionId));
+        fieldRepository.listFilterableByVersions(tenantId, List.of(versionId));
 
     Map<String, WorkRecordField> byCode = new HashMap<>();
     for (WorkRecordField field : fields) {
@@ -182,19 +168,15 @@ public class WorkRecordDynamicFilterPolicyService {
   }
 
   private String resolveVersionId(
-      String tenantId,
-      WorkRecordTemplate template,
-      String requestedVersionId) {
+      String tenantId, WorkRecordTemplate template, String requestedVersionId) {
     if (requestedVersionId != null && !requestedVersionId.isBlank()) {
       return versionRepository
           .findByTemplateAndVersion(tenantId, template.id(), requestedVersionId)
-          .orElseThrow(
-              () -> new IllegalArgumentException("template version not found"))
+          .orElseThrow(() -> new IllegalArgumentException("template version not found"))
           .id();
     }
 
-    if (template.currentVersionId() == null
-        || template.currentVersionId().isBlank()) {
+    if (template.currentVersionId() == null || template.currentVersionId().isBlank()) {
       throw new IllegalArgumentException("template has no current version");
     }
 
@@ -205,11 +187,9 @@ public class WorkRecordDynamicFilterPolicyService {
     boolean hasValue = raw.value() != null;
     boolean hasValues = raw.values() != null;
 
-    if (operator == DynamicFilterOperator.EXISTS
-        || operator == DynamicFilterOperator.NOT_EXISTS) {
+    if (operator == DynamicFilterOperator.EXISTS || operator == DynamicFilterOperator.NOT_EXISTS) {
       if (hasValue || hasValues) {
-        throw new IllegalArgumentException(
-            operator.value() + " must not contain value or values");
+        throw new IllegalArgumentException(operator.value() + " must not contain value or values");
       }
       return;
     }
@@ -223,20 +203,17 @@ public class WorkRecordDynamicFilterPolicyService {
       }
 
       if (!hasValues && !valueIsCollection) {
-        throw new IllegalArgumentException(
-            operator.value() + " requires array values");
+        throw new IllegalArgumentException(operator.value() + " requires array values");
       }
       return;
     }
 
     if (hasValues) {
-      throw new IllegalArgumentException(
-          operator.value() + " must not contain values");
+      throw new IllegalArgumentException(operator.value() + " must not contain values");
     }
 
     if (!hasValue || raw.value() instanceof Collection<?>) {
-      throw new IllegalArgumentException(
-          operator.value() + " requires scalar value");
+      throw new IllegalArgumentException(operator.value() + " requires scalar value");
     }
   }
 
@@ -292,17 +269,12 @@ public class WorkRecordDynamicFilterPolicyService {
 
     if (!allowed.contains(operator)) {
       throw new IllegalArgumentException(
-          "operator "
-              + operator.value()
-              + " is not allowed for "
-              + fieldType.value());
+          "operator " + operator.value() + " is not allowed for " + fieldType.value());
     }
   }
 
   private NormalizedValue normalizeValue(
-      FieldType fieldType,
-      DynamicFilterOperator operator,
-      RecordDynamicFilter raw) {
+      FieldType fieldType, DynamicFilterOperator operator, RecordDynamicFilter raw) {
     return switch (operator) {
       case EQ, CONTAINS, GTE, LTE ->
           new NormalizedValue(normalizeScalar(fieldType, raw.value()), List.of());
@@ -330,8 +302,7 @@ public class WorkRecordDynamicFilterPolicyService {
     if (raw.value() instanceof Collection<?> collection) {
       return collection;
     }
-    throw new IllegalArgumentException(
-        raw.operator().value() + " requires array values");
+    throw new IllegalArgumentException(raw.operator().value() + " requires array values");
   }
 
   private List<Object> normalizeList(FieldType fieldType, Collection<?> rawValues) {
@@ -366,8 +337,7 @@ public class WorkRecordDynamicFilterPolicyService {
 
   private String normalizeNumber(Object raw) {
     if (!(raw instanceof Number) && !(raw instanceof String)) {
-      throw new IllegalArgumentException(
-          "number filter value must be number or numeric string");
+      throw new IllegalArgumentException("number filter value must be number or numeric string");
     }
 
     String value = String.valueOf(raw).trim();
@@ -404,8 +374,7 @@ public class WorkRecordDynamicFilterPolicyService {
       return OffsetDateTime.parse(text).toString();
     } catch (DateTimeParseException ex) {
       throw new IllegalArgumentException(
-          "datetime filter value must be ISO offset datetime (e.g. 2026-01-15T08:30:00+08:00)",
-          ex);
+          "datetime filter value must be ISO offset datetime (e.g. 2026-01-15T08:30:00+08:00)", ex);
     }
   }
 
@@ -447,16 +416,15 @@ public class WorkRecordDynamicFilterPolicyService {
           case NUMBER -> new BigDecimal(first).compareTo(new BigDecimal(second)) > 0;
           case DATE -> LocalDate.parse(first).isAfter(LocalDate.parse(second));
           case DATETIME ->
-              OffsetDateTime.parse(first).toInstant()
+              OffsetDateTime.parse(first)
+                  .toInstant()
                   .isAfter(OffsetDateTime.parse(second).toInstant());
           default ->
-              throw new IllegalArgumentException(
-                  "between is not supported for " + type.value());
+              throw new IllegalArgumentException("between is not supported for " + type.value());
         };
 
     if (descending) {
-      throw new IllegalArgumentException(
-          "between lower bound must not exceed upper bound");
+      throw new IllegalArgumentException("between lower bound must not exceed upper bound");
     }
   }
 

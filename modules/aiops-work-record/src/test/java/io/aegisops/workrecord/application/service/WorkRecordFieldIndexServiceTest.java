@@ -36,8 +36,7 @@ class WorkRecordFieldIndexServiceTest {
             0,
             true);
 
-    assertThatThrownBy(
-            () -> service.createForVersion("t1", "tpl1", "v1", List.of(entry, entry)))
+    assertThatThrownBy(() -> service.createForVersion("t1", "tpl1", "v1", List.of(entry, entry)))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("duplicated fieldCode");
   }

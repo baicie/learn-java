@@ -43,6 +43,7 @@ class WorkRecordServiceRuntimeTest {
           fieldRepository,
           valueValidator,
           auditService,
+          new WorkRecordAuditSnapshots(new ObjectMapper()),
           permissionService,
           userPort,
           new ObjectMapper());
@@ -207,7 +208,22 @@ class WorkRecordServiceRuntimeTest {
         .hasMessageContaining("template version not found");
   }
 
+  private UserPrincipal cachedUser;
+
+  @org.junit.jupiter.api.BeforeEach
+  void setUpUser() {
+    cachedUser =
+        new UserPrincipal(
+            "u1",
+            "t1",
+            "u1",
+            "u1",
+            Set.of("admin"),
+            Set.of("work-record:write", "work-record:read:self"),
+            java.util.Map.of());
+  }
+
   private UserPrincipal user(String id) {
-    return new UserPrincipal(id, "t1", id, id, Set.of("admin"));
+    return cachedUser;
   }
 }

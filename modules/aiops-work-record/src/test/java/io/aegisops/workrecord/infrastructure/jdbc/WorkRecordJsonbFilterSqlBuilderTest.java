@@ -24,7 +24,8 @@ class WorkRecordJsonbFilterSqlBuilderTest {
     builder.appendFilters(
         where,
         params,
-        List.of(filter("content", DynamicFilterOperator.CONTAINS, FieldType.TEXT, "err", List.of())));
+        List.of(
+            filter("content", DynamicFilterOperator.CONTAINS, FieldType.TEXT, "err", List.of())));
 
     assertThat(where.toString()).contains("jsonb_typeof");
     assertThat(where.toString()).contains("'string'");
@@ -59,8 +60,13 @@ class WorkRecordJsonbFilterSqlBuilderTest {
     builder.appendFilters(
         where,
         params,
-        List.of(filter("day", DynamicFilterOperator.BETWEEN, FieldType.DATE, null,
-            List.of("2026-01-01", "2026-01-31"))));
+        List.of(
+            filter(
+                "day",
+                DynamicFilterOperator.BETWEEN,
+                FieldType.DATE,
+                null,
+                List.of("2026-01-01", "2026-01-31"))));
 
     assertThat(where.toString()).contains("try_date");
     assertThat(where.toString()).contains("between");
@@ -76,8 +82,13 @@ class WorkRecordJsonbFilterSqlBuilderTest {
     builder.appendFilters(
         where,
         params,
-        List.of(filter("startedAt", DynamicFilterOperator.LTE, FieldType.DATETIME,
-            "2026-01-01T00:00Z", List.of())));
+        List.of(
+            filter(
+                "startedAt",
+                DynamicFilterOperator.LTE,
+                FieldType.DATETIME,
+                "2026-01-01T00:00Z",
+                List.of())));
 
     assertThat(where.toString()).contains("try_timestamptz");
     assertThat(where.toString()).contains("<=");
@@ -91,8 +102,13 @@ class WorkRecordJsonbFilterSqlBuilderTest {
     builder.appendFilters(
         where,
         params,
-        List.of(filter("tags", DynamicFilterOperator.CONTAINS_ALL, FieldType.MULTI_SELECT, null,
-            List.of("a", "b"))));
+        List.of(
+            filter(
+                "tags",
+                DynamicFilterOperator.CONTAINS_ALL,
+                FieldType.MULTI_SELECT,
+                null,
+                List.of("a", "b"))));
 
     assertThat(where.toString()).contains("@>");
     assertThat(params.get("dfJson0")).isEqualTo("[\"a\",\"b\"]");
@@ -106,8 +122,13 @@ class WorkRecordJsonbFilterSqlBuilderTest {
     builder.appendFilters(
         where,
         params,
-        List.of(filter("tags", DynamicFilterOperator.CONTAINS_ANY, FieldType.MULTI_SELECT, null,
-            List.of("a", "b"))));
+        List.of(
+            filter(
+                "tags",
+                DynamicFilterOperator.CONTAINS_ANY,
+                FieldType.MULTI_SELECT,
+                null,
+                List.of("a", "b"))));
 
     assertThat(where.toString()).contains("jsonb_typeof");
     assertThat(where.toString()).contains("'array'");
@@ -124,7 +145,8 @@ class WorkRecordJsonbFilterSqlBuilderTest {
     builder.appendFilters(
         where,
         params,
-        List.of(filter("priority", DynamicFilterOperator.EXISTS, FieldType.SELECT, null, List.of())));
+        List.of(
+            filter("priority", DynamicFilterOperator.EXISTS, FieldType.SELECT, null, List.of())));
 
     assertThat(where.toString()).contains("jsonb_exists");
     assertThat(where.toString()).contains("cast(:" + "dfKey0 as text)");
@@ -139,7 +161,9 @@ class WorkRecordJsonbFilterSqlBuilderTest {
     builder.appendFilters(
         where,
         params,
-        List.of(filter("priority", DynamicFilterOperator.NOT_EXISTS, FieldType.SELECT, null, List.of())));
+        List.of(
+            filter(
+                "priority", DynamicFilterOperator.NOT_EXISTS, FieldType.SELECT, null, List.of())));
 
     assertThat(where.toString()).contains("not");
     assertThat(where.toString()).contains("jsonb_exists");
@@ -168,8 +192,13 @@ class WorkRecordJsonbFilterSqlBuilderTest {
     builder.appendFilters(
         where,
         params,
-        List.of(filter("severity", DynamicFilterOperator.IN, FieldType.SELECT, null,
-            List.of("open", "in_progress"))));
+        List.of(
+            filter(
+                "severity",
+                DynamicFilterOperator.IN,
+                FieldType.SELECT,
+                null,
+                List.of("open", "in_progress"))));
 
     assertThat(where.toString()).contains("jsonb_typeof");
     assertThat(where.toString()).contains("'string'");
@@ -195,8 +224,13 @@ class WorkRecordJsonbFilterSqlBuilderTest {
                 builder.appendFilters(
                     new StringBuilder(),
                     new HashMap<>(),
-                    List.of(filter("tags", DynamicFilterOperator.EQ, FieldType.MULTI_SELECT,
-                        "a", List.of()))))
+                    List.of(
+                        filter(
+                            "tags",
+                            DynamicFilterOperator.EQ,
+                            FieldType.MULTI_SELECT,
+                            "a",
+                            List.of()))))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("operator eq is incompatible with multi_select");
   }
@@ -232,8 +266,9 @@ class WorkRecordJsonbFilterSqlBuilderTest {
                 builder.appendFilters(
                     new StringBuilder(),
                     new HashMap<>(),
-                    List.of(RecordDynamicFilter.normalized(
-                        "priority", null, FieldType.SELECT, "P1", List.of()))))
+                    List.of(
+                        RecordDynamicFilter.normalized(
+                            "priority", null, FieldType.SELECT, "P1", List.of()))))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("operator is required");
   }

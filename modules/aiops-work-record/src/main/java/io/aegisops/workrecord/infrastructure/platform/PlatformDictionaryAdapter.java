@@ -35,9 +35,7 @@ public class PlatformDictionaryAdapter implements WorkRecordDictionaryPort {
             item ->
                 labels.putIfAbsent(
                     item.itemValue(),
-                    item.enabled()
-                        ? item.itemLabel()
-                        : item.itemLabel() + "（已禁用）"));
+                    item.enabled() ? item.itemLabel() : item.itemLabel() + "（已禁用）"));
 
     return Map.copyOf(labels);
   }

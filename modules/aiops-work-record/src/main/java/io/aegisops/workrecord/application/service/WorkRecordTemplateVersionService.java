@@ -14,7 +14,9 @@ import io.aegisops.workrecord.domain.model.WorkRecordField;
 import io.aegisops.workrecord.domain.model.WorkRecordTemplate;
 import io.aegisops.workrecord.domain.model.WorkRecordTemplateVersion;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,6 +31,8 @@ public class WorkRecordTemplateVersionService {
   private final WorkRecordFieldIndexService fieldIndexService;
   private final WorkRecordTemplatePublishGuard publishGuard;
   private final WorkRecordAuditService auditService;
+  private final WorkRecordAuditSnapshots auditSnapshots;
+  private final WorkRecordFieldAuditService fieldAuditService;
 
   public WorkRecordTemplateVersionService(
       WorkRecordTemplateRepository templateRepository,
@@ -39,7 +43,9 @@ public class WorkRecordTemplateVersionService {
       WorkRecordSchemaNormalizer schemaNormalizer,
       WorkRecordFieldIndexService fieldIndexService,
       WorkRecordTemplatePublishGuard publishGuard,
-      WorkRecordAuditService auditService) {
+      WorkRecordAuditService auditService,
+      WorkRecordAuditSnapshots auditSnapshots,
+      WorkRecordFieldAuditService fieldAuditService) {
     this.templateRepository = templateRepository;
     this.versionRepository = versionRepository;
     this.fieldRepository = fieldRepository;
@@ -49,6 +55,8 @@ public class WorkRecordTemplateVersionService {
     this.fieldIndexService = fieldIndexService;
     this.publishGuard = publishGuard;
     this.auditService = auditService;
+    this.auditSnapshots = auditSnapshots;
+    this.fieldAuditService = fieldAuditService;
   }
 
   public List<WorkRecordTemplateVersion> list(String tenantId, String templateId) {
@@ -136,21 +144,31 @@ public class WorkRecordTemplateVersionService {
     fieldIndexService.createForVersion(tenantId, template.id(), version.id(), fieldEntries);
     templateRepository.updateCurrentVersion(tenantId, template.id(), version.id());
 
-    auditService.record(
+    Map<String, Object> attributes = new LinkedHashMap<>();
+    attributes.put("versionNo", version.versionNo());
+    attributes.put("schemaVersion", document.schemaVersion());
+    attributes.put("fieldCount", fieldEntries.size());
+
+    auditService.recordChange(
         tenantId,
         null,
         template.id(),
         "work_record_template",
         template.id(),
-        "work_record.template.publish",
+        WorkRecordAuditActions.TEMPLATE_PUBLISH,
         actor,
-        "{\"versionNo\":"
-            + version.versionNo()
-            + ",\"schemaVersion\":"
-            + document.schemaVersion()
-            + ",\"fieldCount\":"
-            + fieldEntries.size()
-            + "}");
+        Map.of(),
+        auditSnapshots.version(version),
+        attributes);
+
+    fieldAuditService.recordPublishedChanges(
+        tenantId,
+        template.id(),
+        template.currentVersionId(),
+        version.id(),
+        previousFields,
+        fieldRepository.listByVersion(tenantId, version.id()),
+        actor);
     return version;
   }
 

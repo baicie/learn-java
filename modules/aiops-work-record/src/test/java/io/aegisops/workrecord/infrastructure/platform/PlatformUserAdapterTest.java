@@ -7,7 +7,6 @@ import io.aegisops.common.exception.NotFoundException;
 import io.aegisops.user.UserAccount;
 import io.aegisops.user.UserService;
 import java.time.OffsetDateTime;
-import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
@@ -66,7 +65,6 @@ class PlatformUserAdapterTest {
         "alice@example.com",
         "hash",
         status,
-        Set.of("operator"),
         OffsetDateTime.now(),
         OffsetDateTime.now());
   }

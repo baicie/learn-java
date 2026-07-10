@@ -26,15 +26,16 @@ public class JdbcWorkRecordRepository implements WorkRecordRepository {
   private final WorkRecordJsonbFilterSqlBuilder jsonbFilterSqlBuilder;
 
   public JdbcWorkRecordRepository(
-      NamedParameterJdbcTemplate jdbc,
-      WorkRecordJsonbFilterSqlBuilder jsonbFilterSqlBuilder) {
+      NamedParameterJdbcTemplate jdbc, WorkRecordJsonbFilterSqlBuilder jsonbFilterSqlBuilder) {
     this.jdbc = jdbc;
     this.jsonbFilterSqlBuilder = jsonbFilterSqlBuilder;
   }
 
   /** 包内构造器：兼容旧测试（默认 ObjectMapper） */
   JdbcWorkRecordRepository(NamedParameterJdbcTemplate jdbc) {
-    this(jdbc, new WorkRecordJsonbFilterSqlBuilder(new com.fasterxml.jackson.databind.ObjectMapper()));
+    this(
+        jdbc,
+        new WorkRecordJsonbFilterSqlBuilder(new com.fasterxml.jackson.databind.ObjectMapper()));
   }
 
   @Override
@@ -244,12 +245,12 @@ public class JdbcWorkRecordRepository implements WorkRecordRepository {
         rs.getString("owner_id"),
         rs.getString("creator_id"),
         rs.getObject("record_time", OffsetDateTime.class),
-    rs.getString("builtin_data_json"),
-    rs.getString("custom_data_json"),
-    rs.getInt("row_version"),
-    rs.getObject("created_at", OffsetDateTime.class),
-    rs.getObject("updated_at", OffsetDateTime.class),
-    rs.getObject("deleted_at", OffsetDateTime.class));
+        rs.getString("builtin_data_json"),
+        rs.getString("custom_data_json"),
+        rs.getInt("row_version"),
+        rs.getObject("created_at", OffsetDateTime.class),
+        rs.getObject("updated_at", OffsetDateTime.class),
+        rs.getObject("deleted_at", OffsetDateTime.class));
   }
 
   private String actorOrSystem(String actor) {

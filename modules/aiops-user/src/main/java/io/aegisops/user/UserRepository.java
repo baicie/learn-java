@@ -66,17 +66,13 @@ public class UserRepository {
     }
 
     List<String> filteredIds =
-        userIds.stream()
-            .filter(id -> id != null && !id.isBlank())
-            .distinct()
-            .toList();
+        userIds.stream().filter(id -> id != null && !id.isBlank()).distinct().toList();
 
     if (filteredIds.isEmpty()) {
       return Map.of();
     }
 
-    Map<String, Object> params =
-        Map.of("tenantId", tenantId, "userIds", filteredIds);
+    Map<String, Object> params = Map.of("tenantId", tenantId, "userIds", filteredIds);
 
     return namedJdbc.query(
         """
@@ -127,20 +123,25 @@ public class UserRepository {
   }
 
   public void ensureLegacyRole(String code, String name) {
-    Integer count = jdbc.queryForObject("select count(*) from sys_role where code = ?", Integer.class, code);
+    Integer count =
+        jdbc.queryForObject("select count(*) from sys_role where code = ?", Integer.class, code);
     if (count == null || count == 0) {
       jdbc.update("insert into sys_role(id, code, name) values (?, ?, ?)", Ids.newId(), code, name);
     }
   }
 
   public void attachLegacyRole(String userId, String roleCode) {
-    String roleId = jdbc.queryForObject("select id from sys_role where code = ?", String.class, roleCode);
+    String roleId =
+        jdbc.queryForObject("select id from sys_role where code = ?", String.class, roleCode);
     if (roleId == null) {
       return;
     }
     Integer count =
         jdbc.queryForObject(
-            "select count(*) from sys_user_role where user_id = ? and role_id = ?", Integer.class, userId, roleId);
+            "select count(*) from sys_user_role where user_id = ? and role_id = ?",
+            Integer.class,
+            userId,
+            roleId);
     if (count == null || count == 0) {
       jdbc.update("insert into sys_user_role(user_id, role_id) values (?, ?)", userId, roleId);
     }

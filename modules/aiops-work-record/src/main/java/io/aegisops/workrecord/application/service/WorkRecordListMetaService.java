@@ -39,12 +39,10 @@ public class WorkRecordListMetaService {
             .filter(template -> template.status() != TemplateStatus.ARCHIVED)
             .filter(
                 template ->
-                    template.currentVersionId() != null
-                        && !template.currentVersionId().isBlank())
+                    template.currentVersionId() != null && !template.currentVersionId().isBlank())
             .toList();
 
-    boolean templateScoped =
-        selectedTemplateId != null && !selectedTemplateId.isBlank();
+    boolean templateScoped = selectedTemplateId != null && !selectedTemplateId.isBlank();
 
     List<String> versionIds;
     if (templateScoped) {
@@ -52,23 +50,16 @@ public class WorkRecordListMetaService {
           templates.stream()
               .filter(template -> template.id().equals(selectedTemplateId))
               .findFirst()
-              .orElseThrow(
-                  () -> new IllegalArgumentException("template not found"));
+              .orElseThrow(() -> new IllegalArgumentException("template not found"));
 
       versionIds = List.of(selected.currentVersionId());
     } else {
-      versionIds =
-          templates.stream()
-              .map(WorkRecordTemplate::currentVersionId)
-              .distinct()
-              .toList();
+      versionIds = templates.stream().map(WorkRecordTemplate::currentVersionId).distinct().toList();
     }
 
-    List<WorkRecordField> rawFields =
-        fieldRepository.listEnabledByVersions(tenantId, versionIds);
+    List<WorkRecordField> rawFields = fieldRepository.listEnabledByVersions(tenantId, versionIds);
 
-    List<WorkRecordField> fields =
-        deduplicateCompatibleFields(rawFields, templateScoped);
+    List<WorkRecordField> fields = deduplicateCompatibleFields(rawFields, templateScoped);
 
     List<RecordListColumn> columns = new ArrayList<>(builtinColumns());
     columns.addAll(listColumns(fields));
@@ -109,14 +100,11 @@ public class WorkRecordListMetaService {
   }
 
   private List<WorkRecordField> deduplicateCompatibleFields(
-      List<WorkRecordField> fields,
-      boolean templateScoped) {
+      List<WorkRecordField> fields, boolean templateScoped) {
     Map<String, List<WorkRecordField>> grouped = new LinkedHashMap<>();
 
     for (WorkRecordField field : fields) {
-      grouped
-          .computeIfAbsent(field.fieldCode(), ignored -> new ArrayList<>())
-          .add(field);
+      grouped.computeIfAbsent(field.fieldCode(), ignored -> new ArrayList<>()).add(field);
     }
 
     List<WorkRecordField> result = new ArrayList<>();
@@ -133,8 +121,7 @@ public class WorkRecordListMetaService {
                           && Objects.equals(field.dictCode(), first.dictCode()));
 
       if (templateScoped || compatible) {
-        result.add(
-            sameCode.stream().min(fieldComparator()).orElse(first));
+        result.add(sameCode.stream().min(fieldComparator()).orElse(first));
       }
     }
 
@@ -166,18 +153,7 @@ public class WorkRecordListMetaService {
       boolean exportable,
       int order) {
     return new RecordListColumn(
-        key,
-        title,
-        "builtin",
-        null,
-        type,
-        null,
-        null,
-        "[]",
-        visible,
-        sortable,
-        exportable,
-        order);
+        key, title, "builtin", null, type, null, null, "[]", visible, sortable, exportable, order);
   }
 
   private List<RecordListColumn> listColumns(List<WorkRecordField> fields) {

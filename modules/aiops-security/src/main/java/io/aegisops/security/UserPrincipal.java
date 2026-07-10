@@ -26,28 +26,15 @@ public final class UserPrincipal implements UserDetails {
       Set<String> permissions,
       Map<String, DataScope> dataScopes) {
     this.id = requireText(id, "id");
-    this.tenantId = requireText(
-        tenantId,
-        "tenantId");
-    this.username = requireText(
-        username,
-        "username");
-    this.displayName =
-        displayName == null || displayName.isBlank()
-            ? username
-            : displayName;
+    this.tenantId = requireText(tenantId, "tenantId");
+    this.username = requireText(username, "username");
+    this.displayName = displayName == null || displayName.isBlank() ? username : displayName;
 
-    this.roles = roles == null
-        ? Set.of()
-        : Set.copyOf(roles);
+    this.roles = roles == null ? Set.of() : Set.copyOf(roles);
 
-    this.permissions = permissions == null
-        ? Set.of()
-        : Set.copyOf(permissions);
+    this.permissions = permissions == null ? Set.of() : Set.copyOf(permissions);
 
-    this.dataScopes = dataScopes == null
-        ? Map.of()
-        : Map.copyOf(dataScopes);
+    this.dataScopes = dataScopes == null ? Map.of() : Map.copyOf(dataScopes);
   }
 
   public String id() {
@@ -74,13 +61,11 @@ public final class UserPrincipal implements UserDetails {
     return dataScopes;
   }
 
-  public boolean hasPermission(
-      String permissionCode) {
+  public boolean hasPermission(String permissionCode) {
     return permissions.contains(permissionCode);
   }
 
-  public boolean hasAnyPermission(
-      String... permissionCodes) {
+  public boolean hasAnyPermission(String... permissionCodes) {
     if (permissionCodes == null) {
       return false;
     }
@@ -94,31 +79,20 @@ public final class UserPrincipal implements UserDetails {
     return false;
   }
 
-  public DataScope dataScope(
-      String resourceCode) {
-    return dataScopes.getOrDefault(
-        resourceCode,
-        DataScope.SELF);
+  public DataScope dataScope(String resourceCode) {
+    return dataScopes.getOrDefault(resourceCode, DataScope.SELF);
   }
 
   @Override
-  public Collection<? extends GrantedAuthority>
-      getAuthorities() {
-    Set<GrantedAuthority> authorities =
-        new LinkedHashSet<>();
+  public Collection<? extends GrantedAuthority> getAuthorities() {
+    Set<GrantedAuthority> authorities = new LinkedHashSet<>();
 
     for (String role : roles) {
-      authorities.add(
-          new SimpleGrantedAuthority(
-              "ROLE_"
-                  + role
-                      .replace('-', '_')
-                      .toUpperCase()));
+      authorities.add(new SimpleGrantedAuthority("ROLE_" + role.replace('-', '_').toUpperCase()));
     }
 
     for (String permission : permissions) {
-      authorities.add(
-          new SimpleGrantedAuthority(permission));
+      authorities.add(new SimpleGrantedAuthority(permission));
     }
 
     return Set.copyOf(authorities);
@@ -154,12 +128,9 @@ public final class UserPrincipal implements UserDetails {
     return true;
   }
 
-  private static String requireText(
-      String value,
-      String name) {
+  private static String requireText(String value, String name) {
     if (value == null || value.isBlank()) {
-      throw new IllegalArgumentException(
-          name + " is required");
+      throw new IllegalArgumentException(name + " is required");
     }
 
     return value;

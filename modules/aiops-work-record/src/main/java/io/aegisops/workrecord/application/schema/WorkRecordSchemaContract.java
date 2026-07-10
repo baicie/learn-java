@@ -18,8 +18,7 @@ public final class WorkRecordSchemaContract {
   public static final String FLAT_EXPORTABLE_KEY = "x-work-record-exportable";
   public static final String FLAT_STATISTICAL_KEY = "x-work-record-statistical";
 
-  public static final Pattern FIELD_CODE_PATTERN =
-      Pattern.compile("^[a-zA-Z][a-zA-Z0-9_]{0,63}$");
+  public static final Pattern FIELD_CODE_PATTERN = Pattern.compile("^[a-zA-Z][a-zA-Z0-9_]{0,63}$");
 
   public static final Set<String> SUPPORTED_FIELD_TYPES =
       Set.of(

@@ -8,7 +8,9 @@ import io.aegisops.workrecord.application.port.WorkRecordTemplateRepository;
 import io.aegisops.workrecord.application.port.WorkRecordTemplateUsageRepository;
 import io.aegisops.workrecord.domain.model.TemplateStatus;
 import io.aegisops.workrecord.domain.model.WorkRecordTemplate;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,16 +20,19 @@ public class WorkRecordTemplateService {
   private final WorkRecordTemplateUsageRepository usageRepository;
   private final WorkRecordSchemaService schemaService;
   private final WorkRecordAuditService auditService;
+  private final WorkRecordAuditSnapshots auditSnapshots;
 
   public WorkRecordTemplateService(
       WorkRecordTemplateRepository repository,
       WorkRecordTemplateUsageRepository usageRepository,
       WorkRecordSchemaService schemaService,
-      WorkRecordAuditService auditService) {
+      WorkRecordAuditService auditService,
+      WorkRecordAuditSnapshots auditSnapshots) {
     this.repository = repository;
     this.usageRepository = usageRepository;
     this.schemaService = schemaService;
     this.auditService = auditService;
+    this.auditSnapshots = auditSnapshots;
   }
 
   public List<WorkRecordTemplate> list(String tenantId, boolean includeDisabled) {
@@ -55,15 +60,17 @@ public class WorkRecordTemplateService {
             schemaService.normalizeObject(command.draftDesignerJson(), "designerJson"));
 
     WorkRecordTemplate template = repository.create(tenantId, normalized, actor);
-    auditService.record(
+    auditService.recordChange(
         tenantId,
         null,
         template.id(),
         "work_record_template",
         template.id(),
-        "work_record.template.create",
+        WorkRecordAuditActions.TEMPLATE_CREATE,
         actor,
-        "{\"code\":\"" + escape(template.code()) + "\"}");
+        Map.of(),
+        auditSnapshots.template(template),
+        Map.of());
     return template;
   }
 
@@ -74,15 +81,17 @@ public class WorkRecordTemplateService {
     ensureEditable(template);
 
     WorkRecordTemplate updated = repository.update(tenantId, templateId, command);
-    auditService.record(
+    auditService.recordChange(
         tenantId,
         null,
         templateId,
         "work_record_template",
         templateId,
-        "work_record.template.update",
+        WorkRecordAuditActions.TEMPLATE_UPDATE,
         actor,
-        "{}");
+        auditSnapshots.template(template),
+        auditSnapshots.template(updated),
+        Map.of());
     return updated;
   }
 
@@ -104,15 +113,17 @@ public class WorkRecordTemplateService {
                 : schemaService.normalizeObject(command.draftDesignerJson(), "designerJson"));
 
     WorkRecordTemplate updated = repository.updateDraft(tenantId, templateId, normalized);
-    auditService.record(
+    auditService.recordChange(
         tenantId,
         null,
         templateId,
         "work_record_template",
         templateId,
-        "work_record.template.update_draft",
+        WorkRecordAuditActions.TEMPLATE_DRAFT_UPDATE,
         actor,
-        "{}");
+        auditSnapshots.template(template),
+        auditSnapshots.template(updated),
+        Map.of());
     return updated;
   }
 
@@ -134,7 +145,10 @@ public class WorkRecordTemplateService {
                 source.draftDesignerJson()),
             actor);
 
-    auditService.record(
+    Map<String, Object> attributes = new LinkedHashMap<>();
+    attributes.put("sourceTemplateId", source.id());
+
+    auditService.recordChange(
         tenantId,
         null,
         copied.id(),
@@ -142,7 +156,9 @@ public class WorkRecordTemplateService {
         copied.id(),
         "work_record.template.copy",
         actor,
-        "{\"sourceTemplateId\":\"" + escape(source.id()) + "\"}");
+        Map.of(),
+        auditSnapshots.template(copied),
+        attributes);
     return copied;
   }
 
@@ -153,7 +169,8 @@ public class WorkRecordTemplateService {
       throw new IllegalStateException("archived template cannot be enabled");
     }
     repository.enable(tenantId, templateId);
-    auditService.record(
+    WorkRecordTemplate updated = get(tenantId, templateId);
+    auditService.recordChange(
         tenantId,
         null,
         templateId,
@@ -161,15 +178,18 @@ public class WorkRecordTemplateService {
         templateId,
         "work_record.template.enable",
         actor,
-        "{}");
-    return get(tenantId, templateId);
+        auditSnapshots.template(template),
+        auditSnapshots.template(updated),
+        Map.of());
+    return updated;
   }
 
   @Transactional
   public WorkRecordTemplate disable(String tenantId, String templateId, String actor) {
-    get(tenantId, templateId);
+    WorkRecordTemplate template = get(tenantId, templateId);
     repository.disable(tenantId, templateId);
-    auditService.record(
+    WorkRecordTemplate updated = get(tenantId, templateId);
+    auditService.recordChange(
         tenantId,
         null,
         templateId,
@@ -177,19 +197,22 @@ public class WorkRecordTemplateService {
         templateId,
         "work_record.template.disable",
         actor,
-        "{}");
-    return get(tenantId, templateId);
+        auditSnapshots.template(template),
+        auditSnapshots.template(updated),
+        Map.of());
+    return updated;
   }
 
   @Transactional
   public WorkRecordTemplate archive(String tenantId, String templateId, String actor) {
-    get(tenantId, templateId);
+    WorkRecordTemplate template = get(tenantId, templateId);
     long references = usageRepository.countRecordsByTemplate(tenantId, templateId);
     if (references > 0) {
       throw new IllegalStateException("template is referenced by records and cannot be archived");
     }
     repository.archive(tenantId, templateId);
-    auditService.record(
+    WorkRecordTemplate updated = get(tenantId, templateId);
+    auditService.recordChange(
         tenantId,
         null,
         templateId,
@@ -197,8 +220,10 @@ public class WorkRecordTemplateService {
         templateId,
         "work_record.template.archive",
         actor,
-        "{}");
-    return get(tenantId, templateId);
+        auditSnapshots.template(template),
+        auditSnapshots.template(updated),
+        Map.of());
+    return updated;
   }
 
   private void ensureEditable(WorkRecordTemplate template) {

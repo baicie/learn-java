@@ -56,10 +56,7 @@ class WorkRecordExportServiceTest {
     exportPolicy = new WorkRecordExportPolicy(5000);
     fieldRepository = mock(WorkRecordFieldIndexRepository.class);
     columnResolver = new WorkRecordExportColumnResolver(fieldRepository);
-    clock =
-        Clock.fixed(
-            Instant.parse("2026-07-10T07:30:00Z"),
-            ZoneId.of("Asia/Shanghai"));
+    clock = Clock.fixed(Instant.parse("2026-07-10T07:30:00Z"), ZoneId.of("Asia/Shanghai"));
 
     service =
         new WorkRecordExportService(
@@ -81,8 +78,7 @@ class WorkRecordExportServiceTest {
   void shouldExportCurrentColumnsWithLabelsAndAudit() {
     RecordQuery query = query();
 
-    when(queryService.prepareEffectiveQuery("t1", query, user()))
-        .thenReturn(query);
+    when(queryService.prepareEffectiveQuery("t1", query, user())).thenReturn(query);
 
     when(metaService.meta("t1", "tpl1"))
         .thenReturn(
@@ -91,29 +87,52 @@ class WorkRecordExportServiceTest {
                 List.of(
                     column("title", "标题", "builtin", null, "text", null, null, true),
                     column("ownerId", "负责人", "builtin", null, "user", null, null, true),
-                    column("custom.priority", "优先级", "custom", "priority", "select", "dict", "priority_dict", true)),
+                    column(
+                        "custom.priority",
+                        "优先级",
+                        "custom",
+                        "priority",
+                        "select",
+                        "dict",
+                        "priority_dict",
+                        true)),
                 List.of(
                     column("title", "标题", "builtin", null, "text", null, null, true),
                     column("ownerId", "负责人", "builtin", null, "user", null, null, true),
-                    column("custom.priority", "优先级", "custom", "priority", "select", "dict", "priority_dict", true)),
+                    column(
+                        "custom.priority",
+                        "优先级",
+                        "custom",
+                        "priority",
+                        "select",
+                        "dict",
+                        "priority_dict",
+                        true)),
                 List.of(),
                 Set.of("priority_dict"),
                 5000,
                 List.of("all")));
 
-    when(repository.listForExport(eq("t1"), eq(query), eq(5001)))
-        .thenReturn(List.of(record()));
+    when(repository.listForExport(eq("t1"), eq(query), eq(5001))).thenReturn(List.of(record()));
 
     when(fieldRepository.listByVersions(eq("t1"), anyList()))
         .thenReturn(
             List.of(
-                field("f1", "t1", "tpl1", "v1", "优先级", "priority", FieldType.SELECT, OptionSource.DICT, "priority_dict", true)));
+                field(
+                    "f1",
+                    "t1",
+                    "tpl1",
+                    "v1",
+                    "优先级",
+                    "priority",
+                    FieldType.SELECT,
+                    OptionSource.DICT,
+                    "priority_dict",
+                    true)));
 
-    when(dictionaryPort.itemLabels("t1", "priority_dict"))
-        .thenReturn(Map.of("P1", "高"));
+    when(dictionaryPort.itemLabels("t1", "priority_dict")).thenReturn(Map.of("P1", "高"));
 
-    when(userPort.displayNames(eq("t1"), anyCollection()))
-        .thenReturn(Map.of("u1", "张三"));
+    when(userPort.displayNames(eq("t1"), anyCollection())).thenReturn(Map.of("u1", "张三"));
 
     var result =
         service.export("t1", query, List.of("title", "ownerId", "custom.priority"), user());
@@ -123,9 +142,7 @@ class WorkRecordExportServiceTest {
     assertThat(result.rowCount()).isEqualTo(1);
     assertThat(result.fileName()).isEqualTo("work-records-20260710-153000.csv");
 
-    assertThat(csv)
-        .contains("\"标题\",\"负责人\",\"优先级\"")
-        .contains("\"日报\",\"张三\",\"高\"");
+    assertThat(csv).contains("\"标题\",\"负责人\",\"优先级\"").contains("\"日报\",\"张三\",\"高\"");
 
     verify(auditService)
         .record(
@@ -143,24 +160,24 @@ class WorkRecordExportServiceTest {
   void shouldRejectNonExportableColumn() {
     RecordQuery query = query();
 
-    when(queryService.prepareEffectiveQuery("t1", query, user()))
-        .thenReturn(query);
+    when(queryService.prepareEffectiveQuery("t1", query, user())).thenReturn(query);
 
     when(metaService.meta("t1", "tpl1"))
         .thenReturn(
             new RecordListMeta(
                 List.of(),
                 List.of(
-                    column("custom.secret", "秘密", "custom", "secret", "text", "static", null, false)),
+                    column(
+                        "custom.secret", "秘密", "custom", "secret", "text", "static", null, false)),
                 List.of(
-                    column("custom.secret", "秘密", "custom", "secret", "text", "static", null, false)),
+                    column(
+                        "custom.secret", "秘密", "custom", "secret", "text", "static", null, false)),
                 List.of(),
                 Set.of(),
                 5000,
                 List.of()));
 
-    assertThatThrownBy(
-            () -> service.export("t1", query, List.of("custom.secret"), user()))
+    assertThatThrownBy(() -> service.export("t1", query, List.of("custom.secret"), user()))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("column is not exportable");
 
@@ -188,8 +205,7 @@ class WorkRecordExportServiceTest {
 
     RecordQuery query = query();
 
-    when(queryService.prepareEffectiveQuery("t1", query, user()))
-        .thenReturn(query);
+    when(queryService.prepareEffectiveQuery("t1", query, user())).thenReturn(query);
 
     when(metaService.meta("t1", "tpl1"))
         .thenReturn(
@@ -202,11 +218,9 @@ class WorkRecordExportServiceTest {
                 1,
                 List.of()));
 
-    when(repository.listForExport("t1", query, 2))
-        .thenReturn(List.of(record(), record()));
+    when(repository.listForExport("t1", query, 2)).thenReturn(List.of(record(), record()));
 
-    assertThatThrownBy(
-            () -> limitedService.export("t1", query, List.of("title"), user()))
+    assertThatThrownBy(() -> limitedService.export("t1", query, List.of("title"), user()))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("超过 1 行");
 
@@ -244,26 +258,59 @@ class WorkRecordExportServiceTest {
       String dictCode,
       boolean exportable) {
     return new RecordListColumn(
-        key, title, source, fieldCode, fieldType, optionSource, dictCode, "[]", true, false, exportable, 1);
+        key,
+        title,
+        source,
+        fieldCode,
+        fieldType,
+        optionSource,
+        dictCode,
+        "[]",
+        true,
+        false,
+        exportable,
+        1);
   }
 
   private RecordQuery query() {
     return new RecordQuery(
-        1, 20, "tpl1", null,
-        List.of("done"), null, null, null, null, null,
-        false, "u1",
+        1,
+        20,
+        "tpl1",
+        null,
+        List.of("done"),
+        null,
+        null,
+        null,
+        null,
+        null,
+        false,
+        "u1",
         List.of(),
-        "recordTime", "desc", "all", null);
+        "recordTime",
+        "desc",
+        "all",
+        null);
   }
 
   private WorkRecord record() {
     OffsetDateTime now = OffsetDateTime.parse("2026-07-10T15:00:00+08:00");
     return new WorkRecord(
-        "r1", "t1", "tpl1", "v1",
-        "日报", RecordStatus.DONE,
-        "u1", "u1", now,
-        "{}", "{\"priority\":\"P1\"}",
-        1, now, now, null);
+        "r1",
+        "t1",
+        "tpl1",
+        "v1",
+        "日报",
+        RecordStatus.DONE,
+        "u1",
+        "u1",
+        now,
+        "{}",
+        "{\"priority\":\"P1\"}",
+        1,
+        now,
+        now,
+        null);
   }
 
   private WorkRecordField field(
@@ -278,15 +325,45 @@ class WorkRecordExportServiceTest {
       String dictCode,
       boolean exportable) {
     return new WorkRecordField(
-        id, tenantId, templateId, templateVersionId,
-        fieldName, fieldCode, fieldType,
-        false, null, optionSource, dictCode, "[]", null,
-        true, true, exportable, false,
-        1, true,
-        OffsetDateTime.now(), OffsetDateTime.now());
+        id,
+        tenantId,
+        templateId,
+        templateVersionId,
+        fieldName,
+        fieldCode,
+        fieldType,
+        false,
+        null,
+        optionSource,
+        dictCode,
+        "[]",
+        null,
+        true,
+        true,
+        exportable,
+        false,
+        1,
+        true,
+        OffsetDateTime.now(),
+        OffsetDateTime.now());
+  }
+
+  private UserPrincipal cachedUser;
+
+  @BeforeEach
+  void setUpUser() {
+    cachedUser =
+        new UserPrincipal(
+            "u1",
+            "t1",
+            "alice",
+            "张三",
+            Set.of("admin"),
+            Set.of("work-record:export", "work-record:read:self"),
+            java.util.Map.of());
   }
 
   private UserPrincipal user() {
-    return new UserPrincipal("u1", "t1", "alice", "张三", Set.of("admin"));
+    return cachedUser;
   }
 }

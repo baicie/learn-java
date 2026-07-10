@@ -155,7 +155,9 @@ public class PlatformPermissionBootstrap implements ApplicationRunner {
         new PlatformDefaultRoleGrant(
             "grant-system-admin-platform-calendar-read", "system_admin", "platform:calendar:read"),
         new PlatformDefaultRoleGrant(
-            "grant-system-admin-platform-calendar-write", "system_admin", "platform:calendar:write"),
+            "grant-system-admin-platform-calendar-write",
+            "system_admin",
+            "platform:calendar:write"),
         new PlatformDefaultRoleGrant(
             "grant-system-admin-platform-calendar-import",
             "system_admin",

@@ -8,12 +8,9 @@ import org.springframework.stereotype.Component;
 public class WorkRecordCsvWriter {
   private static final char BOM = '\uFEFF';
 
-  public byte[] write(
-      List<String> headers,
-      List<List<String>> rows) {
+  public byte[] write(List<String> headers, List<List<String>> rows) {
     if (headers == null || headers.isEmpty()) {
-      throw new IllegalArgumentException(
-          "csv headers must not be empty");
+      throw new IllegalArgumentException("csv headers must not be empty");
     }
 
     StringBuilder csv = new StringBuilder();
@@ -24,8 +21,7 @@ public class WorkRecordCsvWriter {
     if (rows != null) {
       for (List<String> row : rows) {
         if (row.size() != headers.size()) {
-          throw new IllegalArgumentException(
-              "csv row size does not match header size");
+          throw new IllegalArgumentException("csv row size does not match header size");
         }
         appendRow(csv, row);
       }
@@ -34,9 +30,7 @@ public class WorkRecordCsvWriter {
     return csv.toString().getBytes(StandardCharsets.UTF_8);
   }
 
-  private void appendRow(
-      StringBuilder csv,
-      List<String> values) {
+  private void appendRow(StringBuilder csv, List<String> values) {
     for (int index = 0; index < values.size(); index++) {
       if (index > 0) {
         csv.append(',');
@@ -72,8 +66,6 @@ public class WorkRecordCsvWriter {
   }
 
   private String quote(String value) {
-    return "\""
-        + value.replace("\"", "\"\"")
-        + "\"";
+    return "\"" + value.replace("\"", "\"\"") + "\"";
   }
 }

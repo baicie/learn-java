@@ -91,8 +91,7 @@ public class CalendarRepository {
         end);
   }
 
-  public Optional<CalendarDayRecord> findDay(
-      String tenantId, String calendarId, LocalDate date) {
+  public Optional<CalendarDayRecord> findDay(String tenantId, String calendarId, LocalDate date) {
     List<CalendarDayRecord> rows =
         jdbc.query(
             """

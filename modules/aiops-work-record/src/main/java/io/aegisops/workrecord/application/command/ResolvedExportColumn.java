@@ -5,13 +5,11 @@ import java.util.Collections;
 import java.util.Map;
 
 public record ResolvedExportColumn(
-    RecordListColumn column,
-    Map<String, WorkRecordField> fieldsByVersion) {
+    RecordListColumn column, Map<String, WorkRecordField> fieldsByVersion) {
 
   public ResolvedExportColumn {
-    fieldsByVersion = fieldsByVersion == null
-        ? Collections.emptyMap()
-        : Map.copyOf(fieldsByVersion);
+    fieldsByVersion =
+        fieldsByVersion == null ? Collections.emptyMap() : Map.copyOf(fieldsByVersion);
   }
 
   public boolean builtin() {

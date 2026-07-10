@@ -46,8 +46,7 @@ public class WorkRecordTemplatePublishGuard {
                   + previous.fieldCode());
         }
 
-        if (previous.schemaPath() != null
-            && !previous.schemaPath().equals(sameCode.schemaPath())) {
+        if (previous.schemaPath() != null && !previous.schemaPath().equals(sameCode.schemaPath())) {
           errors.add(
               "schemaPath is locked because records already reference template version: "
                   + previous.fieldCode()

@@ -55,12 +55,8 @@ public class WorkRecordController {
 
   @GetMapping("/meta")
   @PreAuthorize("hasAuthority('work-record:read:all') or hasAuthority('work-record:read:self')")
-  public ApiResponse<?> meta(
-      @RequestParam(required = false) String templateId) {
-    return ApiResponse.ok(
-        metaService.meta(
-            TenantContext.requireTenantId(),
-            templateId));
+  public ApiResponse<?> meta(@RequestParam(required = false) String templateId) {
+    return ApiResponse.ok(metaService.meta(TenantContext.requireTenantId(), templateId));
   }
 
   @GetMapping
@@ -143,13 +139,10 @@ public class WorkRecordController {
     return ApiResponse.ok(null);
   }
 
-  @PostMapping(
-      value = "/export",
-      produces = "text/csv;charset=UTF-8")
+  @PostMapping(value = "/export", produces = "text/csv;charset=UTF-8")
   @PreAuthorize("hasAuthority('work-record:export')")
   public ResponseEntity<byte[]> export(
-      @RequestBody ExportRecordRequest request,
-      @AuthenticationPrincipal UserPrincipal user) {
+      @RequestBody ExportRecordRequest request, @AuthenticationPrincipal UserPrincipal user) {
     RecordQuery query =
         new RecordQuery(
             1,
@@ -164,40 +157,22 @@ public class WorkRecordController {
             request.ownerId(),
             false,
             user == null ? null : user.id(),
-            request.dynamicFilters() == null
-                ? List.of()
-                : request.dynamicFilters(),
+            request.dynamicFilters() == null ? List.of() : request.dynamicFilters(),
             normalizeSortBy(request.sortBy()),
             normalizeSortDir(request.sortDir()),
             request.quickView(),
             request.workdayCount());
 
     WorkRecordExportResult result =
-        exportService.export(
-            TenantContext.requireTenantId(),
-            query,
-            request.columns(),
-            user);
+        exportService.export(TenantContext.requireTenantId(), query, request.columns(), user);
 
     ContentDisposition disposition =
-        ContentDisposition.attachment()
-            .filename(
-                result.fileName(),
-                StandardCharsets.UTF_8)
-            .build();
+        ContentDisposition.attachment().filename(result.fileName(), StandardCharsets.UTF_8).build();
 
     return ResponseEntity.ok()
-        .contentType(
-            new MediaType(
-                "text",
-                "csv",
-                StandardCharsets.UTF_8))
-        .header(
-            HttpHeaders.CONTENT_DISPOSITION,
-            disposition.toString())
-        .header(
-            "X-Export-Row-Count",
-            String.valueOf(result.rowCount()))
+        .contentType(new MediaType("text", "csv", StandardCharsets.UTF_8))
+        .header(HttpHeaders.CONTENT_DISPOSITION, disposition.toString())
+        .header("X-Export-Row-Count", String.valueOf(result.rowCount()))
         .body(result.content());
   }
 

@@ -37,43 +37,30 @@ public class WorkRecordQueryService {
   }
 
   WorkRecordQueryService(
-      WorkRecordRepository repository,
-      WorkRecordPermissionService permissionService) {
+      WorkRecordRepository repository, WorkRecordPermissionService permissionService) {
     this(repository, permissionService, null, Clock.systemUTC());
   }
 
   public PageResult<WorkRecord> page(String tenantId, RecordQuery query, UserPrincipal user) {
-    return repository.page(
-        tenantId,
-        prepareEffectiveQuery(tenantId, query, user));
+    return repository.page(tenantId, prepareEffectiveQuery(tenantId, query, user));
   }
 
-  public RecordQuery prepareEffectiveQuery(
-      String tenantId,
-      RecordQuery query,
-      UserPrincipal user) {
+  public RecordQuery prepareEffectiveQuery(String tenantId, RecordQuery query, UserPrincipal user) {
     if (query == null) {
       throw new IllegalArgumentException("record query is required");
     }
 
-    boolean permissionOnlySelf =
-        !permissionService.canReadAll(user);
+    boolean permissionOnlySelf = !permissionService.canReadAll(user);
 
-    if (!permissionService.canReadAll(user)
-        && !permissionService.canReadSelf(user)) {
-      throw new SecurityException(
-          "not allowed to read work records");
+    if (!permissionService.canReadAll(user) && !permissionService.canReadSelf(user)) {
+      throw new SecurityException("not allowed to read work records");
     }
 
-    RecordQuickView view =
-        RecordQuickView.from(query.quickView());
+    RecordQuickView view = RecordQuickView.from(query.quickView());
 
-    RecordQuery quickQuery =
-        applyQuickView(query, view);
+    RecordQuery quickQuery = applyQuickView(query, view);
 
-    boolean effectiveOnlySelf =
-        permissionOnlySelf
-            || view == RecordQuickView.MINE;
+    boolean effectiveOnlySelf = permissionOnlySelf || view == RecordQuickView.MINE;
 
     List<RecordDynamicFilter> normalizedFilters =
         normalizeDynamicFilters(
@@ -106,8 +93,7 @@ public class WorkRecordQueryService {
     WorkRecord record =
         repository
             .find(tenantId, recordId)
-            .orElseThrow(
-                () -> new IllegalArgumentException("work record not found"));
+            .orElseThrow(() -> new IllegalArgumentException("work record not found"));
 
     permissionService.requireRead(user, record);
     return record;
@@ -126,8 +112,7 @@ public class WorkRecordQueryService {
       throw new IllegalStateException("dynamic filter policy service is unavailable");
     }
 
-    return dynamicFilterPolicyService.normalize(
-        tenantId, templateId, templateVersionId, filters);
+    return dynamicFilterPolicyService.normalize(tenantId, templateId, templateVersionId, filters);
   }
 
   private RecordQuery applyQuickView(RecordQuery query, RecordQuickView view) {
@@ -144,8 +129,7 @@ public class WorkRecordQueryService {
         to = from.plusDays(1);
       }
       case THIS_WEEK -> {
-        LocalDate start =
-            now.toLocalDate().minusDays(now.getDayOfWeek().getValue() - 1L);
+        LocalDate start = now.toLocalDate().minusDays(now.getDayOfWeek().getValue() - 1L);
         from = start.atStartOfDay(clock.getZone()).toOffsetDateTime();
         to = from.plusWeeks(1);
       }
@@ -156,9 +140,7 @@ public class WorkRecordQueryService {
       }
       case RECENT_WORKDAYS -> {
         int count =
-            query.workdayCount() == null
-                ? 5
-                : Math.max(1, Math.min(query.workdayCount(), 60));
+            query.workdayCount() == null ? 5 : Math.max(1, Math.min(query.workdayCount(), 60));
 
         LocalDate start = recentWorkdayStart(now.toLocalDate(), count);
 

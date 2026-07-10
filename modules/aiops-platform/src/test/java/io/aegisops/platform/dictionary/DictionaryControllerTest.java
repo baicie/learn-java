@@ -71,7 +71,9 @@ class DictionaryControllerTest {
     TenantContext.setTenantId("tenant_1");
     DictionaryController controller = new DictionaryController(service);
 
-    var response = controller.createType(new CreateDictTypeRequest("record_status", "工作记录状态", null, null, true), null);
+    var response =
+        controller.createType(
+            new CreateDictTypeRequest("record_status", "工作记录状态", null, null, true), null);
 
     assertThat(response.success()).isTrue();
     assertThat(response.data().dictCode()).isEqualTo("record_status");
@@ -165,12 +167,17 @@ class DictionaryControllerTest {
             "system",
             OffsetDateTime.now(),
             OffsetDateTime.now());
-    when(service.createItem(eq("tenant_1"), eq("record_status"), any(), eq("system"))).thenReturn(stored);
+    when(service.createItem(eq("tenant_1"), eq("record_status"), any(), eq("system")))
+        .thenReturn(stored);
 
     TenantContext.setTenantId("tenant_1");
     DictionaryController controller = new DictionaryController(service);
 
-    var response = controller.createItem("record_status", new CreateDictItemRequest("草稿", "draft", null, null, null, null, true, null), null);
+    var response =
+        controller.createItem(
+            "record_status",
+            new CreateDictItemRequest("草稿", "draft", null, null, null, null, true, null),
+            null);
 
     assertThat(response.success()).isTrue();
     assertThat(response.data().itemValue()).isEqualTo("draft");
@@ -197,16 +204,23 @@ class DictionaryControllerTest {
             "system",
             OffsetDateTime.now(),
             OffsetDateTime.now());
-    when(service.updateItem(eq("tenant_1"), eq("record_status"), eq("di1"), any(), any(String.class)))
+    when(service.updateItem(
+            eq("tenant_1"), eq("record_status"), eq("di1"), any(), any(String.class)))
         .thenReturn(stored);
 
     TenantContext.setTenantId("tenant_1");
     DictionaryController controller = new DictionaryController(service);
 
-    var response = controller.updateItem("record_status", "di1", new UpdateDictItemRequest("草稿", null, null, null, true, null), null);
+    var response =
+        controller.updateItem(
+            "record_status",
+            "di1",
+            new UpdateDictItemRequest("草稿", null, null, null, true, null),
+            null);
 
     assertThat(response.success()).isTrue();
     assertThat(response.data().itemValue()).isEqualTo("draft");
-    verify(service).updateItem(eq("tenant_1"), eq("record_status"), eq("di1"), any(), any(String.class));
+    verify(service)
+        .updateItem(eq("tenant_1"), eq("record_status"), eq("di1"), any(), any(String.class));
   }
 }

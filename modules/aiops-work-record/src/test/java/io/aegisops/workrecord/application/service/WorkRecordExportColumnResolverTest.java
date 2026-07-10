@@ -32,8 +32,7 @@ class WorkRecordExportColumnResolverTest {
     RecordListColumn col = column("title", "标题", "builtin", null, "text", true);
     WorkRecord record = record("r1", "v1");
 
-    List<ResolvedExportColumn> result =
-        resolver.resolve("t1", List.of(col), List.of(record));
+    List<ResolvedExportColumn> result = resolver.resolve("t1", List.of(col), List.of(record));
 
     assertThat(result).hasSize(1);
     assertThat(result.get(0).builtin()).isTrue();
@@ -47,11 +46,9 @@ class WorkRecordExportColumnResolverTest {
 
     when(fieldRepository.listByVersions("t1", List.of("v1")))
         .thenReturn(
-            List.of(
-                field("f1", "t1", "tpl1", "v1", "优先级", "priority", FieldType.SELECT, true)));
+            List.of(field("f1", "t1", "tpl1", "v1", "优先级", "priority", FieldType.SELECT, true)));
 
-    List<ResolvedExportColumn> result =
-        resolver.resolve("t1", List.of(col), List.of(record));
+    List<ResolvedExportColumn> result = resolver.resolve("t1", List.of(col), List.of(record));
 
     assertThat(result).hasSize(1);
     assertThat(result.get(0).builtin()).isFalse();
@@ -60,8 +57,7 @@ class WorkRecordExportColumnResolverTest {
 
   @Test
   void shouldRejectFieldThatIsNotExportableInHistoricalVersion() {
-    RecordListColumn col =
-        column("custom.secret", "秘密", "custom", "secret", "text", true);
+    RecordListColumn col = column("custom.secret", "秘密", "custom", "secret", "text", true);
 
     WorkRecord r1 = record("r1", "v1");
     WorkRecord r2 = record("r2", "v2");
@@ -72,16 +68,14 @@ class WorkRecordExportColumnResolverTest {
                 field("f1", "t1", "tpl1", "v1", "秘密", "secret", FieldType.TEXT, false),
                 field("f2", "t1", "tpl1", "v2", "秘密", "secret", FieldType.TEXT, true)));
 
-    assertThatThrownBy(
-            () -> resolver.resolve("t1", List.of(col), List.of(r1, r2)))
+    assertThatThrownBy(() -> resolver.resolve("t1", List.of(col), List.of(r1, r2)))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("not exportable in template version v1");
   }
 
   @Test
   void shouldRejectNonExportableColumnFlag() {
-    RecordListColumn col =
-        column("custom.secret", "秘密", "custom", "secret", "text", false);
+    RecordListColumn col = column("custom.secret", "秘密", "custom", "secret", "text", false);
 
     WorkRecord record = record("r1", "v1");
 
@@ -94,8 +88,7 @@ class WorkRecordExportColumnResolverTest {
   void shouldHandleEmptyRecords() {
     RecordListColumn col = column("custom.priority", "优先级", "custom", "priority", "select", true);
 
-    List<ResolvedExportColumn> result =
-        resolver.resolve("t1", List.of(col), List.of());
+    List<ResolvedExportColumn> result = resolver.resolve("t1", List.of(col), List.of());
 
     assertThat(result).hasSize(1);
     assertThat(result.get(0).builtin()).isFalse();
@@ -109,16 +102,16 @@ class WorkRecordExportColumnResolverTest {
     WorkRecord r2 = record("r2", "v2");
     WorkRecord r3 = record("r3", "v3");
 
-    when(fieldRepository.listByVersions(eq("t1"), argThat(list ->
-        list.size() == 3 && list.containsAll(List.of("v1", "v2", "v3")))))
+    when(fieldRepository.listByVersions(
+            eq("t1"),
+            argThat(list -> list.size() == 3 && list.containsAll(List.of("v1", "v2", "v3")))))
         .thenReturn(
             List.of(
                 field("f1", "t1", "tpl1", "v1", "优先级", "priority", FieldType.SELECT, true),
                 field("f2", "t1", "tpl1", "v2", "优先级", "priority", FieldType.SELECT, true),
                 field("f3", "t1", "tpl1", "v3", "优先级", "priority", FieldType.SELECT, true)));
 
-    List<ResolvedExportColumn> result =
-        resolver.resolve("t1", List.of(col), List.of(r1, r2, r3));
+    List<ResolvedExportColumn> result = resolver.resolve("t1", List.of(col), List.of(r1, r2, r3));
 
     assertThat(result).hasSize(1);
 
@@ -155,19 +148,45 @@ class WorkRecordExportColumnResolverTest {
       FieldType fieldType,
       boolean exportable) {
     return new WorkRecordField(
-        id, tenantId, templateId, templateVersionId,
-        fieldName, fieldCode, fieldType,
-        false, null, OptionSource.STATIC, null, "[]", null,
-        true, true, exportable, false,
-        1, true,
-        OffsetDateTime.now(), OffsetDateTime.now());
+        id,
+        tenantId,
+        templateId,
+        templateVersionId,
+        fieldName,
+        fieldCode,
+        fieldType,
+        false,
+        null,
+        OptionSource.STATIC,
+        null,
+        "[]",
+        null,
+        true,
+        true,
+        exportable,
+        false,
+        1,
+        true,
+        OffsetDateTime.now(),
+        OffsetDateTime.now());
   }
 
   private WorkRecord record(String id, String templateVersionId) {
     return new WorkRecord(
-        id, "t1", "tpl1", templateVersionId,
-        "Test", null, "u1", "u1",
-        OffsetDateTime.now(), "{}", "{}",
-        1, OffsetDateTime.now(), OffsetDateTime.now(), null);
+        id,
+        "t1",
+        "tpl1",
+        templateVersionId,
+        "Test",
+        null,
+        "u1",
+        "u1",
+        OffsetDateTime.now(),
+        "{}",
+        "{}",
+        1,
+        OffsetDateTime.now(),
+        OffsetDateTime.now(),
+        null);
   }
 }

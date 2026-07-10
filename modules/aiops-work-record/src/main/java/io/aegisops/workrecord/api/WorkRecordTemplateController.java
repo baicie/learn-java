@@ -31,8 +31,7 @@ public class WorkRecordTemplateController {
   private final WorkRecordTemplateVersionService versionService;
 
   public WorkRecordTemplateController(
-      WorkRecordTemplateService templateService,
-      WorkRecordTemplateVersionService versionService) {
+      WorkRecordTemplateService templateService, WorkRecordTemplateVersionService versionService) {
     this.templateService = templateService;
     this.versionService = versionService;
   }
@@ -91,7 +90,10 @@ public class WorkRecordTemplateController {
             TenantContext.requireTenantId(),
             templateId,
             new UpdateTemplateDraftCommand(
-                request.name(), request.description(), request.schemaJson(), request.designerJson()),
+                request.name(),
+                request.description(),
+                request.schemaJson(),
+                request.designerJson()),
             actorId(user)));
   }
 
@@ -135,7 +137,8 @@ public class WorkRecordTemplateController {
 
   @PostMapping("/{templateId}/validate-publish")
   @PreAuthorize("hasAuthority('work-record:template:write')")
-  public ApiResponse<TemplatePublishValidationResult> validatePublish(@PathVariable String templateId) {
+  public ApiResponse<TemplatePublishValidationResult> validatePublish(
+      @PathVariable String templateId) {
     return ApiResponse.ok(
         versionService.validatePublish(TenantContext.requireTenantId(), templateId));
   }
@@ -155,7 +158,8 @@ public class WorkRecordTemplateController {
 
   @GetMapping("/{templateId}/versions")
   @PreAuthorize("hasAuthority('work-record:template:read')")
-  public ApiResponse<List<WorkRecordTemplateVersion>> listVersions(@PathVariable String templateId) {
+  public ApiResponse<List<WorkRecordTemplateVersion>> listVersions(
+      @PathVariable String templateId) {
     return ApiResponse.ok(versionService.list(TenantContext.requireTenantId(), templateId));
   }
 
@@ -163,7 +167,8 @@ public class WorkRecordTemplateController {
   @PreAuthorize("hasAuthority('work-record:template:read')")
   public ApiResponse<WorkRecordTemplateVersion> getVersion(
       @PathVariable String templateId, @PathVariable String versionId) {
-    return ApiResponse.ok(versionService.get(TenantContext.requireTenantId(), templateId, versionId));
+    return ApiResponse.ok(
+        versionService.get(TenantContext.requireTenantId(), templateId, versionId));
   }
 
   @GetMapping("/{templateId}/versions/{versionId}/fields")

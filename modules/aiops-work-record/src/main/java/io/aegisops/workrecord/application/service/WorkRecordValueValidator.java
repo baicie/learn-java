@@ -77,8 +77,7 @@ public class WorkRecordValueValidator {
         if (field.enabled() && field.required()) {
           JsonNode value = root.get(field.fieldCode());
           if (isMissingRequiredValue(value)) {
-            throw new IllegalArgumentException(
-                "required field is missing: " + field.fieldCode());
+            throw new IllegalArgumentException("required field is missing: " + field.fieldCode());
           }
         }
       }
@@ -113,8 +112,7 @@ public class WorkRecordValueValidator {
       throw new IllegalArgumentException("field tenant mismatch: " + field.fieldCode());
     }
     if (!templateVersionId.equals(field.templateVersionId())) {
-      throw new IllegalArgumentException(
-          "field templateVersion mismatch: " + field.fieldCode());
+      throw new IllegalArgumentException("field templateVersion mismatch: " + field.fieldCode());
     }
 
     FieldCodeRules.validate(field.fieldCode());

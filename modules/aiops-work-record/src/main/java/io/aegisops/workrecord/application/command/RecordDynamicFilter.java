@@ -8,11 +8,9 @@ import java.util.List;
 /**
  * 动态筛选条件。
  *
- * <p>JSON 反序列化时接收原始 DTO（operator/fieldType 为 String），标准化后
- * 由 {@link
- * io.aegisops.workrecord.application.service.WorkRecordDynamicFilterPolicyService}
- * 转换为带 {@link DynamicFilterOperator} enum 和 {@link FieldType} enum
- * 的内部表示，并补全 operator/fieldType 字段。
+ * <p>JSON 反序列化时接收原始 DTO（operator/fieldType 为 String），标准化后 由 {@link
+ * io.aegisops.workrecord.application.service.WorkRecordDynamicFilterPolicyService} 转换为带 {@link
+ * DynamicFilterOperator} enum 和 {@link FieldType} enum 的内部表示，并补全 operator/fieldType 字段。
  */
 public record RecordDynamicFilter(
     String fieldCode,
@@ -24,8 +22,7 @@ public record RecordDynamicFilter(
   /**
    * JSON 反序列化构造器。
    *
-   * <p>Jackson 会把 operator 字符串和 fieldType 字符串反序列化为对应 enum，
-   * 若无法匹配则抛异常（由 Controller 层捕获返回 400）。
+   * <p>Jackson 会把 operator 字符串和 fieldType 字符串反序列化为对应 enum， 若无法匹配则抛异常（由 Controller 层捕获返回 400）。
    */
   @JsonCreator
   public RecordDynamicFilter(
@@ -66,7 +63,6 @@ public record RecordDynamicFilter(
 
   /** 判断是否为存在性操作符 */
   public boolean existenceOperator() {
-    return operator == DynamicFilterOperator.EXISTS
-        || operator == DynamicFilterOperator.NOT_EXISTS;
+    return operator == DynamicFilterOperator.EXISTS || operator == DynamicFilterOperator.NOT_EXISTS;
   }
 }

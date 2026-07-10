@@ -81,18 +81,6 @@ class WorkRecordTemplatePublishGuardTest {
 
   private FormFieldDescriptor descriptor(String code, FieldType type, String path) {
     return new FormFieldDescriptor(
-        code,
-        code,
-        type,
-        false,
-        OptionSource.STATIC,
-        null,
-        "[]",
-        path,
-        true,
-        true,
-        true,
-        false,
-        1);
+        code, code, type, false, OptionSource.STATIC, null, "[]", path, true, true, true, false, 1);
   }
 }

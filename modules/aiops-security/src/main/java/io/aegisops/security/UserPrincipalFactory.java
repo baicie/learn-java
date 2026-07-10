@@ -8,29 +8,20 @@ import org.springframework.stereotype.Component;
 public class UserPrincipalFactory {
   private final AuthorizationService authorizationService;
 
-  public UserPrincipalFactory(
-      AuthorizationService authorizationService) {
-    this.authorizationService =
-        authorizationService;
+  public UserPrincipalFactory(AuthorizationService authorizationService) {
+    this.authorizationService = authorizationService;
   }
 
-  public UserPrincipal create(
-      UserAccount account) {
+  public UserPrincipal create(UserAccount account) {
     if (account == null) {
-      throw new IllegalArgumentException(
-          "user account is required");
+      throw new IllegalArgumentException("user account is required");
     }
 
-    if (!"active".equalsIgnoreCase(
-        account.status())) {
-      throw new DisabledException(
-          "user is disabled");
+    if (!"active".equalsIgnoreCase(account.status())) {
+      throw new DisabledException("user is disabled");
     }
 
-    AuthorizationSnapshot snapshot =
-        authorizationService.resolve(
-            account.tenantId(),
-            account.id());
+    AuthorizationSnapshot snapshot = authorizationService.resolve(account.tenantId(), account.id());
 
     return new UserPrincipal(
         account.id(),

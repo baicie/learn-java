@@ -8,16 +8,11 @@ class DataScopeTest {
 
   @Test
   void allMustOverrideSelf() {
-    assertThat(
-            DataScope.max(
-                DataScope.SELF,
-                DataScope.ALL))
-        .isEqualTo(DataScope.ALL);
+    assertThat(DataScope.max(DataScope.SELF, DataScope.ALL)).isEqualTo(DataScope.ALL);
   }
 
   @Test
   void nullDefaultsToSelf() {
-    assertThat(DataScope.from(null))
-        .isEqualTo(DataScope.SELF);
+    assertThat(DataScope.from(null)).isEqualTo(DataScope.SELF);
   }
 }

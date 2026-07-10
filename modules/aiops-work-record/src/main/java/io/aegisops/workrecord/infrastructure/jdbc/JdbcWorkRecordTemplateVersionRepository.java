@@ -14,7 +14,8 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public class JdbcWorkRecordTemplateVersionRepository implements WorkRecordTemplateVersionRepository {
+public class JdbcWorkRecordTemplateVersionRepository
+    implements WorkRecordTemplateVersionRepository {
 
   private final NamedParameterJdbcTemplate jdbc;
 

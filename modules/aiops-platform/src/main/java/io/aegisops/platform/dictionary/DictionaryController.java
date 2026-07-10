@@ -49,7 +49,10 @@ public class DictionaryController {
       @AuthenticationPrincipal UserPrincipal user) {
     return ApiResponse.ok(
         service.updateType(
-            TenantContext.requireTenantId(), dictCode, request, user == null ? "system" : user.id()));
+            TenantContext.requireTenantId(),
+            dictCode,
+            request,
+            user == null ? "system" : user.id()));
   }
 
   @DeleteMapping("/{dictCode}")
@@ -78,7 +81,10 @@ public class DictionaryController {
       @AuthenticationPrincipal UserPrincipal user) {
     return ApiResponse.ok(
         service.createItem(
-            TenantContext.requireTenantId(), dictCode, request, user == null ? "system" : user.id()));
+            TenantContext.requireTenantId(),
+            dictCode,
+            request,
+            user == null ? "system" : user.id()));
   }
 
   @PutMapping("/{dictCode}/items/{itemId}")

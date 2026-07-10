@@ -50,7 +50,14 @@ public class UserService {
     UserAccount admin =
         repository
             .findByUsername(username)
-            .orElseGet(() -> repository.create(tenantId, username, "Admin", "admin@local", passwordEncoder.encode(rawPassword)));
+            .orElseGet(
+                () ->
+                    repository.create(
+                        tenantId,
+                        username,
+                        "Admin",
+                        "admin@local",
+                        passwordEncoder.encode(rawPassword)));
 
     repository.ensureLegacyRole("admin", "Administrator");
     repository.attachLegacyRole(admin.id(), "admin");

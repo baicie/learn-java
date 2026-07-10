@@ -91,7 +91,15 @@ public class AuthorizationRepository {
         values (:tenantId, :userId, :roleCode, :actor)
         on conflict do nothing
         """,
-        Map.of("tenantId", tenantId, "userId", userId, "roleCode", roleCode, "actor", actor == null ? "system" : actor));
+        Map.of(
+            "tenantId",
+            tenantId,
+            "userId",
+            userId,
+            "roleCode",
+            roleCode,
+            "actor",
+            actor == null ? "system" : actor));
   }
 
   public int migrateLegacyAssignments(String tenantId, String userId) {

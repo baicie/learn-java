@@ -23,8 +23,8 @@ import org.mockito.Mockito;
 /**
  * Phase 11 验收测试：覆盖当前已实现的动态筛选白名单行为。
  *
- * <p>已由 {@link WorkRecordDynamicFilterPolicyServiceTest} 覆盖更多 Phase 11 新操作符场景，
- * 本测试保留以确保 Phase 10 已有行为不退化。
+ * <p>已由 {@link WorkRecordDynamicFilterPolicyServiceTest} 覆盖更多 Phase 11 新操作符场景， 本测试保留以确保 Phase 10
+ * 已有行为不退化。
  */
 class WorkRecordDynamicFilterServiceTest {
   private final WorkRecordTemplateRepository templateRepository =
@@ -34,16 +34,15 @@ class WorkRecordDynamicFilterServiceTest {
   private final WorkRecordFieldIndexRepository fieldRepository =
       Mockito.mock(WorkRecordFieldIndexRepository.class);
   private final WorkRecordDynamicFilterPolicyService service =
-      new WorkRecordDynamicFilterPolicyService(templateRepository, versionRepository, fieldRepository);
+      new WorkRecordDynamicFilterPolicyService(
+          templateRepository, versionRepository, fieldRepository);
 
   @Test
   void shouldRejectFilterWithoutTemplate() {
     assertThatThrownBy(
             () ->
                 service.normalize(
-                    "t1",
-                    null,
-                    List.of(RecordDynamicFilter.raw("priority", "eq", "P1"))))
+                    "t1", null, List.of(RecordDynamicFilter.raw("priority", "eq", "P1"))))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("templateId is required");
   }
@@ -55,9 +54,7 @@ class WorkRecordDynamicFilterServiceTest {
     assertThatThrownBy(
             () ->
                 service.normalize(
-                    "t1",
-                    "tpl1",
-                    List.of(RecordDynamicFilter.raw("priority", "eq", "P1"))))
+                    "t1", "tpl1", List.of(RecordDynamicFilter.raw("priority", "eq", "P1"))))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("field is not filterable");
   }
@@ -109,10 +106,7 @@ class WorkRecordDynamicFilterServiceTest {
 
     List<RecordDynamicFilter> result =
         service.normalize(
-            "t1",
-            "tpl1",
-            List.of(
-                RecordDynamicFilter.raw("recordDate", "gte", "2026-01-01")));
+            "t1", "tpl1", List.of(RecordDynamicFilter.raw("recordDate", "gte", "2026-01-01")));
 
     assertThat(result).hasSize(1);
     assertThat(result.get(0).operator()).isEqualTo(DynamicFilterOperator.GTE);
@@ -125,9 +119,7 @@ class WorkRecordDynamicFilterServiceTest {
 
     List<RecordDynamicFilter> result =
         service.normalize(
-            "t1",
-            "tpl1",
-            List.of(RecordDynamicFilter.raw("summary", "contains", "异常")));
+            "t1", "tpl1", List.of(RecordDynamicFilter.raw("summary", "contains", "异常")));
 
     assertThat(result).hasSize(1);
     assertThat(result.get(0).operator()).isEqualTo(DynamicFilterOperator.CONTAINS);
@@ -140,9 +132,7 @@ class WorkRecordDynamicFilterServiceTest {
     assertThatThrownBy(
             () ->
                 service.normalize(
-                    "t1",
-                    "tpl1",
-                    List.of(RecordDynamicFilter.raw("summary", "contains", ""))))
+                    "t1", "tpl1", List.of(RecordDynamicFilter.raw("summary", "contains", ""))))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("blank");
   }
@@ -154,9 +144,7 @@ class WorkRecordDynamicFilterServiceTest {
     assertThatThrownBy(
             () ->
                 service.normalize(
-                    "t1",
-                    "tpl1",
-                    List.of(RecordDynamicFilter.raw("summary", "between", "x"))))
+                    "t1", "tpl1", List.of(RecordDynamicFilter.raw("summary", "between", "x"))))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("operator between is not allowed for text");
   }
@@ -168,9 +156,7 @@ class WorkRecordDynamicFilterServiceTest {
     assertThatThrownBy(
             () ->
                 service.normalize(
-                    "t1",
-                    "tpl1",
-                    List.of(RecordDynamicFilter.raw("content", "eq", 123))))
+                    "t1", "tpl1", List.of(RecordDynamicFilter.raw("content", "eq", 123))))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("text filter value must be string");
   }
@@ -207,8 +193,7 @@ class WorkRecordDynamicFilterServiceTest {
             List.of("a"),
             List.of("b"));
 
-    assertThatThrownBy(
-            () -> service.normalize("t1", "tpl1", List.of(raw)))
+    assertThatThrownBy(() -> service.normalize("t1", "tpl1", List.of(raw)))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("must not contain both");
   }

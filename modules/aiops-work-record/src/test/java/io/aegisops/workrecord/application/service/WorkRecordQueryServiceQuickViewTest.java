@@ -14,6 +14,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -42,9 +43,7 @@ class WorkRecordQueryServiceQuickViewTest {
 
   @Test
   void shouldCalculateExactRecentFiveWorkdays() {
-    Clock clock =
-        Clock.fixed(
-            Instant.parse("2026-07-13T02:00:00Z"), ZoneId.of("Asia/Shanghai"));
+    Clock clock = Clock.fixed(Instant.parse("2026-07-13T02:00:00Z"), ZoneId.of("Asia/Shanghai"));
 
     WorkRecordQueryService fixedService =
         new WorkRecordQueryService(
@@ -105,21 +104,40 @@ class WorkRecordQueryServiceQuickViewTest {
         workdayCount);
   }
 
+  private UserPrincipal cachedAdminUser;
+  private UserPrincipal cachedSelfUser;
+
+  @org.junit.jupiter.api.BeforeEach
+  void setUpUsers() {
+    cachedAdminUser =
+        new UserPrincipal(
+            "u1",
+            "t1",
+            "alice",
+            "Alice",
+            Set.of("admin"),
+            Set.of("work-record:read:all"),
+            Map.of(
+                "work-record", io.aegisops.security.DataScope.ALL,
+                "work-record-template", io.aegisops.security.DataScope.ALL));
+    cachedSelfUser =
+        new UserPrincipal(
+            "u2",
+            "t1",
+            "bob",
+            "Bob",
+            Set.of("operator"),
+            Set.of("work-record:read:self"),
+            Map.of(
+                "work-record", io.aegisops.security.DataScope.SELF,
+                "work-record-template", io.aegisops.security.DataScope.SELF));
+  }
+
   private UserPrincipal user() {
-    return new UserPrincipal(
-        "u1",
-        "t1",
-        "alice",
-        "Alice",
-        Set.of("admin"));
+    return cachedAdminUser;
   }
 
   private UserPrincipal selfUser() {
-    return new UserPrincipal(
-        "u2",
-        "t1",
-        "bob",
-        "Bob",
-        Set.of("operator"));
+    return cachedSelfUser;
   }
 }

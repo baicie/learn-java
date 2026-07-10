@@ -23,8 +23,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 class WorkRecordJsonbFilterPostgresIntegrationTest {
 
   @Container
-  static final PostgreSQLContainer<?> POSTGRES =
-      new PostgreSQLContainer<>("postgres:16-alpine");
+  static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine");
 
   static NamedParameterJdbcTemplate jdbc;
   static WorkRecordJsonbFilterSqlBuilder builder;
@@ -102,11 +101,7 @@ class WorkRecordJsonbFilterPostgresIntegrationTest {
     assertThat(
             executeCount(
                 RecordDynamicFilter.normalized(
-                    "priority",
-                    DynamicFilterOperator.EXISTS,
-                    FieldType.SELECT,
-                    null,
-                    List.of())))
+                    "priority", DynamicFilterOperator.EXISTS, FieldType.SELECT, null, List.of())))
         .isEqualTo(1);
   }
 
@@ -116,11 +111,7 @@ class WorkRecordJsonbFilterPostgresIntegrationTest {
     assertThat(
             executeCount(
                 RecordDynamicFilter.normalized(
-                    "cost",
-                    DynamicFilterOperator.GTE,
-                    FieldType.NUMBER,
-                    "10",
-                    List.of())))
+                    "cost", DynamicFilterOperator.GTE, FieldType.NUMBER, "10", List.of())))
         .isEqualTo(1);
   }
 
@@ -180,9 +171,7 @@ class WorkRecordJsonbFilterPostgresIntegrationTest {
 
     Long count =
         jdbc.queryForObject(
-            "select count(*) from work_record.dynamic_query_test " + where,
-            params,
-            Long.class);
+            "select count(*) from work_record.dynamic_query_test " + where, params, Long.class);
 
     return count == null ? 0L : count;
   }

@@ -42,7 +42,8 @@ public class WorkRecordSchemaParser {
     }
   }
 
-  private void parseObject(JsonNode objectNode, String pathPrefix, List<FormFieldDescriptor> output) {
+  private void parseObject(
+      JsonNode objectNode, String pathPrefix, List<FormFieldDescriptor> output) {
     JsonNode properties = objectNode.path("properties");
     if (!properties.isObject()) {
       return;

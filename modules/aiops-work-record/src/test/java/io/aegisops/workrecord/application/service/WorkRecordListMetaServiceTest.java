@@ -21,8 +21,7 @@ class WorkRecordListMetaServiceTest {
       Mockito.mock(WorkRecordTemplateRepository.class);
   private final WorkRecordFieldIndexRepository fieldRepository =
       Mockito.mock(WorkRecordFieldIndexRepository.class);
-  private final WorkRecordExportPolicy exportPolicy =
-      Mockito.mock(WorkRecordExportPolicy.class);
+  private final WorkRecordExportPolicy exportPolicy = Mockito.mock(WorkRecordExportPolicy.class);
 
   private final WorkRecordListMetaService service =
       new WorkRecordListMetaService(templateRepository, fieldRepository, exportPolicy);
@@ -66,17 +65,18 @@ class WorkRecordListMetaServiceTest {
 
     assertThat(meta.columns()).hasSize(9); // 7 builtin + col1 + col3
     assertThat(meta.exportColumns()).hasSize(9); // 7 builtin + col1 + col2
-    assertThat(meta.exportColumns().stream()
-        .filter(c -> "custom.col2".equals(c.key()))
-        .findFirst()
-        .orElseThrow()).isNotNull();
+    assertThat(
+            meta.exportColumns().stream()
+                .filter(c -> "custom.col2".equals(c.key()))
+                .findFirst()
+                .orElseThrow())
+        .isNotNull();
   }
 
   @Test
   void shouldDeduplicateCompatibleColumnsAcrossTemplates() {
     when(templateRepository.list("t1", true))
-        .thenReturn(
-            List.of(template("tpl1", "v1", true), template("tpl2", "v2", true)));
+        .thenReturn(List.of(template("tpl1", "v1", true), template("tpl2", "v2", true)));
 
     when(fieldRepository.listEnabledByVersions("t1", List.of("v1", "v2")))
         .thenReturn(
@@ -86,19 +86,15 @@ class WorkRecordListMetaServiceTest {
 
     var meta = service.meta("t1", null);
 
-    assertThat(
-            meta.columns().stream()
-                .filter(column -> "custom.priority".equals(column.key())))
+    assertThat(meta.columns().stream().filter(column -> "custom.priority".equals(column.key())))
         .hasSize(1);
   }
 
   @Test
   void shouldIncludeDisabledTemplateForHistoricalFiltering() {
-    when(templateRepository.list("t1", true))
-        .thenReturn(List.of(template("tpl1", "v1", false)));
+    when(templateRepository.list("t1", true)).thenReturn(List.of(template("tpl1", "v1", false)));
 
-    when(fieldRepository.listEnabledByVersions("t1", List.of("v1")))
-        .thenReturn(List.of());
+    when(fieldRepository.listEnabledByVersions("t1", List.of("v1"))).thenReturn(List.of());
 
     var meta = service.meta("t1", null);
 
@@ -107,12 +103,10 @@ class WorkRecordListMetaServiceTest {
 
   @Test
   void shouldProvideEmptyFilterFieldsWhenTemplateNotScoped() {
-    when(templateRepository.list("t1", true))
-        .thenReturn(List.of(template("tpl1", "v1", true)));
+    when(templateRepository.list("t1", true)).thenReturn(List.of(template("tpl1", "v1", true)));
 
     when(fieldRepository.listEnabledByVersions("t1", List.of("v1")))
-        .thenReturn(
-            List.of(field("tpl1", "v1", "priority", true, true, FieldType.SELECT, true)));
+        .thenReturn(List.of(field("tpl1", "v1", "priority", true, true, FieldType.SELECT, true)));
 
     var meta = service.meta("t1", null);
 

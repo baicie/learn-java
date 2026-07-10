@@ -42,6 +42,7 @@ class WorkRecordServicePhase9Test {
           fieldRepository,
           valueValidator,
           auditService,
+          new WorkRecordAuditSnapshots(new ObjectMapper()),
           permissionService,
           userPort,
           new ObjectMapper());
@@ -65,8 +66,7 @@ class WorkRecordServicePhase9Test {
             () ->
                 service.create(
                     "t1",
-                    new CreateRecordCommand(
-                        "tpl1", "v1", "日报", "draft", null, null, "{}", "{}"),
+                    new CreateRecordCommand("tpl1", "v1", "日报", "draft", null, null, "{}", "{}"),
                     user()))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("recordTime is required");
@@ -76,7 +76,17 @@ class WorkRecordServicePhase9Test {
   void createShouldResolveVersionAndPersistSuccessfully() {
     WorkRecordTemplateVersion version =
         new WorkRecordTemplateVersion(
-            "v1", "t1", "tpl1", 1, "v1", "{}", "{}", "[]", "u1", OffsetDateTime.now(), OffsetDateTime.now());
+            "v1",
+            "t1",
+            "tpl1",
+            1,
+            "v1",
+            "{}",
+            "{}",
+            "[]",
+            "u1",
+            OffsetDateTime.now(),
+            OffsetDateTime.now());
 
     WorkRecord saved = stubRecord();
 
@@ -114,7 +124,7 @@ class WorkRecordServicePhase9Test {
     verify(valueValidator).validate("t1", "v1", List.of(), "{}");
     verify(userPort).requireActiveUser("t1", "u1");
     verify(auditService)
-        .record(
+        .recordChange(
             eq("t1"),
             eq("r1"),
             eq("tpl1"),
@@ -122,6 +132,8 @@ class WorkRecordServicePhase9Test {
             eq("r1"),
             eq("work_record.record.create"),
             eq("u1"),
+            any(),
+            any(),
             any());
   }
 
@@ -156,12 +168,7 @@ class WorkRecordServicePhase9Test {
                     "t1",
                     "r1",
                     new UpdateRecordCommand(
-                        null,
-                        null,
-                        "u1",
-                        OffsetDateTime.parse("2026-01-01T00:00:00Z"),
-                        null,
-                        null),
+                        null, null, "u1", OffsetDateTime.parse("2026-01-01T00:00:00Z"), null, null),
                     user()))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("work record not found");
@@ -186,7 +193,22 @@ class WorkRecordServicePhase9Test {
         null);
   }
 
+  private UserPrincipal cachedUser;
+
+  @org.junit.jupiter.api.BeforeEach
+  void setUpUser() {
+    cachedUser =
+        new UserPrincipal(
+            "u1",
+            "t1",
+            "alice",
+            "Alice",
+            Set.of("admin"),
+            Set.of("work-record:write", "work-record:read:self"),
+            java.util.Map.of());
+  }
+
   private UserPrincipal user() {
-    return new UserPrincipal("u1", "t1", "alice", "Alice", Set.of("admin"));
+    return cachedUser;
   }
 }

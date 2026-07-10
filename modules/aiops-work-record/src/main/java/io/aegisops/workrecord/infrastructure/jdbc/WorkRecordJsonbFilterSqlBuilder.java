@@ -14,16 +14,15 @@ import org.springframework.stereotype.Component;
 /**
  * JSONB 动态筛选 SQL 构建器。
  *
- * <p>所有生成的 SQL 片段使用 NamedParameterJdbcTemplate 参数化查询，JSONB key/value
- * 均通过参数传入，绝不直接拼接用户输入的 fieldCode 或 value。
+ * <p>所有生成的 SQL 片段使用 NamedParameterJdbcTemplate 参数化查询，JSONB key/value 均通过参数传入，绝不直接拼接用户输入的 fieldCode
+ * 或 value。
  *
  * <p>安全特性：
  *
  * <ul>
  *   <li>使用 {@code jsonb_extract_path_text()} + {@code cast(:key as text)} 避免 key 参数与 JDBC
  *       placeholder 冲突
- *   <li>使用 {@code jsonb_exists(..., cast(... as text))} 替代 {@code ?} 操作符，避免与 JDBC
- *       placeholder 歧义
+ *   <li>使用 {@code jsonb_exists(..., cast(... as text))} 替代 {@code ?} 操作符，避免与 JDBC placeholder 歧义
  *   <li>number/date/datetime 通过 {@code work_record.try_*} 安全转换函数容忍历史脏数据
  *   <li>通过 {@code jsonb_typeof()} 先检查 JSON 类型再比较，避免 cast 报错
  *   <li>使用 {@code coalesce} 处理缺失字段
@@ -45,9 +44,7 @@ public class WorkRecordJsonbFilterSqlBuilder {
    * @param filters 已标准化的筛选条件列表
    */
   public void appendFilters(
-      StringBuilder where,
-      Map<String, Object> params,
-      List<RecordDynamicFilter> filters) {
+      StringBuilder where, Map<String, Object> params, List<RecordDynamicFilter> filters) {
     if (filters == null || filters.isEmpty()) {
       return;
     }
@@ -58,10 +55,7 @@ public class WorkRecordJsonbFilterSqlBuilder {
   }
 
   private void appendFilter(
-      StringBuilder where,
-      Map<String, Object> params,
-      RecordDynamicFilter filter,
-      int index) {
+      StringBuilder where, Map<String, Object> params, RecordDynamicFilter filter, int index) {
     if (filter == null) {
       throw new IllegalArgumentException("normalized filter must not be null");
     }
@@ -104,9 +98,7 @@ public class WorkRecordJsonbFilterSqlBuilder {
     }
     // Use jsonb_exists() with explicit cast to avoid ambiguity with JDBC ? placeholder.
     // The JSONB ? operator checks if a key exists at the top level of the JSON object.
-    where.append("jsonb_exists(custom_data_json, cast(:")
-        .append(keyParam)
-        .append(" as text)) ");
+    where.append("jsonb_exists(custom_data_json, cast(:").append(keyParam).append(" as text)) ");
   }
 
   private void appendEq(
@@ -120,7 +112,8 @@ public class WorkRecordJsonbFilterSqlBuilder {
 
     switch (filter.fieldType()) {
       case NUMBER -> {
-        where.append(" and jsonb_typeof(")
+        where
+            .append(" and jsonb_typeof(")
             .append(jsonExpr(keyParam))
             .append(") = 'number' and work_record.try_numeric(")
             .append(textExpr(keyParam))
@@ -129,7 +122,8 @@ public class WorkRecordJsonbFilterSqlBuilder {
             .append(" as numeric) ");
       }
       case DATE -> {
-        where.append(" and jsonb_typeof(")
+        where
+            .append(" and jsonb_typeof(")
             .append(jsonExpr(keyParam))
             .append(") = 'string' and work_record.try_date(")
             .append(textExpr(keyParam))
@@ -138,7 +132,8 @@ public class WorkRecordJsonbFilterSqlBuilder {
             .append(" as date) ");
       }
       case DATETIME -> {
-        where.append(" and jsonb_typeof(")
+        where
+            .append(" and jsonb_typeof(")
             .append(jsonExpr(keyParam))
             .append(") = 'string' and work_record.")
             .append(safeFunction(FieldType.DATETIME))
@@ -149,7 +144,8 @@ public class WorkRecordJsonbFilterSqlBuilder {
             .append(" as timestamptz) ");
       }
       case BOOLEAN -> {
-        where.append(" and jsonb_typeof(")
+        where
+            .append(" and jsonb_typeof(")
             .append(jsonExpr(keyParam))
             .append(") = 'boolean' and ")
             .append(textExpr(keyParam))
@@ -158,7 +154,8 @@ public class WorkRecordJsonbFilterSqlBuilder {
             .append(' ');
       }
       case TEXT, TEXTAREA, SELECT, USER -> {
-        where.append(" and jsonb_typeof(")
+        where
+            .append(" and jsonb_typeof(")
             .append(jsonExpr(keyParam))
             .append(") = 'string' and ")
             .append(textExpr(keyParam))
@@ -181,7 +178,8 @@ public class WorkRecordJsonbFilterSqlBuilder {
     String valueParam = "dfValue" + index;
     params.put(valueParam, "%" + escapeLike(String.valueOf(filter.value())) + "%");
 
-    where.append(" and jsonb_typeof(")
+    where
+        .append(" and jsonb_typeof(")
         .append(jsonExpr(keyParam))
         .append(") = 'string' and ")
         .append(textExpr(keyParam))
@@ -206,7 +204,8 @@ public class WorkRecordJsonbFilterSqlBuilder {
     String listParam = "dfList" + index;
     params.put(listParam, filter.values().stream().map(String::valueOf).toList());
 
-    where.append(" and jsonb_typeof(")
+    where
+        .append(" and jsonb_typeof(")
         .append(jsonExpr(keyParam))
         .append(") = 'string' and ")
         .append(textExpr(keyParam))
@@ -228,7 +227,8 @@ public class WorkRecordJsonbFilterSqlBuilder {
     String function = safeFunction(filter.fieldType());
     String jsonType = isNumericType(filter.fieldType()) ? "number" : "string";
 
-    where.append(" and jsonb_typeof(")
+    where
+        .append(" and jsonb_typeof(")
         .append(jsonExpr(keyParam))
         .append(") = '")
         .append(jsonType)
@@ -266,7 +266,8 @@ public class WorkRecordJsonbFilterSqlBuilder {
     String jsonType = isNumericType(filter.fieldType()) ? "number" : "string";
     String function = safeFunction(filter.fieldType());
 
-    where.append(" and jsonb_typeof(")
+    where
+        .append(" and jsonb_typeof(")
         .append(jsonExpr(keyParam))
         .append(") = '")
         .append(jsonType)
@@ -304,7 +305,8 @@ public class WorkRecordJsonbFilterSqlBuilder {
       String valueParam = "dfAny" + index + "_" + valueIndex;
       params.put(valueParam, String.valueOf(filter.values().get(valueIndex)));
 
-      where.append("(jsonb_typeof(")
+      where
+          .append("(jsonb_typeof(")
           .append(jsonExpr(keyParam))
           .append(") = 'array' and custom_data_json @> ")
           .append("jsonb_build_object(")
@@ -332,7 +334,8 @@ public class WorkRecordJsonbFilterSqlBuilder {
 
     // Use coalesce to handle missing fields gracefully.
     // The @> operator checks if the array on the left contains all elements of the right.
-    where.append(" and (jsonb_typeof(")
+    where
+        .append(" and (jsonb_typeof(")
         .append(jsonExpr(keyParam))
         .append(") = 'array' and coalesce(custom_data_json -> cast(:")
         .append(keyParam)
@@ -347,8 +350,7 @@ public class WorkRecordJsonbFilterSqlBuilder {
       case DATE -> "try_date";
       case DATETIME -> "try_timestamptz";
       default ->
-          throw new IllegalArgumentException(
-              "range operator is not supported for " + type.value());
+          throw new IllegalArgumentException("range operator is not supported for " + type.value());
     };
   }
 
@@ -358,8 +360,7 @@ public class WorkRecordJsonbFilterSqlBuilder {
       case DATE -> "date";
       case DATETIME -> "timestamptz";
       default ->
-          throw new IllegalArgumentException(
-              "range operator is not supported for " + type.value());
+          throw new IllegalArgumentException("range operator is not supported for " + type.value());
     };
   }
 
@@ -379,8 +380,7 @@ public class WorkRecordJsonbFilterSqlBuilder {
 
   private void requireValues(RecordDynamicFilter filter) {
     if (filter.values() == null || filter.values().isEmpty()) {
-      throw new IllegalArgumentException(
-          filter.operator().value() + " requires normalized values");
+      throw new IllegalArgumentException(filter.operator().value() + " requires normalized values");
     }
   }
 
@@ -429,10 +429,7 @@ public class WorkRecordJsonbFilterSqlBuilder {
 
     if (!allowed.contains(operator)) {
       throw new IllegalArgumentException(
-          "operator "
-              + operator.value()
-              + " is incompatible with "
-              + type.value());
+          "operator " + operator.value() + " is incompatible with " + type.value());
     }
   }
 
@@ -440,8 +437,7 @@ public class WorkRecordJsonbFilterSqlBuilder {
     try {
       return objectMapper.writeValueAsString(values);
     } catch (JsonProcessingException ex) {
-      throw new IllegalArgumentException(
-          "failed to serialize dynamic filter values", ex);
+      throw new IllegalArgumentException("failed to serialize dynamic filter values", ex);
     }
   }
 

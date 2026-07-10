@@ -43,9 +43,7 @@ public class CalendarController {
   @GetMapping("/calendars/{calendarId}/days")
   @PreAuthorize("hasAuthority('platform:calendar:read')")
   public ApiResponse<List<CalendarDayRecord>> listDays(
-      @PathVariable String calendarId,
-      @RequestParam LocalDate start,
-      @RequestParam LocalDate end) {
+      @PathVariable String calendarId, @RequestParam LocalDate start, @RequestParam LocalDate end) {
     return ApiResponse.ok(
         service.listDays(TenantContext.requireTenantId(), calendarId, start, end));
   }
@@ -74,23 +72,23 @@ public class CalendarController {
       @AuthenticationPrincipal UserPrincipal user) {
     return ApiResponse.ok(
         service.importCsv(
-            TenantContext.requireTenantId(), calendarId, request, user == null ? "system" : user.id()));
+            TenantContext.requireTenantId(),
+            calendarId,
+            request,
+            user == null ? "system" : user.id()));
   }
 
   @GetMapping("/calendar-days/check")
   @PreAuthorize("hasAuthority('platform:calendar:read')")
   public ApiResponse<WorkdayCheckResponse> check(
       @RequestParam String calendarId, @RequestParam LocalDate date) {
-    return ApiResponse.ok(
-        service.checkWorkday(TenantContext.requireTenantId(), calendarId, date));
+    return ApiResponse.ok(service.checkWorkday(TenantContext.requireTenantId(), calendarId, date));
   }
 
   @GetMapping("/calendar-days/range")
   @PreAuthorize("hasAuthority('platform:calendar:read')")
   public ApiResponse<List<CalendarDayRecord>> range(
-      @RequestParam String calendarId,
-      @RequestParam LocalDate start,
-      @RequestParam LocalDate end) {
+      @RequestParam String calendarId, @RequestParam LocalDate start, @RequestParam LocalDate end) {
     return ApiResponse.ok(
         service.listDays(TenantContext.requireTenantId(), calendarId, start, end));
   }
@@ -98,9 +96,7 @@ public class CalendarController {
   @GetMapping("/calendar-days/workdays/count")
   @PreAuthorize("hasAuthority('platform:calendar:read')")
   public ApiResponse<WorkdayCountResponse> count(
-      @RequestParam String calendarId,
-      @RequestParam LocalDate start,
-      @RequestParam LocalDate end) {
+      @RequestParam String calendarId, @RequestParam LocalDate start, @RequestParam LocalDate end) {
     return ApiResponse.ok(
         service.countWorkdays(TenantContext.requireTenantId(), calendarId, start, end));
   }

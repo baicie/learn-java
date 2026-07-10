@@ -21,7 +21,6 @@ public class UserController {
   @PreAuthorize("hasAuthority('admin:manage')")
   public ApiResponse<List<UserSummary>> list() {
     String tenantId = TenantContext.requireTenantId();
-    return ApiResponse.ok(
-        service.listByTenant(tenantId).stream().map(UserSummary::from).toList());
+    return ApiResponse.ok(service.listByTenant(tenantId).stream().map(UserSummary::from).toList());
   }
 }

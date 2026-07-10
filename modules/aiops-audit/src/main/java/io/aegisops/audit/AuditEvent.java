@@ -2,12 +2,14 @@ package io.aegisops.audit;
 
 import java.time.OffsetDateTime;
 
-public record AuditLog(
+public record AuditEvent(
     String id,
     String tenantId,
-    String actorUserId,
+    String actorId,
     String action,
-    String targetType,
-    String targetId,
+    String resourceType,
+    String resourceId,
+    String beforeJson,
+    String afterJson,
     String detailJson,
     OffsetDateTime createdAt) {}

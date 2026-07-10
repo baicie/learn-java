@@ -87,10 +87,7 @@ class WorkRecordValueValidatorTest {
     assertThatThrownBy(
             () ->
                 validator.validate(
-                    TENANT,
-                    VERSION,
-                    List.of(textField("count", false)),
-                    "{\"unknown\":\"v\"}"))
+                    TENANT, VERSION, List.of(textField("count", false)), "{\"unknown\":\"v\"}"))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("unknown field: unknown");
   }
@@ -182,8 +179,7 @@ class WorkRecordValueValidatorTest {
             true,
             OffsetDateTime.now(),
             OffsetDateTime.now());
-    assertThatCode(
-            () -> validator.validate(TENANT, VERSION, List.of(numberField), "{\"count\":3}"))
+    assertThatCode(() -> validator.validate(TENANT, VERSION, List.of(numberField), "{\"count\":3}"))
         .doesNotThrowAnyException();
   }
 

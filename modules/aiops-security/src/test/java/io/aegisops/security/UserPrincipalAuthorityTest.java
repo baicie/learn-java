@@ -16,26 +16,14 @@ class UserPrincipalAuthorityTest {
             "t1",
             "alice",
             "Alice",
-            Set.of(
-                BuiltInRoleCodes.NORMAL_USER),
-            Set.of(
-                PermissionCodes
-                    .WORK_RECORD_READ_SELF,
-                PermissionCodes
-                    .WORK_RECORD_WRITE),
-            Map.of(
-                "work-record",
-                DataScope.SELF));
+            Set.of(BuiltInRoleCodes.NORMAL_USER),
+            Set.of(PermissionCodes.WORK_RECORD_READ_SELF, PermissionCodes.WORK_RECORD_WRITE),
+            Map.of("work-record", DataScope.SELF));
 
-    assertThat(
-            principal.getAuthorities())
-        .extracting(
-            authority ->
-                authority.getAuthority())
+    assertThat(principal.getAuthorities())
+        .extracting(authority -> authority.getAuthority())
         .containsExactlyInAnyOrder(
-            "ROLE_NORMAL_USER",
-            "work-record:read:self",
-            "work-record:write");
+            "ROLE_NORMAL_USER", "work-record:read:self", "work-record:write");
   }
 
   @Test
@@ -46,15 +34,10 @@ class UserPrincipalAuthorityTest {
             "t1",
             "alice",
             "Alice",
-            Set.of(
-                BuiltInRoleCodes.SYSTEM_ADMIN),
+            Set.of(BuiltInRoleCodes.SYSTEM_ADMIN),
             Set.of(),
             Map.of());
 
-    assertThat(
-            principal.hasPermission(
-                PermissionCodes
-                    .WORK_RECORD_EXPORT))
-        .isFalse();
+    assertThat(principal.hasPermission(PermissionCodes.WORK_RECORD_EXPORT)).isFalse();
   }
 }

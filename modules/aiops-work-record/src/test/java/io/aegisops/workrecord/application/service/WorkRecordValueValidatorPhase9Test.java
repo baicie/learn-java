@@ -15,7 +15,8 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 class WorkRecordValueValidatorPhase9Test {
-  private final WorkRecordDictionaryPort dictionaryPort = Mockito.mock(WorkRecordDictionaryPort.class);
+  private final WorkRecordDictionaryPort dictionaryPort =
+      Mockito.mock(WorkRecordDictionaryPort.class);
   private final WorkRecordUserPort userPort = Mockito.mock(WorkRecordUserPort.class);
   private final WorkRecordValueValidator validator =
       new WorkRecordValueValidator(new ObjectMapper(), dictionaryPort, userPort);
@@ -93,7 +94,10 @@ class WorkRecordValueValidatorPhase9Test {
     assertThatThrownBy(
             () ->
                 validator.validate(
-                    "t1", "v1", List.of(field("cost", FieldType.NUMBER, false)), "{\"cost\":\"1\"}"))
+                    "t1",
+                    "v1",
+                    List.of(field("cost", FieldType.NUMBER, false)),
+                    "{\"cost\":\"1\"}"))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("field must be number: cost");
   }
@@ -103,7 +107,10 @@ class WorkRecordValueValidatorPhase9Test {
     assertThatThrownBy(
             () ->
                 validator.validate(
-                    "t1", "v1", List.of(field("day", FieldType.DATE, false)), "{\"day\":\"2026/01/01\"}"))
+                    "t1",
+                    "v1",
+                    List.of(field("day", FieldType.DATE, false)),
+                    "{\"day\":\"2026/01/01\"}"))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("field must be ISO date: day");
   }
@@ -126,7 +133,10 @@ class WorkRecordValueValidatorPhase9Test {
     assertThatThrownBy(
             () ->
                 validator.validate(
-                    "t1", "v1", List.of(field("ok", FieldType.BOOLEAN, false)), "{\"ok\":\"true\"}"))
+                    "t1",
+                    "v1",
+                    List.of(field("ok", FieldType.BOOLEAN, false)),
+                    "{\"ok\":\"true\"}"))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("field must be boolean: ok");
   }
@@ -144,7 +154,8 @@ class WorkRecordValueValidatorPhase9Test {
     WorkRecordField priority =
         field("priority", FieldType.SELECT, false, OptionSource.STATIC, null, "[\"P0\",\"P1\"]");
 
-    assertThatThrownBy(() -> validator.validate("t1", "v1", List.of(priority), "{\"priority\":\"P2\"}"))
+    assertThatThrownBy(
+            () -> validator.validate("t1", "v1", List.of(priority), "{\"priority\":\"P2\"}"))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("field option is not allowed: priority/P2");
   }
@@ -154,7 +165,8 @@ class WorkRecordValueValidatorPhase9Test {
     WorkRecordField priority =
         field("priority", FieldType.SELECT, false, OptionSource.STATIC, null, "[]");
 
-    assertThatThrownBy(() -> validator.validate("t1", "v1", List.of(priority), "{\"priority\":\"P1\"}"))
+    assertThatThrownBy(
+            () -> validator.validate("t1", "v1", List.of(priority), "{\"priority\":\"P1\"}"))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("static options are required: priority");
   }
@@ -249,10 +261,7 @@ class WorkRecordValueValidatorPhase9Test {
     assertThatThrownBy(
             () ->
                 validator.validate(
-                    "t1",
-                    "v1",
-                    List.of(field("cost", FieldType.NUMBER, false)),
-                    "{\"cost\":\"\"}"))
+                    "t1", "v1", List.of(field("cost", FieldType.NUMBER, false)), "{\"cost\":\"\"}"))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("field must be number: cost");
   }
@@ -262,10 +271,7 @@ class WorkRecordValueValidatorPhase9Test {
     assertThatThrownBy(
             () ->
                 validator.validate(
-                    "t1",
-                    "v1",
-                    List.of(field("ok", FieldType.BOOLEAN, false)),
-                    "{\"ok\":\"\"}"))
+                    "t1", "v1", List.of(field("ok", FieldType.BOOLEAN, false)), "{\"ok\":\"\"}"))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("field must be boolean: ok");
   }

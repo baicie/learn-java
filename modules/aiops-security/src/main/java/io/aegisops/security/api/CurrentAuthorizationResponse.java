@@ -14,8 +14,7 @@ public record CurrentAuthorizationResponse(
     Set<String> permissions,
     Map<String, DataScope> dataScopes) {
 
-  public static CurrentAuthorizationResponse from(
-      UserPrincipal principal) {
+  public static CurrentAuthorizationResponse from(UserPrincipal principal) {
     return new CurrentAuthorizationResponse(
         principal.id(),
         principal.tenantId(),

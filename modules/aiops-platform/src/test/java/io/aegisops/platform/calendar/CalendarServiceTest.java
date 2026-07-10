@@ -56,7 +56,8 @@ class CalendarServiceTest {
             () ->
                 service.createCalendar(
                     "tenant-1",
-                    new CreateCalendarRequest("CN_1999", "bad", "CN", "Asia/Shanghai", 1999, true, "manual", null),
+                    new CreateCalendarRequest(
+                        "CN_1999", "bad", "CN", "Asia/Shanghai", 1999, true, "manual", null),
                     "u1"))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("year");
@@ -106,18 +107,12 @@ class CalendarServiceTest {
   @Test
   void shouldCountDerivedWorkdaysWhenDaysAreMissing() {
     when(repository.listDays(
-            "tenant-1",
-            "cal-1",
-            LocalDate.of(2026, 7, 6),
-            LocalDate.of(2026, 7, 12)))
+            "tenant-1", "cal-1", LocalDate.of(2026, 7, 6), LocalDate.of(2026, 7, 12)))
         .thenReturn(java.util.List.of());
 
     WorkdayCountResponse response =
         service.countWorkdays(
-            "tenant-1",
-            "cal-1",
-            LocalDate.of(2026, 7, 6),
-            LocalDate.of(2026, 7, 12));
+            "tenant-1", "cal-1", LocalDate.of(2026, 7, 6), LocalDate.of(2026, 7, 12));
 
     // 2026-07-06 (Mon) to 2026-07-12 (Sun) = 7 days
     // Mon-Fri are workdays, Sat-Sun are not

@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.*;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.aegisops.workrecord.application.command.CopyTemplateCommand;
 import io.aegisops.workrecord.application.command.CreateTemplateCommand;
 import io.aegisops.workrecord.application.command.UpdateTemplateCommand;
@@ -21,8 +22,11 @@ class WorkRecordTemplateServiceTest {
       mock(WorkRecordTemplateUsageRepository.class);
   private final WorkRecordSchemaService schemaService = mock(WorkRecordSchemaService.class);
   private final WorkRecordAuditService auditService = mock(WorkRecordAuditService.class);
+  private final WorkRecordAuditSnapshots auditSnapshots =
+      new WorkRecordAuditSnapshots(new ObjectMapper());
   private final WorkRecordTemplateService service =
-      new WorkRecordTemplateService(repository, usageRepository, schemaService, auditService);
+      new WorkRecordTemplateService(
+          repository, usageRepository, schemaService, auditService, auditSnapshots);
 
   @Test
   void shouldRejectDuplicatedTemplateCodeOnCreate() {
@@ -32,9 +36,7 @@ class WorkRecordTemplateServiceTest {
     assertThatThrownBy(
             () ->
                 service.create(
-                    "t1",
-                    new CreateTemplateCommand("daily", "日报", null, "{}", "{}"),
-                    "u1"))
+                    "t1", new CreateTemplateCommand("daily", "日报", null, "{}", "{}"), "u1"))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("template code already exists");
   }
@@ -45,12 +47,7 @@ class WorkRecordTemplateServiceTest {
         .thenReturn(Optional.of(template("tpl1", TemplateStatus.ARCHIVED, false)));
 
     assertThatThrownBy(
-            () ->
-                service.update(
-                    "t1",
-                    "tpl1",
-                    new UpdateTemplateCommand("新名称", null),
-                    "u1"))
+            () -> service.update("t1", "tpl1", new UpdateTemplateCommand("新名称", null), "u1"))
         .isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("archived template cannot be edited");
   }

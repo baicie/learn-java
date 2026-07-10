@@ -38,9 +38,14 @@ class WorkRecordTemplateVersionServiceTest {
   private final WorkRecordSchemaService schemaService = mock(WorkRecordSchemaService.class);
   private final WorkRecordSchemaNormalizer schemaNormalizer =
       new WorkRecordSchemaNormalizer(new ObjectMapper());
-  private final WorkRecordFieldIndexService fieldIndexService = mock(WorkRecordFieldIndexService.class);
+  private final WorkRecordFieldIndexService fieldIndexService =
+      mock(WorkRecordFieldIndexService.class);
   private final WorkRecordTemplatePublishGuard guard = new WorkRecordTemplatePublishGuard();
   private final WorkRecordAuditService auditService = mock(WorkRecordAuditService.class);
+  private final WorkRecordAuditSnapshots auditSnapshots =
+      new WorkRecordAuditSnapshots(new ObjectMapper());
+  private final WorkRecordFieldAuditService fieldAuditService =
+      new WorkRecordFieldAuditService(auditService, auditSnapshots);
 
   private final WorkRecordTemplateVersionService service =
       new WorkRecordTemplateVersionService(
@@ -52,7 +57,9 @@ class WorkRecordTemplateVersionServiceTest {
           schemaNormalizer,
           fieldIndexService,
           guard,
-          auditService);
+          auditService,
+          auditSnapshots,
+          fieldAuditService);
 
   @Test
   void validatePublishShouldReturnErrorsForDisabledTemplate() {
@@ -108,7 +115,8 @@ class WorkRecordTemplateVersionServiceTest {
   void publishShouldRejectLockedFieldTypeChangeWhenReferenced() {
     WorkRecordTemplate template = template(TemplateStatus.PUBLISHED, true, "v0");
     WorkRecordSchemaDocument document =
-        new WorkRecordSchemaDocument(1, "{}", "{}", List.of(field("priority", FieldType.TEXT)), "[]");
+        new WorkRecordSchemaDocument(
+            1, "{}", "{}", List.of(field("priority", FieldType.TEXT)), "[]");
 
     WorkRecordField previous =
         new WorkRecordField(

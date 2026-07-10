@@ -11,7 +11,8 @@ import org.junit.jupiter.api.Test;
 
 class WorkRecordSchemaNormalizerTest {
   private final ObjectMapper objectMapper = new ObjectMapper();
-  private final WorkRecordSchemaNormalizer normalizer = new WorkRecordSchemaNormalizer(objectMapper);
+  private final WorkRecordSchemaNormalizer normalizer =
+      new WorkRecordSchemaNormalizer(objectMapper);
 
   @Test
   void shouldAddSchemaVersionAndDefaultExtensionFlags() throws Exception {
@@ -79,7 +80,6 @@ class WorkRecordSchemaNormalizerTest {
 
     String json = normalizer.fieldIndexJson(List.of(b, a));
 
-    assertThat(json.indexOf("\"fieldCode\":\"a\""))
-        .isLessThan(json.indexOf("\"fieldCode\":\"b\""));
+    assertThat(json.indexOf("\"fieldCode\":\"a\"")).isLessThan(json.indexOf("\"fieldCode\":\"b\""));
   }
 }
