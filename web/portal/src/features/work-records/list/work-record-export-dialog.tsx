@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -33,9 +33,11 @@ export function WorkRecordExportDialog({
   const [confirmed, setConfirmed] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  const wasOpen = useRef(false)
+
   const exportableColumns = useMemo(
-    () => (meta?.columns ?? []).filter((column) => column.exportable),
-    [meta?.columns]
+    () => (meta?.exportColumns ?? []).filter((column) => column.exportable),
+    [meta?.exportColumns]
   )
 
   const currentExportableKeys = useMemo(
@@ -55,11 +57,16 @@ export function WorkRecordExportDialog({
     setError(null)
   }, [currentExportableKeys])
 
-  const handleOpenChange = (next: boolean) => {
-    onOpenChange(next)
-    if (next) {
+  useEffect(() => {
+    if (open && !wasOpen.current) {
       resetDialog()
     }
+
+    wasOpen.current = open
+  }, [open, resetDialog])
+
+  const handleOpenChange = (next: boolean) => {
+    onOpenChange(next)
   }
 
   const toggleColumn = (key: string) => {

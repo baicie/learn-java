@@ -64,6 +64,7 @@ export type RecordListColumn = {
 export type RecordListMeta = {
   templates: WorkRecordTemplate[]
   columns: RecordListColumn[]
+  exportColumns: RecordListColumn[]
   filterFields: RecordListColumn[]
   dictCodes: string[]
   maxExportRows: number
@@ -91,6 +92,7 @@ export type ListQueryState = {
   quickView: string
   workdayCount: number
   templateId: string
+  templateVersionId: string
   statuses: string[]
   ownerId: string
   creatorId: string

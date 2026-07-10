@@ -1,7 +1,9 @@
 package io.aegisops.user;
 
 import io.aegisops.common.exception.NotFoundException;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -18,6 +20,10 @@ public class UserService {
 
   public List<UserAccount> listByTenant(String tenantId) {
     return repository.findAllByTenantId(tenantId);
+  }
+
+  public Map<String, String> displayNames(String tenantId, Collection<String> userIds) {
+    return repository.findDisplayNamesByTenantIdAndIds(tenantId, userIds);
   }
 
   public Optional<UserAccount> findByUsername(String username) {

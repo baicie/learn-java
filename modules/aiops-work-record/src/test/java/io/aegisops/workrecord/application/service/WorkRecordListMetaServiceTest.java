@@ -36,16 +36,40 @@ class WorkRecordListMetaServiceTest {
   void shouldBuildMetaWithDynamicColumnsAndFilterFields() {
     when(templateRepository.list("t1", true)).thenReturn(List.of(template("tpl1", "v1", true)));
     when(fieldRepository.listEnabledByVersions("t1", List.of("v1")))
-        .thenReturn(List.of(field("tpl1", "v1", "priority", true, true, FieldType.SELECT)));
+        .thenReturn(List.of(field("tpl1", "v1", "priority", true, true, FieldType.SELECT, true)));
 
     var meta = service.meta("t1", "tpl1");
 
     assertThat(meta.templates()).hasSize(1);
     assertThat(meta.columns()).anyMatch(column -> column.key().equals("custom.priority"));
+    assertThat(meta.exportColumns()).anyMatch(column -> column.key().equals("custom.priority"));
     assertThat(meta.filterFields()).anyMatch(column -> column.fieldCode().equals("priority"));
     assertThat(meta.dictCodes()).contains("record_priority");
     assertThat(meta.quickViews())
         .contains("mine", "all", "today", "this_week", "this_month", "recent_workdays");
+  }
+
+  @Test
+  void shouldSeparateColumnsFromExportColumns() {
+    when(templateRepository.list("t1", true)).thenReturn(List.of(template("tpl1", "v1", true)));
+    when(fieldRepository.listEnabledByVersions("t1", List.of("v1")))
+        .thenReturn(
+            List.of(
+                // listVisible=true, exportable=true -> both columns and exportColumns
+                field("tpl1", "v1", "col1", true, true, FieldType.TEXT, true),
+                // listVisible=false, exportable=true -> exportColumns only
+                field("tpl1", "v1", "col2", false, false, FieldType.TEXT, true),
+                // listVisible=true, exportable=false -> columns only
+                field("tpl1", "v1", "col3", true, false, FieldType.TEXT, false)));
+
+    var meta = service.meta("t1", "tpl1");
+
+    assertThat(meta.columns()).hasSize(9); // 7 builtin + col1 + col3
+    assertThat(meta.exportColumns()).hasSize(9); // 7 builtin + col1 + col2
+    assertThat(meta.exportColumns().stream()
+        .filter(c -> "custom.col2".equals(c.key()))
+        .findFirst()
+        .orElseThrow()).isNotNull();
   }
 
   @Test
@@ -57,8 +81,8 @@ class WorkRecordListMetaServiceTest {
     when(fieldRepository.listEnabledByVersions("t1", List.of("v1", "v2")))
         .thenReturn(
             List.of(
-                field("tpl1", "v1", "priority", true, true, FieldType.SELECT),
-                field("tpl2", "v2", "priority", true, true, FieldType.SELECT)));
+                field("tpl1", "v1", "priority", true, true, FieldType.SELECT, true),
+                field("tpl2", "v2", "priority", true, true, FieldType.SELECT, true)));
 
     var meta = service.meta("t1", null);
 
@@ -88,7 +112,7 @@ class WorkRecordListMetaServiceTest {
 
     when(fieldRepository.listEnabledByVersions("t1", List.of("v1")))
         .thenReturn(
-            List.of(field("tpl1", "v1", "priority", true, true, FieldType.SELECT)));
+            List.of(field("tpl1", "v1", "priority", true, true, FieldType.SELECT, true)));
 
     var meta = service.meta("t1", null);
 
@@ -120,7 +144,8 @@ class WorkRecordListMetaServiceTest {
       String code,
       boolean listVisible,
       boolean filterable,
-      FieldType type) {
+      FieldType type,
+      boolean exportable) {
     OffsetDateTime now = OffsetDateTime.now();
     return new WorkRecordField(
         "f-" + code,
@@ -138,7 +163,7 @@ class WorkRecordListMetaServiceTest {
         ".properties." + code,
         listVisible,
         filterable,
-        true,
+        exportable,
         false,
         1,
         true,

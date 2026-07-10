@@ -71,7 +71,10 @@ public class WorkRecordListMetaService {
         deduplicateCompatibleFields(rawFields, templateScoped);
 
     List<RecordListColumn> columns = new ArrayList<>(builtinColumns());
-    columns.addAll(dynamicColumns(fields));
+    columns.addAll(listColumns(fields));
+
+    List<RecordListColumn> exportColumns = new ArrayList<>(builtinColumns());
+    exportColumns.addAll(exportColumns(fields));
 
     List<RecordListColumn> filterFields =
         templateScoped
@@ -91,7 +94,8 @@ public class WorkRecordListMetaService {
 
     return new RecordListMeta(
         templates,
-        columns,
+        List.copyOf(columns),
+        List.copyOf(exportColumns),
         filterFields,
         dictCodes,
         exportPolicy.maxRows(),
@@ -126,8 +130,7 @@ public class WorkRecordListMetaService {
                   field ->
                       field.fieldType() == first.fieldType()
                           && field.optionSource() == first.optionSource()
-                          && Objects.equals(field.dictCode(), first.dictCode())
-                          && field.exportable() == first.exportable());
+                          && Objects.equals(field.dictCode(), first.dictCode()));
 
       if (templateScoped || compatible) {
         result.add(
@@ -177,9 +180,17 @@ public class WorkRecordListMetaService {
         order);
   }
 
-  private List<RecordListColumn> dynamicColumns(List<WorkRecordField> fields) {
+  private List<RecordListColumn> listColumns(List<WorkRecordField> fields) {
     return fields.stream()
         .filter(WorkRecordField::listVisible)
+        .sorted(fieldComparator())
+        .map(this::toDynamicColumn)
+        .toList();
+  }
+
+  private List<RecordListColumn> exportColumns(List<WorkRecordField> fields) {
+    return fields.stream()
+        .filter(WorkRecordField::exportable)
         .sorted(fieldComparator())
         .map(this::toDynamicColumn)
         .toList();
@@ -195,7 +206,7 @@ public class WorkRecordListMetaService {
         field.optionSource().value(),
         field.dictCode(),
         field.optionsJson(),
-        true,
+        field.listVisible(),
         false,
         field.exportable(),
         1000 + field.sortOrder());

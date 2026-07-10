@@ -6,6 +6,7 @@ export const DEFAULT_LIST_QUERY: ListQueryState = {
   quickView: 'all',
   workdayCount: 5,
   templateId: '',
+  templateVersionId: '',
   statuses: [],
   ownerId: '',
   creatorId: '',
@@ -48,6 +49,7 @@ export function parseListSearch(search: URLSearchParams): ListQueryState {
     quickView: search.get('quickView') ?? 'all',
     workdayCount: Number(search.get('workdayCount') ?? 5),
     templateId: search.get('templateId') ?? '',
+    templateVersionId: search.get('templateVersionId') ?? '',
     statuses: search.getAll('status'),
     ownerId: search.get('ownerId') ?? '',
     creatorId: search.get('creatorId') ?? '',
@@ -69,6 +71,7 @@ export function stringifyListSearch(state: ListQueryState) {
   search.set('workdayCount', String(state.workdayCount))
 
   set(search, 'templateId', state.templateId)
+  set(search, 'templateVersionId', state.templateVersionId)
   set(search, 'ownerId', state.ownerId)
   set(search, 'creatorId', state.creatorId)
   set(search, 'keyword', state.keyword)

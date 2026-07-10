@@ -75,6 +75,26 @@ public class JdbcWorkRecordFieldIndexRepository implements WorkRecordFieldIndexR
   }
 
   @Override
+  public List<WorkRecordField> listByVersions(String tenantId, List<String> templateVersionIds) {
+    if (templateVersionIds == null || templateVersionIds.isEmpty()) {
+      return List.of();
+    }
+    return jdbc.query(
+        """
+        select id, tenant_id, template_id, template_version_id, field_name, field_code, field_type,
+               required, default_value, option_source, dict_code, options_json::text, schema_path,
+               list_visible, filterable, exportable, statistical, sort_order, enabled,
+               created_at, updated_at
+          from work_record.wr_template_field
+         where tenant_id = :tenantId
+           and template_version_id in (:versionIds)
+         order by template_version_id, sort_order asc, field_code asc
+        """,
+        Map.of("tenantId", tenantId, "versionIds", templateVersionIds),
+        (rs, rowNum) -> mapField(rs));
+  }
+
+  @Override
   public List<WorkRecordField> listEnabledByVersion(String tenantId, String templateVersionId) {
     return listFields(tenantId, templateVersionId, true);
   }

@@ -79,6 +79,7 @@ public class WorkRecordQueryService {
         normalizeDynamicFilters(
             tenantId,
             quickQuery.templateId(),
+            quickQuery.templateVersionId(),
             quickQuery.dynamicFilters());
 
     return new RecordQuery(
@@ -115,6 +116,7 @@ public class WorkRecordQueryService {
   private List<RecordDynamicFilter> normalizeDynamicFilters(
       String tenantId,
       String templateId,
+      String templateVersionId,
       List<RecordDynamicFilter> filters) {
     if (filters == null || filters.isEmpty()) {
       return List.of();
@@ -125,7 +127,7 @@ public class WorkRecordQueryService {
     }
 
     return dynamicFilterPolicyService.normalize(
-        tenantId, templateId, filters);
+        tenantId, templateId, templateVersionId, filters);
   }
 
   private RecordQuery applyQuickView(RecordQuery query, RecordQuickView view) {

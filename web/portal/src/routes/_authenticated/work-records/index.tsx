@@ -32,6 +32,7 @@ const recordsSearchSchema = z.object({
   quickView: z.string().catch('all'),
   workdayCount: z.coerce.number().int().min(1).max(60).catch(5),
   templateId: z.string().catch(''),
+  templateVersionId: z.string().catch(''),
   statuses: z.array(z.string()).catch([]),
   ownerId: z.string().catch(''),
   creatorId: z.string().catch(''),

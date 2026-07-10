@@ -1,3 +1,4 @@
+import axios from 'axios'
 import { apiClient } from '@/lib/api-client'
 import type { ListQueryState } from './types'
 
@@ -11,39 +12,78 @@ export async function exportWorkRecords(
   query: ListQueryState,
   columns: string[]
 ): Promise<ExportDownload> {
-  const response = await apiClient.post(
-    '/api/work-record/records/export',
-    {
-      templateId: blank(query.templateId),
-      templateVersionId: undefined,
-      statuses: query.statuses,
-      keyword: blank(query.keyword),
-      recordTimeFrom: toOffset(query.recordTimeFrom),
-      recordTimeTo: toOffset(query.recordTimeTo),
-      creatorId: blank(query.creatorId),
-      ownerId: blank(query.ownerId),
-      quickView: query.quickView,
-      workdayCount: query.workdayCount,
-      dynamicFilters: query.dynamicFilters,
-      sortBy: query.sortBy,
-      sortDir: query.sortDir,
-      columns,
-    },
-    {
-      responseType: 'blob',
-    }
-  )
+  try {
+    const response = await apiClient.post(
+      '/api/work-record/records/export',
+      {
+        templateId: blank(query.templateId),
+        templateVersionId: blank(query.templateVersionId),
+        statuses: query.statuses,
+        keyword: blank(query.keyword),
+        recordTimeFrom: toOffset(query.recordTimeFrom),
+        recordTimeTo: toOffset(query.recordTimeTo),
+        creatorId: blank(query.creatorId),
+        ownerId: blank(query.ownerId),
+        quickView: query.quickView,
+        workdayCount: query.workdayCount,
+        dynamicFilters: query.dynamicFilters,
+        sortBy: query.sortBy,
+        sortDir: query.sortDir,
+        columns,
+      },
+      {
+        responseType: 'blob',
+      }
+    )
 
-  return {
-    blob:
-      response.data instanceof Blob
-        ? response.data
-        : new Blob([response.data], {
-            type: 'text/csv;charset=UTF-8',
-          }),
-    fileName: parseExportFileName(response.headers['content-disposition']),
-    rowCount: parseRowCount(response.headers['x-export-row-count']),
+    return {
+      blob:
+        response.data instanceof Blob
+          ? response.data
+          : new Blob([response.data], {
+              type: 'text/csv;charset=UTF-8',
+            }),
+      fileName: parseExportFileName(response.headers['content-disposition']),
+      rowCount: parseRowCount(response.headers['x-export-row-count']),
+    }
+  } catch (error) {
+    throw await normalizeExportError(error)
   }
+}
+
+export async function normalizeExportError(error: unknown): Promise<Error> {
+  if (!axios.isAxiosError(error)) {
+    return error instanceof Error ? error : new Error('导出失败')
+  }
+
+  const responseData = error.response?.data
+
+  if (responseData instanceof Blob) {
+    try {
+      const text = await responseData.text()
+      const payload = JSON.parse(text) as {
+        message?: string
+        errorCode?: string
+      }
+
+      if (payload.message) {
+        return new Error(payload.message)
+      }
+    } catch {
+      // 继续使用 Axios 默认错误。
+    }
+  }
+
+  if (
+    responseData &&
+    typeof responseData === 'object' &&
+    'message' in responseData &&
+    typeof responseData.message === 'string'
+  ) {
+    return new Error(responseData.message)
+  }
+
+  return new Error(error.message || '导出失败')
 }
 
 export function downloadExport(download: ExportDownload) {
@@ -58,7 +98,7 @@ export function downloadExport(download: ExportDownload) {
   anchor.click()
   anchor.remove()
 
-  URL.revokeObjectURL(url)
+  window.setTimeout(() => URL.revokeObjectURL(url), 0)
 }
 
 export function parseExportFileName(contentDisposition?: string) {

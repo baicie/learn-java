@@ -279,6 +279,7 @@ export function RecordForm({ record }: RecordFormProps) {
                 quickView: 'all',
                 workdayCount: 5,
                 templateId: '',
+                templateVersionId: '',
                 statuses: [],
                 ownerId: '',
                 creatorId: '',

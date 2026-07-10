@@ -5,10 +5,7 @@ import io.aegisops.user.UserAccount;
 import io.aegisops.user.UserService;
 import io.aegisops.workrecord.application.port.WorkRecordUserPort;
 import java.util.Collection;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Set;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -42,26 +39,6 @@ public class PlatformUserAdapter implements WorkRecordUserPort {
 
   @Override
   public Map<String, String> displayNames(String tenantId, Collection<String> userIds) {
-    if (userIds == null || userIds.isEmpty()) {
-      return Map.of();
-    }
-
-    Set<String> requested = new HashSet<>(userIds);
-    Map<String, String> result = new LinkedHashMap<>();
-
-    for (UserAccount user : userService.listByTenant(tenantId)) {
-      if (!requested.contains(user.id())) {
-        continue;
-      }
-
-      String displayName =
-          user.displayName() == null || user.displayName().isBlank()
-              ? user.username()
-              : user.displayName();
-
-      result.put(user.id(), displayName);
-    }
-
-    return Map.copyOf(result);
+    return userService.displayNames(tenantId, userIds);
   }
 }

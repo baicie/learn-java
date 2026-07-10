@@ -106,6 +106,7 @@ const initialQuery: ListQueryState = {
   quickView: 'all',
   workdayCount: 5,
   templateId: '',
+  templateVersionId: '',
   statuses: [],
   ownerId: '',
   creatorId: '',

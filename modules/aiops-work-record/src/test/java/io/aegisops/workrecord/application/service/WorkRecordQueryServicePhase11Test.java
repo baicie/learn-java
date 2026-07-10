@@ -39,7 +39,8 @@ class WorkRecordQueryServicePhase11Test {
         RecordDynamicFilter.normalized(
             "priority", DynamicFilterOperator.EQ, FieldType.SELECT, "P1", List.of());
 
-    when(filterPolicyService.normalize(eq("t1"), eq("tpl1"), eq(List.of(raw))))
+    when(filterPolicyService.normalize(
+            eq("t1"), eq("tpl1"), eq(null), eq(List.of(raw))))
         .thenReturn(List.of(normalized));
     when(repository.page(eq("t1"), Mockito.any()))
         .thenReturn(new PageResult<>(0, 1, 20, List.of()));
@@ -50,6 +51,32 @@ class WorkRecordQueryServicePhase11Test {
     verify(repository).page(eq("t1"), captor.capture());
 
     assertThat(captor.getValue().dynamicFilters()).containsExactly(normalized);
+  }
+
+  @Test
+  void shouldPassTemplateVersionToDynamicFilterPolicy() {
+    RecordDynamicFilter raw = RecordDynamicFilter.raw("priority", "eq", "P1");
+    RecordDynamicFilter normalized =
+        RecordDynamicFilter.normalized(
+            "priority", DynamicFilterOperator.EQ, FieldType.SELECT, "P1", List.of());
+
+    when(filterPolicyService.normalize(
+            eq("t1"), eq("tpl1"), eq("v1"), eq(List.of(raw))))
+        .thenReturn(List.of(normalized));
+    when(repository.page(eq("t1"), Mockito.any()))
+        .thenReturn(new PageResult<>(0, 1, 20, List.of()));
+
+    RecordQuery queryWithVersion = new RecordQuery(
+        1, 20, "tpl1", "v1",
+        List.of(), null, null, null, null, null,
+        false, null,
+        List.of(raw),
+        "recordTime", "desc", "all", null);
+
+    service.page("t1", queryWithVersion, user());
+
+    verify(filterPolicyService).normalize(
+        eq("t1"), eq("tpl1"), eq("v1"), eq(List.of(raw)));
   }
 
   private RecordQuery query(List<RecordDynamicFilter> filters) {

@@ -67,6 +67,7 @@ const templateSchema = z
 const metaSchema = z.object({
   templates: z.array(templateSchema),
   columns: z.array(columnSchema),
+  exportColumns: z.array(columnSchema),
   filterFields: z.array(columnSchema),
   dictCodes: z.array(z.string()),
   maxExportRows: z.number(),
@@ -83,6 +84,7 @@ export async function fetchRecordList(
       quickView: params.quickView,
       workdayCount: params.workdayCount,
       templateId: blank(params.templateId),
+      templateVersionId: blank(params.templateVersionId),
       statuses: params.statuses,
       ownerId: blank(params.ownerId),
       creatorId: blank(params.creatorId),

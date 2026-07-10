@@ -7,11 +7,17 @@ import io.aegisops.security.UserPrincipal;
 import io.aegisops.workrecord.application.command.RecordListColumn;
 import io.aegisops.workrecord.application.command.RecordListMeta;
 import io.aegisops.workrecord.application.command.RecordQuery;
+import io.aegisops.workrecord.application.command.ResolvedExportColumn;
 import io.aegisops.workrecord.application.command.WorkRecordExportResult;
 import io.aegisops.workrecord.application.port.WorkRecordDictionaryPort;
 import io.aegisops.workrecord.application.port.WorkRecordRepository;
 import io.aegisops.workrecord.application.port.WorkRecordUserPort;
+import io.aegisops.workrecord.domain.model.FieldType;
+import io.aegisops.workrecord.domain.model.OptionSource;
 import io.aegisops.workrecord.domain.model.WorkRecord;
+import io.aegisops.workrecord.domain.model.WorkRecordField;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
@@ -19,12 +25,12 @@ import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.HexFormat;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
@@ -41,6 +47,7 @@ public class WorkRecordExportService {
   private final WorkRecordListMetaService metaService;
   private final WorkRecordPermissionService permissionService;
   private final WorkRecordExportPolicy exportPolicy;
+  private final WorkRecordExportColumnResolver columnResolver;
   private final WorkRecordDictionaryPort dictionaryPort;
   private final WorkRecordUserPort userPort;
   private final WorkRecordAuditService auditService;
@@ -54,6 +61,7 @@ public class WorkRecordExportService {
       WorkRecordListMetaService metaService,
       WorkRecordPermissionService permissionService,
       WorkRecordExportPolicy exportPolicy,
+      WorkRecordExportColumnResolver columnResolver,
       WorkRecordDictionaryPort dictionaryPort,
       WorkRecordUserPort userPort,
       WorkRecordAuditService auditService,
@@ -65,6 +73,7 @@ public class WorkRecordExportService {
     this.metaService = metaService;
     this.permissionService = permissionService;
     this.exportPolicy = exportPolicy;
+    this.columnResolver = columnResolver;
     this.dictionaryPort = dictionaryPort;
     this.userPort = userPort;
     this.auditService = auditService;
@@ -81,31 +90,21 @@ public class WorkRecordExportService {
     permissionService.requireExport(user);
 
     RecordQuery query =
-        queryService.prepareEffectiveQuery(
-            tenantId, rawQuery, user);
+        queryService.prepareEffectiveQuery(tenantId, rawQuery, user);
 
     RecordListMeta meta =
         metaService.meta(tenantId, query.templateId());
 
-    List<RecordListColumn> columns =
-        resolveColumns(
-            meta.columns(), requestedColumnKeys);
+    List<RecordListColumn> requestedColumns =
+        resolveColumns(meta.exportColumns(), requestedColumnKeys);
 
     int maxRows = exportPolicy.maxRows();
 
     List<WorkRecord> records =
-        recordRepository.listForExport(
-            tenantId,
-            query,
-            maxRows + 1);
+        recordRepository.listForExport(tenantId, query, maxRows + 1);
 
     if (records.size() > maxRows) {
-      recordRejectedAudit(
-          tenantId,
-          query,
-          columns,
-          user,
-          maxRows);
+      recordRejectedAudit(tenantId, query, requestedColumns, user, maxRows);
 
       throw new IllegalArgumentException(
           "导出结果超过 "
@@ -113,19 +112,17 @@ public class WorkRecordExportService {
               + " 行，请缩小筛选范围后重试");
     }
 
-    List<ParsedRecord> parsedRecords =
-        parseRecords(records);
+    List<ResolvedExportColumn> columns =
+        columnResolver.resolve(tenantId, requestedColumns, records);
+
+    List<ParsedRecord> parsedRecords = parseRecords(records);
 
     LookupContext context =
-        buildLookupContext(
-            tenantId,
-            meta,
-            columns,
-            parsedRecords);
+        buildLookupContext(tenantId, meta, columns, parsedRecords);
 
     List<String> headers =
         columns.stream()
-            .map(RecordListColumn::title)
+            .map(ResolvedExportColumn::title)
             .toList();
 
     List<List<String>> rows = new ArrayList<>();
@@ -133,7 +130,7 @@ public class WorkRecordExportService {
     for (ParsedRecord record : parsedRecords) {
       List<String> row = new ArrayList<>();
 
-      for (RecordListColumn column : columns) {
+      for (ResolvedExportColumn column : columns) {
         row.add(formatCell(record, column, context));
       }
 
@@ -144,38 +141,36 @@ public class WorkRecordExportService {
 
     String fileName =
         "work-records-"
-            + OffsetDateTime.now(clock)
-                .format(FILE_TIME_FORMATTER)
+            + OffsetDateTime.now(clock).format(FILE_TIME_FORMATTER)
             + ".csv";
 
+    String contentSha256 = sha256(content);
     String exportId = Ids.newId();
 
     recordSuccessAudit(
         tenantId,
         exportId,
         query,
-        columns,
+        columns.stream()
+            .map(ResolvedExportColumn::column)
+            .toList(),
         records.size(),
+        fileName,
+        contentSha256,
         user);
 
-    return new WorkRecordExportResult(
-        fileName,
-        content,
-        records.size());
+    return new WorkRecordExportResult(fileName, content, records.size());
   }
 
   private List<RecordListColumn> resolveColumns(
       List<RecordListColumn> candidates,
       List<String> requestedKeys) {
-    Map<String, RecordListColumn> candidateMap =
-        new LinkedHashMap<>();
-
+    Map<String, RecordListColumn> candidateMap = new LinkedHashMap<>();
     for (RecordListColumn column : candidates) {
       candidateMap.put(column.key(), column);
     }
 
-    LinkedHashSet<String> selectedKeys =
-        new LinkedHashSet<>();
+    LinkedHashSet<String> selectedKeys = new LinkedHashSet<>();
 
     if (requestedKeys == null || requestedKeys.isEmpty()) {
       candidates.stream()
@@ -185,16 +180,14 @@ public class WorkRecordExportService {
           .forEach(selectedKeys::add);
     } else {
       for (String key : requestedKeys) {
-        if (key == null || key.isBlank()) {
-          continue;
+        if (key != null && !key.isBlank()) {
+          selectedKeys.add(key);
         }
-        selectedKeys.add(key);
       }
     }
 
     if (selectedKeys.isEmpty()) {
-      throw new IllegalArgumentException(
-          "至少选择一个导出列");
+      throw new IllegalArgumentException("至少选择一个导出列");
     }
 
     List<RecordListColumn> result = new ArrayList<>();
@@ -203,8 +196,7 @@ public class WorkRecordExportService {
       RecordListColumn column = candidateMap.get(key);
 
       if (column == null) {
-        throw new IllegalArgumentException(
-            "unknown export column: " + key);
+        throw new IllegalArgumentException("unknown export column: " + key);
       }
 
       if (!column.exportable()) {
@@ -218,8 +210,7 @@ public class WorkRecordExportService {
     return List.copyOf(result);
   }
 
-  private List<ParsedRecord> parseRecords(
-      List<WorkRecord> records) {
+  private List<ParsedRecord> parseRecords(List<WorkRecord> records) {
     List<ParsedRecord> result = new ArrayList<>();
 
     for (WorkRecord record : records) {
@@ -247,90 +238,101 @@ public class WorkRecordExportService {
   private LookupContext buildLookupContext(
       String tenantId,
       RecordListMeta meta,
-      List<RecordListColumn> columns,
+      List<ResolvedExportColumn> columns,
       List<ParsedRecord> records) {
-    Map<String, String> templateNames =
-        new HashMap<>();
+    Map<String, String> templateNames = new HashMap<>();
+    meta.templates().forEach(
+        template ->
+            templateNames.put(template.id(), template.name()));
 
-    meta.templates()
-        .forEach(
-            template ->
-                templateNames.put(
-                    template.id(), template.name()));
-
-    Set<String> userIds = new HashSet<>();
+    Set<String> userIds = new LinkedHashSet<>();
+    Map<String, Map<String, String>> dictionaryLabels = new HashMap<>();
+    Map<String, Map<String, String>> staticOptionLabels = new HashMap<>();
 
     for (ParsedRecord parsed : records) {
       addNonBlank(userIds, parsed.record().ownerId());
       addNonBlank(userIds, parsed.record().creatorId());
 
-      for (RecordListColumn column : columns) {
-        if (!"custom".equals(column.source())
-            || !"user".equals(column.fieldType())
-            || column.fieldCode() == null) {
+      for (ResolvedExportColumn resolved : columns) {
+        if (resolved.builtin()) {
+          continue;
+        }
+
+        WorkRecordField field =
+            resolved.fieldForVersion(parsed.record().templateVersionId());
+
+        if (field == null) {
           continue;
         }
 
         JsonNode value =
-            parsed.customData().get(column.fieldCode());
+            parsed.customData().get(field.fieldCode());
 
-        if (value != null && value.isTextual()) {
+        if (field.fieldType() == FieldType.USER
+            && value != null
+            && value.isTextual()) {
           addNonBlank(userIds, value.asText());
         }
       }
     }
 
-    Map<String, String> userNames =
-        userPort.displayNames(tenantId, userIds);
+    for (ResolvedExportColumn resolved : columns) {
+      for (WorkRecordField field : resolved.fieldsByVersion().values()) {
+        if (field.dictCode() != null
+            && !field.dictCode().isBlank()) {
+          dictionaryLabels.computeIfAbsent(
+              field.dictCode(),
+              code -> dictionaryPort.itemLabels(tenantId, code));
+        }
 
-    Map<String, Map<String, String>> dictionaryLabels =
-        new HashMap<>();
-
-    Map<String, Map<String, String>> staticOptionLabels =
-        new HashMap<>();
-
-    for (RecordListColumn column : columns) {
-      if (column.dictCode() != null
-          && !column.dictCode().isBlank()) {
-        dictionaryLabels.computeIfAbsent(
-            column.dictCode(),
-            dictCode ->
-                dictionaryPort.itemLabels(
-                    tenantId, dictCode));
-      }
-
-      if ("static".equals(column.optionSource())) {
-        staticOptionLabels.put(
-            column.key(),
-            parseStaticOptionLabels(
-                column.optionsJson()));
+        if (field.optionSource() == OptionSource.STATIC) {
+          String staticKey =
+              field.templateVersionId() + "|" + resolved.key();
+          staticOptionLabels.put(
+              staticKey,
+              parseStaticOptionLabels(field.optionsJson()));
+        }
       }
     }
 
     return new LookupContext(
         Map.copyOf(templateNames),
-        Map.copyOf(userNames),
+        userPort.displayNames(tenantId, userIds),
         Map.copyOf(dictionaryLabels),
         Map.copyOf(staticOptionLabels));
   }
 
   private String formatCell(
       ParsedRecord parsed,
-      RecordListColumn column,
+      ResolvedExportColumn resolved,
       LookupContext context) {
-    if ("builtin".equals(column.source())) {
-      return formatBuiltin(
-          parsed.record(), column.key(), context);
+    RecordListColumn column = resolved.column();
+
+    if (resolved.builtin()) {
+      return formatBuiltin(parsed.record(), column.key(), context);
     }
 
-    if (column.fieldCode() == null) {
+    String fieldCode = column.fieldCode();
+    if (fieldCode == null) {
       return "";
     }
 
-    JsonNode value =
-        parsed.customData().get(column.fieldCode());
+    JsonNode value = parsed.customData().get(fieldCode);
+    WorkRecordField field =
+        resolved.fieldForVersion(parsed.record().templateVersionId());
 
-    return formatDynamic(value, column, context);
+    if (field == null) {
+      if (value != null && !value.isNull()) {
+        throw new IllegalStateException(
+            "record contains field without version metadata: "
+                + parsed.record().id()
+                + "/"
+                + fieldCode);
+      }
+      return "";
+    }
+
+    return formatDynamic(value, field, resolved.key(), context);
   }
 
   private String formatBuiltin(
@@ -341,91 +343,64 @@ public class WorkRecordExportService {
       case "title" -> blank(record.title());
       case "status" -> statusLabel(record.status().value());
       case "templateId" ->
-          context.templateNames()
-              .getOrDefault(
-                  record.templateId(),
-                  record.templateId());
-      case "ownerId" ->
-          displayUser(record.ownerId(), context.userNames());
-      case "creatorId" ->
-          displayUser(record.creatorId(), context.userNames());
-      case "recordTime" ->
-          formatTime(record.recordTime());
-      case "createdAt" ->
-          formatTime(record.createdAt());
-      case "updatedAt" ->
-          formatTime(record.updatedAt());
-      case "templateVersionId" ->
-          blank(record.templateVersionId());
+          context.templateNames().getOrDefault(
+              record.templateId(), record.templateId());
+      case "ownerId" -> displayUser(record.ownerId(), context.userNames());
+      case "creatorId" -> displayUser(record.creatorId(), context.userNames());
+      case "recordTime" -> formatTime(record.recordTime());
+      case "createdAt" -> formatTime(record.createdAt());
+      case "updatedAt" -> formatTime(record.updatedAt());
+      case "templateVersionId" -> blank(record.templateVersionId());
       default -> "";
     };
   }
 
   private String formatDynamic(
       JsonNode value,
-      RecordListColumn column,
+      WorkRecordField field,
+      String columnKey,
       LookupContext context) {
     if (value == null || value.isNull()) {
       return "";
     }
 
-    if ("user".equals(column.fieldType())) {
-      return displayUser(
-          value.asText(), context.userNames());
-    }
-
-    if ("datetime".equals(column.fieldType())) {
-      return formatDynamicTime(value.asText());
-    }
-
-    if ("boolean".equals(column.fieldType())) {
-      return value.asBoolean() ? "是" : "否";
-    }
-
-    if (value.isArray()) {
-      List<String> values = new ArrayList<>();
-
-      for (JsonNode item : value) {
-        values.add(
-            formatOptionValue(
-                item.asText(), column, context));
+    return switch (field.fieldType()) {
+      case USER -> displayUser(value.asText(), context.userNames());
+      case DATETIME -> formatDynamicTime(value.asText());
+      case BOOLEAN -> value.asBoolean() ? "是" : "否";
+      case SELECT -> formatOptionValue(value.asText(), field, columnKey, context);
+      case MULTI_SELECT -> {
+        if (!value.isArray()) {
+          yield value.asText();
+        }
+        List<String> values = new ArrayList<>();
+        for (JsonNode item : value) {
+          values.add(formatOptionValue(item.asText(), field, columnKey, context));
+        }
+        yield String.join("; ", values);
       }
-
-      return String.join("; ", values);
-    }
-
-    if ("select".equals(column.fieldType())) {
-      return formatOptionValue(
-          value.asText(), column, context);
-    }
-
-    if (value.isTextual()
-        || value.isNumber()
-        || value.isBoolean()) {
-      return value.asText();
-    }
-
-    return value.toString();
+      default -> value.isValueNode() ? value.asText() : value.toString();
+    };
   }
 
   private String formatOptionValue(
       String raw,
-      RecordListColumn column,
+      WorkRecordField field,
+      String columnKey,
       LookupContext context) {
-    if (column.dictCode() != null
-        && !column.dictCode().isBlank()) {
+    if (field.dictCode() != null && !field.dictCode().isBlank()) {
       return context.dictionaryLabels()
-          .getOrDefault(column.dictCode(), Map.of())
+          .getOrDefault(field.dictCode(), Map.of())
           .getOrDefault(raw, raw);
     }
 
+    String staticKey = field.templateVersionId() + "|" + columnKey;
     return context.staticOptionLabels()
-        .getOrDefault(column.key(), Map.of())
+        .getOrDefault(staticKey, Map.of())
         .getOrDefault(raw, raw);
   }
 
-  private Map<String, String> parseStaticOptionLabels(
-      String optionsJson) {
+  private Map<String, String> parseStaticOptionLabels(String optionsJson) {
     if (optionsJson == null || optionsJson.isBlank()) {
       return Map.of();
     }
@@ -440,9 +415,7 @@ public class WorkRecordExportService {
       Map<String, String> result = new LinkedHashMap<>();
 
       for (JsonNode item : root) {
-        if (item.isTextual()
-            || item.isNumber()
-            || item.isBoolean()) {
+        if (item.isTextual() || item.isNumber() || item.isBoolean()) {
           result.put(item.asText(), item.asText());
           continue;
         }
@@ -476,13 +449,10 @@ public class WorkRecordExportService {
     }
   }
 
-  private String displayUser(
-      String userId,
-      Map<String, String> userNames) {
+  private String displayUser(String userId, Map<String, String> userNames) {
     if (userId == null || userId.isBlank()) {
       return "";
     }
-
     return userNames.getOrDefault(userId, userId);
   }
 
@@ -502,10 +472,7 @@ public class WorkRecordExportService {
     if (value == null) {
       return "";
     }
-
-    return value
-        .atZoneSameInstant(clock.getZone())
-        .format(CELL_TIME_FORMATTER);
+    return value.atZoneSameInstant(clock.getZone()).format(CELL_TIME_FORMATTER);
   }
 
   private String statusLabel(String status) {
@@ -524,6 +491,8 @@ public class WorkRecordExportService {
       RecordQuery query,
       List<RecordListColumn> columns,
       int rowCount,
+      String fileName,
+      String contentSha256,
       UserPrincipal user) {
     auditService.record(
         tenantId,
@@ -533,12 +502,8 @@ public class WorkRecordExportService {
         exportId,
         "work_record.record.export",
         actorId(user),
-        auditDetail(
-            query,
-            columns,
-            rowCount,
-            exportPolicy.maxRows(),
-            "success"));
+        auditDetail(query, columns, rowCount, exportPolicy.maxRows(),
+            "success", fileName, contentSha256));
   }
 
   private void recordRejectedAudit(
@@ -555,12 +520,8 @@ public class WorkRecordExportService {
         Ids.newId(),
         "work_record.record.export_rejected",
         actorId(user),
-        auditDetail(
-            query,
-            columns,
-            maxRows + 1,
-            maxRows,
-            "limit_exceeded"));
+        auditDetail(query, columns, maxRows + 1, maxRows,
+            "limit_exceeded", null, null));
   }
 
   private String auditDetail(
@@ -568,48 +529,65 @@ public class WorkRecordExportService {
       List<RecordListColumn> columns,
       int rowCount,
       int maxRows,
-      String result) {
+      String result,
+      String fileName,
+      String contentSha256) {
     Map<String, Object> detail = new LinkedHashMap<>();
 
     detail.put("result", result);
     detail.put("rowCount", rowCount);
     detail.put("maxRows", maxRows);
+    detail.put("fileName", fileName);
+    detail.put("contentSha256", contentSha256);
     detail.put(
         "columns",
         columns.stream()
             .map(RecordListColumn::key)
             .toList());
-    detail.put("templateId", query.templateId());
-    detail.put(
-        "templateVersionId",
-        query.templateVersionId());
-    detail.put("statuses", query.statuses());
-    detail.put("quickView", query.quickView());
-    detail.put(
-        "dynamicFilterCount",
-        query.dynamicFilters() == null
-            ? 0
-            : query.dynamicFilters().size());
+
+    Map<String, Object> querySnapshot = new LinkedHashMap<>();
+    querySnapshot.put("templateId", query.templateId());
+    querySnapshot.put("templateVersionId", query.templateVersionId());
+    querySnapshot.put("statuses", query.statuses());
+    querySnapshot.put("keyword", query.keyword());
+    querySnapshot.put("recordTimeFrom", query.recordTimeFrom());
+    querySnapshot.put("recordTimeTo", query.recordTimeTo());
+    querySnapshot.put("creatorId", query.creatorId());
+    querySnapshot.put("ownerId", query.ownerId());
+    querySnapshot.put("onlySelf", query.onlySelf());
+    querySnapshot.put("quickView", query.quickView());
+    querySnapshot.put("workdayCount", query.workdayCount());
+    querySnapshot.put("sortBy", query.sortBy());
+    querySnapshot.put("sortDir", query.sortDir());
+    querySnapshot.put("dynamicFilters", query.dynamicFilters());
+
+    detail.put("query", querySnapshot);
 
     try {
       return objectMapper.writeValueAsString(detail);
     } catch (Exception ex) {
-      return "{}";
+      throw new IllegalStateException(
+          "failed to serialize export audit detail", ex);
     }
   }
 
-  private void addNonBlank(
-      Collection<String> target,
-      String value) {
+  private String sha256(byte[] content) {
+    try {
+      MessageDigest digest = MessageDigest.getInstance("SHA-256");
+      return HexFormat.of().formatHex(digest.digest(content));
+    } catch (NoSuchAlgorithmException ex) {
+      throw new IllegalStateException("SHA-256 is unavailable", ex);
+    }
+  }
+
+  private void addNonBlank(Collection<String> target, String value) {
     if (value != null && !value.isBlank()) {
       target.add(value);
     }
   }
 
   private String actorId(UserPrincipal user) {
-    return user == null
-        || user.id() == null
-        || user.id().isBlank()
+    return user == null || user.id() == null || user.id().isBlank()
         ? "system"
         : user.id();
   }
@@ -618,9 +596,7 @@ public class WorkRecordExportService {
     return value == null ? "" : value;
   }
 
-  private record ParsedRecord(
-      WorkRecord record,
-      JsonNode customData) {}
+  private record ParsedRecord(WorkRecord record, JsonNode customData) {}
 
   private record LookupContext(
       Map<String, String> templateNames,
