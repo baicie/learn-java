@@ -96,6 +96,7 @@ public class WorkRecordListMetaService {
             RecordQuickView.TODAY.value(),
             RecordQuickView.THIS_WEEK.value(),
             RecordQuickView.THIS_MONTH.value(),
+            RecordQuickView.THIS_WORK_MONTH.value(),
             RecordQuickView.RECENT_WORKDAYS.value()));
   }
 

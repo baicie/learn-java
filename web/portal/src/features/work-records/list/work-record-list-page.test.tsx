@@ -72,7 +72,15 @@ vi.mock('./api', () => ({
     ],
     dictCodes: ['record_priority'],
     maxExportRows: 5000,
-    quickViews: ['mine', 'all', 'today', 'this_week', 'this_month'],
+    quickViews: [
+      'mine',
+      'all',
+      'today',
+      'this_week',
+      'this_month',
+      'this_work_month',
+      'recent_workdays',
+    ],
   }),
   fetchRecordList: async () => ({
     total: 1,
@@ -97,6 +105,17 @@ vi.mock('./api', () => ({
         deletedAt: null,
       },
     ],
+  }),
+  fetchWorkdaySummary: async () => ({
+    calendarId: 'cal1',
+    calendarName: '中国大陆 2026 工作日历',
+    timeZone: 'Asia/Shanghai',
+    month: '2026-07',
+    periodStart: '2026-07-01',
+    periodEnd: '2026-07-31',
+    workdayCount: 23,
+    firstWorkday: '2026-07-01',
+    lastWorkday: '2026-07-31',
   }),
 }))
 
@@ -140,5 +159,37 @@ describe('WorkRecordListPage', () => {
     expect(
       screen.getByText('列显示控制', { exact: true }).element()
     ).toBeTruthy()
+  })
+
+  it('renders work month summary', async () => {
+    const query = {
+      ...initialQuery,
+      quickView: 'this_work_month',
+    }
+
+    const screen = await render(
+      <QueryClientProvider
+        client={new QueryClient()}
+      >
+        <WorkRecordListPage
+          query={query}
+          onQueryChange={vi.fn()}
+        />
+      </QueryClientProvider>
+    )
+
+    await expect
+      .element(
+        screen.getByText('23 天')
+      )
+      .toBeVisible()
+
+    await expect
+      .element(
+        screen.getByText(
+          '中国大陆 2026 工作日历'
+        )
+      )
+      .toBeVisible()
   })
 })

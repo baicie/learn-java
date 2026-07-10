@@ -6,6 +6,7 @@ public enum RecordQuickView {
   TODAY("today"),
   THIS_WEEK("this_week"),
   THIS_MONTH("this_month"),
+  THIS_WORK_MONTH("this_work_month"),
   RECENT_WORKDAYS("recent_workdays");
 
   private final String value;
@@ -22,11 +23,13 @@ public enum RecordQuickView {
     if (value == null || value.isBlank()) {
       return ALL;
     }
+
     for (RecordQuickView item : values()) {
       if (item.value.equalsIgnoreCase(value) || item.name().equalsIgnoreCase(value)) {
         return item;
       }
     }
+
     throw new IllegalArgumentException("unsupported quickView: " + value);
   }
 }

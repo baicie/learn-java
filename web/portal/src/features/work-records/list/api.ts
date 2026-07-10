@@ -5,6 +5,7 @@ import type {
   ListQueryState,
   PageResult,
   RecordListMeta,
+  RecordWorkdaySummary,
   WorkRecord,
 } from './types'
 
@@ -112,6 +113,33 @@ export async function fetchRecordListMeta(
   })
 
   return apiResponseSchema(metaSchema).parse(data).data
+}
+
+const workdaySummarySchema = z.object({
+  calendarId: z.string(),
+  calendarName: z.string(),
+  timeZone: z.string(),
+  month: z.string(),
+  periodStart: z.string(),
+  periodEnd: z.string(),
+  workdayCount: z.number().int().nonnegative(),
+  firstWorkday: z.string().nullable(),
+  lastWorkday: z.string().nullable(),
+})
+
+export async function fetchWorkdaySummary(
+  month?: string
+): Promise<RecordWorkdaySummary> {
+  const { data } = await apiClient.get(
+    '/api/work-record/records/workdays/summary',
+    {
+      params: {
+        month: blank(month),
+      },
+    }
+  )
+
+  return apiResponseSchema(workdaySummarySchema).parse(data).data
 }
 
 function blank(value?: string) {

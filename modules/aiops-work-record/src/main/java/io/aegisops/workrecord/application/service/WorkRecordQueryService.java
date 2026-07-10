@@ -5,12 +5,16 @@ import io.aegisops.security.UserPrincipal;
 import io.aegisops.workrecord.application.command.RecordDynamicFilter;
 import io.aegisops.workrecord.application.command.RecordQuery;
 import io.aegisops.workrecord.application.command.RecordQuickView;
+import io.aegisops.workrecord.application.port.WorkRecordCalendarPort;
 import io.aegisops.workrecord.application.port.WorkRecordRepository;
+import io.aegisops.workrecord.application.port.WorkRecordWorkMonth;
+import io.aegisops.workrecord.application.port.WorkRecordWorkdayWindow;
 import io.aegisops.workrecord.domain.model.WorkRecord;
 import java.time.Clock;
-import java.time.DayOfWeek;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,9 +23,13 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class WorkRecordQueryService {
+  private static final int DEFAULT_WORKDAY_COUNT = 5;
+  private static final int MAX_WORKDAY_COUNT = 60;
+
   private final WorkRecordRepository repository;
   private final WorkRecordPermissionService permissionService;
   private final WorkRecordDynamicFilterPolicyService dynamicFilterPolicyService;
+  private final WorkRecordCalendarPort calendarPort;
   private final Clock clock;
 
   @Autowired
@@ -29,16 +37,26 @@ public class WorkRecordQueryService {
       WorkRecordRepository repository,
       WorkRecordPermissionService permissionService,
       WorkRecordDynamicFilterPolicyService dynamicFilterPolicyService,
+      WorkRecordCalendarPort calendarPort,
       @Qualifier("workRecordClock") Clock clock) {
     this.repository = repository;
     this.permissionService = permissionService;
     this.dynamicFilterPolicyService = dynamicFilterPolicyService;
+    this.calendarPort = calendarPort;
     this.clock = clock;
   }
 
   WorkRecordQueryService(
       WorkRecordRepository repository, WorkRecordPermissionService permissionService) {
-    this(repository, permissionService, null, Clock.systemUTC());
+    this(repository, permissionService, null, null, Clock.systemUTC());
+  }
+
+  WorkRecordQueryService(
+      WorkRecordRepository repository,
+      WorkRecordPermissionService permissionService,
+      WorkRecordDynamicFilterPolicyService dynamicFilterPolicyService,
+      Clock clock) {
+    this(repository, permissionService, dynamicFilterPolicyService, null, clock);
   }
 
   public PageResult<WorkRecord> page(String tenantId, RecordQuery query, UserPrincipal user) {
@@ -50,17 +68,17 @@ public class WorkRecordQueryService {
       throw new IllegalArgumentException("record query is required");
     }
 
-    boolean permissionOnlySelf = !permissionService.canReadAll(user);
+    boolean canReadAll = permissionService.canReadAll(user);
 
-    if (!permissionService.canReadAll(user) && !permissionService.canReadSelf(user)) {
+    if (!canReadAll && !permissionService.canReadSelf(user)) {
       throw new SecurityException("not allowed to read work records");
     }
 
     RecordQuickView view = RecordQuickView.from(query.quickView());
 
-    RecordQuery quickQuery = applyQuickView(query, view);
+    RecordQuery quickQuery = applyQuickView(tenantId, query, view);
 
-    boolean effectiveOnlySelf = permissionOnlySelf || view == RecordQuickView.MINE;
+    boolean effectiveOnlySelf = !canReadAll || view == RecordQuickView.MINE;
 
     List<RecordDynamicFilter> normalizedFilters =
         normalizeDynamicFilters(
@@ -96,56 +114,69 @@ public class WorkRecordQueryService {
             .orElseThrow(() -> new IllegalArgumentException("work record not found"));
 
     permissionService.requireRead(user, record);
+
     return record;
   }
 
-  private List<RecordDynamicFilter> normalizeDynamicFilters(
-      String tenantId,
-      String templateId,
-      String templateVersionId,
-      List<RecordDynamicFilter> filters) {
-    if (filters == null || filters.isEmpty()) {
-      return List.of();
-    }
+  private RecordQuery applyQuickView(String tenantId, RecordQuery query, RecordQuickView view) {
+    Instant nowInstant = clock.instant();
 
-    if (dynamicFilterPolicyService == null) {
-      throw new IllegalStateException("dynamic filter policy service is unavailable");
-    }
-
-    return dynamicFilterPolicyService.normalize(tenantId, templateId, templateVersionId, filters);
-  }
-
-  private RecordQuery applyQuickView(RecordQuery query, RecordQuickView view) {
     ZonedDateTime now = ZonedDateTime.now(clock);
+
     OffsetDateTime from = query.recordTimeFrom();
+
     OffsetDateTime to = query.recordTimeTo();
 
     switch (view) {
       case MINE, ALL -> {
-        // MINE 由 effectiveOnlySelf 统一实现 owner OR creator。
+        // 数据范围统一在 effectiveOnlySelf 中实现。
       }
+
       case TODAY -> {
         from = now.toLocalDate().atStartOfDay(clock.getZone()).toOffsetDateTime();
+
         to = from.plusDays(1);
       }
+
       case THIS_WEEK -> {
         LocalDate start = now.toLocalDate().minusDays(now.getDayOfWeek().getValue() - 1L);
+
         from = start.atStartOfDay(clock.getZone()).toOffsetDateTime();
+
         to = from.plusWeeks(1);
       }
+
       case THIS_MONTH -> {
         LocalDate start = now.toLocalDate().withDayOfMonth(1);
+
         from = start.atStartOfDay(clock.getZone()).toOffsetDateTime();
+
         to = start.plusMonths(1).atStartOfDay(clock.getZone()).toOffsetDateTime();
       }
+
+      case THIS_WORK_MONTH -> {
+        WorkRecordWorkMonth month = requireCalendarPort().currentWorkMonth(tenantId, nowInstant);
+
+        ZoneId zoneId = ZoneId.of(month.timeZone());
+
+        from = month.periodStart().atStartOfDay(zoneId).toOffsetDateTime();
+
+        to = month.periodEnd().plusDays(1).atStartOfDay(zoneId).toOffsetDateTime();
+      }
+
       case RECENT_WORKDAYS -> {
-        int count =
-            query.workdayCount() == null ? 5 : Math.max(1, Math.min(query.workdayCount(), 60));
+        int count = normalizeWorkdayCount(query.workdayCount());
 
-        LocalDate start = recentWorkdayStart(now.toLocalDate(), count);
+        WorkRecordWorkdayWindow window =
+            requireCalendarPort().recentWorkdays(tenantId, nowInstant, count);
 
-        from = start.atStartOfDay(clock.getZone()).toOffsetDateTime();
-        to = now.toOffsetDateTime();
+        ZoneId zoneId = ZoneId.of(window.timeZone());
+
+        from = window.periodStart().atStartOfDay(zoneId).toOffsetDateTime();
+
+        // 保持原有语义：从第 N 个工作日开始到当前时刻。
+        // 期间若有人主动填写节假日记录，仍然可见。
+        to = OffsetDateTime.ofInstant(nowInstant, zoneId);
       }
     }
 
@@ -169,21 +200,35 @@ public class WorkRecordQueryService {
         query.workdayCount());
   }
 
-  private LocalDate recentWorkdayStart(LocalDate today, int count) {
-    LocalDate cursor = today;
-    int remaining = count;
-
-    while (remaining > 0) {
-      DayOfWeek day = cursor.getDayOfWeek();
-      if (day != DayOfWeek.SATURDAY && day != DayOfWeek.SUNDAY) {
-        remaining -= 1;
-      }
-
-      if (remaining > 0) {
-        cursor = cursor.minusDays(1);
-      }
+  private List<RecordDynamicFilter> normalizeDynamicFilters(
+      String tenantId,
+      String templateId,
+      String templateVersionId,
+      List<RecordDynamicFilter> filters) {
+    if (filters == null || filters.isEmpty()) {
+      return List.of();
     }
 
-    return cursor;
+    if (dynamicFilterPolicyService == null) {
+      throw new IllegalStateException("dynamic filter policy service " + "is unavailable");
+    }
+
+    return dynamicFilterPolicyService.normalize(tenantId, templateId, templateVersionId, filters);
+  }
+
+  private int normalizeWorkdayCount(Integer requested) {
+    if (requested == null) {
+      return DEFAULT_WORKDAY_COUNT;
+    }
+
+    return Math.min(Math.max(requested, 1), MAX_WORKDAY_COUNT);
+  }
+
+  private WorkRecordCalendarPort requireCalendarPort() {
+    if (calendarPort == null) {
+      throw new IllegalStateException("work calendar port is unavailable");
+    }
+
+    return calendarPort;
   }
 }

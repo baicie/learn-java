@@ -1,5 +1,8 @@
+import { Button } from '@/components/ui/button'
+
 type Props = {
   value: string
+  available: string[]
   onChange: (value: string) => void
 }
 
@@ -9,23 +12,32 @@ const labels: Record<string, string> = {
   today: '今日记录',
   this_week: '本周记录',
   this_month: '本月记录',
+  this_work_month: '本工作月',
   recent_workdays: '最近工作日',
 }
 
-export function QuickViewTabs({ value, onChange }: Props) {
+export function QuickViewTabs({
+  value,
+  available,
+  onChange,
+}: Props) {
+  const views =
+    available.length > 0
+      ? available
+      : Object.keys(labels)
+
   return (
     <div className='flex flex-wrap gap-2'>
-      {Object.entries(labels).map(([key, label]) => (
-        <button
+      {views.map((key) => (
+        <Button
           key={key}
           type='button'
-          className={`rounded-md border px-3 py-1.5 text-sm ${
-            value === key ? 'bg-primary text-primary-foreground' : 'bg-background'
-          }`}
+          size='sm'
+          variant={value === key ? 'default' : 'outline'}
           onClick={() => onChange(key)}
         >
-          {label}
-        </button>
+          {labels[key] ?? key}
+        </Button>
       ))}
     </div>
   )

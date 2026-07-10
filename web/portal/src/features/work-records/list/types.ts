@@ -86,6 +86,18 @@ export type PageResult<T> = {
   items: T[]
 }
 
+export type RecordWorkdaySummary = {
+  calendarId: string
+  calendarName: string
+  timeZone: string
+  month: string
+  periodStart: string
+  periodEnd: string
+  workdayCount: number
+  firstWorkday: string | null
+  lastWorkday: string | null
+}
+
 export type ListQueryState = {
   page: number
   pageSize: number

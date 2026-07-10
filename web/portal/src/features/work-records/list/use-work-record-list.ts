@@ -1,7 +1,11 @@
 import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { listDictItems } from '@/features/dictionaries/api'
-import { fetchRecordList, fetchRecordListMeta } from './api'
+import {
+  fetchRecordList,
+  fetchRecordListMeta,
+  fetchWorkdaySummary,
+} from './api'
 import type { DictOptionMap, ListQueryState } from './types'
 
 export function useWorkRecordList(
@@ -38,6 +42,12 @@ export function useWorkRecordList(
 
       return Object.fromEntries(entries)
     },
+  })
+
+  const workdaySummaryQuery = useQuery({
+    queryKey: ['work-record-workday-summary', 'current'],
+    queryFn: () => fetchWorkdaySummary(),
+    enabled: query.quickView === 'this_work_month',
   })
 
   const effectiveColumns = useMemo(() => {
@@ -78,6 +88,11 @@ export function useWorkRecordList(
     dictOptions: dictQuery.data ?? {},
     effectiveColumns,
     loading: metaQuery.isLoading || listQuery.isLoading || dictQuery.isLoading,
+    // 工作日统计错误不应让整个列表消失，
+    // 因此不合并进顶部 error 字段，由统计卡片单独展示。
     error: metaQuery.error ?? listQuery.error ?? dictQuery.error,
+    workdaySummary: workdaySummaryQuery.data,
+    workdaySummaryLoading: workdaySummaryQuery.isLoading,
+    workdaySummaryError: workdaySummaryQuery.error,
   }
 }
