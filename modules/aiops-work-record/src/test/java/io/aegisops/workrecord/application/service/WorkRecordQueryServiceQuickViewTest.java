@@ -50,7 +50,7 @@ class WorkRecordQueryServiceQuickViewTest {
         new WorkRecordQueryService(
             repository,
             new WorkRecordPermissionService(),
-            Mockito.mock(WorkRecordDynamicFilterService.class),
+            Mockito.mock(WorkRecordDynamicFilterPolicyService.class),
             clock);
 
     Mockito.when(repository.page(eq("t1"), Mockito.any()))

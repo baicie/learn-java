@@ -21,18 +21,18 @@ import org.springframework.stereotype.Service;
 public class WorkRecordQueryService {
   private final WorkRecordRepository repository;
   private final WorkRecordPermissionService permissionService;
-  private final WorkRecordDynamicFilterService dynamicFilterService;
+  private final WorkRecordDynamicFilterPolicyService dynamicFilterPolicyService;
   private final Clock clock;
 
   @Autowired
   public WorkRecordQueryService(
       WorkRecordRepository repository,
       WorkRecordPermissionService permissionService,
-      WorkRecordDynamicFilterService dynamicFilterService,
+      WorkRecordDynamicFilterPolicyService dynamicFilterPolicyService,
       @Qualifier("workRecordClock") Clock clock) {
     this.repository = repository;
     this.permissionService = permissionService;
-    this.dynamicFilterService = dynamicFilterService;
+    this.dynamicFilterPolicyService = dynamicFilterPolicyService;
     this.clock = clock;
   }
 
@@ -102,11 +102,11 @@ public class WorkRecordQueryService {
       return List.of();
     }
 
-    if (dynamicFilterService == null) {
-      throw new IllegalStateException("dynamic filter service is unavailable");
+    if (dynamicFilterPolicyService == null) {
+      throw new IllegalStateException("dynamic filter policy service is unavailable");
     }
 
-    return dynamicFilterService.validateAndNormalize(
+    return dynamicFilterPolicyService.normalize(
         tenantId, templateId, filters);
   }
 

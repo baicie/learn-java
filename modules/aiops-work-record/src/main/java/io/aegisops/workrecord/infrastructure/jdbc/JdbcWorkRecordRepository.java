@@ -3,13 +3,11 @@ package io.aegisops.workrecord.infrastructure.jdbc;
 import io.aegisops.common.api.PageResult;
 import io.aegisops.common.id.Ids;
 import io.aegisops.workrecord.application.command.CreateRecordCommand;
-import io.aegisops.workrecord.application.command.RecordDynamicFilter;
 import io.aegisops.workrecord.application.command.RecordQuery;
 import io.aegisops.workrecord.application.command.UpdateRecordCommand;
 import io.aegisops.workrecord.application.port.WorkRecordRepository;
 import io.aegisops.workrecord.domain.model.RecordStatus;
 import io.aegisops.workrecord.domain.model.WorkRecord;
-import io.aegisops.workrecord.domain.rule.FieldCodeRules;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.OffsetDateTime;
@@ -25,9 +23,18 @@ import org.springframework.stereotype.Repository;
 public class JdbcWorkRecordRepository implements WorkRecordRepository {
 
   private final NamedParameterJdbcTemplate jdbc;
+  private final WorkRecordJsonbFilterSqlBuilder jsonbFilterSqlBuilder;
 
-  public JdbcWorkRecordRepository(NamedParameterJdbcTemplate jdbc) {
+  public JdbcWorkRecordRepository(
+      NamedParameterJdbcTemplate jdbc,
+      WorkRecordJsonbFilterSqlBuilder jsonbFilterSqlBuilder) {
     this.jdbc = jdbc;
+    this.jsonbFilterSqlBuilder = jsonbFilterSqlBuilder;
+  }
+
+  /** 包内构造器：兼容旧测试（默认 ObjectMapper） */
+  JdbcWorkRecordRepository(NamedParameterJdbcTemplate jdbc) {
+    this(jdbc, new WorkRecordJsonbFilterSqlBuilder(new com.fasterxml.jackson.databind.ObjectMapper()));
   }
 
   @Override
@@ -255,128 +262,7 @@ public class JdbcWorkRecordRepository implements WorkRecordRepository {
 
   private void applyDynamicFilters(
       StringBuilder where, Map<String, Object> params, RecordQuery query) {
-    if (query.dynamicFilters() == null || query.dynamicFilters().isEmpty()) {
-      return;
-    }
-
-    int index = 0;
-
-    for (RecordDynamicFilter filter : query.dynamicFilters()) {
-      FieldCodeRules.validate(filter.fieldCode());
-
-      String key = "dfKey" + index;
-      String value = "dfValue" + index;
-      params.put(key, filter.fieldCode());
-
-      switch (filter.operator()) {
-        case "eq" -> {
-          params.put(value, String.valueOf(filter.value()));
-          where
-              .append(" and custom_data_json ->> :")
-              .append(key)
-              .append(" = :")
-              .append(value)
-              .append(' ');
-        }
-
-        case "contains" -> {
-          params.put(value, String.valueOf(filter.value()));
-
-          if ("multi_select".equals(filter.fieldType())) {
-            where
-                .append(" and coalesce(custom_data_json -> :")
-                .append(key)
-                .append(", '[]'::jsonb)")
-                .append(" @> jsonb_build_array(to_jsonb(cast(:")
-                .append(value)
-                .append(" as text))) ");
-          } else {
-            params.put(value, "%" + filter.value() + "%");
-            where
-                .append(" and custom_data_json ->> :")
-                .append(key)
-                .append(" ilike :")
-                .append(value)
-                .append(' ');
-          }
-        }
-
-        case "in" -> {
-          if (!(filter.value() instanceof List<?> values) || values.isEmpty()) {
-            throw new IllegalArgumentException(
-                "operator in requires non-empty array");
-          }
-
-          String listKey = "dfList" + index;
-          params.put(
-              listKey,
-              values.stream().map(String::valueOf).toList());
-
-          if ("multi_select".equals(filter.fieldType())) {
-            where
-                .append(
-                    " and exists (select 1 "
-                        + "from jsonb_array_elements_text("
-                        + "coalesce(custom_data_json -> :")
-                .append(key)
-                .append(", '[]'::jsonb)) as x(value) ")
-                .append("where x.value in (:")
-                .append(listKey)
-                .append(")) ");
-          } else {
-            where
-                .append(" and custom_data_json ->> :")
-                .append(key)
-                .append(" in (:")
-                .append(listKey)
-                .append(") ");
-          }
-        }
-
-        case "gte", "lte" -> {
-          String comparator = "gte".equals(filter.operator()) ? ">=" : "<=";
-          params.put(value, String.valueOf(filter.value()));
-
-          String expression =
-              switch (filter.fieldType()) {
-                case "number" ->
-                    "(custom_data_json ->> :" + key + ")::numeric";
-                case "date" ->
-                    "(custom_data_json ->> :" + key + ")::date";
-                case "datetime" ->
-                    "(custom_data_json ->> :" + key + ")::timestamptz";
-                default ->
-                    throw new IllegalArgumentException(
-                        "range operator is not supported for "
-                            + filter.fieldType());
-              };
-
-          String parameterExpression =
-              switch (filter.fieldType()) {
-                case "number" -> "cast(:" + value + " as numeric)";
-                case "date" -> "cast(:" + value + " as date)";
-                case "datetime" -> "cast(:" + value + " as timestamptz)";
-                default -> throw new IllegalStateException();
-              };
-
-          where
-              .append(" and ")
-              .append(expression)
-              .append(' ')
-              .append(comparator)
-              .append(' ')
-              .append(parameterExpression)
-              .append(' ');
-        }
-
-        default ->
-            throw new IllegalArgumentException(
-                "unsupported dynamic filter operator: "
-                    + filter.operator());
-      }
-
-      index += 1;
-    }
+    jsonbFilterSqlBuilder.appendFilters(where, params, query.dynamicFilters());
   }
 
   private String orderBy(String sortBy, String sortDir) {

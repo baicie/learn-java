@@ -19,13 +19,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
-/**
- * Phase 10 验收测试：覆盖当前已实现的动态筛选白名单行为。
- *
- * <p>已由 {@link WorkRecordDynamicFilterPolicyServiceTest} 覆盖更多 Phase 11 新操作符场景，
- * 本测试保留以确保 Phase 10 已有行为不退化。
- */
-class WorkRecordDynamicFilterServiceTest {
+class WorkRecordDynamicFilterPolicyServiceTest {
   private final WorkRecordTemplateRepository templateRepository =
       Mockito.mock(WorkRecordTemplateRepository.class);
   private final WorkRecordFieldIndexRepository fieldRepository =
@@ -34,7 +28,7 @@ class WorkRecordDynamicFilterServiceTest {
       new WorkRecordDynamicFilterPolicyService(templateRepository, fieldRepository);
 
   @Test
-  void shouldRejectFilterWithoutTemplate() {
+  void shouldRequireTemplateWhenDynamicFiltersExist() {
     assertThatThrownBy(
             () ->
                 service.normalize(
@@ -60,7 +54,118 @@ class WorkRecordDynamicFilterServiceTest {
   }
 
   @Test
-  void shouldRejectArrayOperatorForScalarNumber() {
+  void shouldRejectInvalidFieldCode() {
+    prepare(List.of(field("priority", FieldType.SELECT, true)));
+
+    assertThatThrownBy(
+            () ->
+                service.normalize(
+                    "t1",
+                    "tpl1",
+                    List.of(RecordDynamicFilter.raw("bad-key", "eq", "x"))))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("invalid fieldCode");
+  }
+
+  @Test
+  void shouldRejectUnsupportedOperatorForText() {
+    prepare(List.of(field("content", FieldType.TEXT, true)));
+
+    assertThatThrownBy(
+            () ->
+                service.normalize(
+                    "t1",
+                    "tpl1",
+                    List.of(RecordDynamicFilter.raw("content", "gte", "abc"))))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("operator gte is not allowed for text");
+  }
+
+  @Test
+  void shouldNormalizeNumberBetween() {
+    prepare(List.of(field("cost", FieldType.NUMBER, true)));
+
+    List<RecordDynamicFilter> result =
+        service.normalize(
+            "t1",
+            "tpl1",
+            List.of(
+                RecordDynamicFilter.normalized(
+                    "cost",
+                    DynamicFilterOperator.BETWEEN,
+                    FieldType.NUMBER,
+                    null,
+                    List.of(1, "2.00"))));
+
+    assertThat(result).hasSize(1);
+    assertThat(result.get(0).operator()).isEqualTo(DynamicFilterOperator.BETWEEN);
+    assertThat(result.get(0).fieldType()).isEqualTo(FieldType.NUMBER);
+    assertThat(result.get(0).values()).containsExactly("1", "2");
+  }
+
+  @Test
+  void shouldNormalizeDatetimeWithOffset() {
+    prepare(List.of(field("startedAt", FieldType.DATETIME, true)));
+
+    List<RecordDynamicFilter> result =
+        service.normalize(
+            "t1",
+            "tpl1",
+            List.of(RecordDynamicFilter.raw("startedAt", "gte", "2026-01-01T10:00:00+08:00")));
+
+    assertThat(result.get(0).value()).isEqualTo("2026-01-01T10:00+08:00");
+  }
+
+  @Test
+  void shouldRejectDatetimeWithoutOffset() {
+    prepare(List.of(field("startedAt", FieldType.DATETIME, true)));
+
+    assertThatThrownBy(
+            () ->
+                service.normalize(
+                    "t1",
+                    "tpl1",
+                    List.of(RecordDynamicFilter.raw("startedAt", "gte", "2026-01-01T10:00:00"))))
+        .isInstanceOf(RuntimeException.class);
+  }
+
+  @Test
+  void shouldNormalizeMultiSelectContainsAll() {
+    prepare(List.of(field("tags", FieldType.MULTI_SELECT, true)));
+
+    List<RecordDynamicFilter> result =
+        service.normalize(
+            "t1",
+            "tpl1",
+            List.of(
+                RecordDynamicFilter.normalized(
+                    "tags",
+                    DynamicFilterOperator.CONTAINS_ALL,
+                    FieldType.MULTI_SELECT,
+                    null,
+                    List.of("a", "b"))));
+
+    assertThat(result.get(0).fieldType()).isEqualTo(FieldType.MULTI_SELECT);
+    assertThat(result.get(0).values()).containsExactly("a", "b");
+  }
+
+  @Test
+  void shouldAllowExistsWithoutValue() {
+    prepare(List.of(field("priority", FieldType.SELECT, true)));
+
+    List<RecordDynamicFilter> result =
+        service.normalize(
+            "t1",
+            "tpl1",
+            List.of(RecordDynamicFilter.raw("priority", "exists", null)));
+
+    assertThat(result.get(0).operator()).isEqualTo(DynamicFilterOperator.EXISTS);
+    assertThat(result.get(0).value()).isNull();
+    assertThat(result.get(0).values()).isEmpty();
+  }
+
+  @Test
+  void shouldRejectBetweenWithWrongNumberOfValues() {
     prepare(List.of(field("cost", FieldType.NUMBER, true)));
 
     assertThatThrownBy(
@@ -71,91 +176,40 @@ class WorkRecordDynamicFilterServiceTest {
                     List.of(
                         RecordDynamicFilter.normalized(
                             "cost",
-                            DynamicFilterOperator.IN,
+                            DynamicFilterOperator.BETWEEN,
                             FieldType.NUMBER,
                             null,
-                            List.of(1, 2)))))
+                            List.of(1)))))
         .isInstanceOf(IllegalArgumentException.class)
-        .hasMessageContaining("operator in is not allowed for number");
+        .hasMessageContaining("between requires exactly two values");
   }
 
   @Test
-  void shouldNormalizeMultiSelectInFilter() {
+  void shouldRejectTooManyFilters() {
+    prepare(List.of(field("name", FieldType.TEXT, true)));
+
+    var tooManyFilters = java.util.stream.IntStream.range(0, 21)
+        .mapToObj(i -> RecordDynamicFilter.raw("name", "contains", "x"))
+        .toList();
+
+    assertThatThrownBy(
+            () -> service.normalize("t1", "tpl1", tooManyFilters))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("too many dynamic filters");
+  }
+
+  @Test
+  void shouldRejectMultiSelectWithEqOperator() {
     prepare(List.of(field("tags", FieldType.MULTI_SELECT, true)));
 
-    List<RecordDynamicFilter> result =
-        service.normalize(
-            "t1",
-            "tpl1",
-            List.of(
-                RecordDynamicFilter.normalized(
-                    "tags",
-                    DynamicFilterOperator.IN,
-                    FieldType.MULTI_SELECT,
-                    null,
-                    List.of("a", "b"))));
-
-    assertThat(result).hasSize(1);
-    assertThat(result.get(0).fieldType()).isEqualTo(FieldType.MULTI_SELECT);
-    assertThat(result.get(0).values()).containsExactly("a", "b");
-  }
-
-  @Test
-  void shouldNormalizeDateRangeFilter() {
-    prepare(List.of(field("recordDate", FieldType.DATE, true)));
-
-    List<RecordDynamicFilter> result =
-        service.normalize(
-            "t1",
-            "tpl1",
-            List.of(
-                RecordDynamicFilter.raw("recordDate", "gte", "2026-01-01")));
-
-    assertThat(result).hasSize(1);
-    assertThat(result.get(0).operator()).isEqualTo(DynamicFilterOperator.GTE);
-    assertThat(result.get(0).fieldType()).isEqualTo(FieldType.DATE);
-  }
-
-  @Test
-  void shouldNormalizeContainsFilter() {
-    prepare(List.of(field("summary", FieldType.TEXTAREA, true)));
-
-    List<RecordDynamicFilter> result =
-        service.normalize(
-            "t1",
-            "tpl1",
-            List.of(RecordDynamicFilter.raw("summary", "contains", "异常")));
-
-    assertThat(result).hasSize(1);
-    assertThat(result.get(0).operator()).isEqualTo(DynamicFilterOperator.CONTAINS);
-  }
-
-  @Test
-  void shouldRejectBlankContainsFilter() {
-    prepare(List.of(field("summary", FieldType.TEXTAREA, true)));
-
     assertThatThrownBy(
             () ->
                 service.normalize(
                     "t1",
                     "tpl1",
-                    List.of(RecordDynamicFilter.raw("summary", "contains", ""))))
+                    List.of(RecordDynamicFilter.raw("tags", "eq", "a"))))
         .isInstanceOf(IllegalArgumentException.class)
-        .hasMessageContaining("blank");
-  }
-
-  @Test
-  void shouldRejectUnknownOperator() {
-    prepare(List.of(field("summary", FieldType.TEXT, true)));
-
-    assertThatThrownBy(
-            () ->
-                service.normalize(
-                    "t1",
-                    "tpl1",
-                    List.of(RecordDynamicFilter.raw("summary", "between", "x"))))
-        .isInstanceOf(IllegalArgumentException.class)
-        .hasMessageContaining("operator between is not allowed for text");
+        .hasMessageContaining("operator eq is not allowed for multi_select");
   }
 
   private void prepare(List<WorkRecordField> fields) {
