@@ -125,4 +125,24 @@ public class UserRepository {
         passwordHash);
     return findById(id).orElseThrow();
   }
+
+  public void ensureLegacyRole(String code, String name) {
+    Integer count = jdbc.queryForObject("select count(*) from sys_role where code = ?", Integer.class, code);
+    if (count == null || count == 0) {
+      jdbc.update("insert into sys_role(id, code, name) values (?, ?, ?)", Ids.newId(), code, name);
+    }
+  }
+
+  public void attachLegacyRole(String userId, String roleCode) {
+    String roleId = jdbc.queryForObject("select id from sys_role where code = ?", String.class, roleCode);
+    if (roleId == null) {
+      return;
+    }
+    Integer count =
+        jdbc.queryForObject(
+            "select count(*) from sys_user_role where user_id = ? and role_id = ?", Integer.class, userId, roleId);
+    if (count == null || count == 0) {
+      jdbc.update("insert into sys_user_role(user_id, role_id) values (?, ?)", userId, roleId);
+    }
+  }
 }

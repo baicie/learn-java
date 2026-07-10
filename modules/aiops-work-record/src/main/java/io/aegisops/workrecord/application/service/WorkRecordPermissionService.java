@@ -4,6 +4,7 @@ import io.aegisops.security.DataScope;
 import io.aegisops.security.PermissionCodes;
 import io.aegisops.security.UserPrincipal;
 import io.aegisops.workrecord.domain.model.WorkRecord;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -44,7 +45,7 @@ public class WorkRecordPermissionService {
     }
 
     if (!canReadSelf(principal)) {
-      throw new SecurityException(
+      throw new AccessDeniedException(
           "not allowed to read work records");
     }
 
@@ -110,7 +111,7 @@ public class WorkRecordPermissionService {
       WorkRecord record,
       String message) {
     if (principal == null || record == null) {
-      throw new SecurityException(message);
+      throw new AccessDeniedException(message);
     }
 
     String userId = principal.id();
@@ -123,7 +124,7 @@ public class WorkRecordPermissionService {
             && userId.equals(record.ownerId());
 
     if (!creator && !owner) {
-      throw new SecurityException(message);
+      throw new AccessDeniedException(message);
     }
   }
 
@@ -133,7 +134,7 @@ public class WorkRecordPermissionService {
       String message) {
     if (principal == null
         || !principal.hasPermission(permission)) {
-      throw new SecurityException(message);
+      throw new AccessDeniedException(message);
     }
   }
 }

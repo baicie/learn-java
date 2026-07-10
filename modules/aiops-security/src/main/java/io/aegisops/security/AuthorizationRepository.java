@@ -63,9 +63,28 @@ public class AuthorizationRepository {
   public void assignRole(String tenantId, String userId, String roleCode, String actor) {
     requireText(tenantId, "tenantId");
     requireText(userId, "userId");
-    if (!BuiltInRoleCodes.ALL.contains(roleCode)) {
-      throw new IllegalArgumentException("unknown built-in role: " + roleCode);
+    requireText(roleCode, "roleCode");
+
+    Integer userCount =
+        jdbc.queryForObject(
+            "select count(*) from sys_user where tenant_id = :tenantId and id = :userId",
+            Map.of("tenantId", tenantId, "userId", userId),
+            Integer.class);
+
+    if (userCount == null || userCount != 1) {
+      throw new IllegalArgumentException("user not found in tenant");
     }
+
+    Integer roleCount =
+        jdbc.queryForObject(
+            "select count(*) from iam.role_definition where role_code = :roleCode and enabled = true",
+            Map.of("roleCode", roleCode),
+            Integer.class);
+
+    if (roleCount == null || roleCount != 1) {
+      throw new IllegalArgumentException("role not found or disabled: " + roleCode);
+    }
+
     jdbc.update(
         """
         insert into iam.user_role(tenant_id, user_id, role_code, created_by)
@@ -73,6 +92,41 @@ public class AuthorizationRepository {
         on conflict do nothing
         """,
         Map.of("tenantId", tenantId, "userId", userId, "roleCode", roleCode, "actor", actor == null ? "system" : actor));
+  }
+
+  public int migrateLegacyAssignments(String tenantId, String userId) {
+    requireText(tenantId, "tenantId");
+    requireText(userId, "userId");
+
+    return jdbc.update(
+        """
+        with mapped_roles as (
+            select distinct
+                u.tenant_id,
+                u.id as user_id,
+                case lower(r.code)
+                    when 'admin' then 'system_admin'
+                    when 'operator' then 'ops_operator'
+                    when 'viewer' then 'readonly_user'
+                    when 'readonly' then 'readonly_user'
+                    when 'readonly_user' then 'readonly_user'
+                    when 'normal_user' then 'normal_user'
+                    when 'record_admin' then 'record_admin'
+                    when 'system_admin' then 'system_admin'
+                    else null
+                end as new_role_code
+            from sys_user u
+            join sys_user_role ur on ur.user_id = u.id
+            join sys_role r on r.id = ur.role_id
+            where u.tenant_id = :tenantId and u.id = :userId
+        )
+        insert into iam.user_role(tenant_id, user_id, role_code, created_by)
+        select tenant_id, user_id, new_role_code, 'legacy-role-fallback'
+        from mapped_roles
+        where new_role_code is not null
+        on conflict do nothing
+        """,
+        Map.of("tenantId", tenantId, "userId", userId));
   }
 
   public void removeRole(String tenantId, String userId, String roleCode) {

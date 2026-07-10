@@ -12,6 +12,7 @@ import java.time.OffsetDateTime;
 import java.util.Map;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
+import org.springframework.security.access.AccessDeniedException;
 
 class WorkRecordPermissionServiceTest {
   private final WorkRecordPermissionService service =
@@ -67,7 +68,7 @@ class WorkRecordPermissionServiceTest {
                         DataScope.SELF),
                     record("u2", "u3")))
         .isInstanceOf(
-            SecurityException.class);
+            AccessDeniedException.class);
   }
 
   @Test
@@ -83,7 +84,7 @@ class WorkRecordPermissionServiceTest {
                         DataScope.SELF),
                     record("u2", "u3")))
         .isInstanceOf(
-            SecurityException.class);
+            AccessDeniedException.class);
   }
 
   @Test
@@ -111,7 +112,7 @@ class WorkRecordPermissionServiceTest {
                         DataScope.SELF),
                     record("u1", "u1")))
         .isInstanceOf(
-            SecurityException.class);
+            AccessDeniedException.class);
   }
 
   @Test
@@ -126,7 +127,7 @@ class WorkRecordPermissionServiceTest {
                                 .WORK_RECORD_READ_ALL),
                         DataScope.ALL)))
         .isInstanceOf(
-            SecurityException.class);
+            AccessDeniedException.class);
   }
 
   private UserPrincipal principal(

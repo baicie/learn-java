@@ -19,8 +19,9 @@ public class UserController {
 
   @GetMapping
   @PreAuthorize("hasAuthority('admin:manage')")
-  public ApiResponse<List<UserAccount>> list() {
+  public ApiResponse<List<UserSummary>> list() {
     String tenantId = TenantContext.requireTenantId();
-    return ApiResponse.ok(service.listByTenant(tenantId));
+    return ApiResponse.ok(
+        service.listByTenant(tenantId).stream().map(UserSummary::from).toList());
   }
 }

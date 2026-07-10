@@ -108,7 +108,7 @@ public class WorkRecordService {
             .find(tenantId, recordId)
             .orElseThrow(() -> new IllegalArgumentException("work record not found"));
 
-    permissionService.requireWrite(user, existing);
+    permissionService.requireEdit(user, existing);
 
     String builtin =
         command.builtinDataJson() == null ? null : normalizeObject(command.builtinDataJson());

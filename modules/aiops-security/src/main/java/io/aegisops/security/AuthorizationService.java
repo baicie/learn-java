@@ -11,8 +11,16 @@ public class AuthorizationService {
     this.repository = repository;
   }
 
-  @Transactional(readOnly = true)
+  @Transactional
   public AuthorizationSnapshot resolve(String tenantId, String userId) {
+    AuthorizationSnapshot snapshot = repository.findSnapshot(tenantId, userId);
+
+    if (!snapshot.roles().isEmpty()) {
+      return snapshot;
+    }
+
+    repository.migrateLegacyAssignments(tenantId, userId);
+
     return repository.findSnapshot(tenantId, userId);
   }
 

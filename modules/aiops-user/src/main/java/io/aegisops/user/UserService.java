@@ -47,8 +47,14 @@ public class UserService {
   }
 
   public UserAccount createAdminIfAbsent(String tenantId, String username, String rawPassword) {
-    return repository
-        .findByUsername(username)
-        .orElseGet(() -> repository.create(tenantId, username, "Admin", "admin@local", passwordEncoder.encode(rawPassword)));
+    UserAccount admin =
+        repository
+            .findByUsername(username)
+            .orElseGet(() -> repository.create(tenantId, username, "Admin", "admin@local", passwordEncoder.encode(rawPassword)));
+
+    repository.ensureLegacyRole("admin", "Administrator");
+    repository.attachLegacyRole(admin.id(), "admin");
+
+    return admin;
   }
 }
