@@ -63,24 +63,29 @@ public class WorkRecordService {
     requireText(command.title(), "title");
     requireRecordTime(command.recordTime());
 
+    // 必须在任何 Repository 查询前完成权限判断，
+    // 避免只读用户探测模板版本是否存在。
+    permissionService.requireCreate(user);
+
+    RecordStatus targetStatus = RecordStatus.from(command.status());
+
     WorkRecordTemplateVersion version =
         resolveVersion(tenantId, command.templateId(), command.templateVersionId());
 
     List<WorkRecordField> fields = fieldRepository.listByVersion(tenantId, version.id());
     String builtin = normalizeObject(command.builtinDataJson());
     String custom = normalizeObject(command.customDataJson());
-    valueValidator.validate(tenantId, version.id(), fields, custom);
+    valueValidator.validate(
+        tenantId, version.id(), fields, custom, targetStatus != RecordStatus.DRAFT);
 
     validateOwner(tenantId, command.ownerId());
-
-    permissionService.requireCreate(user);
 
     CreateRecordCommand normalized =
         new CreateRecordCommand(
             command.templateId(),
             version.id(),
             command.title(),
-            RecordStatus.from(command.status()).value(),
+            targetStatus.value(),
             blankToNull(command.ownerId()),
             command.recordTime(),
             builtin,
@@ -121,10 +126,25 @@ public class WorkRecordService {
     String custom =
         command.customDataJson() == null ? null : normalizeObject(command.customDataJson());
 
-    if (custom != null) {
+    RecordStatus targetStatus =
+        command.status() == null
+            ? existing.status()
+            : RecordStatus.from(command.status());
+
+    boolean statusChanged = targetStatus != existing.status();
+
+    if (custom != null || statusChanged) {
       List<WorkRecordField> fields =
           fieldRepository.listByVersion(tenantId, existing.templateVersionId());
-      valueValidator.validate(tenantId, existing.templateVersionId(), fields, custom);
+
+      String effectiveCustom = custom == null ? existing.customDataJson() : custom;
+
+      valueValidator.validate(
+          tenantId,
+          existing.templateVersionId(),
+          fields,
+          effectiveCustom,
+          targetStatus != RecordStatus.DRAFT);
     }
 
     if (command.recordTime() != null) {
@@ -136,7 +156,7 @@ public class WorkRecordService {
     UpdateRecordCommand normalized =
         new UpdateRecordCommand(
             command.title(),
-            command.status() == null ? null : RecordStatus.from(command.status()).value(),
+            command.status() == null ? null : targetStatus.value(),
             blankToNull(command.ownerId()),
             command.recordTime(),
             builtin,

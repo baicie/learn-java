@@ -56,6 +56,7 @@ class FieldCodeRulesTest {
         "record_time",
         "builtin_data_json",
         "custom_data_json",
+        "row_version",
         "created_at",
         "updated_at",
         "deleted_at"

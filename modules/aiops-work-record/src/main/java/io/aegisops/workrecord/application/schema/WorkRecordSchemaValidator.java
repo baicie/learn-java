@@ -1,7 +1,5 @@
 package io.aegisops.workrecord.application.schema;
 
-import static io.aegisops.workrecord.application.schema.WorkRecordSchemaContract.FIELD_CODE_PATTERN;
-import static io.aegisops.workrecord.application.schema.WorkRecordSchemaContract.RESERVED_FIELD_CODES;
 import static io.aegisops.workrecord.application.schema.WorkRecordSchemaContract.ROOT_SCHEMA_VERSION_KEY;
 import static io.aegisops.workrecord.application.schema.WorkRecordSchemaContract.SUPPORTED_FIELD_TYPES;
 import static io.aegisops.workrecord.application.schema.WorkRecordSchemaContract.SUPPORTED_OPTION_SOURCES;
@@ -9,6 +7,7 @@ import static io.aegisops.workrecord.application.schema.WorkRecordSchemaContract
 import com.fasterxml.jackson.databind.JsonNode;
 import io.aegisops.workrecord.domain.model.FormFieldDescriptor;
 import io.aegisops.workrecord.domain.model.OptionSource;
+import io.aegisops.workrecord.domain.rule.FieldCodeRules;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -100,15 +99,7 @@ public class WorkRecordSchemaValidator {
   }
 
   public void validateFieldCode(String fieldCode) {
-    if (fieldCode == null || fieldCode.isBlank()) {
-      throw new IllegalArgumentException("fieldCode is required");
-    }
-    if (!FIELD_CODE_PATTERN.matcher(fieldCode).matches()) {
-      throw new IllegalArgumentException("invalid fieldCode: " + fieldCode);
-    }
-    if (RESERVED_FIELD_CODES.contains(fieldCode)) {
-      throw new IllegalArgumentException("reserved fieldCode: " + fieldCode);
-    }
+    FieldCodeRules.validate(fieldCode);
   }
 
   private String requiredText(JsonNode node, String field, String path) {

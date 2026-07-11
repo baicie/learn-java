@@ -107,6 +107,7 @@ describe('RecordRuntimeForm', () => {
 
     const options = screen.getByRole('option', { name: 'P1（已禁用）' })
     await expect.element(options).toBeInTheDocument()
+    await expect.element(options).toBeDisabled()
   })
 
   it('separately enables save draft and submit done', async () => {

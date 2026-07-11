@@ -240,6 +240,7 @@ export const workRecords = {
   'workRecords.designer.property.indexes': 'Indexes',
   'workRecords.designer.property.listVisible': 'List visible',
   'workRecords.designer.property.filterable': 'Filterable',
+  'workRecords.designer.property.exportable': 'Exportable',
   'workRecords.designer.property.statistical': 'Statistical',
   // Preview
   'workRecords.designer.preview.region': 'Runtime preview',

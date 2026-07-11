@@ -231,6 +231,7 @@ export const workRecords = {
   'workRecords.designer.property.indexes': '索引设置',
   'workRecords.designer.property.listVisible': '列表展示',
   'workRecords.designer.property.filterable': '可筛选',
+  'workRecords.designer.property.exportable': '可导出',
   'workRecords.designer.property.statistical': '可统计',
   // Preview
   'workRecords.designer.preview.region': '运行时预览',

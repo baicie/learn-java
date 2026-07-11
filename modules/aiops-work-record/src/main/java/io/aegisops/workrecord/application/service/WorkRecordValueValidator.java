@@ -38,6 +38,15 @@ public class WorkRecordValueValidator {
       String templateVersionId,
       List<WorkRecordField> fields,
       String customDataJson) {
+    validate(tenantId, templateVersionId, fields, customDataJson, true);
+  }
+
+  public void validate(
+      String tenantId,
+      String templateVersionId,
+      List<WorkRecordField> fields,
+      String customDataJson,
+      boolean enforceRequired) {
     try {
       if (tenantId == null || tenantId.isBlank()) {
         throw new IllegalArgumentException("tenantId is required");
@@ -74,7 +83,7 @@ public class WorkRecordValueValidator {
       for (WorkRecordField field : fields) {
         validateFieldDefinition(tenantId, templateVersionId, field);
 
-        if (field.enabled() && field.required()) {
+        if (enforceRequired && field.enabled() && field.required()) {
           JsonNode value = root.get(field.fieldCode());
           if (isMissingRequiredValue(value)) {
             throw new IllegalArgumentException("required field is missing: " + field.fieldCode());

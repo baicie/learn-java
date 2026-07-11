@@ -8,7 +8,6 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.aegisops.common.api.PageResult;
 import io.aegisops.common.tenant.TenantContext;
 import io.aegisops.web.GlobalExceptionHandler;
@@ -25,10 +24,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -38,10 +37,12 @@ import org.springframework.test.web.servlet.MockMvc;
  * <p>不依赖 Phase 编号，描述的是长期不变的 HTTP 行为契约。
  */
 @WebMvcTest(controllers = WorkRecordController.class)
-@Import({
-  GlobalExceptionHandler.class,
-  WorkRecordControllerWebTest.MethodSecurityConfiguration.class
-})
+@ContextConfiguration(
+    classes = {
+      WorkRecordController.class,
+      GlobalExceptionHandler.class,
+      WorkRecordControllerWebTest.MethodSecurityConfiguration.class
+    })
 class WorkRecordControllerWebTest {
 
   @MockitoBean private WorkRecordService recordService;
@@ -51,7 +52,6 @@ class WorkRecordControllerWebTest {
   @MockitoBean private WorkRecordHistoryService historyService;
 
   @Autowired private MockMvc mockMvc;
-  @Autowired private ObjectMapper objectMapper;
 
   @BeforeEach
   void setTenant() {
@@ -185,7 +185,7 @@ class WorkRecordControllerWebTest {
         """;
   }
 
-  @TestConfiguration(proxyBeanMethods = false)
+  @Configuration(proxyBeanMethods = false)
   @EnableMethodSecurity
   static class MethodSecurityConfiguration {}
 }

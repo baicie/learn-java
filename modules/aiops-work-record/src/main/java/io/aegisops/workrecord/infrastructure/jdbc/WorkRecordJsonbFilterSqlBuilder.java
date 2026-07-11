@@ -320,9 +320,11 @@ public class WorkRecordJsonbFilterSqlBuilder {
           .append(" as text), ")
           .append("jsonb_build_array(to_jsonb(cast(:")
           .append(valueParam)
-          .append(" as text))))");
+          // cast + to_jsonb + array + object + 当前分支
+          .append(" as text)))))");
     }
 
+    // 关闭整个 OR 分组
     where.append(") ");
   }
 

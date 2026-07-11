@@ -219,6 +219,33 @@ class WorkRecordValueValidatorTest {
   }
 
   @Test
+  void draftMayOmitRequiredFields() {
+    assertThatCode(
+            () ->
+                validator.validate(
+                    TENANT_ID,
+                    VERSION_ID,
+                    List.of(textField("content", true)),
+                    "{}",
+                    false))
+        .doesNotThrowAnyException();
+  }
+
+  @Test
+  void completedRecordMustContainRequiredFields() {
+    assertThatThrownBy(
+            () ->
+                validator.validate(
+                    TENANT_ID,
+                    VERSION_ID,
+                    List.of(textField("content", true)),
+                    "{}",
+                    true))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("required field is missing: content");
+  }
+
+  @Test
   void shouldRejectNumberAsString() {
     var field =
         WorkRecordFixtures.field(

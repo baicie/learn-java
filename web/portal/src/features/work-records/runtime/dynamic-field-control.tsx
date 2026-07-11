@@ -125,7 +125,11 @@ export function DynamicFieldControl({
       >
         <option value=''>{t('workRecords.form.select')}</option>
         {options(field, dictOptions).map((item) => (
-          <option key={item.itemValue} value={item.itemValue}>
+          <option
+            key={item.itemValue}
+            value={item.itemValue}
+            disabled={!item.enabled}
+          >
             {item.enabled
               ? item.itemLabel
               : `${item.itemLabel}${disabledSuffix}`}
@@ -152,7 +156,11 @@ export function DynamicFieldControl({
         }
       >
         {options(field, dictOptions).map((item) => (
-          <option key={item.itemValue} value={item.itemValue}>
+          <option
+            key={item.itemValue}
+            value={item.itemValue}
+            disabled={!item.enabled}
+          >
             {item.enabled
               ? item.itemLabel
               : `${item.itemLabel}${disabledSuffix}`}

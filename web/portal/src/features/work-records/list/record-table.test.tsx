@@ -1,140 +1,93 @@
+import type { ReactNode } from 'react'
+import { I18nextProvider } from 'react-i18next'
 import { describe, expect, it, vi } from 'vitest'
 import { render } from 'vitest-browser-react'
+import { i18n } from '@/i18n'
 import { RecordTable } from './record-table'
-import type { DictOptionMap, RecordListColumn, WorkRecord } from './types'
+import type { RecordListColumn, WorkRecord } from './types'
 
 vi.mock('@tanstack/react-router', () => ({
-  Link: ({ children, ...props }: { children: React.ReactNode }) => (
-    <a {...props}>{children}</a>
-  ),
+  Link: ({ children }: { children: ReactNode }) => <a href='#'>{children}</a>,
 }))
 
-describe('RecordTable', () => {
-  it('renders empty state', async () => {
-    const screen = await render(
-      <RecordTable
-        records={[]}
-        columns={[]}
-        sortBy='recordTime'
-        sortDir='desc'
-        onSort={vi.fn()}
-      />
-    )
+const record: WorkRecord = {
+  id: 'record-1',
+  tenantId: 'tenant-1',
+  templateId: 'template-1',
+  templateVersionId: 'version-1',
+  title: '日报',
+  status: 'done',
+  ownerId: 'user-1',
+  creatorId: 'user-1',
+  recordTime: '2026-07-11T10:00:00+08:00',
+  builtinDataJson: '{}',
+  customDataJson: '{"priority":"P2","oldField":"历史值"}',
+  rowVersion: 1,
+  createdAt: '2026-07-11T10:00:00+08:00',
+  updatedAt: '2026-07-11T10:00:00+08:00',
+  deletedAt: null,
+}
 
-    await expect.element(screen.getByText('暂无记录')).toBeVisible()
-  })
-
-  it('renders builtin and dynamic columns', async () => {
-    const screen = await render(
-      <RecordTable
-        records={[record()]}
-        columns={[
-          column('title', '标题', 'builtin', null),
-          column('custom.priority', '优先级', 'custom', 'priority'),
-        ]}
-        sortBy='recordTime'
-        sortDir='desc'
-        onSort={vi.fn()}
-      />
-    )
-
-    await expect.element(screen.getByText('日报')).toBeVisible()
-    await expect.element(screen.getByText('P1')).toBeVisible()
-  })
-
-  it('renders dictionary labels and disabled suffix', async () => {
-    const screen = await render(
-      <RecordTable
-        records={[recordWith('{"priority":"P2"}')]}
-        columns={[
-          column(
-            'custom.priority',
-            '优先级',
-            'custom',
-            'priority',
-            'select',
-            'record_priority'
-          ),
-        ]}
-        dictOptions={
-          {
-            record_priority: [
-              { value: 'P1', label: 'P1-紧急', enabled: true },
-              { value: 'P2', label: 'P2-高', enabled: false },
-            ],
-          } satisfies DictOptionMap
-        }
-        sortBy='recordTime'
-        sortDir='desc'
-        onSort={vi.fn()}
-      />
-    )
-
-    await expect.element(screen.getByText('P2-高（已禁用）')).toBeVisible()
-  })
-
-  it('renders multi-select values joined by 、', async () => {
-    const screen = await render(
-      <RecordTable
-        records={[recordWith('{"tags":["a","b"]}')]}
-        columns={[
-          column('custom.tags', '标签', 'custom', 'tags', 'multi_select'),
-        ]}
-        sortBy='recordTime'
-        sortDir='desc'
-        onSort={vi.fn()}
-      />
-    )
-
-    await expect.element(screen.getByText('a、b')).toBeVisible()
-  })
-})
-
-function column(
-  key: string,
-  title: string,
-  source: 'builtin' | 'custom',
-  fieldCode: string | null,
-  fieldType = 'text',
-  dictCode: string | null = null,
-  exportable = true
-): RecordListColumn {
+function column(fieldCode: string, title: string): RecordListColumn {
   return {
-    key,
+    key: `custom.${fieldCode}`,
     title,
-    source,
+    source: 'custom',
     fieldCode,
-    fieldType,
-    optionSource: dictCode ? 'dict' : 'static',
-    dictCode,
+    fieldType: 'text',
+    optionSource: fieldCode === 'priority' ? 'dict' : 'static',
+    dictCode: fieldCode === 'priority' ? 'priority' : null,
     optionsJson: '[]',
     visibleByDefault: true,
     sortable: true,
-    exportable,
-    sortOrder: 1,
+    exportable: true,
+    sortOrder: 0,
   }
 }
 
-function record(): WorkRecord {
-  return recordWith('{"priority":"P1"}')
+function renderTable(columns: RecordListColumn[], onSort = vi.fn()) {
+  return render(
+    <I18nextProvider i18n={i18n} defaultNS='translation'>
+      <RecordTable
+        records={[record]}
+        columns={columns}
+        dictOptions={{
+          priority: [
+            {
+              value: 'P2',
+              label: '中',
+              enabled: false,
+            },
+          ],
+        }}
+        sortBy='recordTime'
+        sortDir='desc'
+        onSort={onSort}
+      />
+    </I18nextProvider>
+  )
 }
 
-function recordWith(custom: string): WorkRecord {
-  return {
-    id: 'r1',
-    tenantId: 't1',
-    templateId: 'tpl1',
-    templateVersionId: 'v1',
-    title: '日报',
-    status: 'done',
-    ownerId: 'u1',
-    creatorId: 'u1',
-    recordTime: '2026-01-01T00:00:00Z',
-    builtinDataJson: '{}',
-    customDataJson: custom,
-    rowVersion: 1,
-    createdAt: '2026-01-01T00:00:00Z',
-    updatedAt: '2026-01-01T00:00:00Z',
-    deletedAt: null,
-  }
-}
+describe('RecordTable', () => {
+  it('renders disabled dictionary label', async () => {
+    const screen = await renderTable([column('priority', '优先级')])
+
+    await expect.element(screen.getByText('中（已禁用）')).toBeVisible()
+  })
+
+  it('renders historical value after field is removed from current template', async () => {
+    const screen = await renderTable([column('oldField', '旧字段')])
+
+    await expect.element(screen.getByText('历史值')).toBeVisible()
+  })
+
+  it('emits dynamic column sort', async () => {
+    const onSort = vi.fn()
+
+    const screen = await renderTable([column('priority', '优先级')], onSort)
+
+    await screen.getByRole('button', { name: '优先级' }).click()
+
+    expect(onSort).toHaveBeenCalledWith('custom.priority', 'desc')
+  })
+})

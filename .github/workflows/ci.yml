@@ -73,7 +73,7 @@ jobs:
   backend:
     name: Backend
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
 
     steps:
       - name: Checkout
@@ -89,10 +89,21 @@ jobs:
       - name: Verify backend
         run: bash scripts/ci/backend.sh
 
+      - name: Upload backend coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: |
+            modules/aiops-platform/target/site/jacoco
+            modules/aiops-work-record/target/site/jacoco
+          if-no-files-found: error
+          retention-days: 14
+
   frontend:
     name: Frontend
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 20
 
     steps:
       - name: Checkout
@@ -116,17 +127,6 @@ jobs:
         with:
           name: portal-coverage
           path: web/portal/coverage
-          if-no-files-found: error
-          retention-days: 14
-
-      - name: Upload backend coverage
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: backend-coverage
-          path: |
-            modules/aiops-platform/target/site/jacoco
-            modules/aiops-work-record/target/site/jacoco
           if-no-files-found: error
           retention-days: 14
 

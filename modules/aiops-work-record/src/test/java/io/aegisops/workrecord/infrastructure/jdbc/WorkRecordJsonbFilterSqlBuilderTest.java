@@ -138,6 +138,45 @@ class WorkRecordJsonbFilterSqlBuilderTest {
     assertThat(sql).contains("jsonb_build_object");
     assertThat(params).containsEntry("dfAny0_0", "a");
     assertThat(params).containsEntry("dfAny0_1", "b");
+
+    assertThat(count(sql, '(')).isEqualTo(count(sql, ')'));
+    assertThat(count(sql, '\'')).isEqualTo(2);
+  }
+
+  @Test
+  void containsAnyShouldProduceBalancedParameterizedSql() {
+    StringBuilder where = new StringBuilder(" where tenant_id = :tenantId ");
+    Map<String, Object> params = new HashMap<>();
+
+    builder.appendFilters(
+        where,
+        params,
+        List.of(
+            filter(
+                "tags",
+                DynamicFilterOperator.CONTAINS_ANY,
+                FieldType.MULTI_SELECT,
+                null,
+                List.of("a", "b"))));
+
+    String sql = where.toString();
+
+    assertThat(sql)
+        .contains(" and (")
+        .contains(" or ")
+        .doesNotContain("'tags'")
+        .doesNotContain("->>'tags'");
+
+    assertThat(count(sql, '(')).isEqualTo(count(sql, ')'));
+
+    assertThat(params)
+        .containsEntry("dfKey0", "tags")
+        .containsEntry("dfAny0_0", "a")
+        .containsEntry("dfAny0_1", "b");
+  }
+
+  private static long count(String value, char target) {
+    return value.chars().filter(character -> character == target).count();
   }
 
   @Test
