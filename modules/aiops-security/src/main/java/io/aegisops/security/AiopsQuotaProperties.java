@@ -7,6 +7,7 @@ public class AiopsQuotaProperties {
   private int publicApiRequestsPerMinute = 600;
   private int internalAgentRequestsPerMinute = 1200;
   private boolean rateLimitEnabled = true;
+  private String backend = "redis";
 
   public int getPublicApiRequestsPerMinute() {
     return publicApiRequestsPerMinute;
@@ -30,5 +31,13 @@ public class AiopsQuotaProperties {
 
   public void setRateLimitEnabled(boolean rateLimitEnabled) {
     this.rateLimitEnabled = rateLimitEnabled;
+  }
+
+  public String getBackend() {
+    return backend;
+  }
+
+  public void setBackend(String backend) {
+    this.backend = backend;
   }
 }

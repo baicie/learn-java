@@ -30,6 +30,7 @@ public class WorkRecordQueryService {
   private final WorkRecordPermissionService permissionService;
   private final WorkRecordDynamicFilterPolicyService dynamicFilterPolicyService;
   private final WorkRecordCalendarPort calendarPort;
+  private final WorkRecordQueryPolicy queryPolicy;
   private final Clock clock;
 
   @Autowired
@@ -38,17 +39,25 @@ public class WorkRecordQueryService {
       WorkRecordPermissionService permissionService,
       WorkRecordDynamicFilterPolicyService dynamicFilterPolicyService,
       WorkRecordCalendarPort calendarPort,
+      WorkRecordQueryPolicy queryPolicy,
       @Qualifier("workRecordClock") Clock clock) {
     this.repository = repository;
     this.permissionService = permissionService;
     this.dynamicFilterPolicyService = dynamicFilterPolicyService;
     this.calendarPort = calendarPort;
+    this.queryPolicy = queryPolicy;
     this.clock = clock;
   }
 
   WorkRecordQueryService(
       WorkRecordRepository repository, WorkRecordPermissionService permissionService) {
-    this(repository, permissionService, null, null, Clock.systemUTC());
+    this(
+        repository,
+        permissionService,
+        null,
+        null,
+        new WorkRecordQueryPolicy(WorkRecordProductionProperties.defaults()),
+        Clock.systemUTC());
   }
 
   WorkRecordQueryService(
@@ -56,7 +65,13 @@ public class WorkRecordQueryService {
       WorkRecordPermissionService permissionService,
       WorkRecordDynamicFilterPolicyService dynamicFilterPolicyService,
       Clock clock) {
-    this(repository, permissionService, dynamicFilterPolicyService, null, clock);
+    this(
+        repository,
+        permissionService,
+        dynamicFilterPolicyService,
+        null,
+        new WorkRecordQueryPolicy(WorkRecordProductionProperties.defaults()),
+        clock);
   }
 
   public PageResult<WorkRecord> page(String tenantId, RecordQuery query, UserPrincipal user) {
@@ -88,9 +103,12 @@ public class WorkRecordQueryService {
             quickQuery.templateVersionId(),
             quickQuery.dynamicFilters());
 
+    WorkRecordQueryPolicy.PageWindow window =
+        queryPolicy.normalize(quickQuery.page(), quickQuery.pageSize());
+
     return new RecordQuery(
-        Math.max(1, quickQuery.page()),
-        Math.min(Math.max(1, quickQuery.pageSize()), 200),
+        window.page(),
+        window.size(),
         quickQuery.templateId(),
         quickQuery.templateVersionId(),
         quickQuery.statuses(),

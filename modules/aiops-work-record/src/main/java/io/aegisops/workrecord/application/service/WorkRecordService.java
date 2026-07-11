@@ -29,6 +29,7 @@ public class WorkRecordService {
   private final WorkRecordAuditSnapshots auditSnapshots;
   private final WorkRecordPermissionService permissionService;
   private final WorkRecordUserPort userPort;
+  private final WorkRecordPayloadPolicy payloadPolicy;
   private final ObjectMapper objectMapper;
 
   public WorkRecordService(
@@ -40,6 +41,7 @@ public class WorkRecordService {
       WorkRecordAuditSnapshots auditSnapshots,
       WorkRecordPermissionService permissionService,
       WorkRecordUserPort userPort,
+      WorkRecordPayloadPolicy payloadPolicy,
       ObjectMapper objectMapper) {
     this.recordRepository = recordRepository;
     this.versionRepository = versionRepository;
@@ -49,6 +51,7 @@ public class WorkRecordService {
     this.auditSnapshots = auditSnapshots;
     this.permissionService = permissionService;
     this.userPort = userPort;
+    this.payloadPolicy = payloadPolicy;
     this.objectMapper = objectMapper;
   }
 
@@ -62,6 +65,9 @@ public class WorkRecordService {
     requireText(command.templateVersionId(), "templateVersionId");
     requireText(command.title(), "title");
     requireRecordTime(command.recordTime());
+
+    payloadPolicy.requireBuiltinData(command.builtinDataJson());
+    payloadPolicy.requireCustomData(command.customDataJson());
 
     // 必须在任何 Repository 查询前完成权限判断，
     // 避免只读用户探测模板版本是否存在。
@@ -120,6 +126,14 @@ public class WorkRecordService {
             .orElseThrow(() -> new IllegalArgumentException("work record not found"));
 
     permissionService.requireEdit(user, existing);
+
+    if (command.builtinDataJson() != null) {
+      payloadPolicy.requireBuiltinData(command.builtinDataJson());
+    }
+
+    if (command.customDataJson() != null) {
+      payloadPolicy.requireCustomData(command.customDataJson());
+    }
 
     String builtin =
         command.builtinDataJson() == null ? null : normalizeObject(command.builtinDataJson());

@@ -33,10 +33,11 @@ public class AiopsSecurityConfiguration {
   @Bean
   TenantRateLimitFilter tenantRateLimitFilter(
       AiopsQuotaProperties quotaProperties,
-      InMemoryTenantRateLimiter rateLimiter,
+      RateLimitService rateLimitService,
       SecurityErrorResponseWriter responseWriter,
       TenantSecurityAuditService auditService) {
-    return new TenantRateLimitFilter(quotaProperties, rateLimiter, responseWriter, auditService);
+    return new TenantRateLimitFilter(
+        quotaProperties, rateLimitService, responseWriter, auditService);
   }
 
   /**

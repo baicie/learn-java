@@ -6,6 +6,8 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.aegisops.security.InMemoryDistributedLeaseService;
+import io.aegisops.security.InMemoryTenantRateLimiter;
 import io.aegisops.security.UserPrincipal;
 import io.aegisops.workrecord.application.command.RecordListColumn;
 import io.aegisops.workrecord.application.command.RecordListMeta;
@@ -13,6 +15,7 @@ import io.aegisops.workrecord.application.command.RecordQuery;
 import io.aegisops.workrecord.application.port.WorkRecordDictionaryPort;
 import io.aegisops.workrecord.application.port.WorkRecordFieldIndexRepository;
 import io.aegisops.workrecord.application.port.WorkRecordRepository;
+import io.aegisops.workrecord.application.port.WorkRecordTelemetry;
 import io.aegisops.workrecord.application.port.WorkRecordUserPort;
 import io.aegisops.workrecord.domain.model.FieldType;
 import io.aegisops.workrecord.domain.model.OptionSource;
@@ -70,6 +73,12 @@ class WorkRecordExportServiceTest {
             userPort,
             auditService,
             new WorkRecordCsvWriter(),
+            new WorkRecordExportGuard(
+                new InMemoryTenantRateLimiter(),
+                new InMemoryDistributedLeaseService(),
+                new WorkRecordProductionProperties(),
+                WorkRecordTelemetry.noop()),
+            WorkRecordTelemetry.noop(),
             new ObjectMapper(),
             clock);
   }
@@ -200,6 +209,12 @@ class WorkRecordExportServiceTest {
             userPort,
             auditService,
             new WorkRecordCsvWriter(),
+            new WorkRecordExportGuard(
+                new InMemoryTenantRateLimiter(),
+                new InMemoryDistributedLeaseService(),
+                new WorkRecordProductionProperties(),
+                WorkRecordTelemetry.noop()),
+            WorkRecordTelemetry.noop(),
             new ObjectMapper(),
             clock);
 

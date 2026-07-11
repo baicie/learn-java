@@ -2,6 +2,8 @@ package io.aegisops.workrecord.application.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.aegisops.common.exception.AppException;
+import io.aegisops.common.exception.ErrorCode;
 import io.aegisops.common.id.Ids;
 import io.aegisops.security.UserPrincipal;
 import io.aegisops.workrecord.application.command.RecordListColumn;
@@ -11,6 +13,7 @@ import io.aegisops.workrecord.application.command.ResolvedExportColumn;
 import io.aegisops.workrecord.application.command.WorkRecordExportResult;
 import io.aegisops.workrecord.application.port.WorkRecordDictionaryPort;
 import io.aegisops.workrecord.application.port.WorkRecordRepository;
+import io.aegisops.workrecord.application.port.WorkRecordTelemetry;
 import io.aegisops.workrecord.application.port.WorkRecordUserPort;
 import io.aegisops.workrecord.domain.model.FieldType;
 import io.aegisops.workrecord.domain.model.OptionSource;
@@ -52,6 +55,8 @@ public class WorkRecordExportService {
   private final WorkRecordUserPort userPort;
   private final WorkRecordAuditService auditService;
   private final WorkRecordCsvWriter csvWriter;
+  private final WorkRecordExportGuard exportGuard;
+  private final WorkRecordTelemetry telemetry;
   private final ObjectMapper objectMapper;
   private final Clock clock;
 
@@ -66,6 +71,8 @@ public class WorkRecordExportService {
       WorkRecordUserPort userPort,
       WorkRecordAuditService auditService,
       WorkRecordCsvWriter csvWriter,
+      WorkRecordExportGuard exportGuard,
+      WorkRecordTelemetry telemetry,
       ObjectMapper objectMapper,
       @Qualifier("workRecordClock") Clock clock) {
     this.recordRepository = recordRepository;
@@ -78,14 +85,41 @@ public class WorkRecordExportService {
     this.userPort = userPort;
     this.auditService = auditService;
     this.csvWriter = csvWriter;
+    this.exportGuard = exportGuard;
+    this.telemetry = telemetry;
     this.objectMapper = objectMapper;
     this.clock = clock;
   }
 
   public WorkRecordExportResult export(
       String tenantId, RecordQuery rawQuery, List<String> requestedColumnKeys, UserPrincipal user) {
+
     permissionService.requireExport(user);
 
+    try (WorkRecordExportGuard.Permit ignored = exportGuard.acquire(tenantId, user)) {
+      WorkRecordExportResult result =
+          doExport(tenantId, rawQuery, requestedColumnKeys, user);
+
+      telemetry.recordExport("success");
+
+      return result;
+    } catch (AppException ex) {
+      String code = ex.errorCode();
+      if (ErrorCode.EXPORT_RATE_LIMITED.name().equals(code)
+          || ErrorCode.EXPORT_IN_PROGRESS.name().equals(code)) {
+        throw ex;
+      }
+
+      telemetry.recordExport("failed");
+      throw ex;
+    } catch (RuntimeException ex) {
+      telemetry.recordExport("failed");
+      throw ex;
+    }
+  }
+
+  private WorkRecordExportResult doExport(
+      String tenantId, RecordQuery rawQuery, List<String> requestedColumnKeys, UserPrincipal user) {
     RecordQuery query = queryService.prepareEffectiveQuery(tenantId, rawQuery, user);
 
     RecordListMeta meta = metaService.meta(tenantId, query.templateId());

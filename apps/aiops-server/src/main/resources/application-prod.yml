@@ -1,0 +1,110 @@
+spring:
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+
+  datasource:
+    hikari:
+      maximum-pool-size: ${AIOPS_DB_POOL_MAX:20}
+      minimum-idle: ${AIOPS_DB_POOL_MIN:5}
+      connection-timeout: 3000
+      validation-timeout: 2000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      keepalive-time: 300000
+
+  data:
+    redis:
+      host: ${AIOPS_REDIS_HOST:redis}
+      port: ${AIOPS_REDIS_PORT:6379}
+      password: ${AIOPS_REDIS_PASSWORD:}
+      timeout: 2s
+      connect-timeout: 2s
+
+server:
+  shutdown: graceful
+  max-http-request-header-size: 16KB
+  compression:
+    enabled: true
+    min-response-size: 2KB
+    mime-types:
+      - application/json
+      - text/csv
+      - text/html
+      - text/plain
+
+management:
+  server:
+    port: ${AIOPS_MANAGEMENT_PORT:9090}
+
+  endpoints:
+    web:
+      exposure:
+        include:
+          - health
+          - info
+          - prometheus
+
+  endpoint:
+    health:
+      show-details: never
+      probes:
+        enabled: true
+      group:
+        liveness:
+          include:
+            - livenessState
+            - ping
+        readiness:
+          include:
+            - readinessState
+            - db
+            - redis
+            - workRecord
+
+  health:
+    redis:
+      enabled: true
+
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
+aiops:
+  web:
+    request:
+      max-body-bytes: ${AIOPS_MAX_REQUEST_BODY_BYTES:2097152}
+
+  security:
+    allowed-origins:
+      - ${AIOPS_PORTAL_ORIGIN:https://portal.example.com}
+
+  quota:
+    backend: redis
+    rate-limit-enabled: true
+    public-api-requests-per-minute: ${AIOPS_PUBLIC_API_RPM:600}
+    internal-agent-requests-per-minute: ${AIOPS_INTERNAL_AGENT_RPM:1200}
+
+  work-record:
+    payload:
+      schema-max-bytes: 1048576
+      designer-max-bytes: 1048576
+      custom-data-max-bytes: 262144
+      builtin-data-max-bytes: 131072
+
+    query:
+      max-page-size: 200
+      max-offset: 100000
+      slow-threshold-millis: 500
+
+    export:
+      max-rows: 5000
+      requests-per-minute: 5
+      lease-seconds: 120
+
+    metrics:
+      snapshot-delay-ms: 60000
+
+    health:
+      require-indexes: true

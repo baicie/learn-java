@@ -26,7 +26,12 @@ class WorkRecordTemplateServiceTest {
       new WorkRecordAuditSnapshots(new ObjectMapper());
   private final WorkRecordTemplateService service =
       new WorkRecordTemplateService(
-          repository, usageRepository, schemaService, auditService, auditSnapshots);
+          repository,
+          usageRepository,
+          schemaService,
+          auditService,
+          auditSnapshots,
+          new WorkRecordPayloadPolicy(new WorkRecordProductionProperties()));
 
   @Test
   void shouldRejectDuplicatedTemplateCodeOnCreate() {

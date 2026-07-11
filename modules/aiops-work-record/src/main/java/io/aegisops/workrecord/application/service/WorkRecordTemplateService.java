@@ -21,18 +21,21 @@ public class WorkRecordTemplateService {
   private final WorkRecordSchemaService schemaService;
   private final WorkRecordAuditService auditService;
   private final WorkRecordAuditSnapshots auditSnapshots;
+  private final WorkRecordPayloadPolicy payloadPolicy;
 
   public WorkRecordTemplateService(
       WorkRecordTemplateRepository repository,
       WorkRecordTemplateUsageRepository usageRepository,
       WorkRecordSchemaService schemaService,
       WorkRecordAuditService auditService,
-      WorkRecordAuditSnapshots auditSnapshots) {
+      WorkRecordAuditSnapshots auditSnapshots,
+      WorkRecordPayloadPolicy payloadPolicy) {
     this.repository = repository;
     this.usageRepository = usageRepository;
     this.schemaService = schemaService;
     this.auditService = auditService;
     this.auditSnapshots = auditSnapshots;
+    this.payloadPolicy = payloadPolicy;
   }
 
   public List<WorkRecordTemplate> list(String tenantId, boolean includeDisabled) {
@@ -50,6 +53,9 @@ public class WorkRecordTemplateService {
     requireText(command.code(), "code");
     requireText(command.name(), "name");
     ensureCodeAvailable(tenantId, command.code());
+
+    payloadPolicy.requireSchema(command.draftSchemaJson());
+    payloadPolicy.requireDesigner(command.draftDesignerJson());
 
     CreateTemplateCommand normalized =
         new CreateTemplateCommand(
@@ -100,6 +106,14 @@ public class WorkRecordTemplateService {
       String tenantId, String templateId, UpdateTemplateDraftCommand command, String actor) {
     WorkRecordTemplate template = get(tenantId, templateId);
     ensureEditable(template);
+
+    if (command.draftSchemaJson() != null) {
+      payloadPolicy.requireSchema(command.draftSchemaJson());
+    }
+
+    if (command.draftDesignerJson() != null) {
+      payloadPolicy.requireDesigner(command.draftDesignerJson());
+    }
 
     UpdateTemplateDraftCommand normalized =
         new UpdateTemplateDraftCommand(

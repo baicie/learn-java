@@ -192,12 +192,12 @@ public class IncidentCaseService {
   private IncidentCaseResponse toResponse(IncidentCaseRecord record) {
     List<IncidentCaseSymptomResponse> symptoms =
         caseRepository.listSymptoms(record.tenantId(), record.id()).stream()
-            .map(record -> toSymptomResponse(record))
+            .map(this::toSymptomResponse)
             .toList();
 
     List<IncidentCaseResolutionStepResponse> steps =
         caseRepository.listResolutionSteps(record.tenantId(), record.id()).stream()
-            .map(record -> toResolutionStepResponse(record))
+            .map(this::toResolutionStepResponse)
             .toList();
 
     List<String> tags =

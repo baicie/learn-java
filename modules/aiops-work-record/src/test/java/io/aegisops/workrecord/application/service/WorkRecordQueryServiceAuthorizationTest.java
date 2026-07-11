@@ -40,6 +40,7 @@ class WorkRecordQueryServiceAuthorizationTest {
           new WorkRecordPermissionService(),
           filterPolicy,
           calendarPort,
+          new WorkRecordQueryPolicy(new WorkRecordProductionProperties()),
           Clock.fixed(Instant.parse("2026-07-11T02:00:00Z"), ZoneId.of("Asia/Shanghai")));
 
   @Test

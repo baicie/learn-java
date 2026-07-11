@@ -55,6 +55,7 @@ class WorkRecordServiceAuthorizationTest {
           new WorkRecordAuditSnapshots(new ObjectMapper()),
           permissionService,
           userPort,
+          new WorkRecordPayloadPolicy(new WorkRecordProductionProperties()),
           new ObjectMapper());
 
   @Test

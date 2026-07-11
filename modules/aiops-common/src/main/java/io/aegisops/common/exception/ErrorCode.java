@@ -1,0 +1,42 @@
+package io.aegisops.common.exception;
+
+public enum ErrorCode {
+  BAD_REQUEST(400),
+  VALIDATION_ERROR(400),
+  MALFORMED_REQUEST(400),
+
+  UNAUTHORIZED(401),
+  FORBIDDEN(403),
+
+  RESOURCE_NOT_FOUND(404),
+
+  CONFLICT(409),
+
+  PAYLOAD_TOO_LARGE(413),
+  SCHEMA_JSON_TOO_LARGE(413),
+  DESIGNER_JSON_TOO_LARGE(413),
+  CUSTOM_DATA_JSON_TOO_LARGE(413),
+  BUILTIN_DATA_JSON_TOO_LARGE(413),
+
+  PAGE_WINDOW_EXCEEDED(422),
+
+  RATE_LIMITED(429),
+  TENANT_RATE_LIMITED(429),
+  EXPORT_RATE_LIMITED(429),
+  EXPORT_IN_PROGRESS(429),
+
+  DATABASE_TIMEOUT(503),
+  RATE_LIMIT_BACKEND_UNAVAILABLE(503),
+
+  INTERNAL_ERROR(500);
+
+  private final int httpStatus;
+
+  ErrorCode(int httpStatus) {
+    this.httpStatus = httpStatus;
+  }
+
+  public int httpStatus() {
+    return httpStatus;
+  }
+}

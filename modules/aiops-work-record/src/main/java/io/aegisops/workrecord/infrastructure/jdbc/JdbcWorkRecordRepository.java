@@ -6,10 +6,12 @@ import io.aegisops.workrecord.application.command.CreateRecordCommand;
 import io.aegisops.workrecord.application.command.RecordQuery;
 import io.aegisops.workrecord.application.command.UpdateRecordCommand;
 import io.aegisops.workrecord.application.port.WorkRecordRepository;
+import io.aegisops.workrecord.application.port.WorkRecordTelemetry;
 import io.aegisops.workrecord.domain.model.RecordStatus;
 import io.aegisops.workrecord.domain.model.WorkRecord;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -25,19 +27,24 @@ public class JdbcWorkRecordRepository implements WorkRecordRepository {
 
   private final NamedParameterJdbcTemplate jdbc;
   private final WorkRecordJsonbFilterSqlBuilder jsonbFilterSqlBuilder;
+  private final WorkRecordTelemetry telemetry;
 
   @Autowired
   public JdbcWorkRecordRepository(
-      NamedParameterJdbcTemplate jdbc, WorkRecordJsonbFilterSqlBuilder jsonbFilterSqlBuilder) {
+      NamedParameterJdbcTemplate jdbc,
+      WorkRecordJsonbFilterSqlBuilder jsonbFilterSqlBuilder,
+      WorkRecordTelemetry telemetry) {
     this.jdbc = jdbc;
     this.jsonbFilterSqlBuilder = jsonbFilterSqlBuilder;
+    this.telemetry = telemetry;
   }
 
-  /** 包内构造器：兼容旧测试（默认 ObjectMapper） */
+  /** 包内构造器：兼容旧测试（默认 ObjectMapper 与 noop telemetry） */
   JdbcWorkRecordRepository(NamedParameterJdbcTemplate jdbc) {
     this(
         jdbc,
-        new WorkRecordJsonbFilterSqlBuilder(new com.fasterxml.jackson.databind.ObjectMapper()));
+        new WorkRecordJsonbFilterSqlBuilder(new com.fasterxml.jackson.databind.ObjectMapper()),
+        WorkRecordTelemetry.noop());
   }
 
   @Override
@@ -200,26 +207,32 @@ public class JdbcWorkRecordRepository implements WorkRecordRepository {
     applyDynamicFilters(where, params, query);
 
     Long total =
-        jdbc.queryForObject(
-            "select count(*) from work_record.wr_record " + where, params, Long.class);
+        timed(
+            "record_count",
+            () ->
+                jdbc.queryForObject(
+                    "select count(*) from work_record.wr_record " + where, params, Long.class));
 
     params.put("limit", size);
     params.put("offset", offset);
 
     List<WorkRecord> items =
-        jdbc.query(
-            """
-            select id, tenant_id, template_id, template_version_id, title, status,
-                   owner_id, creator_id, record_time,
-                   builtin_data_json::text, custom_data_json::text,
-                   row_version, created_at, updated_at, deleted_at
-              from work_record.wr_record
-            """
-                + where
-                + orderBy(query.sortBy(), query.sortDir())
-                + " limit :limit offset :offset",
-            params,
-            (rs, rowNum) -> mapRecord(rs));
+        timed(
+            "record_page",
+            () ->
+                jdbc.query(
+                    """
+                    select id, tenant_id, template_id, template_version_id, title, status,
+                           owner_id, creator_id, record_time,
+                           builtin_data_json::text, custom_data_json::text,
+                           row_version, created_at, updated_at, deleted_at
+                      from work_record.wr_record
+                    """
+                        + where
+                        + orderBy(query.sortBy(), query.sortDir())
+                        + " limit :limit offset :offset",
+                    params,
+                    (rs, rowNum) -> mapRecord(rs)));
 
     return new PageResult<>(total == null ? 0L : total, page, size, items);
   }
@@ -294,17 +307,26 @@ public class JdbcWorkRecordRepository implements WorkRecordRepository {
   }
 
   private String orderBy(String sortBy, String sortDir) {
-    String dir = "asc".equalsIgnoreCase(sortDir) ? "asc" : "desc";
-    String column =
-        switch (sortBy == null ? "" : sortBy) {
-          case "title" -> "title";
-          case "status" -> "status";
-          case "ownerId" -> "owner_id";
-          case "creatorId" -> "creator_id";
-          case "createdAt" -> "created_at";
-          case "recordTime" -> "record_time";
-          default -> "record_time";
-        };
-    return " order by " + column + " " + dir + ", created_at desc ";
+    String direction = "asc".equalsIgnoreCase(sortDir) ? "asc" : "desc";
+
+    return switch (sortBy == null ? "" : sortBy) {
+      case "title" -> " order by title " + direction + ", created_at desc, id desc ";
+      case "status" -> " order by status " + direction + ", created_at desc, id desc ";
+      case "ownerId" ->
+          " order by owner_id " + direction + " nulls last, created_at desc, id desc ";
+      case "creatorId" -> " order by creator_id " + direction + ", created_at desc, id desc ";
+      case "createdAt" -> " order by created_at " + direction + ", id desc ";
+      case "recordTime" -> " order by record_time " + direction + ", created_at desc, id desc ";
+      default -> " order by record_time desc, created_at desc, id desc ";
+    };
+  }
+
+  private <T> T timed(String operation, java.util.function.Supplier<T> supplier) {
+    long started = System.nanoTime();
+    try {
+      return supplier.get();
+    } finally {
+      telemetry.recordQuery(operation, Duration.ofNanos(System.nanoTime() - started));
+    }
   }
 }

@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.aegisops.workrecord.application.command.DynamicFilterOperator;
 import io.aegisops.workrecord.application.command.RecordDynamicFilter;
 import io.aegisops.workrecord.application.command.RecordQuery;
+import io.aegisops.workrecord.application.port.WorkRecordTelemetry;
 import io.aegisops.workrecord.domain.model.FieldType;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -39,7 +40,10 @@ class JdbcWorkRecordRepositoryPostgresIT {
     jdbc = new NamedParameterJdbcTemplate(dataSource);
 
     repository =
-        new JdbcWorkRecordRepository(jdbc, new WorkRecordJsonbFilterSqlBuilder(new ObjectMapper()));
+        new JdbcWorkRecordRepository(
+            jdbc,
+            new WorkRecordJsonbFilterSqlBuilder(new ObjectMapper()),
+            WorkRecordTelemetry.noop());
 
     jdbc.getJdbcTemplate().execute("create schema work_record");
 

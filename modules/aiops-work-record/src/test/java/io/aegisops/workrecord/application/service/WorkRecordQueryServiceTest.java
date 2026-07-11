@@ -43,7 +43,12 @@ class WorkRecordQueryServiceTest {
 
   private final WorkRecordQueryService service =
       new WorkRecordQueryService(
-          repository, new WorkRecordPermissionService(), filterPolicy, calendarPort, clock);
+          repository,
+          new WorkRecordPermissionService(),
+          filterPolicy,
+          calendarPort,
+          new WorkRecordQueryPolicy(new WorkRecordProductionProperties()),
+          clock);
 
   @Test
   void dynamicFiltersMustBeNormalizedBeforeRepositoryPage() {

@@ -3,13 +3,29 @@ package io.aegisops.workrecord.application.service;
 import io.aegisops.security.DataScope;
 import io.aegisops.security.PermissionCodes;
 import io.aegisops.security.UserPrincipal;
+import io.aegisops.workrecord.application.port.WorkRecordTelemetry;
 import io.aegisops.workrecord.domain.model.WorkRecord;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
 @Service
 public class WorkRecordPermissionService {
   private static final String RESOURCE_CODE = "work-record";
+  private static final String SELF_DATA_SCOPE_PERMISSION =
+      "work-record:data-scope:self";
+
+  private final WorkRecordTelemetry telemetry;
+
+  @Autowired
+  public WorkRecordPermissionService(WorkRecordTelemetry telemetry) {
+    this.telemetry = telemetry;
+  }
+
+  /** 保留单元测试无参构造。 */
+  WorkRecordPermissionService() {
+    this(WorkRecordTelemetry.noop());
+  }
 
   public boolean canReadAll(UserPrincipal principal) {
     return principal != null
@@ -83,12 +99,14 @@ public class WorkRecordPermissionService {
     boolean owner = record.ownerId() != null && userId.equals(record.ownerId());
 
     if (!creator && !owner) {
+      telemetry.recordPermissionDenied(SELF_DATA_SCOPE_PERMISSION);
       throw new AccessDeniedException(message);
     }
   }
 
   private void requirePermission(UserPrincipal principal, String permission, String message) {
     if (principal == null || !principal.hasPermission(permission)) {
+      telemetry.recordPermissionDenied(permission);
       throw new AccessDeniedException(message);
     }
   }

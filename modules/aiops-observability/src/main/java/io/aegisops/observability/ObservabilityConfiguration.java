@@ -51,6 +51,20 @@ public class ObservabilityConfiguration {
     return registration;
   }
 
+  @Bean
+  OperationLogFilter operationLogFilter(ObservabilityProperties properties) {
+    return new OperationLogFilter(properties);
+  }
+
+  @Bean
+  FilterRegistrationBean<OperationLogFilter> operationLogFilterRegistration(
+      OperationLogFilter filter) {
+    FilterRegistrationBean<OperationLogFilter> registration = new FilterRegistrationBean<>(filter);
+    registration.setOrder(Ordered.LOWEST_PRECEDENCE - 5);
+    registration.addUrlPatterns("/*");
+    return registration;
+  }
+
   @Bean("aegisopsReadiness")
   HealthIndicator aegisopsReadinessIndicator(ObservabilityProperties properties) {
     return new AegisOpsReadinessIndicator(properties);

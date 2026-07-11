@@ -10,6 +10,7 @@ public class ObservabilityProperties {
   private String traceIdHeader = "X-Trace-Id";
   private boolean httpMetricsEnabled = true;
   private boolean requestIdResponseHeaderEnabled = true;
+  private boolean operationLogEnabled = true;
 
   public boolean isEnabled() {
     return enabled;
@@ -57,5 +58,13 @@ public class ObservabilityProperties {
 
   public void setRequestIdResponseHeaderEnabled(boolean requestIdResponseHeaderEnabled) {
     this.requestIdResponseHeaderEnabled = requestIdResponseHeaderEnabled;
+  }
+
+  public boolean isOperationLogEnabled() {
+    return operationLogEnabled;
+  }
+
+  public void setOperationLogEnabled(boolean operationLogEnabled) {
+    this.operationLogEnabled = operationLogEnabled;
   }
 }

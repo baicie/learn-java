@@ -74,6 +74,7 @@ class WorkRecordQueryServiceQuickViewTest {
             new WorkRecordPermissionService(),
             Mockito.mock(WorkRecordDynamicFilterPolicyService.class),
             calendarPort,
+            new WorkRecordQueryPolicy(new WorkRecordProductionProperties()),
             clock);
 
     when(repository.page(eq("t1"), any())).thenReturn(new PageResult<>(0, 1, 20, List.of()));
