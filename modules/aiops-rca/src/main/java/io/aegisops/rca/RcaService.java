@@ -142,7 +142,7 @@ public class RcaService {
     }
 
     return evidence.stream()
-        .map(evidence -> evidence.ruleId())
+        .map(e -> e.ruleId())
         .filter(value -> value != null && !value.isBlank())
         .distinct()
         .toList();
