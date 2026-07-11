@@ -1,4 +1,4 @@
-import { Button } from '@/components/ui/button'
+import { useTranslation } from 'react-i18next'
 
 type Props = {
   value: string
@@ -6,38 +6,36 @@ type Props = {
   onChange: (value: string) => void
 }
 
-const labels: Record<string, string> = {
-  mine: '我的记录',
-  all: '全部记录',
-  today: '今日记录',
-  this_week: '本周记录',
-  this_month: '本月记录',
-  this_work_month: '本工作月',
-  recent_workdays: '最近工作日',
-}
+export function QuickViewTabs({ value, available, onChange }: Props) {
+  const { t } = useTranslation()
 
-export function QuickViewTabs({
-  value,
-  available,
-  onChange,
-}: Props) {
-  const views =
-    available.length > 0
-      ? available
-      : Object.keys(labels)
+  const labels: Record<string, string> = {
+    mine: t('workRecords.quick.mine'),
+    all: t('workRecords.quick.all'),
+    today: t('workRecords.quick.today'),
+    this_week: t('workRecords.quick.thisWeek'),
+    this_month: t('workRecords.quick.thisMonth'),
+    this_work_month: t('workRecords.quick.thisWorkMonth'),
+    recent_workdays: t('workRecords.quick.recentWorkdays'),
+  }
+
+  const views = available.length > 0 ? available : Object.keys(labels)
 
   return (
     <div className='flex flex-wrap gap-2'>
       {views.map((key) => (
-        <Button
+        <button
           key={key}
           type='button'
-          size='sm'
-          variant={value === key ? 'default' : 'outline'}
+          className={`rounded-md border px-3 py-1 text-sm ${
+            value === key
+              ? 'bg-primary text-primary-foreground'
+              : 'bg-background'
+          }`}
           onClick={() => onChange(key)}
         >
           {labels[key] ?? key}
-        </Button>
+        </button>
       ))}
     </div>
   )

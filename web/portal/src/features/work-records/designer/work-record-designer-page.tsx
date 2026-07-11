@@ -1,6 +1,21 @@
+import { useNavigate } from '@tanstack/react-router'
 import { ArrowLeft, Eye, Rocket, Save, ShieldCheck } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
+import { useUnsavedChangesGuard } from '@/hooks/use-unsaved-changes-guard'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { notify } from '@/components/feedback/app-toaster'
+import {
+  EmptyState,
+  ErrorState,
+  PageLoadingState,
+} from '@/components/feedback/async-state'
+import { useConfirm } from '@/components/feedback/confirm-provider'
+import {
+  DetailPageLayout,
+  DetailSection,
+} from '@/components/layout/detail-page-layout'
+import { fieldDeleteConfirmOptions } from './field-delete-risk'
 import { FieldLibrary } from './field-library'
 import { FormCanvas } from './form-canvas'
 import { FormPreview } from './form-preview'
@@ -10,47 +25,119 @@ import { useWorkRecordDesigner } from './use-work-record-designer'
 
 export function WorkRecordDesignerPage() {
   const designer = useWorkRecordDesigner()
+  const confirm = useConfirm()
+  const { t } = useTranslation()
+  const navigate = useNavigate()
 
-  if (designer.loading) {
-    return <main className='p-6 text-sm text-muted-foreground'>加载中...</main>
+  useUnsavedChangesGuard(
+    designer.dirty && !designer.saving && !designer.publishing
+  )
+
+  const handleBack = () => {
+    void navigate({ to: '/work-records/designer' })
+  }
+
+  const selectTemplate = async (templateId: string) => {
+    if (templateId === designer.selectedTemplateId) return
+
+    if (designer.dirty) {
+      const accepted = await confirm({
+        title: t('workRecords.templateSwitch.title'),
+        description: t('workRecords.designer.switchTemplateDescription'),
+        confirmText: t('workRecords.designer.discardAndSwitch'),
+        cancelText: t('common.cancel'),
+        variant: 'warning',
+      })
+
+      if (!accepted) return
+    }
+
+    designer.loadTemplate(templateId)
+  }
+
+  const removeField = async (fieldId: string) => {
+    const field = designer.fields.find((item) => item.id === fieldId)
+    if (!field) return
+
+    const accepted = await confirm(
+      fieldDeleteConfirmOptions({
+        fieldName: field.fieldName,
+        fieldCode: field.fieldCode,
+        published: field.locked || field.referenced,
+        required: field.required,
+        filterable: field.filterable,
+        exportable: field.exportable,
+        t,
+      })
+    )
+
+    if (accepted) {
+      designer.removeOrDisableField(fieldId)
+    }
+  }
+
+  const saveDraft = async () => {
+    try {
+      await designer.saveDraft()
+      notify.success(t('workRecords.designer.saveDraftSuccess'))
+    } catch (error) {
+      notify.error(error, t('workRecords.designer.saveDraftFailed'))
+    }
+  }
+
+  if (designer.queryError) {
+    return (
+      <main className='p-4 md:p-6'>
+        <ErrorState
+          error={designer.queryError as Error}
+          onRetry={() => window.location.reload()}
+        />
+      </main>
+    )
+  }
+
+  if (designer.loading && designer.fields.length === 0) {
+    return <PageLoadingState />
   }
 
   if (!designer.templates.length) {
     return (
-      <main className='p-6'>
-        <Card>
-          <CardContent className='p-6 text-sm text-muted-foreground'>
-            暂无模板。请先在模板管理中创建模板。
-          </CardContent>
-        </Card>
+      <main className='p-4 md:p-6'>
+        <EmptyState
+          title={t('workRecords.designer.noTemplates')}
+          description={t('workRecords.designer.noTemplatesHint')}
+        />
       </main>
     )
   }
 
   return (
-    <main className='grid gap-4 p-6'>
-      <div className='flex flex-wrap items-center justify-between gap-3'>
-        <div>
-          <h1 className='text-2xl font-semibold'>工作记录表单设计器</h1>
-          <p className='text-sm text-muted-foreground'>
-            字段库 / 画布 / 属性面板 / 实时预览 / 发布校验
-          </p>
+    <DetailPageLayout
+      title={t('workRecords.designer.title')}
+      description={t('workRecords.designer.subtitle')}
+      meta={
+        <div className='flex flex-wrap gap-2 text-xs text-muted-foreground'>
+          <span>
+            {t('workRecords.designer.toolbar.dirty')}：
+            {designer.dirty ? '✓' : '—'}
+          </span>
+          <span>·</span>
+          <span>
+            {t('workRecords.designer.toolbar.fields')}：{designer.fields.length}
+          </span>
         </div>
-
-        <div className='flex flex-wrap items-center gap-2'>
-          <Button
-            type='button'
-            variant='outline'
-            onClick={() => history.back()}
-          >
+      }
+      actions={
+        <>
+          <Button type='button' variant='outline' onClick={handleBack}>
             <ArrowLeft className='mr-2 size-4' />
-            返回
+            {t('common.back')}
           </Button>
 
           <select
             className='rounded-md border bg-background px-3 py-2 text-sm'
             value={designer.selectedTemplateId}
-            onChange={(event) => designer.loadTemplate(event.target.value)}
+            onChange={(event) => void selectTemplate(event.target.value)}
           >
             {designer.templates.map((template) => (
               <option key={template.id} value={template.id}>
@@ -65,17 +152,19 @@ export function WorkRecordDesignerPage() {
             onClick={() => designer.setPreviewOpen(!designer.previewOpen)}
           >
             <Eye className='mr-2 size-4' />
-            {designer.previewOpen ? '关闭预览' : '打开预览'}
+            {designer.previewOpen
+              ? t('workRecords.designer.toolbar.closePreview')
+              : t('workRecords.designer.toolbar.openPreview')}
           </Button>
 
           <Button
             type='button'
             variant='outline'
-            disabled={designer.saving}
-            onClick={() => designer.saveDraft()}
+            disabled={designer.saving || !designer.dirty}
+            onClick={() => void saveDraft()}
           >
             <Save className='mr-2 size-4' />
-            保存草稿
+            {t('workRecords.designer.toolbar.saveDraft')}
           </Button>
 
           <Button
@@ -85,7 +174,7 @@ export function WorkRecordDesignerPage() {
             onClick={() => designer.validatePublish()}
           >
             <ShieldCheck className='mr-2 size-4' />
-            发布校验
+            {t('workRecords.designer.toolbar.validatePublish')}
           </Button>
 
           <Button
@@ -94,55 +183,64 @@ export function WorkRecordDesignerPage() {
             onClick={() => designer.publish()}
           >
             <Rocket className='mr-2 size-4' />
-            发布
+            {t('workRecords.designer.toolbar.publish')}
           </Button>
+        </>
+      }
+    >
+      <DetailSection
+        title={t('workRecords.designer.section.canvas')}
+        description={t('workRecords.designer.section.canvasDescription')}
+      >
+        <div className='grid gap-4 xl:grid-cols-[260px_minmax(0,1fr)_340px]'>
+          <FieldLibrary onAdd={designer.addField} />
+
+          <FormCanvas
+            fields={designer.fields}
+            selectedFieldId={designer.selectedField?.id ?? ''}
+            onSelect={designer.setSelectedFieldId}
+            onMove={designer.moveField}
+            onDuplicate={designer.duplicateField}
+            onRemoveOrDisable={(fieldId) => void removeField(fieldId)}
+          />
+
+          <PropertyPanel
+            field={designer.selectedField}
+            dictTypes={designer.dictTypes}
+            onChange={designer.updateField}
+          />
         </div>
-      </div>
+      </DetailSection>
 
-      {designer.saveError || designer.publishError ? (
-        <div className='rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700'>
-          {(designer.saveError as Error | null)?.message ??
-            (designer.publishError as Error | null)?.message}
+      <DetailSection
+        title={t('workRecords.designer.section.diff')}
+        description={t('workRecords.designer.section.diffDescription')}
+      >
+        <div className='grid gap-4 xl:grid-cols-[minmax(0,1fr)_420px]'>
+          <SchemaDiffPanel
+            diff={designer.schemaDiff}
+            validationErrors={designer.validationErrors}
+            publishValidation={designer.publishValidation}
+          />
+
+          {designer.previewOpen ? (
+            <Card>
+              <CardContent className='p-4'>
+                <FormPreview fields={designer.fields} />
+              </CardContent>
+            </Card>
+          ) : null}
         </div>
-      ) : null}
-
-      <div className='grid gap-4 xl:grid-cols-[260px_minmax(0,1fr)_340px]'>
-        <FieldLibrary onAdd={designer.addField} />
-
-        <FormCanvas
-          fields={designer.fields}
-          selectedFieldId={designer.selectedField?.id ?? ''}
-          onSelect={designer.setSelectedFieldId}
-          onMove={designer.moveField}
-          onDuplicate={designer.duplicateField}
-          onRemoveOrDisable={designer.removeOrDisableField}
-        />
-
-        <PropertyPanel
-          field={designer.selectedField}
-          dictTypes={designer.dictTypes}
-          onChange={designer.updateField}
-        />
-      </div>
-
-      <div className='grid gap-4 xl:grid-cols-[minmax(0,1fr)_420px]'>
-        <SchemaDiffPanel
-          diff={designer.schemaDiff}
-          validationErrors={designer.validationErrors}
-          publishValidation={designer.publishValidation}
-        />
-
-        {designer.previewOpen ? <FormPreview fields={designer.fields} /> : null}
-      </div>
+      </DetailSection>
 
       <details className='rounded-md border p-3'>
         <summary className='cursor-pointer text-sm font-medium'>
-          查看生成的 schema
+          {t('workRecords.designer.viewGeneratedSchema')}
         </summary>
         <pre className='mt-3 overflow-auto rounded bg-muted p-3 text-xs'>
           {designer.schemaJson}
         </pre>
       </details>
-    </main>
+    </DetailPageLayout>
   )
 }

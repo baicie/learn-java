@@ -1,9 +1,17 @@
-import { useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '@/stores/auth-store'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  FormErrorSummary,
+  FormFieldShell,
+} from '@/components/form/form-field-shell'
 import { DynamicFieldControl } from './dynamic-field-control'
-import { setCustomValue, statusLabel, validateRuntimeForm } from './schema'
+import { setCustomValue, statusLabel } from './schema'
+import {
+  TemplateSwitchSelect,
+  type TemplateOption,
+} from './template-switch-select'
 import type {
   RuntimeDictOptions,
   WorkRecordField,
@@ -18,6 +26,8 @@ type RecordRuntimeFormProps = {
   fields: WorkRecordField[]
   dictOptions: RuntimeDictOptions
   value: WorkRecordRuntimeFormValue
+  errors: Record<string, string>
+  dirty: boolean
   submitting?: boolean
   onTemplateChange?: (templateId: string) => void
   onChange: (value: WorkRecordRuntimeFormValue) => void
@@ -32,6 +42,8 @@ export function RecordRuntimeForm({
   fields,
   dictOptions,
   value,
+  errors,
+  dirty,
   submitting,
   onTemplateChange,
   onChange,
@@ -39,11 +51,15 @@ export function RecordRuntimeForm({
   onSubmitDone,
   onCancel,
 }: RecordRuntimeFormProps) {
-  const authUser = useAuthStore((state) => state.auth.user)
-  const validation = useMemo(
-    () => validateRuntimeForm(value, fields),
-    [value, fields]
-  )
+  const { t } = useTranslation()
+  const principal = useAuthStore((state) => state.auth.principal)
+  const authUser = principal
+
+  const templateOptions: TemplateOption[] = templates.map((template) => ({
+    id: template.id,
+    name: template.name,
+    disabled: !template.enabled || !template.currentVersionId,
+  }))
 
   const enabledFields = fields
     .filter((field) => field.enabled)
@@ -53,117 +69,157 @@ export function RecordRuntimeForm({
     onChange({ ...value, status })
   }
 
+  const errorEntries = Object.entries(errors)
+
   return (
     <main className='grid gap-4 p-6 xl:grid-cols-[minmax(0,1fr)_320px]'>
       <section className='grid gap-4'>
+        {errorEntries.length ? <FormErrorSummary errors={errors} /> : null}
+
         <Card>
           <CardHeader>
             <CardTitle>
-              {mode === 'create' ? '新建工作记录' : '编辑工作记录'}
+              {mode === 'create'
+                ? t('workRecords.new.title')
+                : t('workRecords.edit.title')}
             </CardTitle>
           </CardHeader>
           <CardContent className='grid gap-4'>
-            <label className='grid gap-1 text-sm'>
-              <span className='font-medium'>标题 *</span>
-              <input
-                className='rounded-md border bg-background px-3 py-2'
-                value={value.title}
-                onChange={(event) =>
-                  onChange({ ...value, title: event.target.value })
-                }
-              />
-            </label>
+            <FormFieldShell
+              id='title'
+              label={t('workRecords.field.title')}
+              required
+              error={errors.title}
+            >
+              {(controlProps) => (
+                <input
+                  {...controlProps}
+                  className='rounded-md border bg-background px-3 py-2'
+                  value={value.title}
+                  onChange={(event) =>
+                    onChange({ ...value, title: event.target.value })
+                  }
+                />
+              )}
+            </FormFieldShell>
 
-            <label className='grid gap-1 text-sm'>
-              <span className='font-medium'>模板 *</span>
-              <select
-                className='rounded-md border bg-background px-3 py-2'
-                value={value.templateId}
-                disabled={mode === 'edit'}
-                onChange={(event) => onTemplateChange?.(event.target.value)}
-              >
-                <option value=''>请选择模板</option>
-                {templates.map((template) => (
-                  <option key={template.id} value={template.id}>
-                    {template.name}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <FormFieldShell
+              id='templateId'
+              label={t('workRecords.field.template')}
+              required
+              error={errors.templateId}
+            >
+              {(controlProps) => (
+                <TemplateSwitchSelect
+                  id={controlProps.id}
+                  value={value.templateId}
+                  templates={templateOptions}
+                  dirty={dirty}
+                  disabled={mode === 'edit'}
+                  onChange={(templateId) => onTemplateChange?.(templateId)}
+                />
+              )}
+            </FormFieldShell>
 
             <div className='grid gap-4 md:grid-cols-3'>
-              <label className='grid gap-1 text-sm'>
-                <span className='font-medium'>状态</span>
-                <select
-                  className='rounded-md border bg-background px-3 py-2'
-                  value={value.status}
-                  onChange={(event) =>
-                    changeStatus(event.target.value as WorkRecordStatus)
-                  }
-                >
-                  <option value='draft'>草稿</option>
-                  <option value='processing'>处理中</option>
-                  <option value='done'>已完成</option>
-                  <option value='archived'>已归档</option>
-                </select>
-              </label>
+              <FormFieldShell id='status' label={t('workRecords.field.status')}>
+                {(controlProps) => (
+                  <select
+                    {...controlProps}
+                    className='rounded-md border bg-background px-3 py-2'
+                    value={value.status}
+                    onChange={(event) =>
+                      changeStatus(event.target.value as WorkRecordStatus)
+                    }
+                  >
+                    <option value='draft'>
+                      {t('workRecords.status.draft')}
+                    </option>
+                    <option value='processing'>
+                      {t('workRecords.status.processing')}
+                    </option>
+                    <option value='done'>{t('workRecords.status.done')}</option>
+                    <option value='archived'>
+                      {t('workRecords.status.archived')}
+                    </option>
+                  </select>
+                )}
+              </FormFieldShell>
 
-              <label className='grid gap-1 text-sm'>
-                <span className='font-medium'>负责人</span>
-                <input
-                  className='rounded-md border bg-background px-3 py-2'
-                  placeholder='用户 ID / 账号'
-                  value={value.ownerId}
-                  onChange={(event) =>
-                    onChange({ ...value, ownerId: event.target.value })
-                  }
-                />
-              </label>
+              <FormFieldShell id='ownerId' label={t('workRecords.field.owner')}>
+                {(controlProps) => (
+                  <input
+                    {...controlProps}
+                    className='rounded-md border bg-background px-3 py-2'
+                    placeholder={t('workRecords.form.ownerPlaceholder')}
+                    value={value.ownerId}
+                    onChange={(event) =>
+                      onChange({ ...value, ownerId: event.target.value })
+                    }
+                  />
+                )}
+              </FormFieldShell>
 
-              <label className='grid gap-1 text-sm'>
-                <span className='font-medium'>记录时间 *</span>
-                <input
-                  className='rounded-md border bg-background px-3 py-2'
-                  type='datetime-local'
-                  value={value.recordTime}
-                  onChange={(event) =>
-                    onChange({ ...value, recordTime: event.target.value })
-                  }
-                />
-              </label>
+              <FormFieldShell
+                id='recordTime'
+                label={t('workRecords.field.recordTime')}
+                required
+                error={errors.recordTime}
+              >
+                {(controlProps) => (
+                  <input
+                    {...controlProps}
+                    className='rounded-md border bg-background px-3 py-2'
+                    type='datetime-local'
+                    value={value.recordTime}
+                    onChange={(event) =>
+                      onChange({ ...value, recordTime: event.target.value })
+                    }
+                  />
+                )}
+              </FormFieldShell>
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>动态字段</CardTitle>
+            <CardTitle>{t('workRecords.form.recordContent')}</CardTitle>
           </CardHeader>
           <CardContent className='grid gap-4'>
             {enabledFields.length === 0 ? (
               <div className='rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground'>
-                当前模板没有可填写字段
+                {t('workRecords.designer.emptyHint')}
               </div>
             ) : null}
 
-            {enabledFields.map((field) => (
-              <label key={field.id} className='grid gap-1 text-sm'>
-                <span className='font-medium'>
-                  {field.fieldName}
-                  {field.required ? (
-                    <span className='text-red-500'> *</span>
-                  ) : null}
-                </span>
-                <DynamicFieldControl
-                  field={field}
-                  value={value.customData[field.fieldCode]}
-                  dictOptions={dictOptions}
-                  onChange={(fieldValue) =>
-                    onChange(setCustomValue(value, field.fieldCode, fieldValue))
-                  }
-                />
-              </label>
-            ))}
+            {enabledFields.map((field) => {
+              const errorKey = `custom.${field.fieldCode}`
+              const controlId = `custom-${field.fieldCode}`
+              return (
+                <FormFieldShell
+                  key={field.id}
+                  id={controlId}
+                  label={field.fieldName}
+                  required={field.required}
+                  error={errors[errorKey]}
+                >
+                  {(controlProps) => (
+                    <DynamicFieldControl
+                      field={field}
+                      value={value.customData[field.fieldCode]}
+                      dictOptions={dictOptions}
+                      controlProps={controlProps}
+                      onChange={(fieldValue) =>
+                        onChange(
+                          setCustomValue(value, field.fieldCode, fieldValue)
+                        )
+                      }
+                    />
+                  )}
+                </FormFieldShell>
+              )
+            })}
           </CardContent>
         </Card>
       </section>
@@ -171,47 +227,50 @@ export function RecordRuntimeForm({
       <aside className='grid content-start gap-4'>
         <Card>
           <CardHeader>
-            <CardTitle>提交</CardTitle>
+            <CardTitle>{t('workRecords.form.submit')}</CardTitle>
           </CardHeader>
           <CardContent className='grid gap-3 text-sm'>
-            <div>当前状态：{statusLabel(value.status)}</div>
-            <div>模板版本：{value.templateVersionId || '-'}</div>
-            <div>当前用户：{authUser?.accountNo ?? authUser?.email ?? '-'}</div>
+            <div>
+              {t('workRecords.field.status')}：{statusLabel(value.status)}
+            </div>
+            <div>
+              {t('workRecords.field.template')}：
+              {value.templateVersionId || '-'}
+            </div>
+            <div>
+              {t('workRecords.field.creator')}：
+              {authUser?.displayName ?? authUser?.username ?? '-'}
+            </div>
 
-            {validation.errors.length ? (
-              <div className='rounded-md border border-red-200 bg-red-50 p-3 text-red-700'>
-                <div className='mb-1 font-medium'>提交前校验失败</div>
-                <ul className='list-disc pl-5'>
-                  {validation.errors.map((error) => (
-                    <li key={error}>{error}</li>
-                  ))}
-                </ul>
+            {errorEntries.length ? (
+              <div className='rounded-md border border-destructive/30 bg-destructive/5 p-3 text-destructive'>
+                {t('workRecords.form.validationFailed')}
               </div>
             ) : (
-              <div className='rounded-md border border-green-200 bg-green-50 p-3 text-green-800'>
-                前端校验通过，提交后后端会再次校验。
+              <div className='rounded-md border bg-muted/40 p-3 text-muted-foreground'>
+                {t('workRecords.designer.toolbar.dirty')}：{dirty ? '✓' : '—'}
               </div>
             )}
 
             <Button
               type='button'
               variant='outline'
-              disabled={submitting || !validation.valid}
+              disabled={submitting}
               onClick={onSaveDraft}
             >
-              保存草稿
+              {submitting
+                ? t('workRecords.form.saving')
+                : t('workRecords.form.saveDraft')}
             </Button>
 
-            <Button
-              type='button'
-              disabled={submitting || !validation.valid}
-              onClick={onSubmitDone}
-            >
-              提交完成
+            <Button type='button' disabled={submitting} onClick={onSubmitDone}>
+              {submitting
+                ? t('workRecords.form.submitting')
+                : t('workRecords.form.submit')}
             </Button>
 
             <Button type='button' variant='ghost' onClick={onCancel}>
-              返回
+              {t('common.back')}
             </Button>
           </CardContent>
         </Card>

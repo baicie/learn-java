@@ -60,4 +60,58 @@ describe('ConfirmProvider', () => {
 
     await expect.element(screen.getByText('cancelled')).toBeVisible()
   })
+
+  it('does not skip queued dialogs', async () => {
+    function QueueHarness() {
+      const confirm = useConfirm()
+      const [result, setResult] = useState('pending')
+
+      return (
+        <>
+          <button
+            type='button'
+            onClick={async () => {
+              const first = confirm({
+                title: '第一个确认框',
+                description: 'first',
+                confirmText: '确认第一个',
+              })
+
+              const second = confirm({
+                title: '第二个确认框',
+                description: 'second',
+                confirmText: '确认第二个',
+              })
+
+              const values = await Promise.all([first, second])
+
+              setResult(values.join(','))
+            }}
+          >
+            打开队列
+          </button>
+
+          <span>{result}</span>
+        </>
+      )
+    }
+
+    const screen = await render(
+      <ConfirmProvider>
+        <QueueHarness />
+      </ConfirmProvider>
+    )
+
+    await screen.getByRole('button', { name: '打开队列' }).click()
+
+    await expect.element(screen.getByText('第一个确认框')).toBeVisible()
+
+    await screen.getByRole('button', { name: '确认第一个' }).click()
+
+    await expect.element(screen.getByText('第二个确认框')).toBeVisible()
+
+    await screen.getByRole('button', { name: '确认第二个' }).click()
+
+    await expect.element(screen.getByText('true,true')).toBeVisible()
+  })
 })

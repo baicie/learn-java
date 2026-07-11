@@ -1,42 +1,34 @@
 import type { ReactNode } from 'react'
-import { RotateCcw } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 
-export function TableToolbar({
-  search,
-  filters,
-  actions,
-  activeFilterCount = 0,
-  onReset,
-}: {
-  search?: ReactNode
-  filters?: ReactNode
+type Props = {
+  title?: ReactNode
+  description?: ReactNode
+  children?: ReactNode
   actions?: ReactNode
-  activeFilterCount?: number
-  onReset?: () => void
-}) {
+}
+
+export function TableToolbar({ title, description, children, actions }: Props) {
   return (
-    <section className='grid gap-3 rounded-lg border bg-card p-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start'>
-      <div className='grid min-w-0 gap-3'>
-        {search}
-
-        <div className='flex min-w-0 flex-wrap items-center gap-2'>
-          {filters}
-
-          {activeFilterCount > 0 && onReset ? (
-            <Button type='button' size='sm' variant='ghost' onClick={onReset}>
-              <RotateCcw className='mr-1 size-4' />
-              重置筛选
-            </Button>
+    <section className='grid gap-3 rounded-lg border bg-card p-3'>
+      {title || description || actions ? (
+        <header className='flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between'>
+          <div className='min-w-0'>
+            {title ? (
+              <h2 className='text-base font-semibold'>{title}</h2>
+            ) : null}
+            {description ? (
+              <p className='text-sm text-muted-foreground'>{description}</p>
+            ) : null}
+          </div>
+          {actions ? (
+            <div className='flex flex-wrap items-center gap-2 lg:justify-end'>
+              {actions}
+            </div>
           ) : null}
-        </div>
-      </div>
-
-      {actions ? (
-        <div className='flex flex-wrap items-center gap-2 lg:justify-end'>
-          {actions}
-        </div>
+        </header>
       ) : null}
+
+      {children}
     </section>
   )
 }

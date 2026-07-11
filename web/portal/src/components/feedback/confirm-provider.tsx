@@ -1,11 +1,9 @@
-// 同一文件同时导出组件（ConfirmProvider）和 hook（useConfirm），
-// 遵循 Phase 16 设计稿中反馈基础设施的导出约定。
-/* eslint-disable react-refresh/only-export-components */
 import {
   createContext,
   type ReactNode,
   useCallback,
   useContext,
+  useEffect,
   useRef,
   useState,
 } from 'react'
@@ -39,8 +37,14 @@ const ConfirmContext = createContext<ConfirmContextValue | null>(null)
 let requestSequence = 0
 
 export function ConfirmProvider({ children }: { children: ReactNode }) {
+  const activeRef = useRef<PendingConfirm | null>(null)
   const queueRef = useRef<PendingConfirm[]>([])
-  const [current, setCurrent] = useState<PendingConfirm | null>(null)
+  const [active, setActive] = useState<PendingConfirm | null>(null)
+
+  const activate = useCallback((request: PendingConfirm | null) => {
+    activeRef.current = request
+    setActive(request)
+  }, [])
 
   const confirm = useCallback(
     (options: ConfirmOptions) =>
@@ -51,86 +55,101 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
           resolve,
         }
 
-        setCurrent((existing) => {
-          if (existing) {
-            queueRef.current.push(request)
-            return existing
-          }
-          return request
-        })
+        if (activeRef.current) {
+          queueRef.current.push(request)
+          return
+        }
+
+        activate(request)
       }),
+    [activate]
+  )
+
+  const settle = useCallback(
+    (confirmed: boolean) => {
+      const current = activeRef.current
+      if (!current) return
+
+      activeRef.current = null
+      current.resolve(confirmed)
+
+      const next = queueRef.current.shift() ?? null
+      activate(next)
+    },
+    [activate]
+  )
+
+  useEffect(
+    () => () => {
+      activeRef.current?.resolve(false)
+      for (const request of queueRef.current) {
+        request.resolve(false)
+      }
+      activeRef.current = null
+      queueRef.current = []
+    },
     []
   )
 
-  const finish = useCallback(
-    (confirmed: boolean) => {
-      if (!current) return
-      current.resolve(confirmed)
-      setCurrent(queueRef.current.shift() ?? null)
-    },
-    [current]
-  )
-
-  const variant = current?.options.variant ?? 'default'
+  const variant = active?.options.variant ?? 'default'
 
   return (
     <ConfirmContext.Provider value={{ confirm }}>
       {children}
 
       <AlertDialog.Root
-        open={Boolean(current)}
+        open={Boolean(active)}
         onOpenChange={(open) => {
-          if (!open && current) {
-            finish(false)
+          if (!open && activeRef.current) {
+            settle(false)
           }
         }}
       >
         <AlertDialog.Portal>
-          <AlertDialog.Overlay className='fixed inset-0 z-50 bg-black/50 data-[state=closed]:animate-out data-[state=open]:animate-in' />
+          <AlertDialog.Overlay className='fixed inset-0 z-50 bg-black/50' />
 
           <AlertDialog.Content className='fixed top-1/2 left-1/2 z-50 grid w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4 rounded-lg border bg-background p-5 shadow-lg sm:p-6'>
             <AlertDialog.Title className='text-lg font-semibold'>
-              {current?.options.title}
+              {active?.options.title}
             </AlertDialog.Title>
 
             <AlertDialog.Description asChild>
               <div className='text-sm leading-6 text-muted-foreground'>
-                {current?.options.description}
+                {active?.options.description}
               </div>
             </AlertDialog.Description>
 
-            {current?.options.details ? (
+            {active?.options.details ? (
               <div className='rounded-md border bg-muted/40 p-3 text-sm'>
-                {current.options.details}
+                {active.options.details}
               </div>
             ) : null}
 
             <div className='flex flex-col-reverse gap-2 sm:flex-row sm:justify-end'>
-              <AlertDialog.Cancel asChild>
-                <Button
-                  type='button'
-                  variant='outline'
-                  onClick={() => finish(false)}
-                >
-                  {current?.options.cancelText ?? '取消'}
-                </Button>
-              </AlertDialog.Cancel>
+              {/*
+                Dialog 由 active state 完全控制。
+                这里不使用 AlertDialog.Cancel/Action，因为它们会在内部触发
+                onOpenChange(false)，从而和 settle() 产生重复结算。
+              */}
+              <Button
+                type='button'
+                variant='outline'
+                onClick={() => settle(false)}
+              >
+                {active?.options.cancelText ?? '取消'}
+              </Button>
 
-              <AlertDialog.Action asChild>
-                <Button
-                  type='button'
-                  variant={
-                    variant === 'destructive' ? 'destructive' : 'default'
-                  }
-                  className={cn(
-                    variant === 'warning' &&
-                      'bg-amber-600 text-white hover:bg-amber-700'
-                  )}
-                  onClick={() => finish(true)}
-                >
-                  {current?.options.confirmText ?? '确认'}
-                </Button>
-              </AlertDialog.Action>
+              <Button
+                type='button'
+                variant={variant === 'destructive' ? 'destructive' : 'default'}
+                className={cn(
+                  variant === 'warning' &&
+                    'bg-amber-600 text-white hover:bg-amber-700'
+                )}
+                onClick={() => settle(true)}
+              >
+                {active?.options.confirmText ?? '确认'}
+              </Button>
             </div>
           </AlertDialog.Content>
         </AlertDialog.Portal>
@@ -139,10 +158,18 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
   )
 }
 
+// useConfirm must share a file with ConfirmProvider (Context + hook pattern)
+// so it can access the internal queueing state through Context. Splitting
+// them across files would force consumers to import from two paths and lose
+// the React-Refresh-friendly colocated boundary the rest of the feedback
+// infrastructure relies on.
+// eslint-disable-next-line react-refresh/only-export-components
 export function useConfirm() {
   const context = useContext(ConfirmContext)
+
   if (!context) {
     throw new Error('useConfirm must be used inside ConfirmProvider')
   }
+
   return context.confirm
 }

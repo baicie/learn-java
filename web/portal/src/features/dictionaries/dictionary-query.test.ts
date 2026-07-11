@@ -64,4 +64,14 @@ describe('dictionary query', () => {
       )
     ).toBe('P2')
   })
+
+  it('shares cache across pages via platform-dictionaries namespace', async () => {
+    // 第一次 fetch 写入 cache，模拟列表页请求字典。
+    await client.fetchQuery(dictionaryItemsQueryOptions('priority', true))
+
+    // 详情 / 新建页通过相同 key 拉取，得到引用相等的缓存数据。
+    const second = client.getQueryData(dictionaryKeys.items('priority', true))
+
+    expect(second).toBeDefined()
+  })
 })

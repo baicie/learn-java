@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { describe, expect, it, vi } from 'vitest'
 import { render } from 'vitest-browser-react'
+import { ConfirmProvider } from '@/components/feedback/confirm-provider'
 import { WorkRecordDesignerPage } from './work-record-designer-page'
 
 const calls: string[] = []
@@ -111,28 +112,45 @@ vi.mock('@/features/dictionaries/api', () => ({
   ],
 }))
 
+vi.mock('@/hooks/use-unsaved-changes-guard', () => ({
+  useUnsavedChangesGuard: () => undefined,
+}))
+
+vi.mock('@tanstack/react-router', () => ({
+  useBlocker: () => ({ status: 'idle', proceed: vi.fn(), reset: vi.fn() }),
+  useNavigate: () => vi.fn(async () => undefined),
+  Link: ({
+    children,
+    ...props
+  }: {
+    children: React.ReactNode
+  } & React.AnchorHTMLAttributes<HTMLAnchorElement>) => (
+    <a {...props}>{children}</a>
+  ),
+}))
+
 describe('WorkRecordDesignerPage', () => {
   it('renders designer layout', async () => {
     calls.length = 0
     const screen = await render(
       <QueryClientProvider client={new QueryClient()}>
-        <WorkRecordDesignerPage />
+        <ConfirmProvider>
+          <WorkRecordDesignerPage />
+        </ConfirmProvider>
       </QueryClientProvider>
     )
 
-    await expect.element(screen.getByText('工作记录表单设计器')).toBeVisible()
+    await expect.element(screen.getByText('表单设计')).toBeVisible()
     await expect
       .element(screen.getByText('字段库', { exact: true }))
       .toBeVisible()
     await expect
-      .element(screen.getByText('表单画布', { exact: true }))
+      .element(screen.getByText('字段画布', { exact: true }))
       .toBeVisible()
     await expect
-      .element(screen.getByText('属性面板', { exact: true }))
+      .element(screen.getByText('字段属性', { exact: true }))
       .toBeVisible()
-    await expect
-      .element(screen.getByText('实时预览', { exact: true }))
-      .toBeVisible()
+    await expect.element(screen.getByText('运行时预览（只读）')).toBeVisible()
   })
 
   it('publishes by saving current draft first', async () => {
@@ -140,11 +158,13 @@ describe('WorkRecordDesignerPage', () => {
 
     const screen = await render(
       <QueryClientProvider client={new QueryClient()}>
-        <WorkRecordDesignerPage />
+        <ConfirmProvider>
+          <WorkRecordDesignerPage />
+        </ConfirmProvider>
       </QueryClientProvider>
     )
 
-    await expect.element(screen.getByText('工作记录表单设计器')).toBeVisible()
+    await expect.element(screen.getByText('表单设计')).toBeVisible()
     await screen.getByText('发布', { exact: true }).click()
 
     await vi.waitFor(() => {

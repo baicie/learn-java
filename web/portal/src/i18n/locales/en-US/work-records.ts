@@ -4,6 +4,34 @@ export const workRecords = {
   'workRecords.nav.designer': 'Form Designer',
   'workRecords.list.title': 'Records',
   'workRecords.list.description': 'Browse, filter and export work records.',
+  'workRecords.list.emptyDescription': 'No records match the current filters.',
+  'workRecords.list.total': '{{count}} records',
+  'workRecords.list.previousPage': 'Previous',
+  'workRecords.list.nextPage': 'Next',
+  'workRecords.list.currentPage': 'Page {{page}}',
+  'workRecords.list.refresh': 'Refreshing…',
+  'workRecords.list.view': 'View',
+  'workRecords.list.allStatus': 'All statuses',
+  'workRecords.list.searchPlaceholder': 'Search records…',
+  'workRecords.list.allTemplates': 'All templates',
+  'workRecords.list.status.draft': 'Draft',
+  'workRecords.list.status.processing': 'Processing',
+  'workRecords.list.status.done': 'Done',
+  'workRecords.list.status.archived': 'Archived',
+  'workRecords.list.workdaysCount': 'workdays',
+  'workRecords.list.recentWorkdaysPrefix': 'Last',
+  'workRecords.list.pageSizeOption': '{{count}} / page',
+  'workRecords.list.activeFiltersLabel': 'Reset filters',
+  'workRecords.list.noRecords': 'No records',
+  'workRecords.list.dictLoadFailed':
+    'Dictionary labels failed to load. Raw values are shown temporarily.',
+  'workRecords.list.refreshFailedHint':
+    'Failed to refresh work records. Showing the last successful result.',
+  'workRecords.list.columnControl': 'Column control',
+  'workRecords.list.dynamicFilterEmpty':
+    'No dynamic fields available for filtering',
+  'workRecords.list.emptyTitle': 'No work records',
+
   'workRecords.new.title': 'New record',
   'workRecords.edit.title': 'Edit record',
   'workRecords.detail.title': 'Record details',
@@ -23,10 +51,7 @@ export const workRecords = {
   'workRecords.list.detail': 'Details',
   'workRecords.list.edit': 'Edit',
   'workRecords.list.exportStarted': 'Export started',
-  'workRecords.list.searchPlaceholder': 'Search records...',
   'workRecords.list.create': 'New Record',
-  'workRecords.list.allTemplates': 'All templates',
-  'workRecords.list.empty': 'No records',
   // Dynamic filters
   'workRecords.list.dynamicFilters': 'Dynamic Filters',
   'workRecords.list.dynamicFiltersDescription':
@@ -57,6 +82,15 @@ export const workRecords = {
   'workRecords.filters.multiValuePlaceholder':
     'Multiple values separated by comma',
   'workRecords.filters.existsHint': '(Exists / Not exists)',
+  // Quick views
+  'workRecords.quick.mine': 'My records',
+  'workRecords.quick.all': 'All records',
+  'workRecords.quick.today': 'Today',
+  'workRecords.quick.thisWeek': 'This week',
+  'workRecords.quick.thisMonth': 'This month',
+  'workRecords.quick.thisWorkMonth': 'Current work month',
+  'workRecords.quick.recentWorkdays': 'Recent workdays',
+
   // Form
   'workRecords.form.basicInfo': 'Basic Info',
   'workRecords.form.recordContent': 'Record Content',
@@ -65,12 +99,102 @@ export const workRecords = {
   'workRecords.form.ownerPlaceholder': 'Select or enter owner',
   'workRecords.form.templateRequired': 'Please select a template',
   'workRecords.form.titleRequired': 'Please enter a title',
-  'workRecords.form.submitSuccess': 'Submitted successfully',
+  'workRecords.form.recordTimeRequired': 'Please choose a record time',
+  'workRecords.form.versionRequired': 'Please pick a template version',
+  'workRecords.form.validationFailed':
+    'Please fix the form errors before submitting',
+  'workRecords.form.saveSuccess': 'Work record saved',
   'workRecords.form.submit': 'Submit',
+  'workRecords.form.submitSuccess': 'Submitted successfully',
   'workRecords.form.saveDraft': 'Save as Draft',
+  'workRecords.form.saving': 'Saving…',
+  'workRecords.form.submitting': 'Submitting…',
+  'workRecords.form.notPublishedTitle': 'No published template',
+  'workRecords.form.notPublishedHint':
+    'Publish a template in the designer before creating records.',
+  'workRecords.form.recordNotFound': 'Record not found',
+  'workRecords.form.loading': 'Loading…',
+  'workRecords.form.cancel': 'Cancel',
+  'workRecords.form.submitDone': 'Submit as Done',
+  'workRecords.form.select': 'Please select',
+  'workRecords.form.booleanYes': 'Yes',
+  'workRecords.form.booleanNo': 'No',
+  'workRecords.form.yes': 'Yes / No',
+
+  // Template switching
+  'workRecords.templateSwitch.title': 'Switch template',
+  'workRecords.templateSwitch.description':
+    'Switching templates clears all dynamic values for the current template.',
+  'workRecords.templateSwitch.confirm': 'Clear and switch',
+
+  // Designer
+  'workRecords.designer.removeField.title': 'Remove field “{{name}}”',
+  'workRecords.designer.removeField.description':
+    'The field will be removed from the draft. Published fields can only be disabled in a new version — historical values are preserved.',
+  'workRecords.designer.removeField.confirm': 'Remove field',
+  'workRecords.designer.removeField.fieldCode': 'Field code',
+  'workRecords.designer.removeField.publishedHint':
+    'This field has been published. Historical values are preserved, but reports / exports will no longer include it.',
+  'workRecords.designer.removeField.requiredHint':
+    'This field is currently required. Removing it will break validation rules that depend on it.',
+  'workRecords.designer.removeField.filterableHint':
+    'This field is currently filterable. Filter options will disappear after removal.',
+  'workRecords.designer.removeField.exportableHint':
+    'This field is currently exportable. Export columns will decrease after removal.',
+  'workRecords.designer.fieldCodeLocked': 'Field code locked',
+  'workRecords.designer.fieldCodeLockedHint':
+    'Field codes are part of storage, query, export and API contracts and become locked once the field is published.',
+  'workRecords.designer.dirtyGuard.title': 'Switch template',
+  'workRecords.designer.dirtyGuard.description':
+    'The current template has unsaved changes. Switching will discard them.',
+  'workRecords.designer.dirtyGuard.confirm': 'Discard and switch',
+  'workRecords.designer.subtitle':
+    'Field library / canvas / property panel / live preview / publish validation',
+  'workRecords.designer.toolbar.dirty': 'Unsaved changes',
+  'workRecords.designer.toolbar.fields': 'Field count',
+  'workRecords.designer.toolbar.closePreview': 'Close preview',
+  'workRecords.designer.toolbar.openPreview': 'Open preview',
+  'workRecords.designer.toolbar.saveDraft': 'Save draft',
+  'workRecords.designer.toolbar.validatePublish': 'Validate',
+  'workRecords.designer.toolbar.publish': 'Publish',
+  'workRecords.designer.section.canvas': 'Canvas',
+  'workRecords.designer.section.canvasDescription':
+    'Drag fields from the library or add new ones. Configure them on the right.',
+  'workRecords.designer.section.diff': 'Schema diff',
+  'workRecords.designer.section.diffDescription':
+    'Compare the current draft against the published version, showing added / modified / removed fields.',
+  'workRecords.designer.saveDraftSuccess': 'Template draft saved',
+  'workRecords.designer.saveDraftFailed': 'Failed to save template draft',
+  'workRecords.designer.viewGeneratedSchema': 'View generated schema',
+  'workRecords.designer.noTemplates': 'No templates',
+  'workRecords.designer.noTemplatesHint':
+    'Please create a template in template management first.',
+  'workRecords.designer.switchTemplateDescription':
+    'The current template has unsaved changes. Switching will discard them.',
+  'workRecords.designer.discardAndSwitch': 'Discard and switch',
+
+  // Calendar
+  'workRecords.calendar.createSuccess': 'Calendar created',
+  'workRecords.calendar.importSuccess': 'Calendar imported',
+  'workRecords.calendar.updateSuccess': 'Date status updated',
+  'workRecords.calendar.toggle.title': 'Change date status',
+  'workRecords.calendar.toggle.description':
+    'This change affects workday statistics, recent workdays and future missing-report checks.',
+  'workRecords.calendar.toggleConfirm': 'Confirm change',
+  'workRecords.calendar.import.title': 'Import work calendar',
+  'workRecords.calendar.import.description':
+    'Imported rows overwrite workday, holiday and adjustment settings for the affected dates.',
+  'workRecords.calendar.import.confirm': 'Confirm import',
+  'workRecords.calendar.default.title': 'Switch default calendar',
+  'workRecords.calendar.default.description':
+    'Affects recent workday detection, current work month stats and downstream missing-report checks.',
+  'workRecords.calendar.default.confirm': 'Confirm switch',
+
   // Detail
   'workRecords.detail.template': 'Template',
   'workRecords.detail.legacyFields': 'Legacy Fields',
+  'workRecords.detail.disabledFieldBadge': 'Disabled field',
+  'workRecords.detail.disabledOption': '(disabled)',
   // Designer regions & palette
   'workRecords.designer.emptyHint': 'Add a field from the palette to start',
   'workRecords.designer.palette.region': 'Field palette',
@@ -124,7 +248,6 @@ export const workRecords = {
     'Add a field to see the runtime preview',
   'workRecords.designer.toolbar.save': 'Save template',
   'workRecords.designer.toolbar.saving': 'Saving…',
-  'workRecords.designer.toolbar.dirty': 'Unsaved changes',
   'workRecords.designer.toolbar.offline':
     'Backend unavailable — showing sample data',
   'workRecords.designer.toolbar.templateLabel': 'Active template',
@@ -133,4 +256,5 @@ export const workRecords = {
   'workRecords.designer.toolbar.retry': 'Retry loading templates',
   // Empty / fallback placeholder (was hardcoded, see designer-design §14.4)
   'workRecords.designer.dict.empty': 'No dictionaries available',
+  'workRecords.designer.saveSuccess': 'Template draft saved',
 } as const

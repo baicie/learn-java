@@ -1,5 +1,5 @@
 import { useQueries } from '@tanstack/react-query'
-import { listDictItems } from './api'
+import { listDictItems, type DictItem } from './api'
 
 export type DictionaryOption = {
   value: string
@@ -8,6 +8,8 @@ export type DictionaryOption = {
 }
 
 export type DictionaryOptionMap = Record<string, DictionaryOption[]>
+
+export type DictionaryItemsMap = Record<string, DictItem[]>
 
 const DICT_STALE_TIME = 30 * 60 * 1000
 const DICT_GC_TIME = 24 * 60 * 60 * 1000
@@ -33,19 +35,32 @@ export function dictionaryItemsQueryOptions(
   }
 }
 
-export function useDictionaryOptions(
-  dictCodes: string[],
-  includeDisabled = true
-) {
-  const codes = Array.from(
+function normalizeCodes(dictCodes: string[]) {
+  return Array.from(
     new Set(dictCodes.map((code) => code.trim()).filter(Boolean))
   ).sort()
+}
+
+function useRawDictionaryQueries(
+  dictCodes: string[],
+  includeDisabled: boolean
+) {
+  const codes = normalizeCodes(dictCodes)
 
   const queries = useQueries({
     queries: codes.map((dictCode) =>
       dictionaryItemsQueryOptions(dictCode, includeDisabled)
     ),
   })
+
+  return { codes, queries }
+}
+
+export function useDictionaryOptions(
+  dictCodes: string[],
+  includeDisabled = true
+) {
+  const { codes, queries } = useRawDictionaryQueries(dictCodes, includeDisabled)
 
   const options: DictionaryOptionMap = {}
 
@@ -63,6 +78,28 @@ export function useDictionaryOptions(
     loading: queries.some((query) => query.isLoading),
     fetching: queries.some((query) => query.isFetching),
     error: queries.find((query) => query.error)?.error ?? null,
+    refetch: () => Promise.all(queries.map((query) => query.refetch())),
+  }
+}
+
+export function useDictionaryItemsMap(
+  dictCodes: string[],
+  includeDisabled = true
+) {
+  const { codes, queries } = useRawDictionaryQueries(dictCodes, includeDisabled)
+
+  const items: DictionaryItemsMap = {}
+
+  codes.forEach((dictCode, index) => {
+    items[dictCode] = queries[index]?.data ?? []
+  })
+
+  return {
+    items,
+    loading: queries.some((query) => query.isLoading),
+    fetching: queries.some((query) => query.isFetching),
+    error: queries.find((query) => query.error)?.error ?? null,
+    refetch: () => Promise.all(queries.map((query) => query.refetch())),
   }
 }
 

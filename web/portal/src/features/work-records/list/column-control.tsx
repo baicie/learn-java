@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import type { RecordListColumn } from './types'
 
 type Props = {
@@ -7,13 +8,17 @@ type Props = {
 }
 
 export function ColumnControl({ columns, visible, onChange }: Props) {
+  const { t } = useTranslation()
+
   const effectiveVisible = visible.length
     ? visible
-    : columns.filter((column) => column.visibleByDefault).map((column) => column.key)
+    : columns
+        .filter((column) => column.visibleByDefault)
+        .map((column) => column.key)
 
   const toggle = (key: string) => {
     if (effectiveVisible.includes(key)) {
-      onChange(effectiveVisible.filter((item) => item !== key))
+      onChange(effectiveVisible.filter((visibleKey) => visibleKey !== key))
     } else {
       onChange([...effectiveVisible, key])
     }
@@ -21,7 +26,9 @@ export function ColumnControl({ columns, visible, onChange }: Props) {
 
   return (
     <details className='rounded-lg border p-4'>
-      <summary className='cursor-pointer text-sm font-medium'>列显示控制</summary>
+      <summary className='cursor-pointer text-sm font-medium'>
+        {t('workRecords.list.columnControl')}
+      </summary>
       <div className='mt-3 grid gap-2 md:grid-cols-4'>
         {columns.map((column) => (
           <label key={column.key} className='flex items-center gap-2 text-sm'>

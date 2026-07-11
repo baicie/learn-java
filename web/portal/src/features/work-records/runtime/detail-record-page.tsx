@@ -1,20 +1,25 @@
-import { useEffect, useState } from 'react'
+import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate, useParams } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
+import {
+  EmptyState,
+  ErrorState,
+  PageLoadingState,
+} from '@/components/feedback/async-state'
+import { useDictionaryItemsMap } from '@/features/dictionaries/dictionary-query'
 import {
   getWorkRecord,
   listTemplateVersionFields,
   listWorkRecordHistory,
-  loadRuntimeDictOptions,
   parseCustomData,
 } from './api'
 import { RecordReadonlyView } from './record-readonly-view'
-import type { AuditEvent, RuntimeDictOptions } from './types'
 
 export function DetailRecordPage() {
   const navigate = useNavigate()
   const { recordId } = useParams({ strict: false }) as { recordId: string }
-  const [dictOptions, setDictOptions] = useState<RuntimeDictOptions>({})
+  const { t } = useTranslation()
 
   const recordQuery = useQuery({
     queryKey: ['work-record-runtime-record', recordId],
@@ -42,32 +47,68 @@ export function DetailRecordPage() {
     enabled: Boolean(recordId),
   })
 
-  useEffect(() => {
-    if (!fieldsQuery.data) return
-    loadRuntimeDictOptions(fieldsQuery.data).then(setDictOptions)
-  }, [fieldsQuery.data])
+  const fields = useMemo(() => fieldsQuery.data ?? [], [fieldsQuery.data])
 
-  if (recordQuery.isLoading || fieldsQuery.isLoading) {
-    return <main className='p-6 text-sm text-muted-foreground'>加载中...</main>
+  const dictCodes = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          fields
+            .map((field) => field.dictCode)
+            .filter((code): code is string => Boolean(code))
+        )
+      ),
+
+    [fields]
+  )
+
+  const dictionaries = useDictionaryItemsMap(dictCodes, true)
+
+  if (recordQuery.isLoading || fieldsQuery.isLoading || dictionaries.loading) {
+    return <PageLoadingState />
+  }
+
+  const blockingError =
+    recordQuery.error ?? fieldsQuery.error ?? dictionaries.error
+
+  if (blockingError && !recordQuery.data) {
+    return (
+      <main className='p-4 md:p-6'>
+        <ErrorState
+          error={blockingError}
+          onRetry={() => {
+            void Promise.all([
+              recordQuery.refetch(),
+              fieldsQuery.refetch(),
+              dictionaries.refetch(),
+            ])
+          }}
+        />
+      </main>
+    )
   }
 
   if (!recordQuery.data) {
-    return <main className='p-6 text-sm text-red-600'>记录不存在</main>
+    return (
+      <main className='p-4 md:p-6'>
+        <EmptyState title={t('workRecords.form.recordNotFound')} />
+      </main>
+    )
   }
 
-  const history: AuditEvent[] = historyQuery.data ?? []
+  const history = historyQuery.data ?? []
 
   return (
     <RecordReadonlyView
       record={recordQuery.data}
-      fields={fieldsQuery.data ?? []}
-      dictOptions={dictOptions}
+      fields={fields}
+      dictOptions={dictionaries.items}
       customData={parseCustomData(recordQuery.data)}
       canEdit={recordQuery.data.status !== 'archived'}
       history={history}
       historyLoading={historyQuery.isLoading}
       historyError={historyQuery.error as Error | null}
-      onBack={() => globalThis.history.back()}
+      onBack={() => navigate({ to: '/work-records' } as never)}
       onEdit={() =>
         navigate({
           to: '/work-records/$recordId/edit',

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import type { ListQueryState, RecordListMeta } from './types'
 
 type Props = {
@@ -7,12 +8,13 @@ type Props = {
 }
 
 export function ListToolbar({ meta, query, onChange }: Props) {
+  const { t } = useTranslation()
   return (
     <div className='grid gap-3 rounded-lg border p-4'>
       <div className='grid gap-3 md:grid-cols-4'>
         <input
           className='rounded-md border bg-background px-3 py-2 text-sm'
-          placeholder='搜索标题'
+          placeholder={t('workRecords.list.searchPlaceholder')}
           value={query.keyword}
           onChange={(event) => onChange({ keyword: event.target.value })}
         />
@@ -22,7 +24,7 @@ export function ListToolbar({ meta, query, onChange }: Props) {
           value={query.templateId}
           onChange={(event) => onChange({ templateId: event.target.value })}
         >
-          <option value=''>全部模板</option>
+          <option value=''>{t('workRecords.list.allTemplates')}</option>
           {(meta?.templates ?? []).map((template) => (
             <option key={template.id} value={template.id}>
               {template.name}
@@ -32,14 +34,14 @@ export function ListToolbar({ meta, query, onChange }: Props) {
 
         <input
           className='rounded-md border bg-background px-3 py-2 text-sm'
-          placeholder='负责人 ID'
+          placeholder={t('workRecords.field.owner')}
           value={query.ownerId}
           onChange={(event) => onChange({ ownerId: event.target.value })}
         />
 
         <input
           className='rounded-md border bg-background px-3 py-2 text-sm'
-          placeholder='创建人 ID'
+          placeholder={t('workRecords.field.creator')}
           value={query.creatorId}
           onChange={(event) => onChange({ creatorId: event.target.value })}
         />
@@ -50,14 +52,20 @@ export function ListToolbar({ meta, query, onChange }: Props) {
           className='rounded-md border bg-background px-3 py-2 text-sm'
           value={query.statuses[0] ?? ''}
           onChange={(event) =>
-            onChange({ statuses: event.target.value ? [event.target.value] : [] })
+            onChange({
+              statuses: event.target.value ? [event.target.value] : [],
+            })
           }
         >
-          <option value=''>全部状态</option>
-          <option value='draft'>草稿</option>
-          <option value='processing'>处理中</option>
-          <option value='done'>已完成</option>
-          <option value='archived'>已归档</option>
+          <option value=''>{t('workRecords.list.allStatus')}</option>
+          <option value='draft'>{t('workRecords.list.status.draft')}</option>
+          <option value='processing'>
+            {t('workRecords.list.status.processing')}
+          </option>
+          <option value='done'>{t('workRecords.list.status.done')}</option>
+          <option value='archived'>
+            {t('workRecords.list.status.archived')}
+          </option>
         </select>
 
         <input
@@ -90,7 +98,7 @@ export function ListToolbar({ meta, query, onChange }: Props) {
             })
           }
         >
-          重置筛选
+          {t('workRecords.list.activeFiltersLabel')}
         </button>
       </div>
     </div>

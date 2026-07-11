@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import type { DynamicFilter, RecordListColumn } from './types'
 
 type Props = {
@@ -7,6 +8,8 @@ type Props = {
 }
 
 export function DynamicFilterPanel({ fields, filters, onChange }: Props) {
+  const { t } = useTranslation()
+
   const update = (fieldCode: string, value: string) => {
     const next = filters.filter((item) => item.fieldCode !== fieldCode)
     if (value.trim()) {
@@ -17,10 +20,14 @@ export function DynamicFilterPanel({ fields, filters, onChange }: Props) {
 
   return (
     <details className='rounded-lg border p-4'>
-      <summary className='cursor-pointer text-sm font-medium'>动态字段筛选</summary>
+      <summary className='cursor-pointer text-sm font-medium'>
+        {t('workRecords.list.dynamicFilters')}
+      </summary>
       <div className='mt-3 grid gap-3 md:grid-cols-3'>
         {fields.length === 0 ? (
-          <div className='text-sm text-muted-foreground'>暂无可筛选动态字段</div>
+          <div className='text-sm text-muted-foreground'>
+            {t('workRecords.list.dynamicFilterEmpty')}
+          </div>
         ) : null}
 
         {fields.map((field) => (
@@ -28,7 +35,10 @@ export function DynamicFilterPanel({ fields, filters, onChange }: Props) {
             <span>{field.title}</span>
             <input
               className='rounded-md border bg-background px-3 py-2'
-              value={String(filters.find((item) => item.fieldCode === field.fieldCode)?.value ?? '')}
+              value={String(
+                filters.find((item) => item.fieldCode === field.fieldCode)
+                  ?.value ?? ''
+              )}
               onChange={(event) => update(field.fieldCode!, event.target.value)}
             />
           </label>

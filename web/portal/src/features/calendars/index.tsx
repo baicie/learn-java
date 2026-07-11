@@ -1,11 +1,20 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Check, Plus, Upload } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { notify } from '@/components/feedback/app-toaster'
+import {
+  EmptyState,
+  ErrorState,
+  PageLoadingState,
+  QueryStateBoundary,
+  TableLoadingState,
+} from '@/components/feedback/async-state'
 import { useConfirm } from '@/components/feedback/confirm-provider'
+import { ResponsiveTable } from '@/components/layout/responsive-table'
 import { PermissionGate } from '@/components/permission-gate'
 import {
   createCalendar,
@@ -27,6 +36,7 @@ function monthRange(year: number, month: number) {
 export function CalendarsPage() {
   const queryClient = useQueryClient()
   const confirm = useConfirm()
+  const { t } = useTranslation()
   const now = new Date()
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth() + 1)
@@ -96,10 +106,10 @@ export function CalendarsPage() {
         sourceType: 'manual',
       }),
     onSuccess: async () => {
-      notify.success('年度日历创建成功')
+      notify.success(t('calendars.create.success'))
       await invalidate()
     },
-    onError: (error) => notify.error(error, '年度日历创建失败'),
+    onError: (error) => notify.error(error, t('calendars.create.failed')),
   })
 
   const importMutation = useMutation({
@@ -111,16 +121,16 @@ ${year}-01-01,HOLIDAY,false,元旦,
 `
       ),
     onSuccess: async () => {
-      notify.success('工作日历导入成功')
+      notify.success(t('calendars.import.success'))
       await invalidate()
     },
-    onError: (error) => notify.error(error, '工作日历导入失败'),
+    onError: (error) => notify.error(error, t('calendars.import.failed')),
   })
 
   const defaultMutation = useMutation({
     mutationFn: (calendarId: string) => setDefaultCalendar(calendarId),
     onSuccess: async () => {
-      notify.success('默认日历已更新')
+      notify.success(t('calendars.default.success'))
       await queryClient.invalidateQueries({
         queryKey: ['platform-default-calendar'],
       })
@@ -131,7 +141,7 @@ ${year}-01-01,HOLIDAY,false,元旦,
         queryKey: ['work-record-list'],
       })
     },
-    onError: (error) => notify.error(error, '默认日历更新失败'),
+    onError: (error) => notify.error(error, t('calendars.default.failed')),
   })
 
   const updateDayMutation = useMutation({
@@ -146,7 +156,7 @@ ${year}-01-01,HOLIDAY,false,元旦,
     }) => updateCalendarDay(calendarId, date, input),
 
     onSuccess: async () => {
-      notify.success('日期状态更新成功')
+      notify.success(t('calendars.day.success'))
       await queryClient.invalidateQueries({
         queryKey: ['platform-calendar-days'],
       })
@@ -158,8 +168,52 @@ ${year}-01-01,HOLIDAY,false,元旦,
       })
     },
 
-    onError: (error) => notify.error(error, '日期状态更新失败'),
+    onError: (error) => notify.error(error, t('calendars.day.failed')),
   })
+
+  const confirmImport = async () => {
+    if (!selectedCalendar) {
+      return
+    }
+
+    const accepted = await confirm({
+      title: t('calendars.import.confirmTitle'),
+      description: t('calendars.import.confirmDescription'),
+      details: (
+        <div>
+          {t('calendars.import.confirmTarget')}:{selectedCalendar.calendarName}
+        </div>
+      ),
+      confirmText: t('calendars.import.confirmAction'),
+      variant: 'warning',
+    })
+
+    if (accepted) {
+      importMutation.mutate(selectedCalendar.id)
+    }
+  }
+
+  const confirmDefault = async () => {
+    if (!selectedCalendar) {
+      return
+    }
+
+    const accepted = await confirm({
+      title: t('calendars.default.confirmTitle'),
+      description: t('calendars.default.confirmDescription'),
+      details: (
+        <div>
+          {t('calendars.default.confirmNew')}:{selectedCalendar.calendarName}
+        </div>
+      ),
+      confirmText: t('calendars.default.confirmAction'),
+      variant: 'warning',
+    })
+
+    if (accepted) {
+      defaultMutation.mutate(selectedCalendar.id)
+    }
+  }
 
   const submitUpdateDay = async (
     calendarId: string,
@@ -169,15 +223,17 @@ ${year}-01-01,HOLIDAY,false,元旦,
     }
   ) => {
     const accepted = await confirm({
-      title: '修改日期状态',
-      description: '该修改会影响最近工作日、工作日统计和后续日报缺失判断。',
+      title: t('calendars.day.confirmTitle'),
+      description: t('calendars.day.confirmDescription'),
       details: (
         <div>
-          {day.calendarDate}：
-          {day.workday ? '工作日 → 非工作日' : '非工作日 → 工作日'}
+          {day.calendarDate}:
+          {day.workday
+            ? t('calendars.day.workdayToOff')
+            : t('calendars.day.offToWorkday')}
         </div>
       ),
-      confirmText: '确认修改',
+      confirmText: t('calendars.day.confirmAction'),
       variant: 'warning',
     })
 
@@ -189,27 +245,44 @@ ${year}-01-01,HOLIDAY,false,元旦,
       input: {
         dayType: day.workday ? 'HOLIDAY' : 'ADJUSTED_WORKDAY',
         workday: !day.workday,
-        holidayName: day.workday ? '手工设置假期' : undefined,
+        holidayName: day.workday ? t('calendars.day.manualHoliday') : undefined,
         sourceType: 'manual',
         remark: 'portal override',
       },
     })
   }
 
+  if (calendars.isLoading) {
+    return <PageLoadingState />
+  }
+
+  if (calendars.error && !calendars.data) {
+    return (
+      <main className='p-4 md:p-6'>
+        <ErrorState
+          error={calendars.error}
+          onRetry={() => void calendars.refetch()}
+        />
+      </main>
+    )
+  }
+
   return (
     <main className='grid gap-4 p-4 md:gap-6 md:p-6'>
       <header className='flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between'>
         <div>
-          <h1 className='text-xl font-semibold md:text-2xl'>工作日历</h1>
+          <h1 className='text-xl font-semibold md:text-2xl'>
+            {t('calendars.title')}
+          </h1>
           <p className='text-sm text-muted-foreground'>
-            维护工作日、节假日和调休工作日，供日报、月报、值班和统计使用。
+            {t('calendars.subtitle')}
           </p>
         </div>
       </header>
 
       <Card>
         <CardHeader className='flex flex-row items-center justify-between'>
-          <CardTitle>日历</CardTitle>
+          <CardTitle>{t('calendars.title')}</CardTitle>
           <div className='flex flex-wrap gap-2'>
             <input
               className='w-24 rounded-md border px-2 py-1 text-sm'
@@ -230,7 +303,7 @@ ${year}-01-01,HOLIDAY,false,元旦,
             >
               {Array.from({ length: 12 }).map((_, index) => (
                 <option key={index + 1} value={index + 1}>
-                  {index + 1} 月
+                  {index + 1} {t('calendars.month')}
                 </option>
               ))}
             </select>
@@ -241,7 +314,7 @@ ${year}-01-01,HOLIDAY,false,元旦,
                 disabled={createMutation.isPending}
               >
                 <Plus className='mr-1 size-4' />
-                创建年度日历
+                {t('calendars.create.button')}
               </Button>
             </PermissionGate>
             {selectedCalendar ? (
@@ -249,11 +322,11 @@ ${year}-01-01,HOLIDAY,false,元旦,
                 <Button
                   size='sm'
                   variant='outline'
-                  onClick={() => importMutation.mutate(selectedCalendar.id)}
+                  onClick={() => void confirmImport()}
                   disabled={importMutation.isPending}
                 >
                   <Upload className='mr-1 size-4' />
-                  导入示例 CSV
+                  {t('calendars.import.button')}
                 </Button>
               </PermissionGate>
             ) : null}
@@ -261,9 +334,10 @@ ${year}-01-01,HOLIDAY,false,元旦,
         </CardHeader>
         <CardContent className='grid gap-4'>
           {yearCalendars.length === 0 ? (
-            <p className='text-sm text-muted-foreground'>
-              当前年份还没有工作日历，请先创建。
-            </p>
+            <EmptyState
+              title={t('calendars.emptyTitle')}
+              description={t('calendars.emptyDescription')}
+            />
           ) : (
             <>
               <select
@@ -282,15 +356,16 @@ ${year}-01-01,HOLIDAY,false,元旦,
                 <div className='flex items-center gap-2 text-sm'>
                   <span className='text-muted-foreground'>
                     {defaultCalendar.isError
-                      ? '默认日历未配置'
-                      : `默认日历：${
-                          defaultCalendar.data?.calendarName ?? '加载中…'
+                      ? t('calendars.default.unset')
+                      : `${t('calendars.default.label')}：${
+                          defaultCalendar.data?.calendarName ??
+                          t('common.loading')
                         }`}
                   </span>
                   {defaultCalendar.data?.id === selectedCalendar.id ? (
                     <Badge variant='secondary'>
                       <Check className='mr-1 size-3' />
-                      当前默认日历
+                      {t('calendars.default.currentBadge')}
                     </Badge>
                   ) : (
                     <PermissionGate any={['platform:calendar:write']}>
@@ -298,60 +373,98 @@ ${year}-01-01,HOLIDAY,false,元旦,
                         size='sm'
                         variant='outline'
                         disabled={defaultMutation.isPending}
-                        onClick={() =>
-                          defaultMutation.mutate(selectedCalendar.id)
-                        }
+                        onClick={() => void confirmDefault()}
                       >
-                        设为默认日历
+                        {t('calendars.default.set')}
                       </Button>
                     </PermissionGate>
                   )}
                 </div>
               ) : null}
+
+              <QueryStateBoundary
+                loading={days.isLoading}
+                error={days.error}
+                empty={!selectedCalendar || (days.data?.length ?? 0) === 0}
+                loadingFallback={<TableLoadingState columns={6} />}
+                errorFallback={
+                  <ErrorState
+                    compact
+                    error={days.error}
+                    onRetry={() => void days.refetch()}
+                  />
+                }
+                emptyFallback={
+                  <EmptyState
+                    compact
+                    title={t('calendars.days.emptyTitle')}
+                    description={t('calendars.days.emptyDescription')}
+                  />
+                }
+              >
+                <ResponsiveTable>
+                  <table className='w-full text-sm'>
+                    <thead>
+                      <tr className='border-b bg-muted/40'>
+                        <th className='p-2 text-left'>
+                          {t('calendars.days.columns.date')}
+                        </th>
+                        <th className='p-2 text-left'>
+                          {t('calendars.days.columns.week')}
+                        </th>
+                        <th className='p-2 text-left'>
+                          {t('calendars.days.columns.type')}
+                        </th>
+                        <th className='p-2 text-left'>
+                          {t('calendars.days.columns.workday')}
+                        </th>
+                        <th className='p-2 text-left'>
+                          {t('calendars.days.columns.holiday')}
+                        </th>
+                        <th className='p-2 text-left'>
+                          {t('calendars.days.columns.action')}
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {days.data?.map((day) => (
+                        <tr key={day.id} className='border-b'>
+                          <td className='p-2'>{day.calendarDate}</td>
+                          <td className='p-2'>{day.dayOfWeek}</td>
+                          <td className='p-2'>{day.dayType}</td>
+                          <td className='p-2'>
+                            {day.workday
+                              ? t('calendars.days.workday')
+                              : t('calendars.days.off')}
+                          </td>
+                          <td className='p-2'>{day.holidayName ?? '-'}</td>
+                          <td className='p-2'>
+                            {selectedCalendar ? (
+                              <PermissionGate any={['platform:calendar:write']}>
+                                <Button
+                                  size='sm'
+                                  variant='outline'
+                                  disabled={updateDayMutation.isPending}
+                                  onClick={() =>
+                                    void submitUpdateDay(
+                                      selectedCalendar.id,
+                                      day
+                                    )
+                                  }
+                                >
+                                  {t('calendars.days.toggle')}
+                                </Button>
+                              </PermissionGate>
+                            ) : null}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </ResponsiveTable>
+              </QueryStateBoundary>
             </>
           )}
-
-          <div className='overflow-x-auto rounded-md border'>
-            <table className='w-full text-sm'>
-              <thead>
-                <tr className='border-b bg-muted/40'>
-                  <th className='p-2 text-left'>日期</th>
-                  <th className='p-2 text-left'>星期</th>
-                  <th className='p-2 text-left'>类型</th>
-                  <th className='p-2 text-left'>是否工作日</th>
-                  <th className='p-2 text-left'>节日</th>
-                  <th className='p-2 text-left'>操作</th>
-                </tr>
-              </thead>
-              <tbody>
-                {days.data?.map((day) => (
-                  <tr key={day.id} className='border-b'>
-                    <td className='p-2'>{day.calendarDate}</td>
-                    <td className='p-2'>{day.dayOfWeek}</td>
-                    <td className='p-2'>{day.dayType}</td>
-                    <td className='p-2'>{day.workday ? '是' : '否'}</td>
-                    <td className='p-2'>{day.holidayName ?? '-'}</td>
-                    <td className='p-2'>
-                      {selectedCalendar ? (
-                        <PermissionGate any={['platform:calendar:write']}>
-                          <Button
-                            size='sm'
-                            variant='outline'
-                            disabled={updateDayMutation.isPending}
-                            onClick={() =>
-                              void submitUpdateDay(selectedCalendar.id, day)
-                            }
-                          >
-                            切换
-                          </Button>
-                        </PermissionGate>
-                      ) : null}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
         </CardContent>
       </Card>
     </main>

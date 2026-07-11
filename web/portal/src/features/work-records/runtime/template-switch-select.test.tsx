@@ -1,27 +1,32 @@
-import { I18nProvider } from '@/i18n/provider'
+import { i18n } from '@/i18n'
+import { I18nextProvider } from 'react-i18next'
 import { describe, expect, it, vi } from 'vitest'
 import { render } from 'vitest-browser-react'
 import { ConfirmProvider } from '@/components/feedback/confirm-provider'
 import { TemplateSwitchSelect } from './template-switch-select'
 
+function withProviders(node: React.ReactNode) {
+  return render(
+    <I18nextProvider i18n={i18n} defaultNS='translation'>
+      <ConfirmProvider>{node}</ConfirmProvider>
+    </I18nextProvider>
+  )
+}
+
 describe('TemplateSwitchSelect', () => {
   it('asks for confirmation when dirty', async () => {
     const onChange = vi.fn()
 
-    const screen = await render(
-      <I18nProvider>
-        <ConfirmProvider>
-          <TemplateSwitchSelect
-            value='tpl-1'
-            dirty
-            templates={[
-              { id: 'tpl-1', name: '日报' },
-              { id: 'tpl-2', name: '周报' },
-            ]}
-            onChange={onChange}
-          />
-        </ConfirmProvider>
-      </I18nProvider>
+    const screen = await withProviders(
+      <TemplateSwitchSelect
+        value='tpl-1'
+        dirty
+        templates={[
+          { id: 'tpl-1', name: '日报' },
+          { id: 'tpl-2', name: '周报' },
+        ]}
+        onChange={onChange}
+      />
     )
 
     await screen.getByRole('combobox').selectOptions('tpl-2')
@@ -31,6 +36,26 @@ describe('TemplateSwitchSelect', () => {
     expect(onChange).not.toHaveBeenCalled()
 
     await screen.getByRole('button', { name: '清空并切换' }).click()
+
+    expect(onChange).toHaveBeenCalledWith('tpl-2')
+  })
+
+  it('switches immediately when not dirty', async () => {
+    const onChange = vi.fn()
+
+    const screen = await withProviders(
+      <TemplateSwitchSelect
+        value='tpl-1'
+        dirty={false}
+        templates={[
+          { id: 'tpl-1', name: '日报' },
+          { id: 'tpl-2', name: '周报' },
+        ]}
+        onChange={onChange}
+      />
+    )
+
+    await screen.getByRole('combobox').selectOptions('tpl-2')
 
     expect(onChange).toHaveBeenCalledWith('tpl-2')
   })

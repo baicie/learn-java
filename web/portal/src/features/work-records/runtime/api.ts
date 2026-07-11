@@ -1,13 +1,10 @@
 import { z } from 'zod'
 import { apiClient } from '@/lib/api-client'
 import { apiResponseSchema } from '@/lib/api-response'
-import { listDictItems } from '@/features/dictionaries/api'
 import {
   WORK_RECORD_FIELD_TYPES,
   WORK_RECORD_STATUSES,
   type AuditEvent,
-  type DictItemOption,
-  type RuntimeDictOptions,
   type WorkRecord,
   type WorkRecordField,
   type WorkRecordRuntimeFormValue,
@@ -164,34 +161,6 @@ export async function updateWorkRecord(
     customDataJson: JSON.stringify(value.customData ?? {}),
   })
   return apiResponseSchema(recordSchema).parse(data).data
-}
-
-export async function loadRuntimeDictOptions(
-  fields: WorkRecordField[]
-): Promise<RuntimeDictOptions> {
-  const dictCodes = Array.from(
-    new Set(
-      fields
-        .map((field) => field.dictCode)
-        .filter((value): value is string => Boolean(value))
-    )
-  )
-
-  const entries = await Promise.all(
-    dictCodes.map(async (dictCode) => {
-      const items = await listDictItems(dictCode, true)
-      const options: DictItemOption[] = items.map((item) => ({
-        id: item.id,
-        itemLabel: item.itemLabel,
-        itemValue: item.itemValue,
-        color: item.color,
-        enabled: item.enabled,
-      }))
-      return [dictCode, options] as const
-    })
-  )
-
-  return Object.fromEntries(entries)
 }
 
 export function parseCustomData(record?: WorkRecord): Record<string, unknown> {

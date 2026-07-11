@@ -54,7 +54,11 @@ describe('work record designer components', () => {
     )
 
     await expect
-      .element(screen.getByText('该字段已发布，字段编码不可修改'))
+      .element(
+        screen.getByText(
+          '字段编码用于数据存储、查询、导出和 API 契约，字段发布后不可修改。'
+        )
+      )
       .toBeVisible()
   })
 })

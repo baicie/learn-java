@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
+import { validateRecordForm } from './record-form-validation'
 import {
   buildInitialFormValue,
   fieldDisplayValue,
   sanitizeCustomDataForSubmit,
   setCustomValue,
-  validateRuntimeForm,
 } from './schema'
 import type { RuntimeDictOptions, WorkRecordField } from './types'
 
@@ -35,7 +35,7 @@ describe('work record runtime schema', () => {
   })
 
   it('validates required dynamic fields', () => {
-    const result = validateRuntimeForm(
+    const result = validateRecordForm(
       {
         title: '日报',
         templateId: 'tpl1',
@@ -45,11 +45,11 @@ describe('work record runtime schema', () => {
         recordTime: '2026-01-01T00:00',
         customData: {},
       },
-      [field('content', 'textarea', true)]
+      [field('content', 'textarea', true)],
+      'done'
     )
 
-    expect(result.valid).toBe(false)
-    expect(result.errors.join('\n')).toContain('内容 不能为空')
+    expect(result['custom.content']).toBe('请填写内容')
   })
 
   it('sets custom values immutably', () => {
@@ -97,7 +97,7 @@ describe('work record runtime schema', () => {
   })
 
   it('rejects invalid record time', () => {
-    const result = validateRuntimeForm(
+    const result = validateRecordForm(
       {
         title: '日报',
         templateId: 'tpl1',
@@ -107,11 +107,11 @@ describe('work record runtime schema', () => {
         recordTime: 'bad-time',
         customData: {},
       },
-      []
+      [],
+      'done'
     )
 
-    expect(result.valid).toBe(false)
-    expect(result.errors.join('\n')).toContain('记录时间格式不正确')
+    expect(result.recordTime).toBe('记录时间格式无效')
   })
 
   it('sanitizes disabled and unknown custom data before submit', () => {

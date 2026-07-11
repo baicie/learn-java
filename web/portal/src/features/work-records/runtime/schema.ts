@@ -1,12 +1,11 @@
+import { parseCustomData, toLocalDateTimeInput } from './api'
 import {
   type RuntimeDictOptions,
   type WorkRecord,
   type WorkRecordField,
   type WorkRecordRuntimeFormValue,
-  type WorkRecordRuntimeValidation,
   type WorkRecordStatus,
 } from './types'
-import { parseCustomData, toLocalDateTimeInput } from './api'
 
 export function buildInitialFormValue(input: {
   templates?: { id: string; currentVersionId: string | null }[]
@@ -34,87 +33,6 @@ export function buildInitialFormValue(input: {
     ownerId: '',
     recordTime: toLocalDateTimeInput(new Date().toISOString()),
     customData: {},
-  }
-}
-
-export function validateRuntimeForm(
-  value: WorkRecordRuntimeFormValue,
-  fields: WorkRecordField[]
-): WorkRecordRuntimeValidation {
-  const errors: string[] = []
-
-  if (!value.title.trim()) {
-    errors.push('标题不能为空')
-  }
-
-  if (!value.templateId) {
-    errors.push('请选择模板')
-  }
-
-  if (!value.templateVersionId) {
-    errors.push('模板未发布，无法填写记录')
-  }
-
-  if (!value.recordTime) {
-    errors.push('记录时间不能为空')
-  } else if (Number.isNaN(new Date(value.recordTime).getTime())) {
-    errors.push('记录时间格式不正确')
-  }
-
-  for (const field of fields.filter((item) => item.enabled)) {
-    const fieldValue = value.customData[field.fieldCode]
-
-    if (field.required && isEmptyValue(fieldValue)) {
-      errors.push(`${field.fieldName} 不能为空`)
-      continue
-    }
-
-    if (isEmptyValue(fieldValue)) {
-      continue
-    }
-
-    switch (field.fieldType) {
-      case 'number':
-        if (typeof fieldValue !== 'number' || Number.isNaN(fieldValue)) {
-          errors.push(`${field.fieldName} 必须是数字`)
-        }
-        break
-      case 'boolean':
-        if (typeof fieldValue !== 'boolean') {
-          errors.push(`${field.fieldName} 必须是布尔值`)
-        }
-        break
-      case 'date':
-        if (
-          typeof fieldValue !== 'string' ||
-          !/^\d{4}-\d{2}-\d{2}$/.test(fieldValue)
-        ) {
-          errors.push(`${field.fieldName} 必须是日期`)
-        }
-        break
-      case 'datetime':
-        if (
-          typeof fieldValue !== 'string' ||
-          Number.isNaN(new Date(fieldValue).getTime())
-        ) {
-          errors.push(`${field.fieldName} 必须是日期时间`)
-        }
-        break
-      case 'multi_select':
-        if (!Array.isArray(fieldValue)) {
-          errors.push(`${field.fieldName} 必须是多选数组`)
-        }
-        break
-      default:
-        if (typeof fieldValue !== 'string') {
-          errors.push(`${field.fieldName} 必须是文本`)
-        }
-    }
-  }
-
-  return {
-    valid: errors.length === 0,
-    errors,
   }
 }
 
@@ -173,9 +91,7 @@ export function fieldDisplayValue(
   if (field.optionSource === 'dict' && field.dictCode) {
     const options = dictOptions[field.dictCode] ?? []
     if (Array.isArray(value)) {
-      return value
-        .map((item) => optionLabel(options, String(item)))
-        .join('、')
+      return value.map((item) => optionLabel(options, String(item))).join('、')
     }
     return optionLabel(options, String(value))
   }

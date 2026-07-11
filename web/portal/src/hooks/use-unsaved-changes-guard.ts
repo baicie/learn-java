@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useBlocker } from '@tanstack/react-router'
-import { useI18n } from '@/i18n/provider'
+import { useTranslation } from 'react-i18next'
 import { useConfirm } from '@/components/feedback/confirm-provider'
 
 type NavigationResolver = {
@@ -13,6 +13,7 @@ export async function resolveBlockedNavigation(
   confirm: () => Promise<boolean>
 ) {
   const leave = await confirm()
+
   if (leave) {
     resolver.proceed()
   } else {
@@ -22,7 +23,7 @@ export async function resolveBlockedNavigation(
 
 export function useUnsavedChangesGuard(enabled: boolean) {
   const confirm = useConfirm()
-  const { t } = useI18n()
+  const { t } = useTranslation()
   const resolvingRef = useRef(false)
 
   const blocker = useBlocker({

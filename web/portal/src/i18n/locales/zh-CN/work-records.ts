@@ -7,6 +7,35 @@ export const workRecords = {
   'workRecords.nav.designer': '表单设计',
   'workRecords.list.title': '记录列表',
   'workRecords.list.description': '查看、筛选与导出工作记录。',
+  'workRecords.list.emptyDescription': '当前筛选条件下没有符合条件的记录。',
+  'workRecords.list.total': '共 {{count}} 条',
+  'workRecords.list.previousPage': '上一页',
+  'workRecords.list.nextPage': '下一页',
+  'workRecords.list.currentPage': '第 {{page}} 页',
+  'workRecords.list.refresh': '正在刷新…',
+  'workRecords.list.view': '查看',
+  'workRecords.list.allStatus': '全部状态',
+  'workRecords.list.searchPlaceholder': '搜索记录标题…',
+  'workRecords.list.allTemplates': '全部模板',
+  'workRecords.list.status.draft': '草稿',
+  'workRecords.list.status.processing': '处理中',
+  'workRecords.list.status.done': '已完成',
+  'workRecords.list.status.archived': '已归档',
+  'workRecords.list.workdaysCount': '个工作日',
+  'workRecords.list.recentWorkdaysPrefix': '最近',
+  'workRecords.list.pageSizeOption': '{{count}} 条/页',
+  'workRecords.list.activeFiltersLabel': '重置筛选',
+  'workRecords.list.noRecords': '暂无记录',
+  'workRecords.list.dictLoadFailed': '字典标签加载失败，当前暂时显示原始值',
+  'workRecords.list.refreshFailedHint':
+    '工作记录刷新失败，当前继续显示上一次结果',
+  'workRecords.list.columnControl': '列显示控制',
+  'workRecords.list.addFilter': '添加筛选',
+  'workRecords.list.dynamicFilters': '动态筛选',
+  'workRecords.list.dynamicFiltersDescription': '按动态字段筛选记录',
+  'workRecords.list.dynamicFilterEmpty': '暂无可筛选动态字段',
+  'workRecords.list.emptyTitle': '暂无工作记录',
+
   'workRecords.new.title': '新建记录',
   'workRecords.edit.title': '编辑记录',
   'workRecords.detail.title': '记录详情',
@@ -25,15 +54,8 @@ export const workRecords = {
   'workRecords.list.detail': '详情',
   'workRecords.list.edit': '编辑',
   'workRecords.list.exportStarted': '导出已开始',
-  'workRecords.list.searchPlaceholder': '搜索记录标题...',
   'workRecords.list.create': '新建记录',
-  'workRecords.list.allTemplates': '全部模板',
-  'workRecords.list.empty': '暂无记录',
   // Dynamic filters
-  'workRecords.list.dynamicFilters': '动态筛选',
-  'workRecords.list.dynamicFiltersDescription': '按模板动态字段筛选记录',
-  'workRecords.list.addFilter': '添加筛选条件',
-  // Export
   'workRecords.list.export': '导出',
   'workRecords.export.title': '导出记录',
   'workRecords.export.description': '将筛选后的记录导出为 CSV 文件',
@@ -57,6 +79,15 @@ export const workRecords = {
   'workRecords.filters.valuePlaceholder': '输入值',
   'workRecords.filters.multiValuePlaceholder': '多个值用逗号分隔',
   'workRecords.filters.existsHint': '(存在/不存在)',
+  // Quick views
+  'workRecords.quick.mine': '我的记录',
+  'workRecords.quick.all': '全部记录',
+  'workRecords.quick.today': '今日记录',
+  'workRecords.quick.thisWeek': '本周记录',
+  'workRecords.quick.thisMonth': '本月记录',
+  'workRecords.quick.thisWorkMonth': '本工作月',
+  'workRecords.quick.recentWorkdays': '最近工作日',
+
   // Form
   'workRecords.form.basicInfo': '基本信息',
   'workRecords.form.recordContent': '记录内容',
@@ -65,12 +96,99 @@ export const workRecords = {
   'workRecords.form.ownerPlaceholder': '选择或输入负责人',
   'workRecords.form.templateRequired': '请选择模板',
   'workRecords.form.titleRequired': '请输入标题',
-  'workRecords.form.submitSuccess': '提交成功',
+  'workRecords.form.recordTimeRequired': '请选择记录时间',
+  'workRecords.form.versionRequired': '请选择模板版本',
+  'workRecords.form.validationFailed': '请修正表单中的错误后再提交',
+  'workRecords.form.saveSuccess': '工作记录保存成功',
   'workRecords.form.submit': '提交',
+  'workRecords.form.submitSuccess': '提交成功',
   'workRecords.form.saveDraft': '保存草稿',
+  'workRecords.form.saving': '保存中…',
+  'workRecords.form.submitting': '提交中…',
+  'workRecords.form.notPublishedTitle': '暂无已发布模板',
+  'workRecords.form.notPublishedHint': '请先在模板设计器中发布一个可用模板。',
+  'workRecords.form.recordNotFound': '记录不存在',
+  'workRecords.form.loading': '加载中…',
+  'workRecords.form.cancel': '取消',
+  'workRecords.form.submitDone': '提交完成',
+  'workRecords.form.select': '请选择',
+  'workRecords.form.booleanYes': '是',
+  'workRecords.form.booleanNo': '否',
+  'workRecords.form.yes': '是 / 否',
+
+  // Template switching
+  'workRecords.templateSwitch.title': '切换记录模板',
+  'workRecords.templateSwitch.description':
+    '切换模板会清空当前模板下已填写的动态字段。',
+  'workRecords.templateSwitch.confirm': '清空并切换',
+
+  // Designer
+  'workRecords.designer.removeField.title': '移除字段“{{name}}”',
+  'workRecords.designer.removeField.description':
+    '字段将从当前设计稿中移除。已发布字段只能在新版本中禁用，历史记录中的值不会被删除。',
+  'workRecords.designer.removeField.confirm': '确认移除字段',
+  'workRecords.designer.removeField.fieldCode': '字段编码',
+  'workRecords.designer.removeField.publishedHint':
+    '该字段已发布，移除会保留历史数据，但报表 / 导出将不再包含该字段。',
+  'workRecords.designer.removeField.requiredHint':
+    '该字段当前为必填，移除后依赖该字段的校验规则会失效。',
+  'workRecords.designer.removeField.filterableHint':
+    '该字段当前支持筛选，移除后筛选条件将不再出现。',
+  'workRecords.designer.removeField.exportableHint':
+    '该字段当前支持导出，移除后导出列会减少。',
+  'workRecords.designer.fieldCodeLocked': '字段编码已锁定',
+  'workRecords.designer.fieldCodeLockedHint':
+    '字段编码用于数据存储、查询、导出和 API 契约，字段发布后不可修改。',
+  'workRecords.designer.dirtyGuard.title': '切换记录模板',
+  'workRecords.designer.dirtyGuard.description':
+    '当前模板存在未保存修改，切换后这些修改将丢失。',
+  'workRecords.designer.dirtyGuard.confirm': '放弃修改并切换',
+  'workRecords.designer.toolbar.dirty': '有未保存修改',
+  'workRecords.designer.subtitle':
+    '字段库 / 画布 / 属性面板 / 实时预览 / 发布校验',
+  'workRecords.designer.toolbar.fields': '字段数量',
+  'workRecords.designer.toolbar.closePreview': '关闭预览',
+  'workRecords.designer.toolbar.openPreview': '打开预览',
+  'workRecords.designer.toolbar.saveDraft': '保存草稿',
+  'workRecords.designer.toolbar.validatePublish': '发布校验',
+  'workRecords.designer.toolbar.publish': '发布',
+  'workRecords.designer.section.canvas': '字段画布',
+  'workRecords.designer.section.canvasDescription':
+    '从字段库拖入或新增字段，右侧可编辑字段属性。',
+  'workRecords.designer.section.diff': 'Schema 差异',
+  'workRecords.designer.section.diffDescription':
+    '对比当前草稿与已发布版本，展示新增 / 修改 / 删除的字段。',
+  'workRecords.designer.saveDraftSuccess': '模板草稿保存成功',
+  'workRecords.designer.saveDraftFailed': '模板草稿保存失败',
+  'workRecords.designer.viewGeneratedSchema': '查看生成的 schema',
+  'workRecords.designer.noTemplates': '暂无模板',
+  'workRecords.designer.noTemplatesHint': '请先在模板管理中创建模板。',
+  'workRecords.designer.switchTemplateDescription':
+    '当前模板存在未保存修改，切换后这些修改将丢失。',
+  'workRecords.designer.discardAndSwitch': '放弃修改并切换',
+
+  // Calendar
+  'workRecords.calendar.createSuccess': '年度日历创建成功',
+  'workRecords.calendar.importSuccess': '工作日历导入成功',
+  'workRecords.calendar.updateSuccess': '日期状态更新成功',
+  'workRecords.calendar.toggle.title': '修改日期状态',
+  'workRecords.calendar.toggle.description':
+    '该修改会影响最近工作日、工作日统计和后续日报缺失判断。',
+  'workRecords.calendar.toggleConfirm': '确认修改',
+  'workRecords.calendar.import.title': '导入工作日历',
+  'workRecords.calendar.import.description':
+    '导入内容会覆盖 CSV 中涉及日期的工作日、节假日和调休配置。',
+  'workRecords.calendar.import.confirm': '确认导入',
+  'workRecords.calendar.default.title': '切换默认工作日历',
+  'workRecords.calendar.default.description':
+    '此操作会影响工作记录最近工作日、本工作月统计和后续日报缺失判断。',
+  'workRecords.calendar.default.confirm': '确认切换',
+
   // Detail
   'workRecords.detail.template': '模板',
   'workRecords.detail.legacyFields': '历史遗留字段',
+  'workRecords.detail.disabledFieldBadge': '已禁用字段',
+  'workRecords.detail.disabledOption': '（已禁用）',
   // Designer regions & palette
   'workRecords.designer.emptyHint': '从左侧字段库添加字段开始',
   'workRecords.designer.palette.region': '字段库',
@@ -120,11 +238,11 @@ export const workRecords = {
   'workRecords.designer.preview.empty': '添加字段后此处会显示运行态预览',
   'workRecords.designer.toolbar.save': '保存模板',
   'workRecords.designer.toolbar.saving': '保存中…',
-  'workRecords.designer.toolbar.dirty': '有未保存修改',
   'workRecords.designer.toolbar.offline': '未连接后端，显示示例数据',
   'workRecords.designer.toolbar.templateLabel': '当前模板',
   'workRecords.designer.toolbar.empty': '暂无可用模板，可从示例开始',
   'workRecords.designer.toolbar.retry': '重试加载模板',
   // Empty / fallback placeholder (was hardcoded, see designer-design §14.4)
   'workRecords.designer.dict.empty': '暂无可用字典',
+  'workRecords.designer.saveSuccess': '模板草稿保存成功',
 } as const

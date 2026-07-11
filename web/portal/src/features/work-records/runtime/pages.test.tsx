@@ -1,6 +1,9 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { i18n } from '@/i18n'
+import { I18nextProvider } from 'react-i18next'
 import { describe, expect, it, vi } from 'vitest'
 import { render } from 'vitest-browser-react'
+import { ConfirmProvider } from '@/components/feedback/confirm-provider'
 import { DetailRecordPage } from './detail-record-page'
 import { EditRecordPage } from './edit-record-page'
 import { NewRecordPage } from './new-record-page'
@@ -8,6 +11,7 @@ import { NewRecordPage } from './new-record-page'
 vi.mock('@tanstack/react-router', () => ({
   useNavigate: () => vi.fn(async () => undefined),
   useParams: () => ({ recordId: 'r1' }),
+  useBlocker: () => ({ status: 'idle', proceed: vi.fn(), reset: vi.fn() }),
 }))
 
 vi.mock('./api', () => ({
@@ -105,7 +109,6 @@ vi.mock('./api', () => ({
     updatedAt: '2026-01-01T00:00:00Z',
     deletedAt: null,
   }),
-  loadRuntimeDictOptions: async () => ({}),
   listWorkRecordHistory: async () => [],
   parseCustomData: (record?: { customDataJson?: string }) => {
     if (!record?.customDataJson) return {}
@@ -124,25 +127,30 @@ vi.mock('./api', () => ({
 
 vi.mock('@/features/dictionaries/api', () => ({
   listDictItems: async () => [],
+  listDictTypes: async () => [],
 }))
 
 function renderWithClient(node: React.ReactNode) {
   return render(
-    <QueryClientProvider client={new QueryClient()}>{node}</QueryClientProvider>
+    <QueryClientProvider client={new QueryClient()}>
+      <I18nextProvider i18n={i18n} defaultNS='translation'>
+        <ConfirmProvider>{node}</ConfirmProvider>
+      </I18nextProvider>
+    </QueryClientProvider>
   )
 }
 
 describe('record runtime pages', () => {
   it('new record page renders form', async () => {
     const screen = await renderWithClient(<NewRecordPage />)
-    await expect.element(screen.getByText('新建工作记录')).toBeVisible()
-    await expect.element(screen.getByText('动态字段')).toBeVisible()
+    await expect.element(screen.getByText('新建记录')).toBeVisible()
+    await expect.element(screen.getByText('工作内容')).toBeVisible()
   })
 
   it('edit record page renders form with current title', async () => {
     const screen = await renderWithClient(<EditRecordPage />)
-    await expect.element(screen.getByText('编辑工作记录')).toBeVisible()
-    const titleLocator = screen.getByLabelText('标题 *')
+    await expect.element(screen.getByText('编辑记录')).toBeVisible()
+    const titleLocator = screen.getByLabelText('标题')
     await vi.waitFor(() => {
       const node = titleLocator.element() as HTMLInputElement
       expect(node.value).toBe('日报')

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { notify } from '@/components/feedback/app-toaster'
 import { useDictionaryOptions } from '@/features/dictionaries/dictionary-query'
 import {
@@ -13,6 +14,8 @@ export function useWorkRecordList(
   query: ListQueryState,
   onQueryChange: (next: ListQueryState) => void
 ) {
+  const { t } = useTranslation()
+
   const metaQuery = useQuery({
     queryKey: ['work-record-list-meta', query.templateId],
     queryFn: () => fetchRecordListMeta(query.templateId || undefined),
@@ -30,6 +33,7 @@ export function useWorkRecordList(
   )
 
   const notifiedDictError = useRef<unknown>(null)
+  const notifiedRefreshError = useRef<unknown>(null)
 
   useEffect(() => {
     if (
@@ -37,12 +41,24 @@ export function useWorkRecordList(
       dictionaryQuery.error !== notifiedDictError.current
     ) {
       notifiedDictError.current = dictionaryQuery.error
-      notify.error(
-        dictionaryQuery.error,
-        '字典标签加载失败，当前暂时显示原始值'
-      )
+      notify.error(dictionaryQuery.error, t('workRecords.list.dictLoadFailed'))
     }
-  }, [dictionaryQuery.error])
+  }, [dictionaryQuery.error, t])
+
+  const hasListData = listQuery.data !== undefined
+  const tableBlockingError = hasListData ? null : listQuery.error
+  const tableRefreshError = hasListData ? listQuery.error : null
+
+  useEffect(() => {
+    if (!tableRefreshError) {
+      notifiedRefreshError.current = null
+      return
+    }
+    if (tableRefreshError === notifiedRefreshError.current) return
+
+    notifiedRefreshError.current = tableRefreshError
+    notify.error(tableRefreshError, t('workRecords.list.refreshFailedHint'))
+  }, [tableRefreshError, t])
 
   const workdaySummaryQuery = useQuery({
     queryKey: ['work-record-workday-summary', 'current'],
@@ -99,7 +115,9 @@ export function useWorkRecordList(
 
     tableRefreshing: listQuery.isFetching && Boolean(listQuery.data),
 
-    tableError: listQuery.error,
+    tableError: tableBlockingError,
+
+    tableRefreshError,
 
     retryPage: () => metaQuery.refetch(),
     retryTable: () => listQuery.refetch(),

@@ -1,5 +1,9 @@
+import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  DetailPageLayout,
+  DetailSection,
+} from '@/components/layout/detail-page-layout'
 import { DynamicFieldControl } from './dynamic-field-control'
 import { RecordHistoryCard } from './record-history-card'
 import { statusLabel } from './schema'
@@ -38,41 +42,87 @@ export function RecordReadonlyView({
   onBack,
   onEdit,
 }: RecordReadonlyViewProps) {
+  const { t } = useTranslation()
   const sortedFields = fields.slice().sort((a, b) => a.sortOrder - b.sortOrder)
 
   return (
-    <main className='grid gap-4 p-6 xl:grid-cols-[minmax(0,1fr)_320px]'>
-      <section className='grid gap-4'>
-        <Card>
-          <CardHeader>
-            <CardTitle>{record.title}</CardTitle>
-          </CardHeader>
-          <CardContent className='grid gap-3 text-sm md:grid-cols-2'>
-            <Info label='模板' value={template?.name ?? record.templateId} />
-            <Info label='模板版本' value={record.templateVersionId} />
-            <Info label='状态' value={statusLabel(record.status)} />
-            <Info label='负责人' value={record.ownerId ?? '-'} />
-            <Info label='创建人' value={record.creatorId} />
-            <Info label='记录时间' value={formatDateTime(record.recordTime)} />
-          </CardContent>
-        </Card>
+    <DetailPageLayout
+      title={record.title}
+      description={t('workRecords.detail.title')}
+      meta={
+        <div className='flex flex-wrap gap-2 text-xs text-muted-foreground'>
+          <span>
+            {t('workRecords.field.status')}：{statusLabel(record.status)}
+          </span>
+          <span>·</span>
+          <span>
+            {t('workRecords.field.template')}：
+            {template?.name ?? record.templateId}
+          </span>
+        </div>
+      }
+      actions={
+        <>
+          {canEdit ? (
+            <Button type='button' onClick={onEdit}>
+              {t('common.edit')}
+            </Button>
+          ) : null}
+          <Button type='button' variant='outline' onClick={onBack}>
+            {t('common.back')}
+          </Button>
+        </>
+      }
+    >
+      <DetailSection
+        title={t('workRecords.field.template')}
+        description={t('workRecords.designer.emptyHint')}
+      >
+        <div className='grid gap-3 text-sm md:grid-cols-2'>
+          <Info
+            label={t('workRecords.field.template')}
+            value={template?.name ?? record.templateId}
+          />
+          <Info
+            label={t('workRecords.field.template')}
+            value={record.templateVersionId}
+          />
+          <Info
+            label={t('workRecords.field.status')}
+            value={statusLabel(record.status)}
+          />
+          <Info
+            label={t('workRecords.field.owner')}
+            value={record.ownerId ?? '-'}
+          />
+          <Info
+            label={t('workRecords.field.creator')}
+            value={record.creatorId}
+          />
+          <Info
+            label={t('workRecords.field.recordTime')}
+            value={formatDateTime(record.recordTime)}
+          />
+        </div>
+      </DetailSection>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>动态字段</CardTitle>
-          </CardHeader>
-          <CardContent className='grid gap-4'>
-            {sortedFields.length === 0 ? (
-              <div className='text-sm text-muted-foreground'>暂无动态字段</div>
-            ) : null}
-
+      <DetailSection
+        title={t('workRecords.form.recordContent')}
+        description={t('workRecords.detail.legacyFields')}
+      >
+        {sortedFields.length === 0 ? (
+          <div className='text-sm text-muted-foreground'>
+            {t('common.empty')}
+          </div>
+        ) : (
+          <div className='grid gap-4'>
             {sortedFields.map((field) => (
-              <label key={field.id} className='grid gap-1 text-sm'>
+              <div key={field.id} className='grid gap-1 text-sm'>
                 <span className='font-medium'>
                   {field.fieldName}
                   {!field.enabled ? (
                     <span className='ml-2 rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground'>
-                      已禁用字段
+                      {t('workRecords.detail.disabledFieldBadge')}
                     </span>
                   ) : null}
                 </span>
@@ -83,36 +133,18 @@ export function RecordReadonlyView({
                   readonly
                   onChange={() => undefined}
                 />
-              </label>
+              </div>
             ))}
-          </CardContent>
-        </Card>
+          </div>
+        )}
+      </DetailSection>
 
-        <RecordHistoryCard
-          events={history}
-          loading={historyLoading}
-          error={historyError}
-        />
-      </section>
-
-      <aside className='grid content-start gap-3'>
-        <Card>
-          <CardHeader>
-            <CardTitle>操作</CardTitle>
-          </CardHeader>
-          <CardContent className='grid gap-2'>
-            {canEdit ? (
-              <Button type='button' onClick={onEdit}>
-                编辑
-              </Button>
-            ) : null}
-            <Button type='button' variant='outline' onClick={onBack}>
-              返回
-            </Button>
-          </CardContent>
-        </Card>
-      </aside>
-    </main>
+      <RecordHistoryCard
+        events={history}
+        loading={historyLoading}
+        error={historyError}
+      />
+    </DetailPageLayout>
   )
 }
 

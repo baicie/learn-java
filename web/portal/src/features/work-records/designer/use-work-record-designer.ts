@@ -28,6 +28,7 @@ export function useWorkRecordDesigner() {
   const queryClient = useQueryClient()
   const [selectedTemplateId, setSelectedTemplateId] = useState('')
   const [fields, setFields] = useState<DesignerField[]>([])
+  const [savedSchemaJson, setSavedSchemaJson] = useState('[]')
   const [selectedFieldId, setSelectedFieldId] = useState('')
   const [previewOpen, setPreviewOpen] = useState(true)
   const [publishValidation, setPublishValidation] =
@@ -115,6 +116,7 @@ export function useWorkRecordDesigner() {
         return merged[0]?.id ?? ''
       })
       setHydratedTemplateKey(key)
+      setSavedSchemaJson(schemaToJson(merged))
     })
   }, [
     selectedTemplate,
@@ -225,6 +227,7 @@ export function useWorkRecordDesigner() {
   const saveDraftMutation = useMutation({
     mutationFn: persistDraft,
     onSuccess: async () => {
+      setSavedSchemaJson(schemaJson)
       await queryClient.invalidateQueries({
         queryKey: ['work-record-templates'],
       })
@@ -265,6 +268,7 @@ export function useWorkRecordDesigner() {
     onSuccess: async () => {
       setPublishValidation(null)
       setHydratedTemplateKey('')
+      setSavedSchemaJson(schemaJson)
       await queryClient.invalidateQueries({
         queryKey: ['work-record-templates'],
       })
@@ -273,6 +277,11 @@ export function useWorkRecordDesigner() {
       })
     },
   })
+
+  const queryError =
+    templatesQuery.error ??
+    dictTypesQuery.error ??
+    currentVersionFieldsQuery.error
 
   return {
     templates: templatesQuery.data ?? [],
@@ -301,6 +310,8 @@ export function useWorkRecordDesigner() {
     publishing: publishMutation.isPending,
     saveError: saveDraftMutation.error,
     publishError: publishMutation.error,
+    queryError,
+    dirty: schemaJson !== savedSchemaJson,
     setPreviewOpen,
     setSelectedFieldId,
     loadTemplate,

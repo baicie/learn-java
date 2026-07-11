@@ -1,4 +1,6 @@
+import { useTranslation } from 'react-i18next'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { LockedFieldCodeInput } from './locked-field-code-input'
 import {
   type DictTypeOption,
   type DesignerField,
@@ -17,14 +19,15 @@ export function PropertyPanel({
   dictTypes,
   onChange,
 }: PropertyPanelProps) {
+  const { t } = useTranslation()
   if (!field) {
     return (
       <Card className='h-full'>
         <CardHeader>
-          <CardTitle>属性面板</CardTitle>
+          <CardTitle>{t('workRecords.designer.property.region')}</CardTitle>
         </CardHeader>
         <CardContent className='text-sm text-muted-foreground'>
-          请选择一个字段
+          {t('workRecords.designer.property.empty')}
         </CardContent>
       </Card>
     )
@@ -33,29 +36,28 @@ export function PropertyPanel({
   return (
     <Card className='h-full'>
       <CardHeader>
-        <CardTitle>属性面板</CardTitle>
+        <CardTitle>{t('workRecords.designer.property.region')}</CardTitle>
       </CardHeader>
       <CardContent className='grid gap-4 text-sm'>
         <FieldInput
-          label='字段名称'
+          label={t('workRecords.designer.property.title')}
           value={field.fieldName}
           onChange={(value) => onChange(field.id, { fieldName: value })}
         />
 
-        <FieldInput
-          label='字段编码'
+        <LockedFieldCodeInput
           value={field.fieldCode}
-          disabled={field.locked}
-          help={
-            field.locked
-              ? '该字段已发布，字段编码不可修改'
-              : '规则：^[a-zA-Z][a-zA-Z0-9_]{0,63}$'
+          locked={field.locked}
+          error={
+            field.locked ? undefined : `规则：^[a-zA-Z][a-zA-Z0-9_]{0,63}$`
           }
           onChange={(value) => onChange(field.id, { fieldCode: value })}
         />
 
         <label className='grid gap-1'>
-          <span className='text-xs text-muted-foreground'>字段类型</span>
+          <span className='text-xs text-muted-foreground'>
+            {t('workRecords.designer.property.fieldType')}
+          </span>
           <select
             className='rounded-md border bg-background px-3 py-2'
             value={field.fieldType}
@@ -74,7 +76,7 @@ export function PropertyPanel({
           </select>
           {field.locked ? (
             <span className='text-xs text-muted-foreground'>
-              已发布字段类型不可修改
+              {t('workRecords.designer.property.fieldCodeLockedHint')}
             </span>
           ) : null}
         </label>
@@ -87,11 +89,13 @@ export function PropertyPanel({
               onChange(field.id, { required: event.target.checked })
             }
           />
-          必填
+          {t('workRecords.designer.property.required')}
         </label>
 
         <label className='grid gap-1'>
-          <span className='text-xs text-muted-foreground'>选项来源</span>
+          <span className='text-xs text-muted-foreground'>
+            {t('workRecords.designer.property.optionSource')}
+          </span>
           <select
             className='rounded-md border bg-background px-3 py-2'
             value={field.optionSource}
@@ -101,14 +105,20 @@ export function PropertyPanel({
               })
             }
           >
-            <option value='static'>静态</option>
-            <option value='dict'>平台字典</option>
+            <option value='static'>
+              {t('workRecords.designer.property.optionSourceStatic')}
+            </option>
+            <option value='dict'>
+              {t('workRecords.designer.property.optionSourceDict')}
+            </option>
           </select>
         </label>
 
         {field.optionSource === 'dict' ? (
           <label className='grid gap-1'>
-            <span className='text-xs text-muted-foreground'>绑定字典</span>
+            <span className='text-xs text-muted-foreground'>
+              {t('workRecords.designer.property.dictCode')}
+            </span>
             <select
               className='rounded-md border bg-background px-3 py-2'
               value={field.dictCode}
@@ -116,7 +126,7 @@ export function PropertyPanel({
                 onChange(field.id, { dictCode: event.target.value })
               }
             >
-              <option value=''>请选择字典</option>
+              <option value=''>{t('workRecords.form.select')}</option>
               {dictTypes
                 .filter((item) => item.enabled)
                 .map((dict) => (
@@ -130,25 +140,25 @@ export function PropertyPanel({
 
         <div className='grid gap-2 rounded-md border p-3'>
           <span className='text-xs font-medium text-muted-foreground'>
-            使用场景
+            {t('workRecords.designer.property.indexes')}
           </span>
           <Flag
-            label='列表展示'
+            label={t('workRecords.designer.property.listVisible')}
             checked={field.listVisible}
             onChange={(value) => onChange(field.id, { listVisible: value })}
           />
           <Flag
-            label='允许筛选'
+            label={t('workRecords.designer.property.filterable')}
             checked={field.filterable}
             onChange={(value) => onChange(field.id, { filterable: value })}
           />
           <Flag
-            label='允许导出'
+            label={t('workRecords.designer.property.exportable')}
             checked={field.exportable}
             onChange={(value) => onChange(field.id, { exportable: value })}
           />
           <Flag
-            label='参与统计'
+            label={t('workRecords.designer.property.statistical')}
             checked={field.statistical}
             onChange={(value) => onChange(field.id, { statistical: value })}
           />

@@ -58,6 +58,7 @@ export type RecordListColumn = {
   visibleByDefault: boolean
   sortable: boolean
   exportable: boolean
+  filterable?: boolean
   sortOrder: number
 }
 
@@ -115,4 +116,25 @@ export type ListQueryState = {
   sortDir: 'asc' | 'desc'
   dynamicFilters: DynamicFilter[]
   visibleColumns: string[]
+}
+
+export function buildEmptyListQuery(): ListQueryState {
+  return {
+    page: 1,
+    pageSize: 20,
+    quickView: 'all',
+    workdayCount: 0,
+    templateId: '',
+    templateVersionId: '',
+    statuses: [],
+    ownerId: '',
+    creatorId: '',
+    keyword: '',
+    recordTimeFrom: '',
+    recordTimeTo: '',
+    sortBy: 'recordTime',
+    sortDir: 'desc',
+    dynamicFilters: [],
+    visibleColumns: [],
+  }
 }

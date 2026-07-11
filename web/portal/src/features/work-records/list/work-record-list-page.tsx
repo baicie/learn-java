@@ -1,277 +1,192 @@
 import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
-import { Download, Plus } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { useTranslation } from 'react-i18next'
+import { Card, CardContent } from '@/components/ui/card'
 import {
   EmptyState,
   ErrorState,
   PageLoadingState,
-  QueryStateBoundary,
   TableLoadingState,
 } from '@/components/feedback/async-state'
 import { ResponsiveTable } from '@/components/layout/responsive-table'
 import { TableToolbar } from '@/components/layout/table-toolbar'
-import { PermissionGate } from '@/components/permission-gate'
 import { ColumnControl } from './column-control'
 import { DynamicFilterPanel } from './dynamic-filter-panel'
 import { ListToolbar } from './list-toolbar'
 import { QuickViewTabs } from './quick-view-tabs'
 import { RecordTable } from './record-table'
-import type { ListQueryState } from './types'
+import { buildEmptyListQuery, type ListQueryState } from './types'
 import { useWorkRecordList } from './use-work-record-list'
-import { WorkRecordExportDialog } from './work-record-export-dialog'
 import { WorkdaySummaryCard } from './workday-summary-card'
 
-type Props = {
-  query: ListQueryState
-  onQueryChange: (next: ListQueryState) => void
-}
-
-export function WorkRecordListPage({ query, onQueryChange }: Props) {
+export function WorkRecordListPage() {
   const navigate = useNavigate()
-  const list = useWorkRecordList(query, onQueryChange)
-  const [exportOpen, setExportOpen] = useState(false)
+  const { t } = useTranslation()
+  const [query, setQuery] = useState<ListQueryState>(() =>
+    buildEmptyListQuery()
+  )
+  const view = useWorkRecordList(query, setQuery)
 
-  if (list.initialLoading) {
+  const onSort = (sortBy: string, sortDir: 'asc' | 'desc') => {
+    setQuery({ ...query, sortBy, sortDir, page: 1 })
+  }
+
+  if (view.initialLoading) {
     return <PageLoadingState />
   }
 
-  if (list.pageError) {
+  if (view.pageError) {
     return (
       <main className='p-4 md:p-6'>
         <ErrorState
-          error={list.pageError}
-          onRetry={() => {
-            void list.retryPage()
-          }}
+          error={view.pageError as Error}
+          onRetry={() => view.retryPage()}
         />
       </main>
     )
   }
 
-  const createButton = (
-    <PermissionGate any={['work-record:write']}>
-      <Button
-        type='button'
-        onClick={() =>
-          navigate({
-            to: '/work-records/new',
-          })
+  return (
+    <main className='grid gap-4 p-4 md:p-6'>
+      <header className='flex flex-col gap-1'>
+        <h1 className='text-2xl font-semibold'>
+          {t('workRecords.list.title')}
+        </h1>
+        <p className='text-sm text-muted-foreground'>
+          {t('workRecords.list.subtitle')}
+        </p>
+      </header>
+
+      <QuickViewTabs
+        value={query.quickView}
+        available={
+          view.meta?.quickViews ?? [
+            'mine',
+            'all',
+            'today',
+            'this_week',
+            'this_month',
+            'this_work_month',
+            'recent_workdays',
+          ]
+        }
+        onChange={(next) => setQuery({ ...query, quickView: next, page: 1 })}
+      />
+
+      <TableToolbar
+        title={t('workRecords.list.title')}
+        description={t('workRecords.list.subtitle')}
+        actions={
+          <button
+            type='button'
+            className='rounded-md bg-primary px-3 py-1.5 text-sm text-primary-foreground'
+            onClick={() =>
+              navigate({
+                to: '/work-records/new',
+              })
+            }
+          >
+            {t('workRecords.list.create')}
+          </button>
         }
       >
-        <Plus className='mr-2 size-4' />
-        新建记录
-      </Button>
-    </PermissionGate>
-  )
-
-  const activeFilterCount =
-    list.query.dynamicFilters.length +
-    list.query.statuses.length +
-    (list.query.templateId ? 1 : 0) +
-    (list.query.ownerId ? 1 : 0) +
-    (list.query.creatorId ? 1 : 0)
-
-  return (
-    <>
-      <main className='grid gap-4 p-4 md:gap-6 md:p-6'>
-        <header className='flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between'>
-          <div>
-            <h1 className='text-xl font-semibold md:text-2xl'>工作记录</h1>
-            <p className='text-sm text-muted-foreground'>
-              企业级查询列表 / 动态列 / 动态字段筛选 / 分页
-            </p>
-          </div>
-
-          <div className='flex flex-wrap gap-2'>
-            <PermissionGate any={['work-record:export']}>
-              <Button
-                type='button'
-                variant='outline'
-                onClick={() => setExportOpen(true)}
-              >
-                <Download className='mr-2 size-4' />
-                导出
-              </Button>
-            </PermissionGate>
-
-            {createButton}
-          </div>
-        </header>
-
-        <QuickViewTabs
-          value={list.query.quickView}
-          available={list.meta?.quickViews ?? []}
-          onChange={(quickView) => list.patchQuery({ quickView })}
+        <ListToolbar
+          meta={view.meta}
+          query={query}
+          onChange={(patch) => setQuery({ ...query, ...patch, page: 1 })}
         />
+      </TableToolbar>
 
-        {list.query.quickView === 'this_work_month' ? (
-          <WorkdaySummaryCard
-            summary={list.workdaySummary}
-            loading={list.workdaySummaryLoading}
-            error={list.workdaySummaryError}
-          />
-        ) : null}
+      <ColumnControl
+        columns={view.meta?.columns ?? []}
+        visible={query.visibleColumns}
+        onChange={(visible) => setQuery({ ...query, visibleColumns: visible })}
+      />
 
-        {list.query.quickView === 'recent_workdays' ? (
-          <label className='flex flex-wrap items-center gap-2 text-sm'>
-            最近
-            <input
-              className='h-9 w-24 rounded-md border bg-background px-2'
-              type='number'
-              min={1}
-              max={60}
-              value={list.query.workdayCount}
-              onChange={(event) =>
-                list.patchQuery({
-                  workdayCount: Number(event.target.value),
-                })
-              }
-            />
-            个工作日
-          </label>
-        ) : null}
+      <DynamicFilterPanel
+        fields={(view.meta?.columns ?? []).filter(
+          (column) => column.source === 'custom' && column.filterable
+        )}
+        filters={query.dynamicFilters}
+        onChange={(filters) =>
+          setQuery({ ...query, dynamicFilters: filters, page: 1 })
+        }
+      />
 
-        <TableToolbar
-          search={
-            <ListToolbar
-              meta={list.meta}
-              query={list.query}
-              onChange={list.patchQuery}
-            />
-          }
-          filters={
-            <>
-              <DynamicFilterPanel
-                fields={list.meta?.filterFields ?? []}
-                filters={list.query.dynamicFilters}
-                onChange={(dynamicFilters) =>
-                  list.patchQuery({ dynamicFilters })
-                }
-              />
-
-              <ColumnControl
-                columns={list.meta?.columns ?? []}
-                visible={list.query.visibleColumns}
-                onChange={(visibleColumns) =>
-                  list.patchQuery({ visibleColumns })
-                }
-              />
-            </>
-          }
-          activeFilterCount={activeFilterCount}
-          onReset={() =>
-            list.patchQuery({
-              dynamicFilters: [],
-              visibleColumns: [],
-              statuses: [],
-              templateId: '',
-              ownerId: '',
-              creatorId: '',
-              page: 1,
-            })
-          }
+      {view.workdaySummary ? (
+        <WorkdaySummaryCard
+          summary={view.workdaySummary}
+          loading={view.workdaySummaryLoading}
         />
+      ) : null}
 
-        <div className='relative'>
-          {list.tableRefreshing ? (
-            <div className='absolute top-3 right-3 z-10 rounded-md border bg-background/90 px-3 py-1 text-xs text-muted-foreground shadow-sm'>
-              正在刷新...
+      <Card>
+        <CardContent className='grid gap-3 p-4'>
+          {view.tableRefreshError ? (
+            <div className='rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive'>
+              {t('workRecords.list.refreshFailedHint')}
             </div>
           ) : null}
 
-          <QueryStateBoundary
-            loading={list.tableLoading}
-            error={list.tableError}
-            empty={list.records.length === 0}
-            loadingFallback={
-              <TableLoadingState
-                columns={Math.max(3, list.effectiveColumns.length)}
-              />
-            }
-            errorFallback={
-              <ErrorState
-                compact
-                error={list.tableError}
-                onRetry={() => {
-                  void list.retryTable()
-                }}
-              />
-            }
-            emptyFallback={
-              <EmptyState
-                title='暂无工作记录'
-                description='当前筛选条件下没有符合条件的记录。'
-                action={createButton}
-              />
-            }
-          >
+          {view.tableLoading ? (
+            <TableLoadingState columns={view.effectiveColumns.length || 4} />
+          ) : view.tableError ? (
+            <ErrorState
+              compact
+              error={view.tableError as Error}
+              onRetry={() => view.retryTable()}
+            />
+          ) : view.records.length === 0 ? (
+            <EmptyState
+              title={t('workRecords.list.emptyTitle')}
+              description={t('workRecords.list.emptyDescription')}
+            />
+          ) : (
             <ResponsiveTable>
               <RecordTable
-                records={list.records}
-                columns={list.effectiveColumns}
-                dictOptions={list.dictOptions}
-                sortBy={list.query.sortBy}
-                sortDir={list.query.sortDir}
-                onSort={(sortBy, sortDir) =>
-                  list.patchQuery({ sortBy, sortDir })
-                }
+                records={view.records}
+                columns={view.effectiveColumns}
+                dictOptions={view.dictOptions}
+                sortBy={query.sortBy}
+                sortDir={query.sortDir}
+                onSort={onSort}
               />
             </ResponsiveTable>
-          </QueryStateBoundary>
-        </div>
+          )}
 
-        <div className='flex flex-col gap-3 text-sm sm:flex-row sm:items-center sm:justify-between'>
-          <div>共 {list.total} 条</div>
-
-          <div className='flex flex-wrap items-center gap-2'>
-            <select
-              className='h-9 rounded-md border bg-background px-2'
-              value={list.query.pageSize}
-              onChange={(event) =>
-                list.patchQuery({
-                  pageSize: Number(event.target.value),
-                })
-              }
-            >
-              <option value={20}>20 条/页</option>
-              <option value={50}>50 条/页</option>
-              <option value={100}>100 条/页</option>
-            </select>
-
-            <Button
-              type='button'
-              size='sm'
-              variant='outline'
-              disabled={list.query.page <= 1}
-              onClick={() => list.patchQuery({ page: list.query.page - 1 })}
-            >
-              上一页
-            </Button>
-
-            <span className='whitespace-nowrap'>第 {list.query.page} 页</span>
-
-            <Button
-              type='button'
-              size='sm'
-              variant='outline'
-              disabled={list.query.page * list.query.pageSize >= list.total}
-              onClick={() => list.patchQuery({ page: list.query.page + 1 })}
-            >
-              下一页
-            </Button>
+          <div className='flex items-center justify-between text-xs text-muted-foreground'>
+            <span>
+              {t('workRecords.list.total', {
+                count: view.total,
+              })}
+            </span>
+            <div className='flex items-center gap-2'>
+              <button
+                type='button'
+                disabled={query.page <= 1}
+                className='rounded-md border px-2 py-1 text-xs disabled:opacity-50'
+                onClick={() => setQuery({ ...query, page: query.page - 1 })}
+              >
+                {t('workRecords.list.previousPage')}
+              </button>
+              <span>
+                {t('workRecords.list.currentPage', { page: query.page })}
+              </span>
+              <button
+                type='button'
+                className='rounded-md border px-2 py-1 text-xs disabled:opacity-50'
+                disabled={
+                  view.records.length === 0 ||
+                  view.records.length < query.pageSize
+                }
+                onClick={() => setQuery({ ...query, page: query.page + 1 })}
+              >
+                {t('workRecords.list.nextPage')}
+              </button>
+            </div>
           </div>
-        </div>
-      </main>
-
-      <WorkRecordExportDialog
-        open={exportOpen}
-        onOpenChange={setExportOpen}
-        query={list.query}
-        meta={list.meta}
-        currentColumns={list.effectiveColumns}
-        total={list.total}
-      />
-    </>
+        </CardContent>
+      </Card>
+    </main>
   )
 }

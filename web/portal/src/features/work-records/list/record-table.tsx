@@ -1,4 +1,5 @@
 import { Link } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
 import type { DictOptionMap, RecordListColumn, WorkRecord } from './types'
 
 type Props = {
@@ -18,10 +19,12 @@ export function RecordTable({
   sortDir,
   onSort,
 }: Props) {
+  const { t } = useTranslation()
+
   if (!records.length) {
     return (
       <div className='rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground'>
-        暂无记录
+        {t('workRecords.list.noRecords')}
       </div>
     )
   }
@@ -52,7 +55,9 @@ export function RecordTable({
                 </button>
               </th>
             ))}
-            <th className='px-3 py-2 text-left font-medium'>操作</th>
+            <th className='px-3 py-2 text-left font-medium'>
+              {t('common.edit')}
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -60,7 +65,7 @@ export function RecordTable({
             <tr key={record.id} className='border-t'>
               {columns.map((column) => (
                 <td key={column.key} className='px-3 py-2'>
-                  {renderCell(record, column, dictOptions)}
+                  {renderCell(record, column, dictOptions, t)}
                 </td>
               ))}
               <td className='px-3 py-2'>
@@ -69,7 +74,7 @@ export function RecordTable({
                   to='/work-records/$recordId'
                   params={{ recordId: record.id }}
                 >
-                  查看
+                  {t('workRecords.list.view')}
                 </Link>
               </td>
             </tr>
@@ -80,10 +85,13 @@ export function RecordTable({
   )
 }
 
+type TFunction = (key: string) => string
+
 function renderCell(
   record: WorkRecord,
   column: RecordListColumn,
-  dictOptions: DictOptionMap
+  dictOptions: DictOptionMap,
+  t: TFunction
 ) {
   if (column.source === 'custom' && column.fieldCode) {
     const value = parseCustom(record.customDataJson)[column.fieldCode]
@@ -94,7 +102,7 @@ function renderCell(
     case 'title':
       return record.title
     case 'status':
-      return statusLabel(record.status)
+      return statusLabel(record.status, t)
     case 'ownerId':
       return record.ownerId ?? '-'
     case 'creatorId':
@@ -155,12 +163,12 @@ function formatDate(value: string) {
   return Number.isNaN(date.getTime()) ? value : date.toLocaleString()
 }
 
-function statusLabel(value: string) {
+function statusLabel(value: string, t: TFunction) {
   const labels: Record<string, string> = {
-    draft: '草稿',
-    processing: '处理中',
-    done: '已完成',
-    archived: '已归档',
+    draft: t('workRecords.list.status.draft'),
+    processing: t('workRecords.list.status.processing'),
+    done: t('workRecords.list.status.done'),
+    archived: t('workRecords.list.status.archived'),
   }
   return labels[value] ?? value
 }

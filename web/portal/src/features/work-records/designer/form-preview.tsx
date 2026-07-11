@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import type { DesignerField } from './types'
 
@@ -6,16 +7,19 @@ type FormPreviewProps = {
 }
 
 export function FormPreview({ fields }: FormPreviewProps) {
+  const { t } = useTranslation()
   const enabledFields = fields.filter((field) => field.enabled)
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>实时预览</CardTitle>
+        <CardTitle>{t('workRecords.designer.preview.title')}</CardTitle>
       </CardHeader>
       <CardContent className='grid gap-3'>
         {enabledFields.length === 0 ? (
-          <div className='text-sm text-muted-foreground'>暂无字段</div>
+          <div className='text-sm text-muted-foreground'>
+            {t('workRecords.designer.preview.empty')}
+          </div>
         ) : null}
 
         {enabledFields.map((field) => (

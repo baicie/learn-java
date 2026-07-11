@@ -1,5 +1,9 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { i18n } from '@/i18n'
+import { I18nextProvider } from 'react-i18next'
 import { describe, expect, it, vi } from 'vitest'
 import { render } from 'vitest-browser-react'
+import { ConfirmProvider } from '@/components/feedback/confirm-provider'
 import { RecordRuntimeForm } from './record-runtime-form'
 import type {
   RuntimeDictOptions,
@@ -8,15 +12,27 @@ import type {
   WorkRecordTemplate,
 } from './types'
 
+function withProviders(node: React.ReactNode) {
+  return render(
+    <QueryClientProvider client={new QueryClient()}>
+      <I18nextProvider i18n={i18n} defaultNS='translation'>
+        <ConfirmProvider>{node}</ConfirmProvider>
+      </I18nextProvider>
+    </QueryClientProvider>
+  )
+}
+
 describe('RecordRuntimeForm', () => {
   it('renders base fields and dynamic fields', async () => {
-    const screen = await render(
+    const screen = await withProviders(
       <RecordRuntimeForm
         mode='create'
         templates={[template()]}
         fields={[field('content', 'textarea', true)]}
         dictOptions={{}}
         value={value({ content: 'hello' })}
+        errors={{}}
+        dirty={false}
         onChange={vi.fn()}
         onSaveDraft={vi.fn()}
         onSubmitDone={vi.fn()}
@@ -24,19 +40,23 @@ describe('RecordRuntimeForm', () => {
       />
     )
 
-    await expect.element(screen.getByText('新建工作记录')).toBeVisible()
-    await expect.element(screen.getByText('标题 *')).toBeVisible()
-    await expect.element(screen.getByText('内容')).toBeVisible()
+    await expect.element(screen.getByText('新建记录')).toBeVisible()
+    await expect.element(screen.getByText('工作内容')).toBeVisible()
   })
 
-  it('shows validation errors before submit', async () => {
-    const screen = await render(
+  it('renders summary error card and per-field errors', async () => {
+    const screen = await withProviders(
       <RecordRuntimeForm
         mode='create'
         templates={[template()]}
         fields={[field('content', 'textarea', true)]}
         dictOptions={{}}
         value={value({})}
+        errors={{
+          'custom.content': '请填写工作内容',
+          title: '请输入记录标题',
+        }}
+        dirty
         onChange={vi.fn()}
         onSaveDraft={vi.fn()}
         onSubmitDone={vi.fn()}
@@ -44,8 +64,10 @@ describe('RecordRuntimeForm', () => {
       />
     )
 
-    await expect.element(screen.getByText('提交前校验失败')).toBeVisible()
-    await expect.element(screen.getByText('内容 不能为空')).toBeVisible()
+    await expect.element(screen.getByText('请修正以下内容')).toBeVisible()
+    await expect
+      .element(screen.getByText('请修正表单中的错误后再提交'))
+      .toBeVisible()
   })
 
   it('renders dict options including disabled items', async () => {
@@ -61,7 +83,7 @@ describe('RecordRuntimeForm', () => {
       ],
     }
 
-    const screen = await render(
+    const screen = await withProviders(
       <RecordRuntimeForm
         mode='create'
         templates={[template()]}
@@ -74,6 +96,8 @@ describe('RecordRuntimeForm', () => {
         ]}
         dictOptions={dictOptions}
         value={value({ priority: 'P1' })}
+        errors={{}}
+        dirty={false}
         onChange={vi.fn()}
         onSaveDraft={vi.fn()}
         onSubmitDone={vi.fn()}
@@ -83,6 +107,34 @@ describe('RecordRuntimeForm', () => {
 
     const options = screen.getByRole('option', { name: 'P1（已禁用）' })
     await expect.element(options).toBeInTheDocument()
+  })
+
+  it('separately enables save draft and submit done', async () => {
+    const onSaveDraft = vi.fn()
+    const onSubmitDone = vi.fn()
+
+    const screen = await withProviders(
+      <RecordRuntimeForm
+        mode='create'
+        templates={[template()]}
+        fields={[field('content', 'textarea', true)]}
+        dictOptions={{}}
+        value={value({})}
+        errors={{ 'custom.content': '请填写工作内容' }}
+        dirty
+        submitting={false}
+        onChange={vi.fn()}
+        onSaveDraft={onSaveDraft}
+        onSubmitDone={onSubmitDone}
+        onCancel={vi.fn()}
+      />
+    )
+
+    await screen.getByRole('button', { name: '保存草稿' }).click()
+    expect(onSaveDraft).toHaveBeenCalled()
+
+    await screen.getByRole('button', { name: '提交' }).click()
+    expect(onSubmitDone).toHaveBeenCalled()
   })
 })
 
@@ -129,7 +181,7 @@ function field(
     tenantId: 't1',
     templateId: 'tpl1',
     templateVersionId: 'v1',
-    fieldName: code === 'content' ? '内容' : code,
+    fieldName: code === 'content' ? '工作内容' : code,
     fieldCode: code,
     fieldType,
     required,

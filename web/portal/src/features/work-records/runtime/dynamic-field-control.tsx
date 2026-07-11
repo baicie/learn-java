@@ -1,10 +1,19 @@
+import { useTranslation } from 'react-i18next'
+import { cn } from '@/lib/utils'
 import type { RuntimeDictOptions, WorkRecordField } from './types'
+
+type ControlProps = {
+  id?: string
+  'aria-invalid'?: boolean
+  'aria-describedby'?: string
+}
 
 type DynamicFieldControlProps = {
   field: WorkRecordField
   value: unknown
   dictOptions: RuntimeDictOptions
   readonly?: boolean
+  controlProps?: ControlProps
   onChange: (value: unknown) => void
 }
 
@@ -13,19 +22,28 @@ export function DynamicFieldControl({
   value,
   dictOptions,
   readonly,
+  controlProps,
   onChange,
 }: DynamicFieldControlProps) {
-  const className = 'rounded-md border bg-background px-3 py-2 text-sm'
+  const className = cn('rounded-md border bg-background px-3 py-2 text-sm')
+  const { t } = useTranslation()
+  const disabledSuffix = t('workRecords.detail.disabledOption')
 
   if (readonly) {
     return (
-      <ReadonlyValue field={field} value={value} dictOptions={dictOptions} />
+      <ReadonlyValue
+        field={field}
+        value={value}
+        dictOptions={dictOptions}
+        disabledSuffix={disabledSuffix}
+      />
     )
   }
 
   if (field.fieldType === 'textarea') {
     return (
       <textarea
+        {...controlProps}
         className={className}
         value={typeof value === 'string' ? value : ''}
         onChange={(event) => onChange(event.target.value)}
@@ -36,6 +54,7 @@ export function DynamicFieldControl({
   if (field.fieldType === 'number') {
     return (
       <input
+        {...controlProps}
         className={className}
         type='number'
         value={typeof value === 'number' ? value : ''}
@@ -51,6 +70,7 @@ export function DynamicFieldControl({
   if (field.fieldType === 'date') {
     return (
       <input
+        {...controlProps}
         className={className}
         type='date'
         value={typeof value === 'string' ? value : ''}
@@ -62,6 +82,7 @@ export function DynamicFieldControl({
   if (field.fieldType === 'datetime') {
     return (
       <input
+        {...controlProps}
         className={className}
         type='datetime-local'
         value={toDatetimeLocalValue(value)}
@@ -72,7 +93,9 @@ export function DynamicFieldControl({
             return
           }
           const date = new Date(raw)
-          onChange(Number.isNaN(date.getTime()) ? undefined : date.toISOString())
+          onChange(
+            Number.isNaN(date.getTime()) ? undefined : date.toISOString()
+          )
         }}
       />
     )
@@ -82,11 +105,12 @@ export function DynamicFieldControl({
     return (
       <label className='flex items-center gap-2 text-sm'>
         <input
+          {...controlProps}
           type='checkbox'
           checked={value === true}
           onChange={(event) => onChange(event.target.checked)}
         />
-        是 / 否
+        {t('workRecords.form.yes')}
       </label>
     )
   }
@@ -94,14 +118,17 @@ export function DynamicFieldControl({
   if (field.fieldType === 'select') {
     return (
       <select
+        {...controlProps}
         className={className}
         value={typeof value === 'string' ? value : ''}
         onChange={(event) => onChange(event.target.value)}
       >
-        <option value=''>请选择</option>
+        <option value=''>{t('workRecords.form.select')}</option>
         {options(field, dictOptions).map((item) => (
           <option key={item.itemValue} value={item.itemValue}>
-            {item.enabled ? item.itemLabel : `${item.itemLabel}（已禁用）`}
+            {item.enabled
+              ? item.itemLabel
+              : `${item.itemLabel}${disabledSuffix}`}
           </option>
         ))}
       </select>
@@ -112,6 +139,7 @@ export function DynamicFieldControl({
     const values = Array.isArray(value) ? value.map(String) : []
     return (
       <select
+        {...controlProps}
         className={className}
         multiple
         value={values}
@@ -125,7 +153,9 @@ export function DynamicFieldControl({
       >
         {options(field, dictOptions).map((item) => (
           <option key={item.itemValue} value={item.itemValue}>
-            {item.enabled ? item.itemLabel : `${item.itemLabel}（已禁用）`}
+            {item.enabled
+              ? item.itemLabel
+              : `${item.itemLabel}${disabledSuffix}`}
           </option>
         ))}
       </select>
@@ -134,6 +164,7 @@ export function DynamicFieldControl({
 
   return (
     <input
+      {...controlProps}
       className={className}
       value={typeof value === 'string' ? value : ''}
       onChange={(event) => onChange(event.target.value)}
@@ -145,22 +176,30 @@ function ReadonlyValue({
   field,
   value,
   dictOptions,
+  disabledSuffix,
 }: {
   field: WorkRecordField
   value: unknown
   dictOptions: RuntimeDictOptions
+  disabledSuffix: string
 }) {
+  const { t } = useTranslation()
   let text = '-'
 
   if (field.optionSource === 'dict' && field.dictCode) {
     const opts = dictOptions[field.dictCode] ?? []
     if (Array.isArray(value)) {
-      text = value.map((item) => label(opts, String(item))).join('、')
+      text = value
+        .map((item) => label(opts, String(item), disabledSuffix))
+        .join('、')
     } else if (typeof value === 'string') {
-      text = label(opts, value)
+      text = label(opts, value, disabledSuffix)
     }
   } else if (field.fieldType === 'boolean') {
-    text = value === true ? '是' : '否'
+    text =
+      value === true
+        ? t('workRecords.form.booleanYes')
+        : t('workRecords.form.booleanNo')
   } else if (Array.isArray(value)) {
     text = value.join('、')
   } else if (value !== undefined && value !== null && String(value) !== '') {
@@ -194,11 +233,14 @@ function options(field: WorkRecordField, dictOptions: RuntimeDictOptions) {
 
 function label(
   options: { itemLabel: string; itemValue: string; enabled: boolean }[],
-  value: string
+  value: string,
+  disabledSuffix: string
 ) {
   const option = options.find((item) => item.itemValue === value)
   if (!option) return value
-  return option.enabled ? option.itemLabel : `${option.itemLabel}（已禁用）`
+  return option.enabled
+    ? option.itemLabel
+    : `${option.itemLabel}${disabledSuffix}`
 }
 
 function toDatetimeLocalValue(value: unknown) {

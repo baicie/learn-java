@@ -1,11 +1,7 @@
 import { z } from 'zod'
 import { createFileRoute } from '@tanstack/react-router'
 import { requireAnyPermission } from '@/features/auth/permission'
-import { WorkRecords } from '@/features/work-records'
-import {
-  normalizeListSearch,
-  toRouteSearch,
-} from '@/features/work-records/list/search'
+import { WorkRecordListPage } from '@/features/work-records/list/work-record-list-page'
 
 const scalarValueSchema = z.union([z.string(), z.number(), z.boolean()])
 
@@ -55,18 +51,5 @@ export const Route = createFileRoute('/_authenticated/work-records/')({
 
 // eslint-disable-next-line react-refresh/only-export-components -- TanStack Router requires component inline with createFileRoute
 function Component() {
-  const search = Route.useSearch()
-  const navigate = Route.useNavigate()
-
-  return (
-    <WorkRecords
-      query={normalizeListSearch(search)}
-      onQueryChange={(next) =>
-        navigate({
-          search: toRouteSearch(next),
-          replace: true,
-        })
-      }
-    />
-  )
+  return <WorkRecordListPage />
 }

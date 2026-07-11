@@ -1,4 +1,4 @@
-import { useI18n } from '@/i18n/provider'
+import { useTranslation } from 'react-i18next'
 import { useConfirm } from '@/components/feedback/confirm-provider'
 
 export type TemplateOption = {
@@ -23,7 +23,7 @@ export function TemplateSwitchSelect({
   onChange: (templateId: string) => void
 }) {
   const confirm = useConfirm()
-  const { t } = useI18n()
+  const { t } = useTranslation()
 
   const changeTemplate = async (nextTemplateId: string) => {
     if (nextTemplateId === value || !nextTemplateId) {
@@ -36,9 +36,9 @@ export function TemplateSwitchSelect({
     }
 
     const accepted = await confirm({
-      title: t('template.switch.title'),
-      description: t('template.switch.description'),
-      confirmText: t('template.switch.confirm'),
+      title: t('workRecords.templateSwitch.title'),
+      description: t('workRecords.templateSwitch.description'),
+      confirmText: t('workRecords.templateSwitch.confirm'),
       variant: 'warning',
     })
 
@@ -57,7 +57,7 @@ export function TemplateSwitchSelect({
         void changeTemplate(event.target.value)
       }}
     >
-      <option value=''>请选择模板</option>
+      <option value=''>{t('workRecords.form.selectTemplate')}</option>
 
       {templates.map((template) => (
         <option

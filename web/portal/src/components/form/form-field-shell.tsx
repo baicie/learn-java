@@ -5,6 +5,12 @@ import type { ReactNode } from 'react'
 import { AlertCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
+export type FormControlProps = {
+  id: string
+  'aria-invalid': true | undefined
+  'aria-describedby': string | undefined
+}
+
 export function FormFieldShell({
   id,
   label,
@@ -19,14 +25,19 @@ export function FormFieldShell({
   required?: boolean
   hint?: ReactNode
   error?: string
-  children: ReactNode
+  children: (props: FormControlProps) => ReactNode
   className?: string
 }) {
   const errorId = `${id}-error`
   const hintId = `${id}-hint`
+  const describedBy = error ? errorId : hint ? hintId : undefined
 
   return (
-    <div className={cn('grid gap-1.5', className)}>
+    <div
+      className={cn('grid gap-1.5', className)}
+      data-field-error={Boolean(error) || undefined}
+      data-field-id={id}
+    >
       <label htmlFor={id} className='text-sm font-medium'>
         {label}
         {required ? (
@@ -36,9 +47,11 @@ export function FormFieldShell({
         ) : null}
       </label>
 
-      <div data-field-error={Boolean(error) || undefined} data-field-id={id}>
-        {children}
-      </div>
+      {children({
+        id,
+        'aria-invalid': error ? true : undefined,
+        'aria-describedby': describedBy,
+      })}
 
       {error ? (
         <p

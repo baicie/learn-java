@@ -116,11 +116,6 @@ export type WorkRecordRuntimeFormValue = {
   customData: Record<string, unknown>
 }
 
-export type WorkRecordRuntimeValidation = {
-  valid: boolean
-  errors: string[]
-}
-
 export type AuditChange = {
   path: string
   beforeValue: unknown
