@@ -1,6 +1,7 @@
 package io.aegisops.workrecord.application.service;
 
 import io.aegisops.common.api.PageResult;
+import io.aegisops.common.exception.ResourceNotFoundException;
 import io.aegisops.security.UserPrincipal;
 import io.aegisops.workrecord.application.command.RecordDynamicFilter;
 import io.aegisops.workrecord.application.command.RecordQuery;
@@ -83,12 +84,11 @@ public class WorkRecordQueryService {
       throw new IllegalArgumentException("record query is required");
     }
 
-    boolean canReadAll = permissionService.canReadAll(user);
+    // 统一权限拒绝路径：覆盖"无任何读取权限"用户，
+    // 与 requireRead/requireEdit/requireDelete/requireExport 共享 deny() 指标记录。
+    permissionService.requireQueryAccess(user);
 
-    if (!canReadAll && !permissionService.canReadSelf(user)) {
-      throw new org.springframework.security.access.AccessDeniedException(
-          "not allowed to read work records");
-    }
+    boolean canReadAll = permissionService.canReadAll(user);
 
     RecordQuickView view = RecordQuickView.from(query.quickView());
 
@@ -130,7 +130,8 @@ public class WorkRecordQueryService {
     WorkRecord record =
         repository
             .find(tenantId, recordId)
-            .orElseThrow(() -> new IllegalArgumentException("work record not found"));
+            .orElseThrow(
+                () -> new ResourceNotFoundException("work record not found: " + recordId));
 
     permissionService.requireRead(user, record);
 

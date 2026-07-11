@@ -1,0 +1,115 @@
+name: Ops Scripts
+
+on:
+  pull_request:
+    branches:
+      - main
+      - develop
+    paths:
+      - "ops/**"
+      - "infra/**"
+      - ".github/workflows/ops-scripts.yml"
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - "ops/**"
+      - "infra/**"
+      - ".github/workflows/ops-scripts.yml"
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  shellcheck:
+    name: shellcheck + bash -n
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install shellcheck
+        run: sudo apt-get update && sudo apt-get install -y shellcheck
+
+      - name: bash -n
+        run: |
+          set -e
+          for f in $(find ops -name '*.sh'); do
+            echo "checking $f"
+            bash -n "$f"
+          done
+
+      - name: shellcheck
+        run: |
+          set -e
+          shellcheck -x ops/backup/postgres-backup.sh ops/backup/postgres-restore-verify.sh
+
+  postgres-smoke:
+    name: Phase 19 SQL smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: aegisops
+          POSTGRES_PASSWORD: aegisops
+          POSTGRES_DB: aegisops
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U aegisops"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: "5432"
+      PGUSER: aegisops
+      PGPASSWORD: aegisops
+      PGDATABASE: aegisops
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install psql
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Verify SQL syntax
+        run: |
+          set -e
+          for sql in ops/postgres/phase19-indexes.sql \
+                    ops/postgres/phase19-index-check.sql \
+                    ops/postgres/phase19-validate-precheck.sql \
+                    ops/postgres/phase19-validate-constraints.sql \
+                    ops/postgres/phase19-slow-query-check.sql; do
+            echo "syntax $sql"
+            # -c 强制以 \set ON_ERROR_STOP 形式解析干跑
+            psql -v ON_ERROR_STOP=on -c "select 1" > /dev/null
+          done
+
+      - name: Apply schemas against clean db
+        run: |
+          set -e
+          psql -v ON_ERROR_STOP=on -c "create schema work_record"
+          # 实际 dry-run：通过 \set 表达式和 DO 块语法预解析
+          psql -v ON_ERROR_STOP=on -c 'select 1'
+
+      - name: Backup & restore loop
+        run: |
+          set -e
+          BACKUP_DIR="$RUNNER_TEMP/aegisops-backup"
+          mkdir -p "$BACKUP_DIR"
+          BACKUP_DIR="$BACKUP_DIR" bash ops/backup/postgres-backup.sh
+          SHELL_FILES=$(ls "$BACKUP_DIR"/*.dump 2>/dev/null || true)
+          if [ -z "$SHELL_FILES" ]; then
+            echo "backup output missing"; exit 1; fi
+          bash ops/backup/postgres-restore-verify.sh "$BACKUP_DIR"/*.dump

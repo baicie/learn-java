@@ -30,6 +30,14 @@ public class WorkRecordPayloadPolicy {
         "designerJson");
   }
 
+  public void requireFieldIndex(String json) {
+    requireBytes(
+        json,
+        properties.getPayload().getFieldIndexMaxBytes(),
+        ErrorCode.FIELD_INDEX_JSON_TOO_LARGE,
+        "fieldIndexJson");
+  }
+
   public void requireCustomData(String json) {
     requireBytes(
         json,

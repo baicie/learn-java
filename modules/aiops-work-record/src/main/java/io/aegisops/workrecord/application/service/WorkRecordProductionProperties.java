@@ -36,6 +36,7 @@ public class WorkRecordProductionProperties {
   public static final class Payload {
     private int schemaMaxBytes = 1_048_576;
     private int designerMaxBytes = 1_048_576;
+    private int fieldIndexMaxBytes = 1_048_576;
     private int customDataMaxBytes = 262_144;
     private int builtinDataMaxBytes = 131_072;
 
@@ -53,6 +54,14 @@ public class WorkRecordProductionProperties {
 
     public void setDesignerMaxBytes(int designerMaxBytes) {
       this.designerMaxBytes = positive(designerMaxBytes, "designerMaxBytes");
+    }
+
+    public int getFieldIndexMaxBytes() {
+      return fieldIndexMaxBytes;
+    }
+
+    public void setFieldIndexMaxBytes(int fieldIndexMaxBytes) {
+      this.fieldIndexMaxBytes = positive(fieldIndexMaxBytes, "fieldIndexMaxBytes");
     }
 
     public int getCustomDataMaxBytes() {

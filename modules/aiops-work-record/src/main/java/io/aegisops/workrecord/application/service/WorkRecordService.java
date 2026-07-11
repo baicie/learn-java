@@ -2,6 +2,7 @@ package io.aegisops.workrecord.application.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.aegisops.common.exception.ResourceNotFoundException;
 import io.aegisops.security.UserPrincipal;
 import io.aegisops.workrecord.application.command.CreateRecordCommand;
 import io.aegisops.workrecord.application.command.UpdateRecordCommand;
@@ -66,12 +67,13 @@ public class WorkRecordService {
     requireText(command.title(), "title");
     requireRecordTime(command.recordTime());
 
+    // 必须在 payload 检查之前完成权限判断：
+    // 1) 拒绝未授权用户探测模板版本与字段大小返回差异；
+    // 2) 避免未授权请求消耗 body 解析与 UTF-8 扫描资源。
+    permissionService.requireCreate(user);
+
     payloadPolicy.requireBuiltinData(command.builtinDataJson());
     payloadPolicy.requireCustomData(command.customDataJson());
-
-    // 必须在任何 Repository 查询前完成权限判断，
-    // 避免只读用户探测模板版本是否存在。
-    permissionService.requireCreate(user);
 
     RecordStatus targetStatus = RecordStatus.from(command.status());
 
@@ -123,7 +125,8 @@ public class WorkRecordService {
     WorkRecord existing =
         recordRepository
             .find(tenantId, recordId)
-            .orElseThrow(() -> new IllegalArgumentException("work record not found"));
+            .orElseThrow(
+                () -> new ResourceNotFoundException("work record not found: " + recordId));
 
     permissionService.requireEdit(user, existing);
 
@@ -194,7 +197,8 @@ public class WorkRecordService {
     WorkRecord existing =
         recordRepository
             .find(tenantId, recordId)
-            .orElseThrow(() -> new IllegalArgumentException("work record not found"));
+            .orElseThrow(
+                () -> new ResourceNotFoundException("work record not found: " + recordId));
 
     permissionService.requireDelete(user, existing);
 
@@ -216,14 +220,18 @@ public class WorkRecordService {
   public WorkRecord get(String tenantId, String recordId) {
     return recordRepository
         .find(tenantId, recordId)
-        .orElseThrow(() -> new IllegalArgumentException("work record not found"));
+        .orElseThrow(
+            () -> new ResourceNotFoundException("work record not found: " + recordId));
   }
 
   private WorkRecordTemplateVersion resolveVersion(
       String tenantId, String templateId, String templateVersionId) {
     return versionRepository
         .findByTemplateAndVersion(tenantId, templateId, templateVersionId)
-        .orElseThrow(() -> new IllegalArgumentException("template version not found"));
+        .orElseThrow(
+            () ->
+                new ResourceNotFoundException(
+                    "template version not found: " + templateVersionId));
   }
 
   private String normalizeObject(String json) {

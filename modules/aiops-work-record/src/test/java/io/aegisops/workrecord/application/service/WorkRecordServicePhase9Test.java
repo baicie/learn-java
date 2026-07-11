@@ -7,6 +7,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.aegisops.common.exception.ResourceNotFoundException;
 import io.aegisops.security.UserPrincipal;
 import io.aegisops.workrecord.application.command.CreateRecordCommand;
 import io.aegisops.workrecord.application.command.UpdateRecordCommand;
@@ -157,7 +158,7 @@ class WorkRecordServicePhase9Test {
                         "{}",
                         "{}"),
                     user()))
-        .isInstanceOf(IllegalArgumentException.class)
+        .isInstanceOf(ResourceNotFoundException.class)
         .hasMessageContaining("template version not found");
   }
 
@@ -171,7 +172,7 @@ class WorkRecordServicePhase9Test {
                     new UpdateRecordCommand(
                         null, null, "u1", OffsetDateTime.parse("2026-01-01T00:00:00Z"), null, null),
                     user()))
-        .isInstanceOf(IllegalArgumentException.class)
+        .isInstanceOf(ResourceNotFoundException.class)
         .hasMessageContaining("work record not found");
   }
 

@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import io.aegisops.security.DataScope;
 import io.aegisops.security.PermissionCodes;
 import io.aegisops.security.UserPrincipal;
+import io.aegisops.workrecord.application.port.WorkRecordTelemetry;
 import io.aegisops.workrecord.domain.model.RecordStatus;
 import io.aegisops.workrecord.domain.model.WorkRecord;
 import java.time.OffsetDateTime;
@@ -85,6 +86,58 @@ class WorkRecordPermissionServiceTest {
         .isInstanceOf(AccessDeniedException.class);
   }
 
+  @Test
+  void requireQueryAccessAllowsReadAllPrincipal() {
+    service.requireQueryAccess(
+        principal("admin", Set.of(PermissionCodes.WORK_RECORD_READ_ALL), DataScope.ALL));
+  }
+
+  @Test
+  void requireQueryAccessAllowsReadSelfPrincipal() {
+    service.requireQueryAccess(
+        principal("u1", Set.of(PermissionCodes.WORK_RECORD_READ_SELF), DataScope.SELF));
+  }
+
+  @Test
+  void requireQueryAccessRejectsPrincipalWithNoReadPermissionAndRecordsMetric() {
+    CountingTelemetry telemetry = new CountingTelemetry();
+    WorkRecordPermissionService instrumented = WorkRecordPermissionService.withTelemetry(telemetry);
+
+    assertThatThrownBy(
+            () ->
+                instrumented.requireQueryAccess(
+                    principal("u1", Set.of(PermissionCodes.WORK_RECORD_WRITE), DataScope.SELF)))
+        .isInstanceOf(AccessDeniedException.class);
+
+    assertThat(telemetry.deniedActions).contains(PermissionCodes.WORK_RECORD_READ_SELF);
+  }
+
+  @Test
+  void requireQueryAccessRejectsNullPrincipalAndRecordsMetric() {
+    CountingTelemetry telemetry = new CountingTelemetry();
+    WorkRecordPermissionService instrumented = WorkRecordPermissionService.withTelemetry(telemetry);
+
+    assertThatThrownBy(() -> instrumented.requireQueryAccess(null))
+        .isInstanceOf(AccessDeniedException.class);
+
+    assertThat(telemetry.deniedActions).contains(PermissionCodes.WORK_RECORD_READ_SELF);
+  }
+
+  @Test
+  void requireReadRejectsUserWithoutReadPermissionAndRecordsMetric() {
+    CountingTelemetry telemetry = new CountingTelemetry();
+    WorkRecordPermissionService instrumented = WorkRecordPermissionService.withTelemetry(telemetry);
+
+    assertThatThrownBy(
+            () ->
+                instrumented.requireRead(
+                    principal("u1", Set.of(PermissionCodes.WORK_RECORD_WRITE), DataScope.SELF),
+                    record("u1", "u1")))
+        .isInstanceOf(AccessDeniedException.class);
+
+    assertThat(telemetry.deniedActions).contains(PermissionCodes.WORK_RECORD_READ_SELF);
+  }
+
   private UserPrincipal principal(String id, Set<String> permissions, DataScope scope) {
     return new UserPrincipal(id, "t1", id, id, Set.of(), permissions, Map.of("work-record", scope));
   }
@@ -108,5 +161,20 @@ class WorkRecordPermissionServiceTest {
         now,
         now,
         null);
+  }
+
+  private static final class CountingTelemetry implements WorkRecordTelemetry {
+    private final java.util.List<String> deniedActions = new java.util.ArrayList<>();
+
+    @Override
+    public void recordQuery(String operation, java.time.Duration duration) {}
+
+    @Override
+    public void recordExport(String result) {}
+
+    @Override
+    public void recordPermissionDenied(String action) {
+      deniedActions.add(action);
+    }
   }
 }

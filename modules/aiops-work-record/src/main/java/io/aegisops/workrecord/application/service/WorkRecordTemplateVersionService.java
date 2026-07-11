@@ -1,5 +1,8 @@
 package io.aegisops.workrecord.application.service;
 
+import io.aegisops.common.exception.AppException;
+import io.aegisops.common.exception.ConflictException;
+import io.aegisops.common.exception.ResourceNotFoundException;
 import io.aegisops.workrecord.application.command.PublishTemplateCommand;
 import io.aegisops.workrecord.application.command.TemplateFieldIndexEntry;
 import io.aegisops.workrecord.application.command.TemplatePublishValidationResult;
@@ -33,6 +36,7 @@ public class WorkRecordTemplateVersionService {
   private final WorkRecordAuditService auditService;
   private final WorkRecordAuditSnapshots auditSnapshots;
   private final WorkRecordFieldAuditService fieldAuditService;
+  private final WorkRecordPayloadPolicy payloadPolicy;
 
   public WorkRecordTemplateVersionService(
       WorkRecordTemplateRepository templateRepository,
@@ -45,7 +49,8 @@ public class WorkRecordTemplateVersionService {
       WorkRecordTemplatePublishGuard publishGuard,
       WorkRecordAuditService auditService,
       WorkRecordAuditSnapshots auditSnapshots,
-      WorkRecordFieldAuditService fieldAuditService) {
+      WorkRecordFieldAuditService fieldAuditService,
+      WorkRecordPayloadPolicy payloadPolicy) {
     this.templateRepository = templateRepository;
     this.versionRepository = versionRepository;
     this.fieldRepository = fieldRepository;
@@ -57,6 +62,7 @@ public class WorkRecordTemplateVersionService {
     this.auditService = auditService;
     this.auditSnapshots = auditSnapshots;
     this.fieldAuditService = fieldAuditService;
+    this.payloadPolicy = payloadPolicy;
   }
 
   public List<WorkRecordTemplateVersion> list(String tenantId, String templateId) {
@@ -84,6 +90,10 @@ public class WorkRecordTemplateVersionService {
       WorkRecordSchemaDocument document =
           schemaService.prepareForPublish(template.draftSchemaJson(), template.draftDesignerJson());
 
+      // 发布前重新校验规范化后 JSON 大小，避免草稿历史遗留超大 payload 通过 DB CHECK 才报错。
+      payloadPolicy.requireSchema(document.normalizedSchemaJson());
+      payloadPolicy.requireDesigner(document.normalizedDesignerJson());
+
       List<String> errors = validateFieldLocks(tenantId, template, document);
       if (!errors.isEmpty()) {
         return TemplatePublishValidationResult.failed(errors);
@@ -96,6 +106,9 @@ public class WorkRecordTemplateVersionService {
           publishGuard.buildFieldIndexEntries(
               previousFields, document.fields(), currentVersionReferenced);
 
+      String effectiveFieldIndexJson = schemaNormalizer.fieldIndexEntryJson(fieldEntries);
+      payloadPolicy.requireFieldIndex(effectiveFieldIndexJson);
+
       List<String> warnings = new ArrayList<>();
       if (referenced > 0) {
         warnings.add("current template version is referenced by " + referenced + " records");
@@ -103,7 +116,7 @@ public class WorkRecordTemplateVersionService {
 
       return TemplatePublishValidationResult.ok(
           document.schemaVersion(), fieldEntries.size(), referenced, warnings);
-    } catch (IllegalArgumentException | IllegalStateException ex) {
+    } catch (IllegalArgumentException | AppException ex) {
       return TemplatePublishValidationResult.failed(List.of(ex.getMessage()));
     }
   }
@@ -119,7 +132,7 @@ public class WorkRecordTemplateVersionService {
 
     List<String> errors = validateFieldLocks(tenantId, template, document);
     if (!errors.isEmpty()) {
-      throw new IllegalStateException(String.join("; ", errors));
+      throw new ConflictException(String.join("; ", errors));
     }
 
     List<WorkRecordField> previousFields = previousFields(tenantId, template);
@@ -127,7 +140,12 @@ public class WorkRecordTemplateVersionService {
     List<TemplateFieldIndexEntry> fieldEntries =
         publishGuard.buildFieldIndexEntries(previousFields, document.fields(), referenced);
 
+    // 发布前重新校验规范化后 JSON 大小，避免依赖 DB CHECK 才拒绝写入。
+    payloadPolicy.requireSchema(document.normalizedSchemaJson());
+    payloadPolicy.requireDesigner(document.normalizedDesignerJson());
+
     String effectiveFieldIndexJson = schemaNormalizer.fieldIndexEntryJson(fieldEntries);
+    payloadPolicy.requireFieldIndex(effectiveFieldIndexJson);
 
     int versionNo = versionRepository.nextVersionNo(tenantId, template.id());
     WorkRecordTemplateVersion version =
@@ -209,18 +227,19 @@ public class WorkRecordTemplateVersionService {
   private WorkRecordTemplate requireTemplate(String tenantId, String templateId) {
     return templateRepository
         .find(tenantId, templateId)
-        .orElseThrow(() -> new IllegalArgumentException("template not found"));
+        .orElseThrow(
+            () -> new ResourceNotFoundException("template not found: " + templateId));
   }
 
   private void validateTemplatePublishable(WorkRecordTemplate template) {
     if (!template.enabled()) {
-      throw new IllegalStateException("disabled template cannot be published");
+      throw new ConflictException("disabled template cannot be published");
     }
     if (template.status() == TemplateStatus.DISABLED) {
-      throw new IllegalStateException("disabled template cannot be published");
+      throw new ConflictException("disabled template cannot be published");
     }
     if (template.status() == TemplateStatus.ARCHIVED) {
-      throw new IllegalStateException("archived template cannot be published");
+      throw new ConflictException("archived template cannot be published");
     }
   }
 }

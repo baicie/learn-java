@@ -113,16 +113,16 @@ public class GlobalExceptionHandler {
   @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
   public ResponseEntity<ApiResponse<Void>> handleMethod(HttpRequestMethodNotSupportedException ex) {
     return response(
-        HttpStatus.METHOD_NOT_ALLOWED.value(),
-        "METHOD_NOT_ALLOWED",
+        ErrorCode.METHOD_NOT_ALLOWED.httpStatus(),
+        ErrorCode.METHOD_NOT_ALLOWED.name(),
         "request method is not supported");
   }
 
   @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
   public ResponseEntity<ApiResponse<Void>> handleMediaType(HttpMediaTypeNotSupportedException ex) {
     return response(
-        HttpStatus.UNSUPPORTED_MEDIA_TYPE.value(),
-        "UNSUPPORTED_MEDIA_TYPE",
+        ErrorCode.UNSUPPORTED_MEDIA_TYPE.httpStatus(),
+        ErrorCode.UNSUPPORTED_MEDIA_TYPE.name(),
         "content type is not supported");
   }
 

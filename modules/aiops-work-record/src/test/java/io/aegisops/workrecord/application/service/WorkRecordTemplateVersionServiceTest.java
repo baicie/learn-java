@@ -46,6 +46,8 @@ class WorkRecordTemplateVersionServiceTest {
       new WorkRecordAuditSnapshots(new ObjectMapper());
   private final WorkRecordFieldAuditService fieldAuditService =
       new WorkRecordFieldAuditService(auditService, auditSnapshots);
+  private final WorkRecordPayloadPolicy payloadPolicy =
+      new WorkRecordPayloadPolicy(WorkRecordProductionProperties.defaults());
 
   private final WorkRecordTemplateVersionService service =
       new WorkRecordTemplateVersionService(
@@ -59,7 +61,8 @@ class WorkRecordTemplateVersionServiceTest {
           guard,
           auditService,
           auditSnapshots,
-          fieldAuditService);
+          fieldAuditService,
+          payloadPolicy);
 
   @Test
   void validatePublishShouldReturnErrorsForDisabledTemplate() {

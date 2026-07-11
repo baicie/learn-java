@@ -27,6 +27,11 @@ public class WorkRecordPermissionService {
     this(WorkRecordTelemetry.noop());
   }
 
+  /** 单元测试用：允许注入 spy / mock telemetry 验证指标记录。 */
+  public static WorkRecordPermissionService withTelemetry(WorkRecordTelemetry telemetry) {
+    return new WorkRecordPermissionService(telemetry);
+  }
+
   public boolean canReadAll(UserPrincipal principal) {
     return principal != null
         && principal.hasPermission(PermissionCodes.WORK_RECORD_READ_ALL)
@@ -44,13 +49,25 @@ public class WorkRecordPermissionService {
         principal, PermissionCodes.WORK_RECORD_WRITE, "not allowed to create work records");
   }
 
+  public void requireQueryAccess(UserPrincipal principal) {
+    if (canReadAll(principal)) {
+      return;
+    }
+
+    if (!canReadSelf(principal)) {
+      deny(
+          PermissionCodes.WORK_RECORD_READ_SELF,
+          "not allowed to read work records");
+    }
+  }
+
   public void requireRead(UserPrincipal principal, WorkRecord record) {
     if (canReadAll(principal)) {
       return;
     }
 
     if (!canReadSelf(principal)) {
-      throw new AccessDeniedException("not allowed to read work records");
+      deny(PermissionCodes.WORK_RECORD_READ_SELF, "not allowed to read work records");
     }
 
     requireSelfRecord(principal, record, "not allowed to read this work record");
@@ -106,8 +123,12 @@ public class WorkRecordPermissionService {
 
   private void requirePermission(UserPrincipal principal, String permission, String message) {
     if (principal == null || !principal.hasPermission(permission)) {
-      telemetry.recordPermissionDenied(permission);
-      throw new AccessDeniedException(message);
+      deny(permission, message);
     }
+  }
+
+  private void deny(String permission, String message) {
+    telemetry.recordPermissionDenied(permission);
+    throw new AccessDeniedException(message);
   }
 }

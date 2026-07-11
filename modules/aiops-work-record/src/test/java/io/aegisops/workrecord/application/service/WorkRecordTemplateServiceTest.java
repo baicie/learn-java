@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.*;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.aegisops.common.exception.ConflictException;
 import io.aegisops.workrecord.application.command.CopyTemplateCommand;
 import io.aegisops.workrecord.application.command.CreateTemplateCommand;
 import io.aegisops.workrecord.application.command.UpdateTemplateCommand;
@@ -53,7 +54,7 @@ class WorkRecordTemplateServiceTest {
 
     assertThatThrownBy(
             () -> service.update("t1", "tpl1", new UpdateTemplateCommand("新名称", null), "u1"))
-        .isInstanceOf(IllegalStateException.class)
+        .isInstanceOf(ConflictException.class)
         .hasMessageContaining("archived template cannot be edited");
   }
 

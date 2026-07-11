@@ -1,6 +1,8 @@
 package io.aegisops.workrecord.infrastructure.jdbc;
 
 import io.aegisops.common.api.PageResult;
+import io.aegisops.common.exception.AppException;
+import io.aegisops.common.exception.ErrorCode;
 import io.aegisops.common.id.Ids;
 import io.aegisops.workrecord.application.command.CreateRecordCommand;
 import io.aegisops.workrecord.application.command.RecordQuery;
@@ -161,7 +163,14 @@ public class JdbcWorkRecordRepository implements WorkRecordRepository {
   public PageResult<WorkRecord> page(String tenantId, RecordQuery query) {
     int page = Math.max(1, query.page());
     int size = Math.max(1, query.pageSize());
-    int offset = (page - 1) * size;
+
+    long offset;
+    try {
+      offset = Math.multiplyExact((long) page - 1L, (long) size);
+    } catch (ArithmeticException ex) {
+      throw new AppException(
+          ErrorCode.PAGE_WINDOW_EXCEEDED, "page window is too large", ex);
+    }
 
     StringBuilder where = new StringBuilder(" where tenant_id = :tenantId and deleted_at is null ");
     Map<String, Object> params = new HashMap<>();

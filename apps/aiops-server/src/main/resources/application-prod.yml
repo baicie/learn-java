@@ -108,3 +108,4 @@ aiops:
 
     health:
       require-indexes: true
+      require-validated-constraints: true

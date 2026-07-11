@@ -35,4 +35,50 @@ class WorkRecordPayloadPolicyTest {
                 assertThat(((AppException) throwable).errorCode())
                     .isEqualTo(ErrorCode.CUSTOM_DATA_JSON_TOO_LARGE.name()));
   }
+
+  @Test
+  void rejectsOversizedSchema() {
+    properties.getPayload().setSchemaMaxBytes(8);
+    assertThatThrownBy(() -> policy.requireSchema("x".repeat(9)))
+        .isInstanceOf(AppException.class)
+        .satisfies(
+            throwable ->
+                assertThat(((AppException) throwable).errorCode())
+                    .isEqualTo(ErrorCode.SCHEMA_JSON_TOO_LARGE.name()));
+  }
+
+  @Test
+  void rejectsOversizedDesigner() {
+    properties.getPayload().setDesignerMaxBytes(8);
+    assertThatThrownBy(() -> policy.requireDesigner("x".repeat(9)))
+        .isInstanceOf(AppException.class)
+        .satisfies(
+            throwable ->
+                assertThat(((AppException) throwable).errorCode())
+                    .isEqualTo(ErrorCode.DESIGNER_JSON_TOO_LARGE.name()));
+  }
+
+  @Test
+  void rejectsOversizedFieldIndex() {
+    properties.getPayload().setFieldIndexMaxBytes(8);
+    assertThatThrownBy(() -> policy.requireFieldIndex("x".repeat(9)))
+        .isInstanceOf(AppException.class)
+        .satisfies(
+            throwable ->
+                assertThat(((AppException) throwable).errorCode())
+                    .isEqualTo(ErrorCode.FIELD_INDEX_JSON_TOO_LARGE.name()));
+  }
+
+  @Test
+  void acceptsNullValueForAllChecks() {
+    assertThatCode(
+            () -> {
+              policy.requireSchema(null);
+              policy.requireDesigner(null);
+              policy.requireFieldIndex(null);
+              policy.requireCustomData(null);
+              policy.requireBuiltinData(null);
+            })
+        .doesNotThrowAnyException();
+  }
 }

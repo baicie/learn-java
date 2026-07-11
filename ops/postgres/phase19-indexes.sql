@@ -1,5 +1,38 @@
 \set ON_ERROR_STOP on
 
+-- 清理上次 CREATE INDEX CONCURRENTLY 失败留下的同名无效索引。
+-- 如果不清理，create index ... if not exists 会直接跳过，
+-- 导致索引永远处于 indisvalid=false 状态而健康检查却返回 UP。
+select format(
+    'drop index concurrently if exists %I.%I;',
+    namespace.nspname,
+    index_class.relname
+)
+from pg_class index_class
+join pg_namespace namespace
+  on namespace.oid = index_class.relnamespace
+join pg_index index_state
+  on index_state.indexrelid = index_class.oid
+where namespace.nspname = 'work_record'
+  and index_class.relname in (
+      'idx_wr_record_tenant_time_live',
+      'idx_wr_record_tenant_created_live',
+      'idx_wr_record_tenant_template_time_live',
+      'idx_wr_record_tenant_version_time_live',
+      'idx_wr_record_tenant_status_time_live',
+      'idx_wr_record_tenant_owner_time_live',
+      'idx_wr_record_tenant_creator_time_live',
+      'idx_wr_record_title_trgm_live',
+      'idx_wr_record_custom_jsonb_live',
+      'idx_wr_template_tenant_updated_live',
+      'idx_wr_field_tenant_version_sort'
+  )
+  and (
+      index_state.indisvalid = false
+      or index_state.indisready = false
+  )
+\gexec
+
 create extension if not exists pg_trgm;
 
 create index concurrently if not exists

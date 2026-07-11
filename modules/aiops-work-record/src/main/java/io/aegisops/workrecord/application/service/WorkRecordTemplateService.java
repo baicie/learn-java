@@ -1,5 +1,7 @@
 package io.aegisops.workrecord.application.service;
 
+import io.aegisops.common.exception.ConflictException;
+import io.aegisops.common.exception.ResourceNotFoundException;
 import io.aegisops.workrecord.application.command.CopyTemplateCommand;
 import io.aegisops.workrecord.application.command.CreateTemplateCommand;
 import io.aegisops.workrecord.application.command.UpdateTemplateCommand;
@@ -45,7 +47,7 @@ public class WorkRecordTemplateService {
   public WorkRecordTemplate get(String tenantId, String templateId) {
     return repository
         .find(tenantId, templateId)
-        .orElseThrow(() -> new IllegalArgumentException("template not found"));
+        .orElseThrow(() -> new ResourceNotFoundException("template not found: " + templateId));
   }
 
   @Transactional
@@ -180,7 +182,7 @@ public class WorkRecordTemplateService {
   public WorkRecordTemplate enable(String tenantId, String templateId, String actor) {
     WorkRecordTemplate template = get(tenantId, templateId);
     if (template.status() == TemplateStatus.ARCHIVED) {
-      throw new IllegalStateException("archived template cannot be enabled");
+      throw new ConflictException("archived template cannot be enabled");
     }
     repository.enable(tenantId, templateId);
     WorkRecordTemplate updated = get(tenantId, templateId);
@@ -222,7 +224,7 @@ public class WorkRecordTemplateService {
     WorkRecordTemplate template = get(tenantId, templateId);
     long references = usageRepository.countRecordsByTemplate(tenantId, templateId);
     if (references > 0) {
-      throw new IllegalStateException("template is referenced by records and cannot be archived");
+      throw new ConflictException("template is referenced by records and cannot be archived");
     }
     repository.archive(tenantId, templateId);
     WorkRecordTemplate updated = get(tenantId, templateId);
@@ -242,10 +244,10 @@ public class WorkRecordTemplateService {
 
   private void ensureEditable(WorkRecordTemplate template) {
     if (template.status() == TemplateStatus.ARCHIVED) {
-      throw new IllegalStateException("archived template cannot be edited");
+      throw new ConflictException("archived template cannot be edited");
     }
     if (!template.enabled() || template.status() == TemplateStatus.DISABLED) {
-      throw new IllegalStateException("disabled template cannot be edited");
+      throw new ConflictException("disabled template cannot be edited");
     }
   }
 

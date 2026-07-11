@@ -1,5 +1,6 @@
 package io.aegisops.security;
 
+import io.aegisops.common.exception.ErrorCode;
 import io.aegisops.user.UserService;
 import java.util.List;
 import org.springframework.context.annotation.Bean;
@@ -26,7 +27,8 @@ public class SecurityConfig {
       JwtTokenService tokenService,
       UserService userService,
       UserPrincipalFactory principalFactory,
-      SecurityFilters filters)
+      SecurityFilters filters,
+      SecurityErrorResponseWriter responseWriter)
       throws Exception {
     JwtAuthenticationFilter jwtAuthenticationFilter =
         new JwtAuthenticationFilter(tokenService, userService, principalFactory);
@@ -54,6 +56,23 @@ public class SecurityConfig {
                     .permitAll()
                     .anyRequest()
                     .authenticated())
+        .exceptionHandling(
+            handling ->
+                handling
+                    .authenticationEntryPoint(
+                        (request, response, exception) ->
+                            responseWriter.write(
+                                response,
+                                ErrorCode.UNAUTHORIZED.httpStatus(),
+                                ErrorCode.UNAUTHORIZED.name(),
+                                "authentication required"))
+                    .accessDeniedHandler(
+                        (request, response, exception) ->
+                            responseWriter.write(
+                                response,
+                                ErrorCode.FORBIDDEN.httpStatus(),
+                                ErrorCode.FORBIDDEN.name(),
+                                "access denied")))
         .addFilterBefore(
             filters.internalAgentAuthFilter, UsernamePasswordAuthenticationFilter.class)
         .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)

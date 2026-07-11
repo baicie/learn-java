@@ -9,6 +9,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.aegisops.common.exception.ResourceNotFoundException;
 import io.aegisops.security.UserPrincipal;
 import io.aegisops.workrecord.application.command.CreateRecordCommand;
 import io.aegisops.workrecord.application.port.WorkRecordFieldIndexRepository;
@@ -206,7 +207,7 @@ class WorkRecordServiceRuntimeTest {
                         "{}",
                         "{}"),
                     user("u1")))
-        .isInstanceOf(IllegalArgumentException.class)
+        .isInstanceOf(ResourceNotFoundException.class)
         .hasMessageContaining("template version not found");
   }
 

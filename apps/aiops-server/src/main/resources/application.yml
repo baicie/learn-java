@@ -53,7 +53,9 @@ aiops:
   quota:
     public-api-requests-per-minute: ${AIOPS_PUBLIC_API_RPM:600}
     internal-agent-requests-per-minute: ${AIOPS_INTERNAL_AGENT_RPM:1200}
+    anonymous-requests-per-minute: ${AIOPS_ANONYMOUS_API_RPM:30}
     rate-limit-enabled: true
+    backend: ${AIOPS_QUOTA_BACKEND:memory}
   agent:
     base-url: ${AIOPS_AGENT_BASE_URL:http://localhost:9008}
     internal-token: ${AIOPS_AGENT_INTERNAL_TOKEN:dev-internal-agent-token}
