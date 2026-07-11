@@ -31,7 +31,14 @@ export default defineConfig({
       instances: [{ browser: 'chromium' }],
     },
     coverage: {
-      // include: ['src/**/*.{js,jsx,ts,tsx}'], // Uncomment to expand the report to all src/**/* so untested modules appear as 0% coverage.
+      provider: 'v8',
+      reporter: ['text', 'json-summary', 'html', 'lcov'],
+      include: [
+        'src/features/work-records/**/*.{ts,tsx}',
+        'src/features/dictionaries/**/*.{ts,tsx}',
+        'src/components/feedback/**/*.{ts,tsx}',
+        'src/components/form/**/*.{ts,tsx}',
+      ],
       exclude: [
         'src/components/ui/**',
         'src/assets/**',
@@ -39,7 +46,15 @@ export default defineConfig({
         'src/routeTree.gen.ts',
         'src/test-utils/**',
         'src/routes/**',
+        '**/*.d.ts',
+        '**/types.ts',
       ],
+      thresholds: {
+        statements: 60,
+        branches: 50,
+        functions: 60,
+        lines: 60,
+      },
     },
   },
 })

@@ -144,6 +144,81 @@ class WorkRecordJsonbFilterPostgresIntegrationTest {
   }
 
   @Test
+  void shouldGroupContainsAnyOrBranchesInsideAndParentheses() {
+    // Two values means the SQL fragment must wrap the OR branches in an AND group,
+    // so the fragment remains composable with the rest of the WHERE clause.
+    StringBuilder where = new StringBuilder(" where true ");
+    Map<String, Object> params = new HashMap<>();
+
+    builder.appendFilters(
+        where,
+        params,
+        List.of(
+            RecordDynamicFilter.normalized(
+                "tags",
+                DynamicFilterOperator.CONTAINS_ANY,
+                FieldType.MULTI_SELECT,
+                null,
+                List.of("a", "b"))));
+
+    // The first filter branch already starts with " and ("; verify the closing paren
+    // matches the OR-grouping contract rather than dangling inside the WHERE.
+    String sql = where.toString();
+    org.assertj.core.api.Assertions.assertThat(sql).contains(" and (");
+    org.assertj.core.api.Assertions.assertThat(sql).contains(" or ");
+    org.assertj.core.api.Assertions.assertThat(sql).endsWith(") ");
+
+    // Both params must be present with stable keys.
+    assertThat(params).containsKeys("dfKey0", "dfAny0_0", "dfAny0_1");
+  }
+
+  @Test
+  void shouldMatchAnyOfMultipleValuesViaContainsAny() {
+    // Row "valid" has tags ["a","b"]; contains_any ["a","x"] must match.
+    assertThat(
+            executeCount(
+                RecordDynamicFilter.normalized(
+                    "tags",
+                    DynamicFilterOperator.CONTAINS_ANY,
+                    FieldType.MULTI_SELECT,
+                    null,
+                    List.of("a", "x"))))
+        .isEqualTo(1);
+  }
+
+  @Test
+  void shouldRejectContainsAnyWhenBranchGroupingIsMissing() {
+    // Defensive: this test guards against future regressions where a developer might
+    // remove the wrapping " and (" / ") " pair around the OR-combined branches.
+    StringBuilder where = new StringBuilder(" where true ");
+    Map<String, Object> params = new HashMap<>();
+
+    builder.appendFilters(
+        where,
+        params,
+        List.of(
+            RecordDynamicFilter.normalized(
+                "tags",
+                DynamicFilterOperator.CONTAINS_ANY,
+                FieldType.MULTI_SELECT,
+                null,
+                List.of("a", "b"))));
+
+    String sql = where.toString();
+
+    // After " and (" there must be a "(jsonb_typeof(...)", then " or ", then a sibling branch.
+    int groupStart = sql.indexOf(" and (");
+    int firstBranch = sql.indexOf("(jsonb_typeof", groupStart);
+    int orBranch = sql.indexOf(" or ", firstBranch);
+    int lastParen = sql.lastIndexOf(')');
+
+    org.assertj.core.api.Assertions.assertThat(groupStart).isNotEqualTo(-1);
+    org.assertj.core.api.Assertions.assertThat(firstBranch).isGreaterThan(groupStart);
+    org.assertj.core.api.Assertions.assertThat(orBranch).isGreaterThan(firstBranch);
+    org.assertj.core.api.Assertions.assertThat(lastParen).isGreaterThan(orBranch);
+  }
+
+  @Test
   void shouldCompleteRepresentativeQueryWithinBound() {
     // A representative stress test: run 100 containment queries and verify they all finish
     // within a reasonable time bound (5s). This replaces the pure JVM string-concat benchmark.

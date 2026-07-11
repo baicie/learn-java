@@ -54,7 +54,17 @@ run_frontend() {
   run_script "format:check"
   run_script "lint"
   run_script "typecheck"
-  run_script "test"
+
+  if has_script "test:browser:install"; then
+    run_script "test:browser:install"
+  fi
+
+  if has_script "test:coverage"; then
+    run_script "test:coverage"
+  else
+    run_script "test"
+  fi
+
   run_script "build"
 }
 

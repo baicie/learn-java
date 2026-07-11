@@ -21,11 +21,17 @@ elif ! command -v mvn >/dev/null 2>&1; then
   exit 1
 fi
 
-echo "==> Test aiops-platform"
+# Phase 17：单元测试先走一遍（兼容 Phase 1 baseline 检查）。
 "${MAVEN}" -B -ntp -pl modules/aiops-platform -am test
-
-echo "==> Test aiops-work-record"
 "${MAVEN}" -B -ntp -pl modules/aiops-work-record -am test
-
-echo "==> Test aiops-server"
 "${MAVEN}" -B -ntp -pl apps/aiops-server -am test
+
+# Phase 17：完整验证（包含 Failsafe IT 与 JaCoCo 覆盖率门禁）。
+echo "==> Verify backend test system"
+
+"${MAVEN}" \
+  -B \
+  -ntp \
+  -pl modules/aiops-platform,modules/aiops-work-record,apps/aiops-server \
+  -am \
+  verify

@@ -130,9 +130,12 @@ class WorkRecordJsonbFilterSqlBuilderTest {
                 null,
                 List.of("a", "b"))));
 
-    assertThat(where.toString()).contains("jsonb_typeof");
-    assertThat(where.toString()).contains("'array'");
-    assertThat(where.toString()).contains("jsonb_build_object");
+    String sql = where.toString();
+    assertThat(sql).contains(" and ("); // groups the OR-combined branches
+    assertThat(sql).contains("jsonb_typeof");
+    assertThat(sql).contains("'array'");
+    assertThat(sql).contains(" or ");
+    assertThat(sql).contains("jsonb_build_object");
     assertThat(params).containsEntry("dfAny0_0", "a");
     assertThat(params).containsEntry("dfAny0_1", "b");
   }

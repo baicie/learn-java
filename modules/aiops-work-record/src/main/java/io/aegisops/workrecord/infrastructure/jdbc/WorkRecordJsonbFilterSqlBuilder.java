@@ -294,6 +294,11 @@ public class WorkRecordJsonbFilterSqlBuilder {
       String keyParam) {
     requireValues(filter);
 
+    // Wrap the OR-combined containment branches in a single AND group so the
+    // generated fragment composes cleanly with neighbouring WHERE clauses:
+    //   ... and ( <branch 1> or <branch 2> ... )
+    where.append(" and (");
+
     // For each value, build a separate containment check.
     // Using @> with individual key-value pairs avoids jsonb_array_elements_text
     // failing when the field is a scalar instead of an array.

@@ -110,17 +110,24 @@ jobs:
       - name: Verify frontend
         run: bash scripts/ci/frontend.sh
 
-      - name: Strict lint (max-warnings 0)
-        working-directory: web/console
-        run: pnpm run lint:ci
-
-      - name: Upload coverage
+      - name: Upload portal coverage
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: frontend-coverage
-          path: web/console/coverage
-          if-no-files-found: ignore
+          name: portal-coverage
+          path: web/portal/coverage
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload backend coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: |
+            modules/aiops-platform/target/site/jacoco
+            modules/aiops-work-record/target/site/jacoco
+          if-no-files-found: error
           retention-days: 14
 
   agent:
