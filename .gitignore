@@ -27,3 +27,9 @@ infra/.env
 infra/.env.*
 deploy/**/.env
 deploy/**/.env.*
+
+# Playwright
+.playwright/
+web/portal/.playwright/
+web/portal/playwright-report/
+web/portal/test-results/

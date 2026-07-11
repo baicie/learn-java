@@ -88,20 +88,28 @@ class WorkRecordEnterpriseAcceptanceIT {
 
   @Test
   void completeEnterpriseAcceptanceScenario() {
-    createDefaultDictionary();
-    createWorkCalendar();
-    createAndPublishTemplateV1();
-    usersCreateV1Records();
-    administratorCanReadAllRecords();
-    normalUserCanOnlyReadSelfRecords();
-    administratorPublishesTemplateV2();
-    historicalRecordStillUsesV1();
-    createNewRecordUsingV2();
-    disabledDictionaryItemKeepsHistoricalLabel();
-    dynamicFieldFilterWorks();
-    dynamicFieldsCanBeExported();
-    exportLimitIsEnforced();
-    auditTrailIsComplete();
+    step("01 创建默认字典", this::createDefaultDictionary);
+    step("02 创建工作日历", this::createWorkCalendar);
+    step("03 创建并发布模板 v1", this::createAndPublishTemplateV1);
+    step("04 用户填写 v1 记录", this::usersCreateV1Records);
+    step("05 管理员查看全部记录", this::administratorCanReadAllRecords);
+    step("06 普通用户只能查看自己的记录", this::normalUserCanOnlyReadSelfRecords);
+    step("07 管理员发布模板 v2", this::administratorPublishesTemplateV2);
+    step("08 历史记录仍绑定 v1", this::historicalRecordStillUsesV1);
+    step("09 新记录使用 v2", this::createNewRecordUsingV2);
+    step("10 禁用字典项后历史 label 保留", this::disabledDictionaryItemKeepsHistoricalLabel);
+    step("11 动态字段筛选", this::dynamicFieldFilterWorks);
+    step("12 动态字段导出", this::dynamicFieldsCanBeExported);
+    step("13 导出超限", this::exportLimitIsEnforced);
+    step("14 审计完整性", this::auditTrailIsComplete);
+  }
+
+  private void step(String name, Runnable action) {
+    try {
+      action.run();
+    } catch (Throwable throwable) {
+      throw new AssertionError("Phase 18 acceptance step failed: " + name, throwable);
+    }
   }
 
   private void createDefaultDictionary() {
@@ -399,11 +407,12 @@ class WorkRecordEnterpriseAcceptanceIT {
   }
 
   private void auditTrailIsComplete() {
-    JsonNode events = api.getData("/api/audit-logs", tokens.admin());
+    JsonNode events =
+        api.getData(
+            "/api/audit-logs",
+            tokens.admin());
 
-    Set<String> actions = actionNames(events);
-
-    assertThat(actions)
+    assertThat(actionNames(events))
         .contains(
             "platform.dict_type.create",
             "platform.dict_item.create",
@@ -417,23 +426,130 @@ class WorkRecordEnterpriseAcceptanceIT {
             "work_record.record.export",
             "work_record.record.export_rejected");
 
-    assertThat(eventsForAction(events, "work_record.template.publish")).hasSize(2);
+    List<JsonNode> publishes =
+        eventsForAction(
+            events,
+            "work_record.template.publish");
 
-    assertThat(actorIds(events, "work_record.record.create"))
-        .contains(identities.userA().id(), identities.userB().id());
+    assertThat(publishes).hasSize(2);
 
-    JsonNode rejectedExport =
-        eventsForAction(events, "work_record.record.export_rejected").getFirst();
+    assertThat(
+            publishes.stream()
+                .map(
+                    event ->
+                        event.path("resourceId")
+                            .asText())
+                .toList())
+        .containsOnly(state.templateId);
 
-    JsonNode detail;
-    try {
-      detail = objectMapper.readTree(rejectedExport.path("detailJson").asText());
-    } catch (Exception ex) {
-      throw new AssertionError("invalid detailJson", ex);
+    List<JsonNode> creates =
+        eventsForAction(
+            events,
+            "work_record.record.create");
+
+    assertThat(creates).hasSize(3);
+
+    assertThat(
+            creates.stream()
+                .map(
+                    event ->
+                        event.path("resourceId")
+                            .asText())
+                .toList())
+        .containsExactlyInAnyOrder(
+            state.userARecordV1,
+            state.userBRecordV1,
+            state.userARecordV2);
+
+    assertThat(
+            creates.stream()
+                .map(
+                    event ->
+                        event.path("actorId")
+                            .asText())
+                .collect(
+                    java.util.stream.Collectors.toSet()))
+        .contains(
+            identities.userA().id(),
+            identities.userB().id());
+
+    List<JsonNode> successfulExports =
+        eventsForAction(
+            events,
+            "work_record.record.export");
+
+    assertThat(successfulExports).hasSize(2);
+
+    for (JsonNode export : successfulExports) {
+      JsonNode detail =
+          parseAuditObject(
+              export,
+              "detailJson");
+
+      assertThat(detail.path("result").asText())
+          .isEqualTo("success");
+
+      assertThat(detail.path("rowCount").asInt())
+          .isEqualTo(1);
+
+      assertThat(detail.path("columns").isArray())
+          .isTrue();
+
+      assertThat(detail.path("query").isObject())
+          .isTrue();
     }
 
-    assertThat(detail.path("result").asText()).isEqualTo("limit_exceeded");
-    assertThat(detail.path("maxRows").asInt()).isEqualTo(2);
+    List<JsonNode> rejectedExports =
+        eventsForAction(
+            events,
+            "work_record.record.export_rejected");
+
+    assertThat(rejectedExports).hasSize(1);
+
+    JsonNode rejectedDetail =
+        parseAuditObject(
+            rejectedExports.getFirst(),
+            "detailJson");
+
+    assertThat(
+            rejectedDetail.path("result")
+                .asText())
+        .isEqualTo("limit_exceeded");
+
+    assertThat(
+            rejectedDetail.path("rowCount")
+                .asInt())
+        .isEqualTo(3);
+
+    assertThat(
+            rejectedDetail.path("maxRows")
+                .asInt())
+        .isEqualTo(2);
+
+    assertThat(
+            rejectedDetail.path("columns")
+                .isArray())
+        .isTrue();
+
+    assertThat(
+            rejectedDetail.path("query")
+                .isObject())
+        .isTrue();
+
+    List<JsonNode> disabledItems =
+        eventsForAction(
+            events,
+            "platform.dict_item.disable");
+
+    assertThat(disabledItems)
+        .singleElement()
+        .satisfies(
+            event ->
+                assertThat(
+                        event.path("resourceId")
+                            .asText())
+                    .isEqualTo(
+                        state.p2ItemId));
 
     assertAuditPayloads(events);
   }
@@ -510,21 +626,97 @@ class WorkRecordEnterpriseAcceptanceIT {
     return result;
   }
 
-  private Set<String> actorIds(JsonNode events, String action) {
-    Set<String> result = new LinkedHashSet<>();
-    eventsForAction(events, action)
-        .forEach(event -> result.add(event.path("actorId").asText()));
-    return result;
+  private void assertAuditPayloads(
+      JsonNode events) {
+    for (JsonNode event : events) {
+      assertThat(
+              event.path("id").asText())
+          .isNotBlank();
+
+      assertThat(
+              event.path("tenantId").asText())
+          .isEqualTo(
+              identities.tenantId());
+
+      assertThat(
+              event.path("actorId").asText())
+          .isNotBlank();
+
+      assertThat(
+              event.path("action").asText())
+          .isNotBlank();
+
+      assertThat(
+              event.path("resourceType").asText())
+          .isNotBlank();
+
+      assertThat(
+              event.path("resourceId").asText())
+          .isNotBlank();
+
+      assertThat(
+              event.path("createdAt").asText())
+          .isNotBlank();
+
+      assertThat(
+              parseAuditObject(
+                  event,
+                  "beforeJson")
+                  .isObject())
+          .isTrue();
+
+      assertThat(
+              parseAuditObject(
+                  event,
+                  "afterJson")
+                  .isObject())
+          .isTrue();
+
+      assertThat(
+              parseAuditObject(
+                  event,
+                  "detailJson")
+                  .isObject())
+          .isTrue();
+    }
   }
 
-  private void assertAuditPayloads(JsonNode events) {
-    for (JsonNode event : events) {
-      assertThat(event.path("tenantId").asText()).isEqualTo(identities.tenantId());
-      assertThat(event.path("actorId").asText()).isNotBlank();
-      assertThat(event.path("action").asText()).isNotBlank();
-      assertThat(event.path("resourceType").asText()).isNotBlank();
-      assertThat(event.path("resourceId").asText()).isNotBlank();
-      assertThat(event.path("createdAt").asText()).isNotBlank();
+  private JsonNode parseAuditObject(
+      JsonNode event,
+      String fieldName) {
+    String raw =
+        event.path(fieldName)
+            .asText();
+
+    assertThat(raw)
+        .as(
+            "%s must exist for action %s",
+            fieldName,
+            event.path("action").asText())
+        .isNotBlank();
+
+    try {
+      JsonNode parsed =
+          objectMapper.readTree(raw);
+
+      assertThat(parsed)
+          .as(
+              "%s must be a JSON object for action %s",
+              fieldName,
+              event.path("action").asText())
+          .isNotNull();
+
+      assertThat(parsed.isObject())
+          .isTrue();
+
+      return parsed;
+    } catch (Exception ex) {
+      throw new AssertionError(
+          "invalid "
+              + fieldName
+              + " for action "
+              + event.path("action").asText(),
+          ex);
     }
   }
 

@@ -4,7 +4,7 @@ import {
   type APIRequestContext,
   type APIResponse,
 } from '@playwright/test'
-import type { EnterpriseScenarioState } from './scenario-state'
+import { randomUUID } from 'node:crypto'
 
 type Envelope<T> = {
   success: boolean
@@ -17,16 +17,42 @@ type Entity = {
   id: string
 }
 
-type LoginData = {
-  token: string
-}
-
 type Version = {
   id: string
   versionNo: number
 }
 
-export async function seedEnterpriseScenario(): Promise<EnterpriseScenarioState> {
+type LoginData = {
+  token: string
+}
+
+type CurrentAuthorization = {
+  userId: string
+  tenantId: string
+  username: string
+  roles: string[]
+  permissions: string[]
+  dataScopes: Record<string, string>
+}
+
+export type EnterpriseScenarioState = {
+  runId: string
+  templateName: string
+
+  adminToken: string
+  userAToken: string
+  userBToken: string
+
+  oldRecordId: string
+  otherRecordId: string
+
+  oldTitle: string
+  newTitle: string
+  otherTitle: string
+}
+
+export async function seedEnterpriseScenario():
+  Promise<EnterpriseScenarioState> {
   const api = await request.newContext({
     baseURL: requiredEnv('E2E_API_BASE_URL'),
   })
@@ -50,15 +76,61 @@ export async function seedEnterpriseScenario(): Promise<EnterpriseScenarioState>
       requiredEnv('E2E_USER_B_PASSWORD')
     )
 
-    const suffix = Date.now().toString(36)
-    const dictCode = `e2e_priority_${suffix}`
+    const admin = await currentAuthorization(api, adminToken)
+    const userA = await currentAuthorization(api, userAToken)
+    const userB = await currentAuthorization(api, userBToken)
 
-    await post<Entity>(api, '/api/platform/dictionaries', adminToken, {
-      dictCode,
-      dictName: 'E2E 优先级',
-      enabled: true,
-      sortOrder: 10,
-    })
+    expect(admin.tenantId).toBe(userA.tenantId)
+    expect(admin.tenantId).toBe(userB.tenantId)
+
+    expect(admin.roles).toContain('system_admin')
+    expect(admin.permissions).toContain('work-record:read:all')
+    expect(admin.permissions).toContain('work-record:template:write')
+
+    expect(userA.roles).toContain('normal_user')
+    expect(userA.permissions).toContain('work-record:read:self')
+    expect(userA.permissions).not.toContain('work-record:read:all')
+
+    expect(userB.roles).toContain('normal_user')
+
+    const runId = randomUUID().replaceAll('-', '').slice(0, 12)
+    const dictCode = `e2e_priority_${runId}`
+    const templateName = `E2E 企业日报 v2 ${runId}`
+
+    const calendar = await post<Entity>(
+      api,
+      '/api/platform/calendars',
+      adminToken,
+      {
+        calendarCode: `e2e_cn_${currentShanghaiYear()}_${runId}`,
+        calendarName: `E2E 工作日历 ${runId}`,
+        regionCode: 'CN',
+        timezone: 'Asia/Shanghai',
+        year: currentShanghaiYear(),
+        enabled: true,
+        sourceType: 'e2e',
+        description: 'Phase 18 Playwright 企业验收',
+      }
+    )
+
+    await put<Entity>(
+      api,
+      `/api/platform/calendars/${calendar.id}/default`,
+      adminToken,
+      {}
+    )
+
+    await post<Entity>(
+      api,
+      '/api/platform/dictionaries',
+      adminToken,
+      {
+        dictCode,
+        dictName: `E2E 优先级 ${runId}`,
+        enabled: true,
+        sortOrder: 10,
+      }
+    )
 
     await post<Entity>(
       api,
@@ -91,8 +163,8 @@ export async function seedEnterpriseScenario(): Promise<EnterpriseScenarioState>
       '/api/work-record/templates',
       adminToken,
       {
-        code: `e2e_daily_${suffix}`,
-        name: 'E2E 企业日报',
+        code: `e2e_daily_${runId}`,
+        name: `E2E 企业日报 ${runId}`,
         description: 'Phase 18 Playwright 场景',
         schemaJson: schemaV1(dictCode),
         designerJson: '{"version":1}',
@@ -103,11 +175,16 @@ export async function seedEnterpriseScenario(): Promise<EnterpriseScenarioState>
       api,
       `/api/work-record/templates/${template.id}/publish`,
       adminToken,
-      { versionName: 'v1' }
+      {
+        versionName: 'v1',
+      }
     )
 
-    const oldTitle = `E2E 用户 A v1 ${suffix}`
-    const otherTitle = `E2E 用户 B v1 ${suffix}`
+    expect(v1.versionNo).toBe(1)
+
+    const oldTitle = `E2E 用户 A v1 ${runId}`
+    const otherTitle = `E2E 用户 B v1 ${runId}`
+    const newTitle = `E2E 用户 A v2 ${runId}`
 
     const oldRecord = await createRecord(
       api,
@@ -140,8 +217,8 @@ export async function seedEnterpriseScenario(): Promise<EnterpriseScenarioState>
       `/api/work-record/templates/${template.id}/draft`,
       adminToken,
       {
-        name: 'E2E 企业日报 v2',
-        description: '增加明日计划',
+        name: templateName,
+        description: '增加明日计划字段',
         schemaJson: schemaV2(dictCode),
         designerJson: '{"version":2}',
       }
@@ -151,24 +228,12 @@ export async function seedEnterpriseScenario(): Promise<EnterpriseScenarioState>
       api,
       `/api/work-record/templates/${template.id}/publish`,
       adminToken,
-      { versionName: 'v2' }
-    )
-
-    const newTitle = `E2E 用户 A v2 ${suffix}`
-
-    const newRecord = await createRecord(
-      api,
-      userAToken,
-      template.id,
-      v2.id,
-      newTitle,
       {
-        summary: '完成新版本记录',
-        priority: 'P1',
-        hours: 8,
-        nextPlan: '继续完善 E2E',
+        versionName: 'v2',
       }
     )
+
+    expect(v2.versionNo).toBe(2)
 
     await remove(
       api,
@@ -177,11 +242,12 @@ export async function seedEnterpriseScenario(): Promise<EnterpriseScenarioState>
     )
 
     return {
+      runId,
+      templateName,
       adminToken,
       userAToken,
       userBToken,
       oldRecordId: oldRecord.id,
-      newRecordId: newRecord.id,
       otherRecordId: otherRecord.id,
       oldTitle,
       newTitle,
@@ -198,10 +264,25 @@ async function login(
   password: string
 ) {
   const response = await api.post('/api/auth/login', {
-    data: { username, password },
+    data: {
+      username,
+      password,
+    },
   })
 
-  return unwrap<LoginData>(response).then((data) => data.token)
+  const data = await unwrap<LoginData>(response)
+  return data.token
+}
+
+async function currentAuthorization(
+  api: APIRequestContext,
+  token: string
+) {
+  return unwrap<CurrentAuthorization>(
+    await api.get('/api/auth/me', {
+      headers: auth(token),
+    })
+  )
 }
 
 async function createRecord(
@@ -212,15 +293,20 @@ async function createRecord(
   title: string,
   customData: Record<string, unknown>
 ) {
-  return post<Entity>(api, '/api/work-record/records', token, {
-    templateId,
-    templateVersionId,
-    title,
-    status: 'done',
-    recordTime: new Date().toISOString(),
-    builtinDataJson: '{}',
-    customDataJson: JSON.stringify(customData),
-  })
+  return post<Entity>(
+    api,
+    '/api/work-record/records',
+    token,
+    {
+      templateId,
+      templateVersionId,
+      title,
+      status: 'done',
+      recordTime: new Date().toISOString(),
+      builtinDataJson: '{}',
+      customDataJson: JSON.stringify(customData),
+    }
+  )
 }
 
 async function post<T>(
@@ -251,7 +337,11 @@ async function put<T>(
   )
 }
 
-async function remove(api: APIRequestContext, path: string, token: string) {
+async function remove(
+  api: APIRequestContext,
+  path: string,
+  token: string
+) {
   await unwrap<unknown>(
     await api.delete(path, {
       headers: auth(token),
@@ -259,10 +349,17 @@ async function remove(api: APIRequestContext, path: string, token: string) {
   )
 }
 
-async function unwrap<T>(response: APIResponse): Promise<T> {
-  expect(response.ok()).toBeTruthy()
+async function unwrap<T>(
+  response: APIResponse
+): Promise<T> {
+  const raw = await response.text()
 
-  const envelope = (await response.json()) as Envelope<T>
+  expect(
+    response.ok(),
+    `${response.request().method()} ${response.url()} failed: ${raw}`
+  ).toBeTruthy()
+
+  const envelope = JSON.parse(raw) as Envelope<T>
 
   expect(envelope.success).toBe(true)
   return envelope.data
@@ -284,6 +381,15 @@ function requiredEnv(name: string) {
   return value
 }
 
+function currentShanghaiYear() {
+  return Number(
+    new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Asia/Shanghai',
+      year: 'numeric',
+    }).format(new Date())
+  )
+}
+
 function schemaV1(dictCode: string) {
   return schema(dictCode, false)
 }
@@ -292,28 +398,52 @@ function schemaV2(dictCode: string) {
   return schema(dictCode, true)
 }
 
-function schema(dictCode: string, includeNextPlan: boolean) {
-  const required: string[] = ['summary', 'priority', 'hours']
+function schema(
+  dictCode: string,
+  includeNextPlan: boolean
+) {
+  const required = [
+    'summary',
+    'priority',
+    'hours',
+  ]
 
   const properties: Record<string, unknown> = {
     summary: {
       type: 'string',
       title: '工作总结',
-      'x-work-record': field('summary', 'textarea', 10),
+      'x-component': 'Input.TextArea',
+      'x-work-record': field(
+        'summary',
+        'textarea',
+        10
+      ),
     },
+
     priority: {
       type: 'string',
       title: '优先级',
+      'x-component': 'Select',
       'x-work-record': {
-        ...field('priority', 'select', 20),
+        ...field(
+          'priority',
+          'select',
+          20
+        ),
         optionSource: 'dict',
         dictCode,
       },
     },
+
     hours: {
       type: 'number',
       title: '工作时长',
-      'x-work-record': field('hours', 'number', 30),
+      'x-component': 'NumberPicker',
+      'x-work-record': field(
+        'hours',
+        'number',
+        30
+      ),
     },
   }
 
@@ -323,7 +453,12 @@ function schema(dictCode: string, includeNextPlan: boolean) {
     properties.nextPlan = {
       type: 'string',
       title: '明日计划',
-      'x-work-record': field('nextPlan', 'textarea', 40),
+      'x-component': 'Input.TextArea',
+      'x-work-record': field(
+        'nextPlan',
+        'textarea',
+        40
+      ),
     }
   }
 
@@ -335,7 +470,11 @@ function schema(dictCode: string, includeNextPlan: boolean) {
   })
 }
 
-function field(fieldCode: string, fieldType: string, sortOrder: number) {
+function field(
+  fieldCode: string,
+  fieldType: string,
+  sortOrder: number
+) {
   return {
     fieldCode,
     fieldType,

@@ -5,46 +5,178 @@ on:
 
   pull_request:
     types:
+      - opened
+      - reopened
+      - synchronize
       - labeled
 
 permissions:
   contents: read
 
+concurrency:
+  group: >
+    work-record-e2e-${{
+      github.event.pull_request.number || github.ref
+    }}
+  cancel-in-progress: true
+
 jobs:
   enterprise-e2e:
     if: >
       github.event_name == 'workflow_dispatch' ||
-      github.event.label.name == 'e2e'
+      contains(
+        github.event.pull_request.labels.*.name,
+        'e2e'
+      )
 
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 35
 
-    env:
-      E2E_API_BASE_URL: ${{ secrets.E2E_API_BASE_URL }}
-      E2E_PORTAL_BASE_URL: ${{ secrets.E2E_PORTAL_BASE_URL }}
-
-      E2E_ADMIN_USERNAME: ${{ secrets.E2E_ADMIN_USERNAME }}
-      E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
-
-      E2E_USER_A_USERNAME: ${{ secrets.E2E_USER_A_USERNAME }}
-      E2E_USER_A_PASSWORD: ${{ secrets.E2E_USER_A_PASSWORD }}
-
-      E2E_USER_B_USERNAME: ${{ secrets.E2E_USER_B_USERNAME }}
-      E2E_USER_B_PASSWORD: ${{ secrets.E2E_USER_B_PASSWORD }}
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: aegisops
+          POSTGRES_USER: aegisops
+          POSTGRES_PASSWORD: aegisops
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd
+          "pg_isready -U aegisops -d aegisops"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
-          cache: pnpm
-          cache-dependency-path: pnpm-lock.yaml
+          node-version: "22"
+
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.33.4 --activate
+          pnpm --version
+
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Install frontend dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build current backend commit
+        run: |
+          mvn -B -ntp \
+            -pl apps/aiops-server \
+            -am \
+            -DskipTests \
+            package
+
+      - name: Start current backend commit
+        env:
+          AIOPS_DB_URL: jdbc:postgresql://127.0.0.1:5432/aegisops
+          AIOPS_DB_USERNAME: aegisops
+          AIOPS_DB_PASSWORD: aegisops
+          AIOPS_SERVER_PORT: "8080"
+          AIOPS_JWT_SECRET: phase18-e2e-secret-change-me-change-me
+          AIOPS_JWT_TTL_SECONDS: "900"
+          AIOPS_OBSERVABILITY_ENABLED: "false"
+          AIOPS_EVIDENCE_VICTORIA_ENABLED: "false"
+        run: |
+          SERVER_JAR="$(
+            find apps/aiops-server/target \
+              -maxdepth 1 \
+              -name 'aiops-server-*.jar' \
+              ! -name '*.original' \
+              | head -n 1
+          )"
+
+          test -n "$SERVER_JAR"
+
+          nohup java -jar "$SERVER_JAR" \
+            > /tmp/aiops-server.log 2>&1 &
+
+          echo $! > /tmp/aiops-server.pid
+
+          for attempt in $(seq 1 90); do
+            if curl -fsS \
+              http://127.0.0.1:8080/actuator/health \
+              >/dev/null; then
+              exit 0
+            fi
+
+            sleep 2
+          done
+
+          cat /tmp/aiops-server.log
+          exit 1
+
+      - name: Seed ephemeral E2E users
+        env:
+          PGPASSWORD: aegisops
+        run: |
+          psql \
+            -h 127.0.0.1 \
+            -U aegisops \
+            -d aegisops \
+            -f scripts/ci/seed-work-record-e2e.sql
+
+      - name: Install Chromium
+        run: pnpm -C web/portal run e2e:install
+
+      - name: Start current portal commit
+        env:
+          VITE_API_BASE_URL: http://127.0.0.1:8080
+        run: |
+          nohup pnpm -C web/portal \
+            run dev -- \
+            --host 127.0.0.1 \
+            --port 5173 \
+            > /tmp/aegisops-portal.log 2>&1 &
+
+          echo $! > /tmp/aegisops-portal.pid
+
+          for attempt in $(seq 1 60); do
+            if curl -fsS \
+              http://127.0.0.1:5173 \
+              >/dev/null; then
+              exit 0
+            fi
+
+            sleep 2
+          done
+
+          cat /tmp/aegisops-portal.log
+          exit 1
 
       - name: Run enterprise E2E
-        run: bash scripts/ci/frontend-e2e.sh
+        env:
+          E2E_API_BASE_URL: http://127.0.0.1:8080
+          E2E_PORTAL_BASE_URL: http://127.0.0.1:5173
+
+          E2E_ADMIN_USERNAME: admin
+          E2E_ADMIN_PASSWORD: admin123
+
+          E2E_USER_A_USERNAME: phase18-user-a
+          E2E_USER_A_PASSWORD: Acc3ptance!2026
+
+          E2E_USER_B_USERNAME: phase18-user-b
+          E2E_USER_B_PASSWORD: Acc3ptance!2026
+        run: pnpm -C web/portal run e2e
 
       - name: Upload Playwright report
         if: always()
@@ -52,7 +184,7 @@ jobs:
         with:
           name: work-record-playwright-report
           path: web/portal/playwright-report
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 14
 
       - name: Upload Playwright traces
@@ -61,5 +193,16 @@ jobs:
         with:
           name: work-record-playwright-traces
           path: web/portal/test-results
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Upload service logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: work-record-e2e-service-logs
+          path: |
+            /tmp/aiops-server.log
+            /tmp/aegisops-portal.log
           if-no-files-found: warn
           retention-days: 14

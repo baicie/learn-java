@@ -4,14 +4,16 @@ const portalBaseUrl = requiredEnv('E2E_PORTAL_BASE_URL')
 
 export default defineConfig({
   testDir: './e2e',
-  globalSetup: './e2e/global-setup.ts',
   fullyParallel: false,
+  forbidOnly: Boolean(process.env.CI),
   workers: 1,
   retries: process.env.CI ? 1 : 0,
   timeout: 60_000,
+
   expect: {
     timeout: 10_000,
   },
+
   reporter: [
     ['list'],
     [
@@ -22,12 +24,14 @@ export default defineConfig({
       },
     ],
   ],
+
   use: {
     baseURL: portalBaseUrl,
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
   },
+
   projects: [
     {
       name: 'chromium',
@@ -36,6 +40,7 @@ export default defineConfig({
       },
     },
   ],
+
   outputDir: 'test-results',
 })
 
