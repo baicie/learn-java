@@ -42,12 +42,6 @@
       <artifactId>aiops-user</artifactId>
       <version>${project.version}</version>
     </dependency>
-    <dependency>
-      <groupId>io.aegisops</groupId>
-      <artifactId>aiops-web</artifactId>
-      <version>${project.version}</version>
-      <scope>test</scope>
-    </dependency>
 
     <dependency>
       <groupId>org.springframework.boot</groupId>
@@ -62,6 +56,12 @@
       <groupId>com.tngtech.archunit</groupId>
       <artifactId>archunit-junit5</artifactId>
       <version>1.4.2</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.aegisops</groupId>
+      <artifactId>aiops-web</artifactId>
+      <version>${project.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -104,10 +104,10 @@
         <executions>
           <execution>
             <id>coverage-check</id>
-            <phase>verify</phase>
             <goals>
               <goal>check</goal>
             </goals>
+            <phase>verify</phase>
             <configuration>
               <rules>
                 <rule>

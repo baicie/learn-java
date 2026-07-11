@@ -22,8 +22,7 @@ import java.util.Set;
 /**
  * 统一测试 Fixture：稳定租户与基础身份，便于在不同时期添加的测试之间保持一致的最小可复现场景。
  *
- * <p>测试方法应描述"长期不变的业务契约"（例如 normalUserCannotReadOthersRecord），而不是把阶段编号
- * 作为名字的一部分。
+ * <p>测试方法应描述"长期不变的业务契约"（例如 normalUserCannotReadOthersRecord），而不是把阶段编号 作为名字的一部分。
  */
 public final class WorkRecordFixtures {
 
@@ -35,8 +34,7 @@ public final class WorkRecordFixtures {
   public static final String NORMAL_USER_ID = "user-normal";
   public static final String READONLY_USER_ID = "user-readonly";
 
-  public static final OffsetDateTime NOW =
-      OffsetDateTime.parse("2026-07-11T10:00:00+08:00");
+  public static final OffsetDateTime NOW = OffsetDateTime.parse("2026-07-11T10:00:00+08:00");
 
   private WorkRecordFixtures() {}
 
@@ -63,17 +61,7 @@ public final class WorkRecordFixtures {
 
   public static WorkRecordTemplateVersion version(String versionId) {
     return new WorkRecordTemplateVersion(
-        versionId,
-        TENANT_ID,
-        TEMPLATE_ID,
-        1,
-        "v1",
-        "{}",
-        "{}",
-        "[]",
-        ADMIN_USER_ID,
-        NOW,
-        NOW);
+        versionId, TENANT_ID, TEMPLATE_ID, 1, "v1", "{}", "{}", "[]", ADMIN_USER_ID, NOW, NOW);
   }
 
   public static WorkRecordField field(
@@ -127,11 +115,7 @@ public final class WorkRecordFixtures {
   }
 
   public static WorkRecord record(
-      String id,
-      String versionId,
-      String creatorId,
-      String ownerId,
-      String customDataJson) {
+      String id, String versionId, String creatorId, String ownerId, String customDataJson) {
     return new WorkRecord(
         id,
         TENANT_ID,
@@ -162,34 +146,18 @@ public final class WorkRecordFixtures {
             PermissionCodes.WORK_RECORD_TEMPLATE_WRITE);
 
     Map<String, DataScope> dataScopes =
-        Map.of(
-            "work-record",
-            DataScope.ALL,
-            "work-record-template",
-            DataScope.ALL);
+        Map.of("work-record", DataScope.ALL, "work-record-template", DataScope.ALL);
 
     return new UserPrincipal(
-        ADMIN_USER_ID,
-        TENANT_ID,
-        "admin",
-        "管理员",
-        Set.of("record-admin"),
-        permissions,
-        dataScopes);
+        ADMIN_USER_ID, TENANT_ID, "admin", "管理员", Set.of("record-admin"), permissions, dataScopes);
   }
 
   public static UserPrincipal normalUser() {
     Set<String> permissions =
-        Set.of(
-            PermissionCodes.WORK_RECORD_READ_SELF,
-            PermissionCodes.WORK_RECORD_WRITE);
+        Set.of(PermissionCodes.WORK_RECORD_READ_SELF, PermissionCodes.WORK_RECORD_WRITE);
 
     Map<String, DataScope> dataScopes =
-        Map.of(
-            "work-record",
-            DataScope.SELF,
-            "work-record-template",
-            DataScope.SELF);
+        Map.of("work-record", DataScope.SELF, "work-record-template", DataScope.SELF);
 
     return new UserPrincipal(
         NORMAL_USER_ID,

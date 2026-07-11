@@ -69,10 +69,10 @@ class FlywayMigrationVersionUniquenessTest {
     try (var migrationFiles = migrationFiles()) {
       counts =
           migrationFiles
-              .map(Path::getFileName)
-              .map(Path::toString)
-              .map(ANY_VERSIONED_MIGRATION::matcher)
-              .filter(java.util.regex.Matcher::matches)
+              .map(path -> path.getFileName())
+              .map(path -> path.toString())
+              .map(name -> ANY_VERSIONED_MIGRATION.matcher(name))
+              .filter(matcher -> matcher.matches())
               .map(matcher -> matcher.group(1))
               .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
     }
@@ -129,7 +129,7 @@ class FlywayMigrationVersionUniquenessTest {
       throw new IllegalStateException("db/migration resource directory is missing");
     }
     try (var stream = Files.list(Path.of(resource.toURI()))) {
-      return stream.map(Path::getFileName).map(Path::toString).sorted().toList();
+      return stream.map(path -> path.getFileName()).map(path -> path.toString()).sorted().toList();
     }
   }
 

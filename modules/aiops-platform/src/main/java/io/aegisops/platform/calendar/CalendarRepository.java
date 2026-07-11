@@ -121,8 +121,7 @@ public class CalendarRepository {
       String sourceType,
       String remark,
       String actor) {
-    String id =
-        findDay(tenantId, calendarId, date).map(CalendarDayRecord::id).orElseGet(Ids::newId);
+    String id = findDay(tenantId, calendarId, date).map(day -> day.id()).orElseGet(Ids::newId);
 
     jdbc.update(
         """

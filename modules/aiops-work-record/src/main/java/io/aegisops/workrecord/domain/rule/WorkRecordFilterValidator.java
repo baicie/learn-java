@@ -46,7 +46,7 @@ public final class WorkRecordFilterValidator {
 
     Map<String, WorkRecordField> fieldByCode =
         templateFields.stream()
-            .filter(WorkRecordField::enabled)
+            .filter(field -> field.enabled())
             .collect(Collectors.toMap(WorkRecordField::fieldCode, f -> f, (a, b) -> a));
 
     for (DynamicFieldFilter filter : filters) {

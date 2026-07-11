@@ -46,7 +46,7 @@ public class AnsibleCommandPreviewBuilder {
   }
 
   public String toDisplayCommand(List<String> argv) {
-    return argv.stream().map(this::quote).reduce((a, b) -> a + " " + b).orElse("");
+    return argv.stream().map(arg -> quote(arg)).reduce((a, b) -> a + " " + b).orElse("");
   }
 
   private String quote(String arg) {

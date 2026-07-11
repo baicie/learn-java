@@ -44,7 +44,7 @@ public final class RcaEvidenceFactory {
       return List.of();
     }
     return refs.stream()
-        .map(RcaDiagnosisEvidenceRecord::evidenceKey)
+        .map(record -> record.evidenceKey())
         .filter(value -> value != null && !value.isBlank())
         .distinct()
         .toList();
@@ -55,7 +55,7 @@ public final class RcaEvidenceFactory {
       return List.of();
     }
     return refs.stream()
-        .map(RcaDiagnosisEvidenceRecord::evidenceType)
+        .map(record -> record.evidenceType())
         .filter(value -> value != null && !value.isBlank())
         .distinct()
         .toList();
@@ -66,7 +66,7 @@ public final class RcaEvidenceFactory {
       return "No diagnosis evidence refs attached.";
     }
     return refs.stream()
-        .map(RcaDiagnosisEvidenceRecord::summary)
+        .map(record -> record.summary())
         .filter(value -> value != null && !value.isBlank())
         .distinct()
         .limit(3)

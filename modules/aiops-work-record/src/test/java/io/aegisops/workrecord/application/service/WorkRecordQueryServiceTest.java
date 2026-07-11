@@ -96,11 +96,10 @@ class WorkRecordQueryServiceTest {
                     LocalDate.of(2026, 7, 6),
                     LocalDate.of(2026, 7, 8),
                     LocalDate.of(2026, 7, 9),
-                    LocalDate.of(2026, 7, 10)));
+                    LocalDate.of(2026, 7, 10))));
 
     RecordQuery effective =
-        service.prepareEffectiveQuery(
-            TENANT_ID, quickViewQuery("recent_workdays", 5), adminUser());
+        service.prepareEffectiveQuery(TENANT_ID, quickViewQuery("recent_workdays", 5), adminUser());
 
     assertThat(effective.recordTimeFrom().toLocalDate()).isEqualTo(LocalDate.of(2026, 7, 4));
     assertThat(effective.recordTimeTo().toInstant()).isEqualTo(clock.instant());

@@ -21,11 +21,11 @@ public class RcaEngine {
     List<RcaRuleResult> matched =
         rules.stream()
             .map(rule -> rule.evaluate(context))
-            .filter(RcaRuleResult::matched)
+            .filter(result -> result.matched())
             .sorted(
                 Comparator.comparing(RcaRuleResult::score)
                     .reversed()
-                    .thenComparing(RcaRuleResult::ruleId))
+                    .thenComparing(result -> result.ruleId()))
             .toList();
 
     if (matched.isEmpty()) {
@@ -42,7 +42,7 @@ public class RcaEngine {
     List<RcaEvidence> evidence =
         matched.stream().flatMap(result -> result.evidence().stream()).toList();
 
-    List<String> matchedRules = matched.stream().map(RcaRuleResult::ruleId).distinct().toList();
+    List<String> matchedRules = matched.stream().map(result -> result.ruleId()).distinct().toList();
 
     List<String> evidenceRefs =
         evidence.stream().flatMap(item -> extractEvidenceRefs(item).stream()).distinct().toList();

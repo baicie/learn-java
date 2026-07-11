@@ -217,10 +217,10 @@
             <executions>
               <execution>
                 <id>copy-portal-dist</id>
-                <phase>process-resources</phase>
                 <goals>
                   <goal>copy-resources</goal>
                 </goals>
+                <phase>process-resources</phase>
                 <configuration>
                   <outputDirectory>${project.build.outputDirectory}/static</outputDirectory>
                   <resources>
@@ -241,10 +241,10 @@
             <executions>
               <execution>
                 <id>portal-pnpm-install</id>
-                <phase>generate-resources</phase>
                 <goals>
                   <goal>exec</goal>
                 </goals>
+                <phase>generate-resources</phase>
                 <configuration>
                   <skip>${aiops.portal.skipInstall}</skip>
                   <workingDirectory>${maven.multiModuleProjectDirectory}</workingDirectory>
@@ -258,10 +258,10 @@
 
               <execution>
                 <id>portal-build</id>
-                <phase>generate-resources</phase>
                 <goals>
                   <goal>exec</goal>
                 </goals>
+                <phase>generate-resources</phase>
                 <configuration>
                   <skip>${aiops.portal.skipBuild}</skip>
                   <workingDirectory>${maven.multiModuleProjectDirectory}/web/portal</workingDirectory>
@@ -294,10 +294,10 @@
             <executions>
               <execution>
                 <id>copy-console-dist</id>
-                <phase>process-resources</phase>
                 <goals>
                   <goal>copy-resources</goal>
                 </goals>
+                <phase>process-resources</phase>
                 <configuration>
                   <outputDirectory>${project.build.outputDirectory}/static</outputDirectory>
                   <resources>
@@ -318,10 +318,10 @@
             <executions>
               <execution>
                 <id>console-pnpm-install</id>
-                <phase>generate-resources</phase>
                 <goals>
                   <goal>exec</goal>
                 </goals>
+                <phase>generate-resources</phase>
                 <configuration>
                   <skip>${aiops.console.skipInstall}</skip>
                   <workingDirectory>${maven.multiModuleProjectDirectory}</workingDirectory>
@@ -335,10 +335,10 @@
 
               <execution>
                 <id>console-build</id>
-                <phase>generate-resources</phase>
                 <goals>
                   <goal>exec</goal>
                 </goals>
+                <phase>generate-resources</phase>
                 <configuration>
                   <skip>${aiops.console.skipBuild}</skip>
                   <workingDirectory>${maven.multiModuleProjectDirectory}/web/console</workingDirectory>

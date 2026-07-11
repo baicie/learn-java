@@ -143,7 +143,7 @@ public class IncidentCaseService {
     return caseRepository
         .listCases(tenantId, normalizedStatus, normalizeTagOrNull(tag), limit)
         .stream()
-        .map(this::toResponse)
+        .map(record -> toResponse(record))
         .toList();
   }
 
@@ -192,12 +192,12 @@ public class IncidentCaseService {
   private IncidentCaseResponse toResponse(IncidentCaseRecord record) {
     List<IncidentCaseSymptomResponse> symptoms =
         caseRepository.listSymptoms(record.tenantId(), record.id()).stream()
-            .map(this::toSymptomResponse)
+            .map(record -> toSymptomResponse(record))
             .toList();
 
     List<IncidentCaseResolutionStepResponse> steps =
         caseRepository.listResolutionSteps(record.tenantId(), record.id()).stream()
-            .map(this::toResolutionStepResponse)
+            .map(record -> toResolutionStepResponse(record))
             .toList();
 
     List<String> tags =

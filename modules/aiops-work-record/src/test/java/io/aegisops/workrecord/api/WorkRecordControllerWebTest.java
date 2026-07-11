@@ -132,9 +132,7 @@ class WorkRecordControllerWebTest {
     when(exportService.export(eq("tenant-1"), any(), anyList(), any()))
         .thenReturn(
             new WorkRecordExportResult(
-                "records.csv",
-                "\uFEFF\"标题\"\r\n\"日报\"\r\n".getBytes(StandardCharsets.UTF_8),
-                1));
+                "records.csv", "\uFEFF\"标题\"\r\n\"日报\"\r\n".getBytes(StandardCharsets.UTF_8), 1));
 
     mockMvc
         .perform(
@@ -153,8 +151,7 @@ class WorkRecordControllerWebTest {
         .andExpect(header().string("X-Export-Row-Count", "1"))
         .andExpect(
             header()
-                .string(
-                    "Content-Disposition", org.hamcrest.Matchers.containsString("records.csv")))
+                .string("Content-Disposition", org.hamcrest.Matchers.containsString("records.csv")))
         .andExpect(content().contentType("text/csv;charset=UTF-8"));
   }
 

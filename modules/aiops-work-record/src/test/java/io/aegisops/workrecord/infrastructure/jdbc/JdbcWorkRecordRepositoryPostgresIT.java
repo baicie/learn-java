@@ -24,8 +24,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 class JdbcWorkRecordRepositoryPostgresIT {
 
   @Container
-  static final PostgreSQLContainer<?> POSTGRES =
-      new PostgreSQLContainer<>("postgres:16-alpine");
+  static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine");
 
   private static NamedParameterJdbcTemplate jdbc;
   private static JdbcWorkRecordRepository repository;
@@ -40,9 +39,7 @@ class JdbcWorkRecordRepositoryPostgresIT {
     jdbc = new NamedParameterJdbcTemplate(dataSource);
 
     repository =
-        new JdbcWorkRecordRepository(
-            jdbc,
-            new WorkRecordJsonbFilterSqlBuilder(new ObjectMapper()));
+        new JdbcWorkRecordRepository(jdbc, new WorkRecordJsonbFilterSqlBuilder(new ObjectMapper()));
 
     jdbc.getJdbcTemplate().execute("create schema work_record");
 
@@ -144,9 +141,7 @@ class JdbcWorkRecordRepositoryPostgresIT {
 
     var page = repository.page("tenant-1", query(List.of(filter)));
 
-    assertThat(page.items())
-        .extracting(item -> item.id())
-        .containsExactly("record-a");
+    assertThat(page.items()).extracting(item -> item.id()).containsExactly("record-a");
   }
 
   @Test
@@ -164,9 +159,7 @@ class JdbcWorkRecordRepositoryPostgresIT {
 
     var page = repository.page("tenant-1", query(List.of(filter)));
 
-    assertThat(page.items())
-        .extracting(item -> item.id())
-        .containsExactly("record-all");
+    assertThat(page.items()).extracting(item -> item.id()).containsExactly("record-all");
   }
 
   @Test
@@ -177,28 +170,18 @@ class JdbcWorkRecordRepositoryPostgresIT {
 
     RecordDynamicFilter filter =
         RecordDynamicFilter.normalized(
-            "cost",
-            DynamicFilterOperator.GTE,
-            FieldType.NUMBER,
-            "10",
-            List.of());
+            "cost", DynamicFilterOperator.GTE, FieldType.NUMBER, "10", List.of());
 
     var page = repository.page("tenant-1", query(List.of(filter)));
 
-    assertThat(page.items())
-        .extracting(item -> item.id())
-        .containsExactly("numeric");
+    assertThat(page.items()).extracting(item -> item.id()).containsExactly("numeric");
   }
 
   @Test
   void unsafeFieldCodeMustNeverReachJdbc() {
     RecordDynamicFilter filter =
         RecordDynamicFilter.normalized(
-            "x') or true --",
-            DynamicFilterOperator.EQ,
-            FieldType.TEXT,
-            "anything",
-            List.of());
+            "x') or true --", DynamicFilterOperator.EQ, FieldType.TEXT, "anything", List.of());
 
     assertThatThrownBy(() -> repository.page("tenant-1", query(List.of(filter))))
         .isInstanceOf(IllegalArgumentException.class)

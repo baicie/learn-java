@@ -14,7 +14,7 @@ class AiPersistenceArchitectureTest {
     List<Path> violations =
         Files.walk(Path.of("src/main/java"))
             .filter(path -> path.toString().endsWith(".java"))
-            .filter(this::isViolation)
+            .filter(javaClass -> isViolation(javaClass))
             .toList();
 
     assertTrue(

@@ -60,14 +60,14 @@ public class ZabbixEvidenceAnalyzer {
       List<ZabbixHistoryPoint> history, List<ZabbixTrendPoint> trends) {
     if (history != null && !history.isEmpty()) {
       return history.stream()
-          .map(ZabbixHistoryPoint::doubleValue)
-          .filter(java.util.OptionalDouble::isPresent)
-          .map(java.util.OptionalDouble::getAsDouble)
+          .map(point -> point.doubleValue())
+          .filter(value -> value.isPresent())
+          .map(value -> value.getAsDouble())
           .toList();
     }
 
     if (trends != null && !trends.isEmpty()) {
-      return trends.stream().map(ZabbixTrendPoint::valueMax).toList();
+      return trends.stream().map(point -> point.valueMax()).toList();
     }
 
     return List.of();

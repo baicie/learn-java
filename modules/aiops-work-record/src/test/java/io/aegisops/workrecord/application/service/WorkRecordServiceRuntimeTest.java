@@ -104,7 +104,8 @@ class WorkRecordServiceRuntimeTest {
     assertThat(result.id()).isEqualTo("r1");
 
     ArgumentCaptor<String> customJson = ArgumentCaptor.forClass(String.class);
-    verify(valueValidator).validate(eq("t1"), eq("v1"), eq(List.of()), customJson.capture());
+    verify(valueValidator)
+        .validate(eq("t1"), eq("v1"), eq(List.of()), customJson.capture(), eq(false));
     assertThat(customJson.getValue()).contains("content");
     verify(userPort).requireActiveUser("t1", "u1");
   }

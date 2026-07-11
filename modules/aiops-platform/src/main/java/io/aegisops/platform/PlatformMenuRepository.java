@@ -4,7 +4,6 @@ import java.time.OffsetDateTime;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
@@ -21,8 +20,8 @@ public class PlatformMenuRepository {
         authorities == null
             ? List.of()
             : authorities.stream()
-                .filter(Objects::nonNull)
-                .map(String::trim)
+                .filter(item -> item != null)
+                .map(text -> text.trim())
                 .filter(value -> !value.isBlank())
                 .distinct()
                 .toList();

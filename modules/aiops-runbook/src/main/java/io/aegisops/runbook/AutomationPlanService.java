@@ -327,7 +327,7 @@ public class AutomationPlanService {
         plan.summary(),
         plan.evidenceJson(),
         plan.createdBy(),
-        steps.stream().map(this::toStepResponse).toList(),
+        steps.stream().map(step -> toStepResponse(step)).toList(),
         plan.createdAt(),
         plan.updatedAt());
   }

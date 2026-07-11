@@ -93,7 +93,8 @@ class OutboxPropertiesTest {
 
                       @Override
                       public io.aegisops.worker.job.JobResult handle(
-                          io.aegisops.persistence.jooq.public_.tables.records.AutomationOutboxRecord row) {
+                          io.aegisops.persistence.jooq.public_.tables.records.AutomationOutboxRecord
+                              row) {
                         return io.aegisops.worker.job.JobResult.success();
                       }
                     },
@@ -105,7 +106,8 @@ class OutboxPropertiesTest {
 
                       @Override
                       public io.aegisops.worker.job.JobResult handle(
-                          io.aegisops.persistence.jooq.public_.tables.records.AutomationOutboxRecord row) {
+                          io.aegisops.persistence.jooq.public_.tables.records.AutomationOutboxRecord
+                              row) {
                         return io.aegisops.worker.job.JobResult.success();
                       }
                     })));

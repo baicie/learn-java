@@ -202,7 +202,7 @@ public class WorkRecordJsonbFilterSqlBuilder {
     requireValues(filter);
 
     String listParam = "dfList" + index;
-    params.put(listParam, filter.values().stream().map(String::valueOf).toList());
+    params.put(listParam, filter.values().stream().map(item -> String.valueOf(item)).toList());
 
     where
         .append(" and jsonb_typeof(")

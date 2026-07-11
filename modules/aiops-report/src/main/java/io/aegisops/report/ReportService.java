@@ -32,7 +32,7 @@ public class ReportService {
     if (!normalized.shouldGenerate()) {
       return repository
           .findLatestReport(tenantId, incidentId)
-          .map(IncidentReportResponse::from)
+          .map(record -> IncidentReportResponse.from(record))
           .orElseGet(
               () ->
                   generate(
@@ -71,7 +71,7 @@ public class ReportService {
 
     return repository
         .findLatestReport(tenantId, incidentId)
-        .map(IncidentReportResponse::from)
+        .map(record -> IncidentReportResponse.from(record))
         .orElseThrow(
             () -> new AppException("INCIDENT_REPORT_NOT_FOUND", "Incident report not found"));
   }
@@ -103,14 +103,13 @@ public class ReportService {
     snapshot.put("incidentId", context.incident().id());
     snapshot.put("generatedAt", OffsetDateTime.now().toString());
     snapshot.put("locale", context.locale());
-    snapshot.put("alertIds", context.alerts().stream().map(ReportAlertRecord::id).toList());
+    snapshot.put("alertIds", context.alerts().stream().map(record -> record.id()).toList());
     snapshot.put(
-        "evidenceKeys",
-        context.evidence().stream().map(ReportEvidenceRecord::evidenceKey).toList());
+        "evidenceKeys", context.evidence().stream().map(record -> record.evidenceKey()).toList());
     snapshot.put("rcaId", context.rca() == null ? null : context.rca().id());
     snapshot.put(
         "aiDiagnosisId", context.aiDiagnosis() == null ? null : context.aiDiagnosis().id());
-    snapshot.put("timelineIds", context.timeline().stream().map(ReportTimelineRecord::id).toList());
+    snapshot.put("timelineIds", context.timeline().stream().map(record -> record.id()).toList());
 
     try {
       return objectMapper.writeValueAsString(snapshot);

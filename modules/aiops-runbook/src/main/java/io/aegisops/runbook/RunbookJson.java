@@ -47,7 +47,7 @@ public class RunbookJson {
     try {
       return objectMapper.convertValue(value, STRING_LIST_TYPE).stream()
           .filter(item -> item != null && !item.isBlank())
-          .map(String::trim)
+          .map(text -> text.trim())
           .toList();
     } catch (Exception ex) {
       return List.of();

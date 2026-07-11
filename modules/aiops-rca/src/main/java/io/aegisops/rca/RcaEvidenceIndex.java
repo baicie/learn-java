@@ -69,7 +69,7 @@ public final class RcaEvidenceIndex {
 
   public List<String> refs(String... evidenceTypes) {
     return getAny(evidenceTypes).stream()
-        .map(RcaDiagnosisEvidenceRecord::evidenceKey)
+        .map(record -> record.evidenceKey())
         .filter(value -> value != null && !value.isBlank())
         .distinct()
         .toList();

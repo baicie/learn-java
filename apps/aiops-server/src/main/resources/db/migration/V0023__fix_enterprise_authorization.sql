@@ -99,13 +99,11 @@ insert into iam.role_data_scope(
     role_code,
     resource_code,
     scope_type,
-    created_at,
-    updated_at
+    created_at
 )
-values ('ops_operator', 'work-record', 'SELF', now(), now())
+values ('ops_operator', 'work-record', 'SELF', now())
 on conflict (role_code, resource_code) do update
-set scope_type = excluded.scope_type,
-    updated_at = now();
+set scope_type = excluded.scope_type;
 
 -- 6. 从真实旧表结构迁移角色
 -- 读取 sys_user -> sys_user_role -> sys_role 映射到 iam.user_role
@@ -134,15 +132,13 @@ insert into iam.user_role(
     user_id,
     role_code,
     created_by,
-    created_at,
-    updated_at
+    created_at
 )
 select
     tenant_id,
     user_id,
     new_role_code,
     'phase-13-corrective-migration',
-    now(),
     now()
 from mapped_roles
 where new_role_code is not null

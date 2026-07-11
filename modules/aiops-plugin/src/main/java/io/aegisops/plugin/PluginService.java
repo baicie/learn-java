@@ -45,7 +45,7 @@ public class PluginService {
   }
 
   public List<PluginDescriptorResponse> listPlugins() {
-    return repository.listPlugins().stream().map(this::toPluginResponse).toList();
+    return repository.listPlugins().stream().map(plugin -> toPluginResponse(plugin)).toList();
   }
 
   public PluginDescriptorResponse getPlugin(String pluginId) {
@@ -54,7 +54,7 @@ public class PluginService {
 
   public List<TenantPluginResponse> listTenantPlugins(String tenantId) {
     return repository.listTenantPlugins(tenantId).stream()
-        .map(this::toTenantPluginResponse)
+        .map(plugin -> toTenantPluginResponse(plugin))
         .toList();
   }
 
@@ -119,7 +119,7 @@ public class PluginService {
             .filter(item -> "enabled".equals(item.status()))
             .toList();
 
-    List<String> keys = enabled.stream().map(TenantPluginRecord::pluginKey).toList();
+    List<String> keys = enabled.stream().map(plugin -> plugin.pluginKey()).toList();
     List<Object> contributions = new ArrayList<>();
 
     for (TenantPluginRecord plugin : enabled) {
@@ -154,7 +154,7 @@ public class PluginService {
 
   public List<TenantPluginToolPolicyResponse> listToolPolicies(String tenantId) {
     return repository.listTenantToolPolicies(tenantId).stream()
-        .map(this::toToolPolicyResponse)
+        .map(policy -> toToolPolicyResponse(policy))
         .toList();
   }
 
@@ -191,7 +191,7 @@ public class PluginService {
     return repository
         .findAllowedToolPolicy(tenantId, toolKey)
         .filter(policy -> policy.tenantPluginId().equals(tenantPluginId))
-        .map(this::toToolPolicyResponse)
+        .map(policy -> toToolPolicyResponse(policy))
         .orElseThrow(
             () -> new AppException("PLUGIN_TOOL_POLICY_NOT_FOUND", "Tool policy not found"));
   }
@@ -229,7 +229,7 @@ public class PluginService {
         .filter(
             item -> item.tenantPluginId().equals(tenantPluginId) && item.toolKey().equals(toolKey))
         .findFirst()
-        .map(this::toToolPolicyResponse)
+        .map(policy -> toToolPolicyResponse(policy))
         .orElseThrow(
             () -> new AppException("PLUGIN_TOOL_POLICY_NOT_FOUND", "Tool policy not found"));
   }
@@ -285,8 +285,8 @@ public class PluginService {
         new PluginEventCommand(
             newId("ple"),
             currentTenantId,
-            policy.map(TenantPluginToolPolicyRecord::pluginId).orElse(null),
-            policy.map(TenantPluginToolPolicyRecord::tenantPluginId).orElse(null),
+            policy.map(pluginPolicy -> pluginPolicy.pluginId()).orElse(null),
+            policy.map(pluginPolicy -> pluginPolicy.tenantPluginId()).orElse(null),
             "tool_denied_by_policy",
             "Agent tool denied by plugin policy",
             "agent",

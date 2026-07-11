@@ -16,6 +16,7 @@ import io.aegisops.workrecord.application.port.WorkRecordTemplateVersionReposito
 import io.aegisops.workrecord.application.port.WorkRecordUserPort;
 import io.aegisops.workrecord.domain.model.FieldType;
 import io.aegisops.workrecord.domain.model.OptionSource;
+import io.aegisops.workrecord.domain.model.WorkRecord;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -60,13 +61,7 @@ class WorkRecordServiceAuthorizationTest {
   void normalUserMustNotUpdateAnotherUsersRecord() {
     when(recordRepository.find(TENANT_ID, "record-other"))
         .thenReturn(
-            Optional.of(
-                record(
-                    "record-other",
-                    VERSION_ID,
-                    "user-other",
-                    "user-another",
-                    "{}")));
+            Optional.of(record("record-other", VERSION_ID, "user-other", "user-another", "{}")));
 
     assertThatThrownBy(
             () ->
@@ -101,10 +96,9 @@ class WorkRecordServiceAuthorizationTest {
 
     when(fieldRepository.listByVersion(TENANT_ID, VERSION_ID)).thenReturn(List.of(priority));
 
-    doThrow(
-            new IllegalArgumentException("dict item not found or disabled: priority/P2"))
+    doThrow(new IllegalArgumentException("dict item not found or disabled: priority/P2"))
         .when(valueValidator)
-        .validate(TENANT_ID, VERSION_ID, List.of(priority), "{\"priority\":\"P2\"}");
+        .validate(TENANT_ID, VERSION_ID, List.of(priority), "{\"priority\":\"P2\"}", true);
 
     assertThatThrownBy(
             () ->
@@ -158,8 +152,7 @@ class WorkRecordServiceAuthorizationTest {
         service.update(
             TENANT_ID,
             "record-1",
-            new UpdateRecordCommand(
-                "新标题", null, null, NOW, "{}", existing.customDataJson()),
+            new UpdateRecordCommand("新标题", null, null, NOW, "{}", existing.customDataJson()),
             adminUser());
 
     assertThat(result).isNotNull();
@@ -185,14 +178,7 @@ class WorkRecordServiceAuthorizationTest {
                 service.create(
                     TENANT_ID,
                     new CreateRecordCommand(
-                        TEMPLATE_ID,
-                        VERSION_ID,
-                        "日报",
-                        "done",
-                        null,
-                        NOW,
-                        "{}",
-                        "{}"),
+                        TEMPLATE_ID, VERSION_ID, "日报", "done", null, NOW, "{}", "{}"),
                     readonlyUser()))
         .isInstanceOf(AccessDeniedException.class);
 

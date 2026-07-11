@@ -13,6 +13,7 @@ import io.aegisops.workrecord.application.port.WorkRecordUserPort;
 import io.aegisops.workrecord.domain.model.FieldType;
 import io.aegisops.workrecord.domain.model.OptionSource;
 import io.aegisops.workrecord.domain.model.WorkRecordField;
+import io.aegisops.workrecord.support.WorkRecordFixtures;
 import java.time.OffsetDateTime;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -204,7 +205,10 @@ class WorkRecordValueValidatorTest {
     assertThatThrownBy(
             () ->
                 validator.validate(
-                    TENANT_ID, VERSION_ID, List.of(disabledField("oldField")), "{\"oldField\":\"x\"}"))
+                    TENANT_ID,
+                    VERSION_ID,
+                    List.of(disabledField("oldField")),
+                    "{\"oldField\":\"x\"}"))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("field is disabled: oldField");
   }
@@ -213,7 +217,8 @@ class WorkRecordValueValidatorTest {
   void shouldRejectMissingRequiredField() {
     assertThatThrownBy(
             () ->
-                validator.validate(TENANT_ID, VERSION_ID, List.of(textField("content", true)), "{}"))
+                validator.validate(
+                    TENANT_ID, VERSION_ID, List.of(textField("content", true)), "{}"))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("required field is missing: content");
   }
@@ -223,11 +228,7 @@ class WorkRecordValueValidatorTest {
     assertThatCode(
             () ->
                 validator.validate(
-                    TENANT_ID,
-                    VERSION_ID,
-                    List.of(textField("content", true)),
-                    "{}",
-                    false))
+                    TENANT_ID, VERSION_ID, List.of(textField("content", true)), "{}", false))
         .doesNotThrowAnyException();
   }
 
@@ -236,11 +237,7 @@ class WorkRecordValueValidatorTest {
     assertThatThrownBy(
             () ->
                 validator.validate(
-                    TENANT_ID,
-                    VERSION_ID,
-                    List.of(textField("content", true)),
-                    "{}",
-                    true))
+                    TENANT_ID, VERSION_ID, List.of(textField("content", true)), "{}", true))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("required field is missing: content");
   }
@@ -307,7 +304,10 @@ class WorkRecordValueValidatorTest {
     assertThatThrownBy(
             () ->
                 validator.validate(
-                    TENANT_ID, VERSION_ID, List.of(field), "{\"startedAt\":\"2026-01-01T10:00:00\"}"))
+                    TENANT_ID,
+                    VERSION_ID,
+                    List.of(field),
+                    "{\"startedAt\":\"2026-01-01T10:00:00\"}"))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("field must be ISO offset datetime: startedAt");
   }
@@ -323,7 +323,9 @@ class WorkRecordValueValidatorTest {
     var priority = staticSelectField("priority", "[\"P0\",\"P1\"]");
 
     assertThatThrownBy(
-            () -> validator.validate(TENANT_ID, VERSION_ID, List.of(priority), "{\"priority\":\"P2\"}"))
+            () ->
+                validator.validate(
+                    TENANT_ID, VERSION_ID, List.of(priority), "{\"priority\":\"P2\"}"))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("field option is not allowed: priority/P2");
   }
@@ -333,7 +335,9 @@ class WorkRecordValueValidatorTest {
     var priority = staticSelectField("priority", "[]");
 
     assertThatThrownBy(
-            () -> validator.validate(TENANT_ID, VERSION_ID, List.of(priority), "{\"priority\":\"P1\"}"))
+            () ->
+                validator.validate(
+                    TENANT_ID, VERSION_ID, List.of(priority), "{\"priority\":\"P1\"}"))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("static options are required: priority");
   }
@@ -354,7 +358,9 @@ class WorkRecordValueValidatorTest {
         .requireEnabledItem(TENANT_ID, "priority", "P2");
 
     assertThatThrownBy(
-            () -> validator.validate(TENANT_ID, VERSION_ID, List.of(priority), "{\"priority\":\"P2\"}"))
+            () ->
+                validator.validate(
+                    TENANT_ID, VERSION_ID, List.of(priority), "{\"priority\":\"P2\"}"))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("not found or disabled");
   }
@@ -369,7 +375,8 @@ class WorkRecordValueValidatorTest {
   void shouldRejectMultiSelectNonStringItem() {
     var tags = staticMultiSelectField("tags", "[\"a\"]");
 
-    assertThatThrownBy(() -> validator.validate(TENANT_ID, VERSION_ID, List.of(tags), "{\"tags\":[1]}"))
+    assertThatThrownBy(
+            () -> validator.validate(TENANT_ID, VERSION_ID, List.of(tags), "{\"tags\":[1]}"))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("multi_select item must be string: tags");
   }
@@ -450,7 +457,8 @@ class WorkRecordValueValidatorTest {
     var priority = staticSelectField("priority", "[\"P0\",\"P1\"]");
 
     assertThatThrownBy(
-            () -> validator.validate(TENANT_ID, VERSION_ID, List.of(priority), "{\"priority\":\"\"}"))
+            () ->
+                validator.validate(TENANT_ID, VERSION_ID, List.of(priority), "{\"priority\":\"\"}"))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("field must not be blank: priority");
   }
@@ -471,7 +479,8 @@ class WorkRecordValueValidatorTest {
             true);
 
     assertThatThrownBy(
-            () -> validator.validate(TENANT_ID, VERSION_ID, List.of(field), "{\"priority\":\"P1\"}"))
+            () ->
+                validator.validate(TENANT_ID, VERSION_ID, List.of(field), "{\"priority\":\"P1\"}"))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("dict optionSource is only allowed");
   }
@@ -510,7 +519,8 @@ class WorkRecordValueValidatorTest {
             tags.createdAt(),
             tags.updatedAt());
 
-    assertThatThrownBy(() -> validator.validate(TENANT_ID, VERSION_ID, List.of(required), "{\"tags\":[]}"))
+    assertThatThrownBy(
+            () -> validator.validate(TENANT_ID, VERSION_ID, List.of(required), "{\"tags\":[]}"))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("required field is missing: tags");
   }
@@ -519,7 +529,8 @@ class WorkRecordValueValidatorTest {
   void shouldRejectMissingDictCode() {
     var field = selectDictField("priority", null);
     assertThatThrownBy(
-            () -> validator.validate(TENANT_ID, VERSION_ID, List.of(field), "{\"priority\":\"P1\"}"))
+            () ->
+                validator.validate(TENANT_ID, VERSION_ID, List.of(field), "{\"priority\":\"P1\"}"))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("dictCode is required");
     verify(dictionaryPort, never()).requireEnabledItem(TENANT_ID, null, "P1");

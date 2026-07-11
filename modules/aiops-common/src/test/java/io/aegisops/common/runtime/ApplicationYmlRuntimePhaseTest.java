@@ -101,7 +101,6 @@ class ApplicationYmlRuntimePhaseTest {
     return inner.substring(colon + 1);
   }
 
-  @SuppressWarnings("unchecked")
   private static Object navigate(Map<String, Object> root, String... keys) {
     Object cursor = root;
     for (String key : keys) {
@@ -113,6 +112,7 @@ class ApplicationYmlRuntimePhaseTest {
     return cursor;
   }
 
+  @SuppressWarnings("unchecked")
   private static Map<String, Object> parseYaml(Path ymlPath) throws IOException {
     try (var reader = Files.newBufferedReader(ymlPath)) {
       Object loaded = new Yaml().load(reader);

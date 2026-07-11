@@ -121,7 +121,7 @@ class WorkRecordServicePhase9Test {
 
     verify(versionRepository).findByTemplateAndVersion("t1", "tpl1", "v1");
     verify(fieldRepository).listByVersion("t1", "v1");
-    verify(valueValidator).validate("t1", "v1", List.of(), "{}");
+    verify(valueValidator).validate("t1", "v1", List.of(), "{}", false);
     verify(userPort).requireActiveUser("t1", "u1");
     verify(auditService)
         .recordChange(

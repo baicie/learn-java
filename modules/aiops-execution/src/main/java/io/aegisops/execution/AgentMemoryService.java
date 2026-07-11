@@ -197,7 +197,7 @@ public class AgentMemoryService {
 
     return tags.stream()
         .filter(value -> value != null && !value.isBlank())
-        .map(this::normalizeTag)
+        .map(tag -> normalizeTag(tag))
         .filter(value -> !value.isBlank())
         .distinct()
         .toList();

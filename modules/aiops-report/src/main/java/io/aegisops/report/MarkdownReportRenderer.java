@@ -89,7 +89,7 @@ public class MarkdownReportRenderer {
     List<String> entities =
         context.alerts().stream()
             .map(alert -> firstNonBlank(alert.entityName(), alert.assetId(), alert.sourceEventId()))
-            .filter(this::notBlank)
+            .filter(text -> notBlank(text))
             .distinct()
             .limit(10)
             .toList();
@@ -347,7 +347,7 @@ public class MarkdownReportRenderer {
       return evidence.stream()
           .map(item -> item.get("ruleId"))
           .filter(value -> value != null && !String.valueOf(value).isBlank())
-          .map(String::valueOf)
+          .map(item -> String.valueOf(item))
           .distinct()
           .toList();
     } catch (Exception ex) {

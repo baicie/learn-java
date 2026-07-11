@@ -22,6 +22,7 @@ const MIN_JAVA_MAJOR = 21;
 const isWin = process.platform === "win32";
 const sh = isWin ? "powershell" : "bash";
 const shArg = isWin ? ["-NoProfile", "-Command"] : ["-c"];
+const HEALTH_TIMEOUT_MS = 60_000;
 
 interface JavaRuntime {
   home: string | null;
@@ -56,6 +57,19 @@ function execOut(cmd: string): string {
     return execSync(cmd, { cwd: root, stdio: "pipe" }).toString().trim();
   } catch {
     return "";
+  }
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isPidRunning(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
   }
 }
 
@@ -252,10 +266,10 @@ async function buildBackend(): Promise<void> {
   console.log("  \u2713 Backend built");
 }
 
-async function startApp(key: keyof typeof APPS): Promise<void> {
+async function startApp(key: keyof typeof APPS): Promise<number | null> {
   const app = APPS[key];
   const javaRoot = findJavaRoot(root);
-  if (!javaRoot) return;
+  if (!javaRoot) return null;
 
   const jar = join(
     javaRoot,
@@ -266,7 +280,7 @@ async function startApp(key: keyof typeof APPS): Promise<void> {
   if (!existsSync(jar)) {
     console.error(`  ${app.name}: JAR not found`);
     console.error(`  Run 'tsx scripts/start.ts backend' to build first.`);
-    return;
+    return null;
   }
 
   const pidFile = join(root, `.pid-${key}`);
@@ -307,6 +321,41 @@ async function startApp(key: keyof typeof APPS): Promise<void> {
   console.log(
     `  \u25b6 ${app.name} started (PID: ${pid.pid}) -> http://localhost:${app.port}`,
   );
+  return pid.pid ?? null;
+}
+
+async function waitForAppHealth(
+  key: keyof typeof APPS,
+  pid: number | null,
+  timeoutMs = HEALTH_TIMEOUT_MS,
+): Promise<void> {
+  const app = APPS[key];
+  const url = `http://localhost:${app.port}/actuator/health`;
+  const started = Date.now();
+
+  while (Date.now() - started < timeoutMs) {
+    if (pid && !isPidRunning(pid)) {
+      throw new Error(
+        `${app.name} exited before it became healthy. See logs/${app.name}.log and logs/${app.name}.err.log`,
+      );
+    }
+
+    try {
+      const response = await fetch(url);
+      if (response.ok) {
+        console.log(`  \u2713 ${app.name} is healthy (${url})`);
+        return;
+      }
+    } catch {
+      // Keep polling until the app binds the port or exits.
+    }
+
+    await sleep(1_000);
+  }
+
+  throw new Error(
+    `${app.name} did not become healthy within ${Math.round(timeoutMs / 1000)}s. See logs/${app.name}.log and logs/${app.name}.err.log`,
+  );
 }
 
 async function startBackend(): Promise<void> {
@@ -332,7 +381,8 @@ async function startBackendOnly(): Promise<void> {
     : "mvn -B -ntp -DskipTests -pl apps/aiops-server -am package";
   await run(mvnCmd, { env: javaEnv() });
   console.log("  \u2713 Server built");
-  await startApp("server");
+  const pid = await startApp("server");
+  await waitForAppHealth("server", pid);
 }
 
 async function startFrontend(): Promise<void> {

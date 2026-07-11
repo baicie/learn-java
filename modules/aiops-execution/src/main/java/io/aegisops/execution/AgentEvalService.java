@@ -70,7 +70,7 @@ public class AgentEvalService {
   public List<AgentEvalDatasetResponse> listDatasets(String tenantId, String status) {
     String normalized = support.normalizeDatasetStatusOrNull(status);
     return repository.listDatasets(tenantId, normalized).stream()
-        .map(support::toDatasetResponse)
+        .map(record -> support.toDatasetResponse(record))
         .toList();
   }
 
@@ -167,7 +167,7 @@ public class AgentEvalService {
   public List<AgentEvalCaseResponse> listCases(String tenantId, String datasetId) {
     loadDataset(tenantId, datasetId);
     return repository.listCases(tenantId, datasetId, false).stream()
-        .map(support::toCaseResponse)
+        .map(record -> support.toCaseResponse(record))
         .toList();
   }
 
@@ -201,7 +201,7 @@ public class AgentEvalService {
   public List<AgentPromptProfileResponse> listPromptProfiles(String tenantId, String status) {
     String normalized = support.normalizePromptProfileStatusOrNull(status);
     return repository.listPromptProfiles(tenantId, normalized).stream()
-        .map(support::toPromptProfileResponse)
+        .map(record -> support.toPromptProfileResponse(record))
         .toList();
   }
 
@@ -274,7 +274,7 @@ public class AgentEvalService {
   public List<AgentEvalCaseResultResponse> listRunResults(String tenantId, String runId) {
     getRun(tenantId, runId);
     return repository.listCaseResults(tenantId, runId).stream()
-        .map(support::toCaseResultResponse)
+        .map(record -> support.toCaseResultResponse(record))
         .toList();
   }
 

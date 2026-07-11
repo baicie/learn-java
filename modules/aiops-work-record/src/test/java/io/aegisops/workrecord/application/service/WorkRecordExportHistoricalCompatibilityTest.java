@@ -68,9 +68,7 @@ class WorkRecordExportHistoricalCompatibilityTest {
             auditService,
             new WorkRecordCsvWriter(),
             new ObjectMapper(),
-            Clock.fixed(
-                Instant.parse("2026-07-11T02:00:00Z"),
-                ZoneId.of("Asia/Shanghai")));
+            Clock.fixed(Instant.parse("2026-07-11T02:00:00Z"), ZoneId.of("Asia/Shanghai")));
   }
 
   @Test
@@ -78,12 +76,7 @@ class WorkRecordExportHistoricalCompatibilityTest {
     UserPrincipal user = adminUser();
     var rawQuery = query(null, List.of());
 
-    var exportColumn =
-        customColumn(
-            "priority",
-            "优先级",
-            "priority-current",
-            true);
+    var exportColumn = customColumn("priority", "优先级", "priority-current", true);
 
     RecordListMeta meta =
         new RecordListMeta(
@@ -91,58 +84,24 @@ class WorkRecordExportHistoricalCompatibilityTest {
             List.of(exportColumn),
             List.of(exportColumn),
             List.of(),
-            Set.of(
-                "priority-v1",
-                "priority-v2"),
+            Set.of("priority-v1", "priority-v2"),
             5000,
             List.of("all"));
 
     var version1Record =
-        record(
-            "record-v1",
-            "version-1",
-            ADMIN_USER_ID,
-            ADMIN_USER_ID,
-            "{\"priority\":\"P1\"}");
+        record("record-v1", "version-1", ADMIN_USER_ID, ADMIN_USER_ID, "{\"priority\":\"P1\"}");
 
     var version2Record =
-        record(
-            "record-v2",
-            "version-2",
-            ADMIN_USER_ID,
-            ADMIN_USER_ID,
-            "{\"priority\":\"P2\"}");
+        record("record-v2", "version-2", ADMIN_USER_ID, ADMIN_USER_ID, "{\"priority\":\"P2\"}");
 
-    when(
-            queryService.prepareEffectiveQuery(
-                TENANT_ID,
-                rawQuery,
-                user))
-        .thenReturn(rawQuery);
+    when(queryService.prepareEffectiveQuery(TENANT_ID, rawQuery, user)).thenReturn(rawQuery);
 
-    when(
-            metaService.meta(
-                TENANT_ID,
-                TEMPLATE_ID))
-        .thenReturn(meta);
+    when(metaService.meta(TENANT_ID, TEMPLATE_ID)).thenReturn(meta);
 
-    when(
-            repository.listForExport(
-                TENANT_ID,
-                rawQuery,
-                5001))
-        .thenReturn(
-            List.of(
-                version1Record,
-                version2Record));
+    when(repository.listForExport(TENANT_ID, rawQuery, 5001))
+        .thenReturn(List.of(version1Record, version2Record));
 
-    when(
-            fieldRepository.listByVersions(
-                eq(TENANT_ID),
-                eq(
-                    List.of(
-                        "version-1",
-                        "version-2"))))
+    when(fieldRepository.listByVersions(eq(TENANT_ID), eq(List.of("version-1", "version-2"))))
         .thenReturn(
             List.of(
                 field(
@@ -168,53 +127,20 @@ class WorkRecordExportHistoricalCompatibilityTest {
                     true,
                     true)));
 
-    when(
-            dictionaryPort.itemLabels(
-                TENANT_ID,
-                "priority-v1"))
-        .thenReturn(
-            Map.of(
-                "P1",
-                "旧优先级（已禁用）"));
+    when(dictionaryPort.itemLabels(TENANT_ID, "priority-v1")).thenReturn(Map.of("P1", "旧优先级（已禁用）"));
 
-    when(
-            dictionaryPort.itemLabels(
-                TENANT_ID,
-                "priority-v2"))
-        .thenReturn(
-            Map.of(
-                "P2",
-                "新优先级"));
+    when(dictionaryPort.itemLabels(TENANT_ID, "priority-v2")).thenReturn(Map.of("P2", "新优先级"));
 
-    when(
-            userPort.displayNames(
-                eq(TENANT_ID),
-                anyCollection()))
-        .thenReturn(Map.of());
+    when(userPort.displayNames(eq(TENANT_ID), anyCollection())).thenReturn(Map.of());
 
-    var result =
-        service.export(
-            TENANT_ID,
-            rawQuery,
-            List.of("custom.priority"),
-            user);
+    var result = service.export(TENANT_ID, rawQuery, List.of("custom.priority"), user);
 
-    String csv =
-        new String(
-            result.content(),
-            StandardCharsets.UTF_8);
+    String csv = new String(result.content(), StandardCharsets.UTF_8);
 
     assertThat(result.rowCount()).isEqualTo(2);
 
-    assertThat(csv)
-        .contains("旧优先级（已禁用）")
-        .contains("新优先级");
+    assertThat(csv).contains("旧优先级（已禁用）").contains("新优先级");
 
-    verify(fieldRepository)
-        .listByVersions(
-            TENANT_ID,
-            List.of(
-                "version-1",
-                "version-2"));
+    verify(fieldRepository).listByVersions(TENANT_ID, List.of("version-1", "version-2"));
   }
 }

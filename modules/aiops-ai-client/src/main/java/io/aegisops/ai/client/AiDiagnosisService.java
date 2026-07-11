@@ -26,7 +26,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -71,7 +70,7 @@ public class AiDiagnosisService {
     ensureIncidentExists(tenantId, incidentId);
     return repository
         .findLatestDiagnosis(tenantId, incidentId)
-        .map(this::toResponse)
+        .map(record -> toResponse(record))
         .orElseThrow(() -> new AppException("AI_DIAGNOSIS_NOT_FOUND", "AI diagnosis not found"));
   }
 
@@ -167,10 +166,10 @@ public class AiDiagnosisService {
             tenantId,
             incidentId,
             toAgentIncident(incident),
-            alerts.stream().map(this::toAgentAlert).toList(),
+            alerts.stream().map(alert -> toAgentAlert(alert)).toList(),
             rca == null ? null : toAgentRca(rca),
-            evidence.stream().map(this::toAgentEvidence).toList(),
-            timeline.stream().map(this::toAgentTimeline).toList(),
+            evidence.stream().map(record -> toAgentEvidence(record)).toList(),
+            timeline.stream().map(record -> toAgentTimeline(record)).toList(),
             normalized.normalizedLocale(),
             UUID.randomUUID().toString());
 
@@ -185,7 +184,7 @@ public class AiDiagnosisService {
 
     return repository
         .findDiagnosis(tenantId, diagnosisId)
-        .map(this::toResponse)
+        .map(record -> toResponse(record))
         .orElseThrow(
             () -> new AppException("AI_DIAGNOSIS_NOT_FOUND", "AI diagnosis not found after save"));
   }
@@ -341,8 +340,8 @@ public class AiDiagnosisService {
         ruleIds =
             evList.stream()
                 .map(item -> item.get("ruleId"))
-                .filter(Objects::nonNull)
-                .map(String::valueOf)
+                .filter(item -> item != null)
+                .map(item -> String.valueOf(item))
                 .filter(v -> !v.isBlank())
                 .distinct()
                 .toList();

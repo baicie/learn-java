@@ -246,7 +246,7 @@ public class PostmortemService {
 
     return repository
         .findActionItem(tenantId, id)
-        .map(this::toActionItemResponse)
+        .map(record -> toActionItemResponse(record))
         .orElseThrow(
             () -> new AppException("POSTMORTEM_ACTION_ITEM_NOT_FOUND", "Action item not found"));
   }
@@ -257,7 +257,7 @@ public class PostmortemService {
         .orElseThrow(() -> new AppException("POSTMORTEM_NOT_FOUND", "Postmortem report not found"));
 
     return repository.listActionItems(tenantId, postmortemId).stream()
-        .map(this::toActionItemResponse)
+        .map(record -> toActionItemResponse(record))
         .toList();
   }
 
@@ -273,7 +273,7 @@ public class PostmortemService {
 
     return repository
         .findActionItem(tenantId, actionItemId)
-        .map(this::toActionItemResponse)
+        .map(record -> toActionItemResponse(record))
         .orElseThrow(
             () -> new AppException("POSTMORTEM_ACTION_ITEM_NOT_FOUND", "Action item not found"));
   }
@@ -407,8 +407,8 @@ public class PostmortemService {
         report.sourceSnapshotJson(),
         report.generatedBy(),
         report.generatedAt(),
-        sections.stream().map(this::toSectionResponse).toList(),
-        actionItems.stream().map(this::toActionItemResponse).toList(),
+        sections.stream().map(record -> toSectionResponse(record)).toList(),
+        actionItems.stream().map(record -> toActionItemResponse(record)).toList(),
         report.createdAt(),
         report.updatedAt());
   }

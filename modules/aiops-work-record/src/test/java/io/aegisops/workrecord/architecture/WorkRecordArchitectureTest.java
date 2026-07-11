@@ -20,10 +20,7 @@ class WorkRecordArchitectureTest {
           .should()
           .dependOnClassesThat()
           .resideInAnyPackage(
-              "org.springframework..",
-              "..application..",
-              "..api..",
-              "..infrastructure..");
+              "org.springframework..", "..application..", "..api..", "..infrastructure..");
 
   @ArchTest
   static final ArchRule applicationMustNotDependOnAdapters =
@@ -33,8 +30,7 @@ class WorkRecordArchitectureTest {
           .should()
           .dependOnClassesThat()
           .resideInAnyPackage(
-              "..api..",
-              "..infrastructure..");
+              "io.aegisops.workrecord.api..", "io.aegisops.workrecord.infrastructure..");
 
   @ArchTest
   static final ArchRule apiMustNotDependOnInfrastructure =
@@ -52,7 +48,5 @@ class WorkRecordArchitectureTest {
           .resideOutsideOfPackage("..infrastructure..")
           .should()
           .dependOnClassesThat()
-          .resideInAnyPackage(
-              "org.springframework.jdbc..",
-              "java.sql..");
+          .resideInAnyPackage("org.springframework.jdbc..", "java.sql..");
 }

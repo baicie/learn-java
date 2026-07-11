@@ -186,8 +186,8 @@ public class AuditJson {
       ObjectNode result = objectMapper.createObjectNode();
 
       source
-          .fields()
-          .forEachRemaining(
+          .properties()
+          .forEach(
               entry -> {
                 if (isSensitive(entry.getKey())) {
                   result.put(entry.getKey(), "***");

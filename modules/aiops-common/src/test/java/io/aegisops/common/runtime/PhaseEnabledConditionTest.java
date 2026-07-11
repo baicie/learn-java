@@ -13,7 +13,6 @@ import org.springframework.core.env.MapPropertySource;
 import org.springframework.core.env.StandardEnvironment;
 import org.springframework.core.type.AnnotatedTypeMetadata;
 import org.springframework.core.type.AnnotationMetadata;
-import org.springframework.core.type.StandardAnnotationMetadata;
 
 /**
  * Tests for {@link PhaseEnabledCondition}.
@@ -106,7 +105,7 @@ class PhaseEnabledConditionTest {
   }
 
   private static AnnotationMetadata metadataFor(RuntimePhase phase) {
-    return new StandardAnnotationMetadata(beanForPhase(phase));
+    return AnnotationMetadata.introspect(beanForPhase(phase));
   }
 
   /** Returns the nested bean class for a given required phase. */

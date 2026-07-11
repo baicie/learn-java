@@ -15,7 +15,6 @@ import io.aegisops.zabbix.ZabbixTrendQuery;
 import io.aegisops.zabbix.ZabbixTrigger;
 import io.aegisops.zabbix.ZabbixTriggerQuery;
 import java.math.BigDecimal;
-import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
@@ -256,9 +255,9 @@ public class ZabbixEvidenceCollectorService implements EvidenceCollector {
             + ctx.events().size()
             + " 条相关事件，最早事件时间："
             + ctx.events().stream()
-                .map(ZabbixEvent::clock)
+                .map(event -> event.clock())
                 .min(Comparator.naturalOrder())
-                .map(Instant::toString)
+                .map(instant -> instant.toString())
                 .orElse("unknown");
 
     return new DiagnosisEvidenceDraft(

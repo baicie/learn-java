@@ -14,12 +14,12 @@ public class ApprovalPolicyResolver {
 
     return repository
         .findApprovalPolicy(tenantId, normalizedRisk)
-        .filter(ApprovalPolicyRecord::enabled)
+        .filter(policy -> policy.enabled())
         .or(
             () ->
                 repository
                     .findGlobalApprovalPolicy(normalizedRisk)
-                    .filter(ApprovalPolicyRecord::enabled))
+                    .filter(policy -> policy.enabled()))
         .orElseGet(() -> fallbackPolicy(normalizedRisk));
   }
 

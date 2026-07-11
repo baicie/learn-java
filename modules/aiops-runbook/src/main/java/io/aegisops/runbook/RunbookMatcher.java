@@ -36,7 +36,7 @@ public class RunbookMatcher {
     String evidenceText = RunbookText.evidenceText(incident, alerts, diagnosis, rca);
 
     return runbooks.stream()
-        .filter(RunbookRecord::enabled)
+        .filter(runbook -> runbook.enabled())
         .map(runbook -> score(runbook, incident, alerts, evidenceText))
         .filter(result -> result.score() > 0)
         .sorted(Comparator.comparing(RunbookMatchResult::score).reversed())

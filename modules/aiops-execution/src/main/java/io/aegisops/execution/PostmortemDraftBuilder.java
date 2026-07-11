@@ -1,8 +1,6 @@
 package io.aegisops.execution;
 
 import io.aegisops.execution.dto.PostmortemSourceBundle;
-import io.aegisops.execution.dto.PostmortemSourceBundle.AiDiagnosisSnapshot;
-import io.aegisops.execution.dto.PostmortemSourceBundle.RcaSnapshot;
 import java.util.ArrayList;
 import java.util.List;
 import org.springframework.stereotype.Component;
@@ -53,13 +51,13 @@ public class PostmortemDraftBuilder {
 
   private String chooseRootCause(PostmortemSourceBundle source) {
     return source.aiDiagnoses().stream()
-        .map(AiDiagnosisSnapshot::rootCause)
+        .map(snapshot -> snapshot.rootCause())
         .filter(value -> value != null && !value.isBlank())
         .findFirst()
         .orElseGet(
             () ->
                 source.rcaAnalyses().stream()
-                    .map(RcaSnapshot::rootCause)
+                    .map(snapshot -> snapshot.rootCause())
                     .filter(value -> value != null && !value.isBlank())
                     .findFirst()
                     .orElse("Root cause is not confirmed."));

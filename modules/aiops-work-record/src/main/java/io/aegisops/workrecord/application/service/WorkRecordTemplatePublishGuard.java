@@ -92,8 +92,8 @@ public class WorkRecordTemplatePublishGuard {
 
     return entries.stream()
         .sorted(
-            Comparator.comparingInt(TemplateFieldIndexEntry::sortOrder)
-                .thenComparing(TemplateFieldIndexEntry::fieldCode))
+            Comparator.comparingInt((TemplateFieldIndexEntry entry) -> entry.sortOrder())
+                .thenComparing(entry -> entry.fieldCode()))
         .toList();
   }
 }

@@ -2,6 +2,7 @@ package io.aegisops.worker.runtime;
 
 import io.aegisops.worker.outbox.OutboxPoller;
 import io.aegisops.worker.outbox.OutboxProperties;
+import java.time.Duration;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -61,7 +62,7 @@ public class WorkerRuntimeTopology {
               LOGGER.warn("Outbox tick failed", ex);
             }
           },
-          outboxProperties.pollDelayMs());
+          Duration.ofMillis(outboxProperties.pollDelayMs()));
       // fire one tick right away so the very first batch lands on startup
       try {
         outboxPoller.tick();

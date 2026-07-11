@@ -15,7 +15,6 @@ public record AnsibleActionPayload(
     Map<String, Object> extraVars) {
   private static final TypeReference<Map<String, Object>> MAP_TYPE = new TypeReference<>() {};
 
-  @SuppressWarnings("unchecked")
   public static AnsibleActionPayload parse(ObjectMapper objectMapper, String json) {
     try {
       Map<String, Object> map =
@@ -37,8 +36,8 @@ public record AnsibleActionPayload(
       List<String> tags =
           tagsValue instanceof List<?> raw
               ? raw.stream()
-                  .map(String::valueOf)
-                  .map(String::trim)
+                  .map(item -> String.valueOf(item))
+                  .map(text -> text.trim())
                   .filter(item -> !item.isBlank())
                   .toList()
               : List.of();

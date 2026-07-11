@@ -46,7 +46,7 @@ public final class RcaTestFixtures {
   }
 
   private static List<RcaAlertRecord> alertRecords(List<AlertParams> alerts) {
-    return alerts.stream().map(RcaTestFixtures::alert).toList();
+    return alerts.stream().map(name -> RcaTestFixtures.alert(name)).toList();
   }
 
   public static RcaAlertRecord alert(AlertParams params) {

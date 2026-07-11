@@ -272,7 +272,7 @@ public class CalendarService {
     int count =
         (int)
             listDays(tenantId, calendarId, start, end).stream()
-                .filter(CalendarDayRecord::workday)
+                .filter(day -> day.workday())
                 .count();
 
     return new WorkdayCountResponse(start, end, count);

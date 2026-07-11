@@ -122,10 +122,7 @@ public class DefaultCalendarService {
     validateContinuousCoverage(periodStart, anchorDate, coverage);
 
     List<LocalDate> actualWorkdays =
-        coverage.stream()
-            .filter(CalendarDayRecord::workday)
-            .map(CalendarDayRecord::calendarDate)
-            .toList();
+        coverage.stream().filter(day -> day.workday()).map(day -> day.calendarDate()).toList();
 
     if (!actualWorkdays.equals(ascending)) {
       throw WorkCalendarConfigurationException.inconsistentWorkdays(periodStart, anchorDate);
@@ -194,10 +191,7 @@ public class DefaultCalendarService {
     validateContinuousCoverage(start, end, days);
 
     List<LocalDate> workdays =
-        days.stream()
-            .filter(CalendarDayRecord::workday)
-            .map(CalendarDayRecord::calendarDate)
-            .toList();
+        days.stream().filter(day -> day.workday()).map(day -> day.calendarDate()).toList();
 
     return new CalendarWorkMonth(
         calendar,

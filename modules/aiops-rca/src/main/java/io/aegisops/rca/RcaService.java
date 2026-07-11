@@ -7,7 +7,6 @@ import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,7 +30,7 @@ public class RcaService {
 
     return repository
         .findLatestAnalysis(tenantId, incidentId)
-        .map(this::toResponse)
+        .map(record -> toResponse(record))
         .orElseThrow(() -> new AppException("RCA_NOT_FOUND", "RCA analysis not found"));
   }
 
@@ -55,8 +54,8 @@ public class RcaService {
     List<RcaAlertRecord> alerts = repository.listIncidentAlerts(tenantId, incidentId);
     List<String> assetIds =
         alerts.stream()
-            .map(RcaAlertRecord::assetId)
-            .filter(Objects::nonNull)
+            .map(alert -> alert.assetId())
+            .filter(item -> item != null)
             .filter(value -> !value.isBlank())
             .distinct()
             .toList();
@@ -110,7 +109,7 @@ public class RcaService {
 
     return repository
         .findAnalysis(tenantId, id)
-        .map(this::toResponse)
+        .map(record -> toResponse(record))
         .orElseThrow(() -> new AppException("RCA_NOT_FOUND", "RCA analysis not found after save"));
   }
 
@@ -143,7 +142,7 @@ public class RcaService {
     }
 
     return evidence.stream()
-        .map(RcaEvidence::ruleId)
+        .map(evidence -> evidence.ruleId())
         .filter(value -> value != null && !value.isBlank())
         .distinct()
         .toList();

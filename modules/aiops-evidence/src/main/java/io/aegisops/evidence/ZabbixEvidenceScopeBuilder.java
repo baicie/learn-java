@@ -86,7 +86,7 @@ final class ZabbixEvidenceScopeBuilder {
     try {
       return client.getHosts(5000).stream()
           .filter(host -> hostNameMatches(host, hostName))
-          .map(ZabbixHost::hostId)
+          .map(host -> host.hostId())
           .filter(value -> value != null && !value.isBlank())
           .findFirst()
           .orElse(null);

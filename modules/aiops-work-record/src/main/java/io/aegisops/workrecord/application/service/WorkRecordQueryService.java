@@ -100,7 +100,7 @@ public class WorkRecordQueryService {
         quickQuery.creatorId(),
         quickQuery.ownerId(),
         effectiveOnlySelf,
-        user == null ? null : user.id(),
+        effectiveOnlySelf && user != null ? user.id() : null,
         normalizedFilters,
         quickQuery.sortBy(),
         quickQuery.sortDir(),

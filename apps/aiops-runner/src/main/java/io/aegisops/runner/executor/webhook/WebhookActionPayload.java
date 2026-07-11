@@ -9,7 +9,6 @@ public record WebhookActionPayload(
     String connectorId, String method, String path, Map<String, String> headers, String body) {
   private static final TypeReference<Map<String, Object>> MAP_TYPE = new TypeReference<>() {};
 
-  @SuppressWarnings("unchecked")
   public static WebhookActionPayload parse(ObjectMapper objectMapper, String json) {
     try {
       Map<String, Object> map =

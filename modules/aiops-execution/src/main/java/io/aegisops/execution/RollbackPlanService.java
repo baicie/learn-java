@@ -14,7 +14,6 @@ import io.aegisops.execution.dto.RollbackPlanStepRecord;
 import io.aegisops.execution.dto.RollbackPlanStepResponse;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Objects;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -156,9 +155,9 @@ public class RollbackPlanService {
   private List<RollbackPlanStepCreateCommand> buildRollbackSteps(
       String tenantId, List<ExecutionStepRecord> sourceSteps) {
     return sourceSteps.stream()
-        .sorted(Comparator.comparingInt(ExecutionStepRecord::sequenceNo).reversed())
+        .sorted(Comparator.comparingInt((ExecutionStepRecord step) -> step.sequenceNo()).reversed())
         .map(step -> toRollbackStep(tenantId, step))
-        .filter(Objects::nonNull)
+        .filter(item -> item != null)
         .toList();
   }
 
@@ -205,8 +204,8 @@ public class RollbackPlanService {
         plan.submittedAt(),
         plan.decidedAt(),
         plan.approvalSnapshotJson(),
-        steps.stream().map(this::toStepResponse).toList(),
-        decisions.stream().map(this::toDecisionResponse).toList(),
+        steps.stream().map(step -> toStepResponse(step)).toList(),
+        decisions.stream().map(decision -> toDecisionResponse(decision)).toList(),
         plan.createdAt(),
         plan.updatedAt());
   }

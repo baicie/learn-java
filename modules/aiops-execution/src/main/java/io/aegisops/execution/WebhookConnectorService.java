@@ -61,7 +61,7 @@ public class WebhookConnectorService {
             ? List.of(host)
             : request.allowedHosts();
 
-    allowedHosts.forEach(this::rejectDangerousConfiguredHost);
+    allowedHosts.forEach(host -> rejectDangerousConfiguredHost(host));
 
     repository.createConnector(
         new WebhookConnectorCreateCommand(

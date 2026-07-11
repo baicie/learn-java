@@ -34,14 +34,14 @@ public class AnsibleResourceService {
 
   public List<AnsibleInventoryResponse> listInventories(String tenantId, boolean includeDisabled) {
     return repository.listInventories(tenantId, includeDisabled).stream()
-        .map(this::toInventoryResponse)
+        .map(record -> toInventoryResponse(record))
         .toList();
   }
 
   public AnsibleInventoryResponse getInventory(String tenantId, String inventoryId) {
     return repository
         .findInventory(tenantId, inventoryId)
-        .map(this::toInventoryResponse)
+        .map(record -> toInventoryResponse(record))
         .orElseThrow(
             () -> new AppException("ANSIBLE_INVENTORY_NOT_FOUND", "Ansible inventory not found"));
   }
@@ -244,14 +244,14 @@ public class AnsibleResourceService {
 
   public List<AnsibleCredentialResponse> listCredentials(String tenantId, boolean includeDisabled) {
     return repository.listCredentials(tenantId, includeDisabled).stream()
-        .map(this::toCredentialResponse)
+        .map(record -> toCredentialResponse(record))
         .toList();
   }
 
   public AnsibleCredentialResponse getCredential(String tenantId, String credentialId) {
     return repository
         .findCredential(tenantId, credentialId)
-        .map(this::toCredentialResponse)
+        .map(record -> toCredentialResponse(record))
         .orElseThrow(
             () ->
                 new AppException(

@@ -18,7 +18,7 @@
          -->
         <property>
           <key>scripts</key>
-          <value>../../apps/aiops-server/src/main/resources/db/migration</value>
+          <value>target/generated-resources/jooq/schema.sql</value>
         </property>
 
         <!-- Match Flyway migration ordering. -->
@@ -44,11 +44,6 @@
           <value>true</value>
         </property>
 
-        <!-- Exclude data-only migrations (no schema changes, contain ON CONFLICT / DO $$ / etc). -->
-        <property>
-          <key>parseIgnoreFileName</key>
-          <value>V0008_data.sql</value>
-        </property>
       </properties>
 
       <includes>
@@ -90,6 +85,9 @@
       <records>true</records>
       <pojos>false</pojos>
       <daos>false</daos>
+      <implicitJoinPathsToOne>false</implicitJoinPathsToOne>
+      <implicitJoinPathsToMany>false</implicitJoinPathsToMany>
+      <implicitJoinPathTableSubtypes>false</implicitJoinPathTableSubtypes>
       <fluentSetters>true</fluentSetters>
       <javaTimeTypes>true</javaTimeTypes>
     </generate>

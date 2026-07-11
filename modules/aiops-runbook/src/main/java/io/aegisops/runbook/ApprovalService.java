@@ -343,7 +343,7 @@ public class ApprovalService {
         approval.submittedAt(),
         approval.completedAt(),
         approval.reason(),
-        decisions.stream().map(this::toDecisionResponse).toList(),
+        decisions.stream().map(record -> toDecisionResponse(record)).toList(),
         approval.createdAt(),
         approval.updatedAt());
   }

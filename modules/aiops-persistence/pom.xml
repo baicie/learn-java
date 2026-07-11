@@ -14,6 +14,10 @@
 
   <dependencies>
     <dependency>
+      <groupId>jakarta.xml.bind</groupId>
+      <artifactId>jakarta.xml.bind-api</artifactId>
+    </dependency>
+    <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-jooq</artifactId>
     </dependency>
@@ -36,6 +40,29 @@
               <sources>
                 <source>${project.build.directory}/generated-sources/jooq</source>
               </sources>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>3.5.0</version>
+        <executions>
+          <execution>
+            <id>prepare-jooq-ddl</id>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <phase>generate-sources</phase>
+            <configuration>
+              <executable>node</executable>
+              <arguments>
+                <argument>${maven.multiModuleProjectDirectory}/scripts/prepare-jooq-ddl.mjs</argument>
+                <argument>${maven.multiModuleProjectDirectory}/apps/aiops-server/src/main/resources/db/migration</argument>
+                <argument>${project.build.directory}/generated-resources/jooq/schema.sql</argument>
+              </arguments>
             </configuration>
           </execution>
         </executions>

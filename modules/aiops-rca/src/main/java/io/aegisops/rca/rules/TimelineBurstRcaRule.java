@@ -1,6 +1,5 @@
 package io.aegisops.rca.rules;
 
-import io.aegisops.rca.RcaAlertRecord;
 import io.aegisops.rca.RcaAnalysisContext;
 import io.aegisops.rca.RcaEvidence;
 import io.aegisops.rca.RcaRule;
@@ -11,7 +10,6 @@ import java.time.OffsetDateTime;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -25,8 +23,8 @@ public class TimelineBurstRcaRule implements RcaRule {
   public RcaRuleResult evaluate(RcaAnalysisContext context) {
     List<OffsetDateTime> times =
         context.alerts().stream()
-            .map(RcaAlertRecord::startsAt)
-            .filter(Objects::nonNull)
+            .map(alert -> alert.startsAt())
+            .filter(item -> item != null)
             .sorted(Comparator.naturalOrder())
             .toList();
 

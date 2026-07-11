@@ -223,12 +223,13 @@ class AgentEvalSupport {
             String.join(", ", incidentCase.tags()));
   }
 
-  List<String> mergeLists(List<String>... lists) {
+  @SafeVarargs
+  final List<String> mergeLists(List<String>... lists) {
     return Arrays.stream(lists)
         .filter(list -> list != null)
-        .flatMap(List::stream)
+        .flatMap(list -> list.stream())
         .filter(item -> item != null && !item.isBlank())
-        .map(String::trim)
+        .map(text -> text.trim())
         .distinct()
         .toList();
   }
@@ -239,7 +240,7 @@ class AgentEvalSupport {
     }
     return values.stream()
         .filter(value -> value != null && !value.isBlank())
-        .map(String::trim)
+        .map(text -> text.trim())
         .distinct()
         .toList();
   }

@@ -34,7 +34,7 @@ public class IncidentAggregationPolicy {
     if (isZabbixGroup(alerts)) {
       String service =
           alerts.stream()
-              .map(AlertCandidate::entityName)
+              .map(alert -> alert.entityName())
               .filter(value -> value != null && !value.isBlank())
               .findFirst()
               .orElse("zabbix service");
@@ -52,7 +52,7 @@ public class IncidentAggregationPolicy {
 
     String entity =
         alerts.stream()
-            .map(AlertCandidate::entityName)
+            .map(alert -> alert.entityName())
             .filter(value -> value != null && !value.isBlank())
             .findFirst()
             .orElse("related assets");
@@ -81,12 +81,12 @@ public class IncidentAggregationPolicy {
   }
 
   public String highestSeverity(List<AlertCandidate> alerts) {
-    return IncidentSeverity.max(alerts.stream().map(AlertCandidate::severity).toList());
+    return IncidentSeverity.max(alerts.stream().map(alert -> alert.severity()).toList());
   }
 
   public String primaryAssetId(List<AlertCandidate> alerts) {
     return alerts.stream()
-        .map(AlertCandidate::assetId)
+        .map(alert -> alert.assetId())
         .filter(value -> value != null && !value.isBlank())
         .findFirst()
         .orElse(null);
@@ -94,16 +94,16 @@ public class IncidentAggregationPolicy {
 
   public OffsetDateTime firstStartedAt(List<AlertCandidate> alerts) {
     return alerts.stream()
-        .map(AlertCandidate::startsAt)
-        .filter(Objects::nonNull)
+        .map(alert -> alert.startsAt())
+        .filter(item -> item != null)
         .min(Comparator.naturalOrder())
         .orElse(OffsetDateTime.now());
   }
 
   public OffsetDateTime lastSeenAt(List<AlertCandidate> alerts) {
     return alerts.stream()
-        .map(AlertCandidate::startsAt)
-        .filter(Objects::nonNull)
+        .map(alert -> alert.startsAt())
+        .filter(item -> item != null)
         .max(Comparator.naturalOrder())
         .orElse(OffsetDateTime.now());
   }

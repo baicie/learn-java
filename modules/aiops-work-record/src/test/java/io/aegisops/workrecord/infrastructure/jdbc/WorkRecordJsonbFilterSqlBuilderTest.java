@@ -140,7 +140,8 @@ class WorkRecordJsonbFilterSqlBuilderTest {
     assertThat(params).containsEntry("dfAny0_1", "b");
 
     assertThat(count(sql, '(')).isEqualTo(count(sql, ')'));
-    assertThat(count(sql, '\'')).isEqualTo(2);
+    assertThat(sql).doesNotContain("'a'");
+    assertThat(sql).doesNotContain("'b'");
   }
 
   @Test

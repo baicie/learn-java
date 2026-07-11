@@ -110,7 +110,7 @@ public class WorkRecordExportService {
 
     LookupContext context = buildLookupContext(tenantId, meta, columns, parsedRecords);
 
-    List<String> headers = columns.stream().map(ResolvedExportColumn::title).toList();
+    List<String> headers = columns.stream().map(column -> column.title()).toList();
 
     List<List<String>> rows = new ArrayList<>();
 
@@ -136,7 +136,7 @@ public class WorkRecordExportService {
         tenantId,
         exportId,
         query,
-        columns.stream().map(ResolvedExportColumn::column).toList(),
+        columns.stream().map(column -> column.column()).toList(),
         records.size(),
         fileName,
         contentSha256,
@@ -156,10 +156,10 @@ public class WorkRecordExportService {
 
     if (requestedKeys == null || requestedKeys.isEmpty()) {
       candidates.stream()
-          .filter(RecordListColumn::visibleByDefault)
-          .filter(RecordListColumn::exportable)
-          .map(RecordListColumn::key)
-          .forEach(selectedKeys::add);
+          .filter(column -> column.visibleByDefault())
+          .filter(column -> column.exportable())
+          .map(column -> column.key())
+          .forEach(key -> selectedKeys.add(key));
     } else {
       for (String key : requestedKeys) {
         if (key != null && !key.isBlank()) {
@@ -488,7 +488,7 @@ public class WorkRecordExportService {
     detail.put("maxRows", maxRows);
     detail.put("fileName", fileName);
     detail.put("contentSha256", contentSha256);
-    detail.put("columns", columns.stream().map(RecordListColumn::key).toList());
+    detail.put("columns", columns.stream().map(column -> column.key()).toList());
 
     Map<String, Object> querySnapshot = new LinkedHashMap<>();
     querySnapshot.put("templateId", query.templateId());

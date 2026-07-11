@@ -65,8 +65,8 @@ public class WorkRecordSchemaNormalizer {
       List<FormFieldDescriptor> sorted =
           fields.stream()
               .sorted(
-                  Comparator.comparingInt(FormFieldDescriptor::sortOrder)
-                      .thenComparing(FormFieldDescriptor::fieldCode))
+                  Comparator.comparingInt((FormFieldDescriptor field) -> field.sortOrder())
+                      .thenComparing(field -> field.fieldCode()))
               .toList();
       return objectMapper.writeValueAsString(sorted);
     } catch (Exception ex) {
@@ -79,8 +79,8 @@ public class WorkRecordSchemaNormalizer {
       List<TemplateFieldIndexEntry> sorted =
           fields.stream()
               .sorted(
-                  Comparator.comparingInt(TemplateFieldIndexEntry::sortOrder)
-                      .thenComparing(TemplateFieldIndexEntry::fieldCode))
+                  Comparator.comparingInt((TemplateFieldIndexEntry entry) -> entry.sortOrder())
+                      .thenComparing(entry -> entry.fieldCode()))
               .toList();
       return objectMapper.writeValueAsString(sorted);
     } catch (Exception ex) {

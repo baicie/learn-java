@@ -16,6 +16,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 
@@ -25,6 +26,7 @@ public class JdbcWorkRecordRepository implements WorkRecordRepository {
   private final NamedParameterJdbcTemplate jdbc;
   private final WorkRecordJsonbFilterSqlBuilder jsonbFilterSqlBuilder;
 
+  @Autowired
   public JdbcWorkRecordRepository(
       NamedParameterJdbcTemplate jdbc, WorkRecordJsonbFilterSqlBuilder jsonbFilterSqlBuilder) {
     this.jdbc = jdbc;

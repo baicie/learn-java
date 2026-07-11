@@ -224,14 +224,14 @@ public class ExecutionReportService {
       String tenantId, String executionId) {
     executionRequestService.getExecution(tenantId, executionId);
     return repository.listVerifications(tenantId, executionId).stream()
-        .map(helpers::toVerificationResponse)
+        .map(record -> helpers.toVerificationResponse(record))
         .toList();
   }
 
   public List<ExecutionAuditEventResponse> listAuditEvents(String tenantId, String executionId) {
     executionRequestService.getExecution(tenantId, executionId);
     return repository.listAuditEvents(tenantId, executionId).stream()
-        .map(helpers::toAuditEventResponse)
+        .map(record -> helpers.toAuditEventResponse(record))
         .toList();
   }
 
@@ -381,7 +381,7 @@ public class ExecutionReportService {
         report.markdown(),
         report.generatedBy(),
         report.generatedAt(),
-        sections.stream().map(helpers::toSectionResponse).toList(),
+        sections.stream().map(record -> helpers.toSectionResponse(record)).toList(),
         report.createdAt(),
         report.updatedAt());
   }

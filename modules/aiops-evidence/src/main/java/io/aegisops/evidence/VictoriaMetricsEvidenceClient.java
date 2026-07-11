@@ -83,7 +83,7 @@ public class VictoriaMetricsEvidenceClient implements MetricsEvidenceClient {
       String metricName, String query, OffsetDateTime startedAt, OffsetDateTime lastSeenAt)
       throws Exception {
     String url =
-        UriComponentsBuilder.fromHttpUrl(properties.normalizedBaseUrl() + "/api/v1/query_range")
+        UriComponentsBuilder.fromUriString(properties.normalizedBaseUrl() + "/api/v1/query_range")
             .queryParam("query", query)
             .queryParam("start", startedAt.toInstant().getEpochSecond())
             .queryParam("end", lastSeenAt.toInstant().getEpochSecond())

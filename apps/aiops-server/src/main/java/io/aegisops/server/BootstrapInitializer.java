@@ -7,6 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -22,7 +23,7 @@ public class BootstrapInitializer implements ApplicationRunner {
   }
 
   @Override
-  public void run(ApplicationArguments args) {
+  public void run(@NonNull ApplicationArguments args) {
     Tenant tenant = tenantService.getOrCreateDefaultTenant();
     userService.createAdminIfAbsent(tenant.id(), "admin", "admin123");
     log.info("Bootstrap completed. Default login: admin / admin123");

@@ -46,13 +46,7 @@ class WorkRecordQueryServiceAuthorizationTest {
   void normalUserMustNotReadAnotherUsersRecord() {
     when(repository.find(TENANT_ID, "record-other"))
         .thenReturn(
-            Optional.of(
-                record(
-                    "record-other",
-                    VERSION_ID,
-                    "user-other",
-                    "user-another",
-                    "{}")));
+            Optional.of(record("record-other", VERSION_ID, "user-other", "user-another", "{}")));
 
     assertThatThrownBy(() -> service.get(TENANT_ID, "record-other", normalUser()))
         .isInstanceOf(AccessDeniedException.class);
@@ -60,8 +54,7 @@ class WorkRecordQueryServiceAuthorizationTest {
 
   @Test
   void normalUserListViewMustBeRestrictedToSelf() {
-    when(repository.page(eq(TENANT_ID), any()))
-        .thenReturn(new PageResult<>(0L, 1, 20, List.of()));
+    when(repository.page(eq(TENANT_ID), any())).thenReturn(new PageResult<>(0L, 1, 20, List.of()));
 
     var result = service.page(TENANT_ID, query(null, List.of()), normalUser());
 
@@ -75,8 +68,7 @@ class WorkRecordQueryServiceAuthorizationTest {
 
   @Test
   void adminUserListViewMustNotForceOnlySelf() {
-    when(repository.page(eq(TENANT_ID), any()))
-        .thenReturn(new PageResult<>(0L, 1, 20, List.of()));
+    when(repository.page(eq(TENANT_ID), any())).thenReturn(new PageResult<>(0L, 1, 20, List.of()));
 
     service.page(TENANT_ID, query(null, List.of()), adminUser());
 
@@ -89,11 +81,7 @@ class WorkRecordQueryServiceAuthorizationTest {
 
   @Test
   void requestedVersionIdMustBePassedToFilterPolicy() {
-    RecordDynamicFilter raw =
-        RecordDynamicFilter.raw(
-            "priority",
-            "eq",
-            "P1");
+    RecordDynamicFilter raw = RecordDynamicFilter.raw("priority", "eq", "P1");
 
     when(filterPolicy.normalize(TENANT_ID, TEMPLATE_ID, "version-1", List.of(raw)))
         .thenReturn(List.of(raw));

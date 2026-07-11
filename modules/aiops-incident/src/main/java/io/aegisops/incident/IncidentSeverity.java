@@ -36,8 +36,8 @@ public final class IncidentSeverity {
   public static String max(Collection<String> severities) {
     return severities.stream()
         .filter(severity -> severity != null && !severity.isBlank())
-        .map(IncidentSeverity::normalize)
-        .max(Comparator.comparingInt(IncidentSeverity::weight))
+        .map(severity -> IncidentSeverity.normalize(severity))
+        .max(Comparator.comparingInt(severity -> IncidentSeverity.weight(severity)))
         .orElse("info");
   }
 }

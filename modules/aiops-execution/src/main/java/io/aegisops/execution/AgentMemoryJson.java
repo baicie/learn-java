@@ -40,7 +40,7 @@ public class AgentMemoryJson {
 
       return values.stream()
           .filter(value -> value != null && !value.isBlank())
-          .map(String::trim)
+          .map(text -> text.trim())
           .distinct()
           .toList();
     } catch (Exception ex) {

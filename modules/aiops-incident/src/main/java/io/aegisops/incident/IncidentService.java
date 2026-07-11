@@ -6,7 +6,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
@@ -31,14 +30,16 @@ public class IncidentService {
   }
 
   public List<IncidentRecord> list(String tenantId) {
-    return repository.listIncidents(tenantId, 100).stream().map(IncidentRecord::from).toList();
+    return repository.listIncidents(tenantId, 100).stream()
+        .map(record -> IncidentRecord.from(record))
+        .toList();
   }
 
   public IncidentDetailRecord detail(String tenantId, String incidentId) {
     IncidentRecord incident =
         repository
             .findIncident(tenantId, incidentId)
-            .map(IncidentRecord::from)
+            .map(record -> IncidentRecord.from(record))
             .orElseThrow(() -> new AppException("INCIDENT_NOT_FOUND", "Incident not found"));
 
     return new IncidentDetailRecord(
@@ -115,8 +116,8 @@ public class IncidentService {
 
       OffsetDateTime resolvedAt =
           alerts.stream()
-              .map(AlertCandidate::endsAt)
-              .filter(Objects::nonNull)
+              .map(alert -> alert.endsAt())
+              .filter(item -> item != null)
               .max(OffsetDateTime::compareTo)
               .orElse(OffsetDateTime.now());
 
@@ -262,7 +263,7 @@ public class IncidentService {
 
     return repository
         .findIncident(tenantId, incidentId)
-        .map(IncidentRecord::from)
+        .map(record -> IncidentRecord.from(record))
         .orElseThrow(() -> new AppException("INCIDENT_NOT_FOUND", "Incident not found"));
   }
 

@@ -11,6 +11,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
 import org.springframework.core.io.ResourceLoader;
+import org.springframework.lang.NonNull;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
@@ -35,7 +36,9 @@ public class ConsoleSpaForwardConfiguration {
         new OncePerRequestFilter() {
           @Override
           protected void doFilterInternal(
-              HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+              @NonNull HttpServletRequest request,
+              @NonNull HttpServletResponse response,
+              @NonNull FilterChain filterChain)
               throws ServletException, IOException {
             if (shouldForward(request, consoleIndexExists(resourceLoader))) {
               request.getRequestDispatcher("/index.html").forward(request, response);

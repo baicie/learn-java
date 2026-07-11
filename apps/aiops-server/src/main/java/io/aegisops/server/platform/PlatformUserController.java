@@ -29,6 +29,6 @@ public class PlatformUserController {
   public ApiResponse<List<UserSummary>> listUsers() {
     String tenantId = TenantContext.requireTenantId();
     return ApiResponse.ok(
-        userService.listByTenant(tenantId).stream().map(UserSummary::from).toList());
+        userService.listByTenant(tenantId).stream().map(user -> UserSummary.from(user)).toList());
   }
 }

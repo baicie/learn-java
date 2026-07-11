@@ -127,9 +127,7 @@ public class WorkRecordService {
         command.customDataJson() == null ? null : normalizeObject(command.customDataJson());
 
     RecordStatus targetStatus =
-        command.status() == null
-            ? existing.status()
-            : RecordStatus.from(command.status());
+        command.status() == null ? existing.status() : RecordStatus.from(command.status());
 
     boolean statusChanged = targetStatus != existing.status();
 

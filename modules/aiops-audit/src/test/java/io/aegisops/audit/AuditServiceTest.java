@@ -2,10 +2,9 @@ package io.aegisops.audit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.Mockito.verify;
 
-import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -28,7 +27,7 @@ class AuditServiceTest {
     service.record(cmd);
 
     ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
-    verify(jdbc).update(sqlCaptor.capture(), any(Map.class));
+    verify(jdbc).update(sqlCaptor.capture(), anyMap());
     assertThat(sqlCaptor.getValue()).contains("insert into public.audit_log");
   }
 

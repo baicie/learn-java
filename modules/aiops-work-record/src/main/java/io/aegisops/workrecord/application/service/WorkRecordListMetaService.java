@@ -54,7 +54,8 @@ public class WorkRecordListMetaService {
 
       versionIds = List.of(selected.currentVersionId());
     } else {
-      versionIds = templates.stream().map(WorkRecordTemplate::currentVersionId).distinct().toList();
+      versionIds =
+          templates.stream().map(template -> template.currentVersionId()).distinct().toList();
     }
 
     List<WorkRecordField> rawFields = fieldRepository.listEnabledByVersions(tenantId, versionIds);
@@ -70,9 +71,9 @@ public class WorkRecordListMetaService {
     List<RecordListColumn> filterFields =
         templateScoped
             ? fields.stream()
-                .filter(WorkRecordField::filterable)
+                .filter(field -> field.filterable())
                 .sorted(fieldComparator())
-                .map(this::toDynamicColumn)
+                .map(field -> toDynamicColumn(field))
                 .toList()
             : List.of();
 
@@ -130,8 +131,8 @@ public class WorkRecordListMetaService {
   }
 
   private Comparator<WorkRecordField> fieldComparator() {
-    return Comparator.comparingInt(WorkRecordField::sortOrder)
-        .thenComparing(WorkRecordField::fieldCode);
+    return Comparator.comparingInt((WorkRecordField field) -> field.sortOrder())
+        .thenComparing(field -> field.fieldCode());
   }
 
   private List<RecordListColumn> builtinColumns() {
@@ -159,17 +160,17 @@ public class WorkRecordListMetaService {
 
   private List<RecordListColumn> listColumns(List<WorkRecordField> fields) {
     return fields.stream()
-        .filter(WorkRecordField::listVisible)
+        .filter(field -> field.listVisible())
         .sorted(fieldComparator())
-        .map(this::toDynamicColumn)
+        .map(field -> toDynamicColumn(field))
         .toList();
   }
 
   private List<RecordListColumn> exportColumns(List<WorkRecordField> fields) {
     return fields.stream()
-        .filter(WorkRecordField::exportable)
+        .filter(field -> field.exportable())
         .sorted(fieldComparator())
-        .map(this::toDynamicColumn)
+        .map(field -> toDynamicColumn(field))
         .toList();
   }
 
