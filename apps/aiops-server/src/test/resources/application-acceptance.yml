@@ -1,0 +1,35 @@
+spring:
+  main:
+    banner-mode: off
+
+  flyway:
+    enabled: true
+    locations:
+      - classpath:db/migration
+      - classpath:db/data
+
+aiops:
+  observability:
+    enabled: false
+
+  security:
+    tenant-required: true
+    internal-agent-token-required: false
+
+  quota:
+    rate-limit-enabled: false
+
+  evidence:
+    victoria:
+      enabled: false
+
+  work-record:
+    export:
+      # 验收环境故意设置为 2：
+      # 创建 3 条记录即可验证导出超限。
+      max-rows: 2
+
+logging:
+  level:
+    root: WARN
+    io.aegisops: INFO

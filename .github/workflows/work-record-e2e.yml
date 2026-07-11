@@ -1,0 +1,65 @@
+name: Work Record E2E
+
+on:
+  workflow_dispatch:
+
+  pull_request:
+    types:
+      - labeled
+
+permissions:
+  contents: read
+
+jobs:
+  enterprise-e2e:
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      github.event.label.name == 'e2e'
+
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    env:
+      E2E_API_BASE_URL: ${{ secrets.E2E_API_BASE_URL }}
+      E2E_PORTAL_BASE_URL: ${{ secrets.E2E_PORTAL_BASE_URL }}
+
+      E2E_ADMIN_USERNAME: ${{ secrets.E2E_ADMIN_USERNAME }}
+      E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
+
+      E2E_USER_A_USERNAME: ${{ secrets.E2E_USER_A_USERNAME }}
+      E2E_USER_A_PASSWORD: ${{ secrets.E2E_USER_A_PASSWORD }}
+
+      E2E_USER_B_USERNAME: ${{ secrets.E2E_USER_B_USERNAME }}
+      E2E_USER_B_PASSWORD: ${{ secrets.E2E_USER_B_PASSWORD }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Run enterprise E2E
+        run: bash scripts/ci/frontend-e2e.sh
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: work-record-playwright-report
+          path: web/portal/playwright-report
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload Playwright traces
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: work-record-playwright-traces
+          path: web/portal/test-results
+          if-no-files-found: warn
+          retention-days: 14

@@ -1,0 +1,553 @@
+package io.aegisops.server.acceptance;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.aegisops.security.AuthorizationService;
+import io.aegisops.server.AiOpsServerApplication;
+import io.aegisops.tenant.TenantRepository;
+import io.aegisops.user.UserRepository;
+import java.nio.charset.StandardCharsets;
+import java.time.OffsetDateTime;
+import java.time.Year;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.web.client.TestRestTemplate;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.util.MultiValueMap;
+import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
+
+@SpringBootTest(
+    classes = AiOpsServerApplication.class,
+    webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@ActiveProfiles("acceptance")
+@Testcontainers
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+class WorkRecordEnterpriseAcceptanceIT {
+
+  @Container
+  static final PostgreSQLContainer<?> POSTGRES =
+      new PostgreSQLContainer<>("postgres:16-alpine");
+
+  @DynamicPropertySource
+  static void registerProperties(DynamicPropertyRegistry registry) {
+    registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
+    registry.add("spring.datasource.username", POSTGRES::getUsername);
+    registry.add("spring.datasource.password", POSTGRES::getPassword);
+    registry.add("aiops.work-record.export.max-rows", () -> 2);
+  }
+
+  @Autowired private TestRestTemplate rest;
+  @Autowired private ObjectMapper objectMapper;
+  @Autowired private TenantRepository tenantRepository;
+  @Autowired private UserRepository userRepository;
+  @Autowired private AuthorizationService authorizationService;
+  @Autowired private PasswordEncoder passwordEncoder;
+
+  private AcceptanceIdentityFixture.Identities identities;
+  private AcceptanceHttpClient api;
+  private Tokens tokens;
+  private ScenarioState state;
+
+  @BeforeAll
+  void prepareIdentities() {
+    identities =
+        new AcceptanceIdentityFixture(
+                tenantRepository, userRepository, authorizationService, passwordEncoder)
+            .create();
+
+    api = new AcceptanceHttpClient(rest, objectMapper);
+
+    tokens =
+        new Tokens(
+            api.login(identities.admin().username(), identities.admin().password()),
+            api.login(identities.userA().username(), identities.userA().password()),
+            api.login(identities.userB().username(), identities.userB().password()));
+
+    state = new ScenarioState(identities.suffix());
+  }
+
+  @Test
+  void completeEnterpriseAcceptanceScenario() {
+    createDefaultDictionary();
+    createWorkCalendar();
+    createAndPublishTemplateV1();
+    usersCreateV1Records();
+    administratorCanReadAllRecords();
+    normalUserCanOnlyReadSelfRecords();
+    administratorPublishesTemplateV2();
+    historicalRecordStillUsesV1();
+    createNewRecordUsingV2();
+    disabledDictionaryItemKeepsHistoricalLabel();
+    dynamicFieldFilterWorks();
+    dynamicFieldsCanBeExported();
+    exportLimitIsEnforced();
+    auditTrailIsComplete();
+  }
+
+  private void createDefaultDictionary() {
+    state.dictCode = "acc_priority_" + state.suffix;
+
+    api.postData(
+        "/api/platform/dictionaries",
+        tokens.admin(),
+        Map.of(
+            "dictCode", state.dictCode,
+            "dictName", "验收优先级",
+            "description", "Phase 18 企业验收字典",
+            "sortOrder", 10,
+            "enabled", true));
+
+    api.postData(
+        "/api/platform/dictionaries/" + state.dictCode + "/items",
+        tokens.admin(),
+        Map.of(
+            "itemLabel", "高",
+            "itemValue", "P1",
+            "sortOrder", 10,
+            "enabled", true,
+            "extraJson", "{}"));
+
+    JsonNode p2 =
+        api.postData(
+            "/api/platform/dictionaries/" + state.dictCode + "/items",
+            tokens.admin(),
+            Map.of(
+                "itemLabel", "中",
+                "itemValue", "P2",
+                "sortOrder", 20,
+                "enabled", true,
+                "extraJson", "{}"));
+
+    state.p2ItemId = p2.path("id").asText();
+    assertThat(state.p2ItemId).isNotBlank();
+  }
+
+  private void createWorkCalendar() {
+    int year = Year.now(ZoneId.of("Asia/Shanghai")).getValue();
+
+    JsonNode calendar =
+        api.postData(
+            "/api/platform/calendars",
+            tokens.admin(),
+            Map.of(
+                "calendarCode", "acc_cn_" + year + "_" + state.suffix,
+                "calendarName", "验收工作日历 " + year,
+                "regionCode", "CN",
+                "timezone", "Asia/Shanghai",
+                "year", year,
+                "enabled", true,
+                "sourceType", "acceptance",
+                "description", "Phase 18 验收日历"));
+
+    state.calendarId = calendar.path("id").asText();
+
+    JsonNode selected =
+        api.putData(
+            "/api/platform/calendars/" + state.calendarId + "/default",
+            tokens.admin(),
+            Map.of());
+
+    assertThat(selected.path("id").asText()).isEqualTo(state.calendarId);
+  }
+
+  private void createAndPublishTemplateV1() {
+    JsonNode template =
+        api.postData(
+            "/api/work-record/templates",
+            tokens.admin(),
+            Map.of(
+                "code", "acceptance_daily_" + state.suffix,
+                "name", "企业验收日报",
+                "description", "Phase 18 企业验收模板",
+                "schemaJson", WorkRecordAcceptanceSchemas.v1(state.dictCode),
+                "designerJson", WorkRecordAcceptanceSchemas.designerV1()));
+
+    state.templateId = template.path("id").asText();
+
+    JsonNode version =
+        api.postData(
+            "/api/work-record/templates/" + state.templateId + "/publish",
+            tokens.admin(),
+            Map.of("versionName", "v1"));
+
+    state.v1Id = version.path("id").asText();
+
+    assertThat(version.path("versionNo").asInt()).isEqualTo(1);
+  }
+
+  private void usersCreateV1Records() {
+    state.userAOldTitle = "用户 A v1 日报 " + state.suffix;
+    state.userBOtherTitle = "用户 B v1 日报 " + state.suffix;
+
+    state.userARecordV1 =
+        createRecord(
+            identities.userA(),
+            tokens.userA(),
+            state.v1Id,
+            state.userAOldTitle,
+            Map.of("summary", "完成 Phase 18 场景设计", "priority", "P2", "hours", 7.5));
+
+    state.userBRecordV1 =
+        createRecord(
+            identities.userB(),
+            tokens.userB(),
+            state.v1Id,
+            state.userBOtherTitle,
+            Map.of("summary", "完成其他用户日报", "priority", "P1", "hours", 3));
+  }
+
+  private void administratorCanReadAllRecords() {
+    JsonNode page =
+        api.getData(
+            "/api/work-record/records",
+            tokens.admin(),
+            api.query("page", "1", "pageSize", "20"));
+
+    assertThat(page.path("total").asLong()).isEqualTo(2);
+
+    assertThat(recordIds(page))
+        .containsExactlyInAnyOrder(state.userARecordV1, state.userBRecordV1);
+  }
+
+  private void normalUserCanOnlyReadSelfRecords() {
+    JsonNode page =
+        api.getData(
+            "/api/work-record/records",
+            tokens.userA(),
+            api.query("page", "1", "pageSize", "20"));
+
+    assertThat(recordIds(page))
+        .contains(state.userARecordV1)
+        .doesNotContain(state.userBRecordV1);
+
+    ResponseEntity<JsonNode> forbidden =
+        api.getRaw(
+            "/api/work-record/records/" + state.userBRecordV1,
+            tokens.userA(),
+            api.query());
+
+    assertThat(forbidden.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    assertThat(forbidden.getBody().path("errorCode").asText()).isEqualTo("FORBIDDEN");
+  }
+
+  private void administratorPublishesTemplateV2() {
+    api.putData(
+        "/api/work-record/templates/" + state.templateId + "/draft",
+        tokens.admin(),
+        Map.of(
+            "name", "企业验收日报 v2",
+            "description", "增加明日计划字段",
+            "schemaJson", WorkRecordAcceptanceSchemas.v2(state.dictCode),
+            "designerJson", WorkRecordAcceptanceSchemas.designerV2()));
+
+    JsonNode version =
+        api.postData(
+            "/api/work-record/templates/" + state.templateId + "/publish",
+            tokens.admin(),
+            Map.of("versionName", "v2"));
+
+    state.v2Id = version.path("id").asText();
+    assertThat(version.path("versionNo").asInt()).isEqualTo(2);
+    assertThat(state.v2Id).isNotEqualTo(state.v1Id);
+  }
+
+  private void historicalRecordStillUsesV1() {
+    JsonNode oldRecord =
+        api.getData("/api/work-record/records/" + state.userARecordV1, tokens.admin());
+
+    assertThat(oldRecord.path("templateVersionId").asText()).isEqualTo(state.v1Id);
+
+    JsonNode v1Fields =
+        api.getData(
+            "/api/work-record/templates/" + state.templateId + "/versions/" + state.v1Id
+                + "/fields",
+            tokens.admin());
+
+    assertThat(fieldCodes(v1Fields))
+        .containsExactlyInAnyOrder("summary", "priority", "hours")
+        .doesNotContain("nextPlan");
+  }
+
+  private void createNewRecordUsingV2() {
+    state.userANewTitle = "用户 A v2 日报 " + state.suffix;
+
+    state.userARecordV2 =
+        createRecord(
+            identities.userA(),
+            tokens.userA(),
+            state.v2Id,
+            state.userANewTitle,
+            Map.of(
+                "summary", "完成 v2 工作记录",
+                "priority", "P1",
+                "hours", 8,
+                "nextPlan", "完善企业验收自动化"));
+
+    JsonNode record =
+        api.getData("/api/work-record/records/" + state.userARecordV2, tokens.admin());
+
+    assertThat(record.path("templateVersionId").asText()).isEqualTo(state.v2Id);
+    assertThat(objectField(record.path("customDataJson").asText(), "nextPlan"))
+        .isEqualTo("完善企业验收自动化");
+  }
+
+  private void disabledDictionaryItemKeepsHistoricalLabel() {
+    api.deleteData(
+        "/api/platform/dictionaries/" + state.dictCode + "/items/" + state.p2ItemId,
+        tokens.admin());
+
+    JsonNode items =
+        api.getData(
+            "/api/platform/dictionaries/" + state.dictCode + "/items",
+            tokens.admin(),
+            api.query("includeDisabled", "true"));
+
+    JsonNode disabled = findById(items, state.p2ItemId);
+
+    assertThat(disabled.path("enabled").asBoolean()).isFalse();
+    assertThat(disabled.path("itemLabel").asText()).isEqualTo("中");
+
+    ResponseEntity<byte[]> export =
+        export(
+            Map.of(
+                "templateId", state.templateId,
+                "templateVersionId", state.v1Id,
+                "keyword", state.userAOldTitle,
+                "quickView", "all",
+                "columns", List.of("title", "custom.priority")));
+
+    assertThat(export.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+    String csv = new String(export.getBody(), StandardCharsets.UTF_8);
+
+    assertThat(csv).contains(state.userAOldTitle).contains("中（已禁用）");
+  }
+
+  private void dynamicFieldFilterWorks() {
+    String filters =
+        api.toJson(
+            List.of(Map.of("fieldCode", "hours", "operator", "gte", "value", 7)));
+
+    MultiValueMap<String, String> query =
+        api.query(
+            "page", "1",
+            "pageSize", "20",
+            "templateId", state.templateId,
+            "templateVersionId", state.v1Id,
+            "dynamicFilters", filters);
+
+    JsonNode page = api.getData("/api/work-record/records", tokens.admin(), query);
+
+    assertThat(recordIds(page)).containsExactly(state.userARecordV1);
+  }
+
+  private void dynamicFieldsCanBeExported() {
+    ResponseEntity<byte[]> export =
+        export(
+            Map.of(
+                "templateId", state.templateId,
+                "templateVersionId", state.v2Id,
+                "keyword", state.userANewTitle,
+                "quickView", "all",
+                "columns", List.of("title", "custom.hours", "custom.nextPlan")));
+
+    assertThat(export.getStatusCode()).isEqualTo(HttpStatus.OK);
+    assertThat(export.getHeaders().getFirst("X-Export-Row-Count")).isEqualTo("1");
+
+    String csv = new String(export.getBody(), StandardCharsets.UTF_8);
+
+    assertThat(csv)
+        .contains(state.userANewTitle)
+        .contains("工作时长")
+        .contains("明日计划")
+        .contains("完善企业验收自动化");
+  }
+
+  private void exportLimitIsEnforced() {
+    ResponseEntity<JsonNode> rejected =
+        api.postRaw(
+            "/api/work-record/records/export",
+            tokens.admin(),
+            Map.of("quickView", "all", "columns", List.of("title")));
+
+    assertThat(rejected.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+
+    JsonNode body = rejected.getBody();
+    assertThat(body).isNotNull();
+    assertThat(body.path("errorCode").asText()).isEqualTo("BAD_REQUEST");
+    assertThat(body.path("message").asText()).contains("超过 2 行");
+  }
+
+  private void auditTrailIsComplete() {
+    JsonNode events = api.getData("/api/audit-logs", tokens.admin());
+
+    Set<String> actions = actionNames(events);
+
+    assertThat(actions)
+        .contains(
+            "platform.dict_type.create",
+            "platform.dict_item.create",
+            "platform.calendar.create",
+            "platform.calendar.default.change",
+            "work_record.template.create",
+            "work_record.template.draft.update",
+            "work_record.template.publish",
+            "work_record.record.create",
+            "platform.dict_item.disable",
+            "work_record.record.export",
+            "work_record.record.export_rejected");
+
+    assertThat(eventsForAction(events, "work_record.template.publish")).hasSize(2);
+
+    assertThat(actorIds(events, "work_record.record.create"))
+        .contains(identities.userA().id(), identities.userB().id());
+
+    JsonNode rejectedExport =
+        eventsForAction(events, "work_record.record.export_rejected").getFirst();
+
+    JsonNode detail;
+    try {
+      detail = objectMapper.readTree(rejectedExport.path("detailJson").asText());
+    } catch (Exception ex) {
+      throw new AssertionError("invalid detailJson", ex);
+    }
+
+    assertThat(detail.path("result").asText()).isEqualTo("limit_exceeded");
+    assertThat(detail.path("maxRows").asInt()).isEqualTo(2);
+
+    assertAuditPayloads(events);
+  }
+
+  private String createRecord(
+      AcceptanceIdentityFixture.Account account,
+      String token,
+      String versionId,
+      String title,
+      Map<String, Object> customData) {
+    Map<String, Object> body = new LinkedHashMap<>();
+    body.put("templateId", state.templateId);
+    body.put("templateVersionId", versionId);
+    body.put("title", title);
+    body.put("status", "done");
+    body.put("ownerId", account.id());
+    body.put(
+        "recordTime",
+        OffsetDateTime.now(ZoneOffset.UTC).withNano(0).toString());
+    body.put("builtinDataJson", "{}");
+    body.put("customDataJson", api.toJson(customData));
+
+    JsonNode record = api.postData("/api/work-record/records", token, body);
+    return record.path("id").asText();
+  }
+
+  private ResponseEntity<byte[]> export(Map<String, Object> body) {
+    return api.postCsv("/api/work-record/records/export", tokens.admin(), body);
+  }
+
+  private Set<String> recordIds(JsonNode page) {
+    Set<String> result = new LinkedHashSet<>();
+    page.path("items").forEach(item -> result.add(item.path("id").asText()));
+    return result;
+  }
+
+  private Set<String> fieldCodes(JsonNode fields) {
+    Set<String> result = new LinkedHashSet<>();
+    fields.forEach(field -> result.add(field.path("fieldCode").asText()));
+    return result;
+  }
+
+  private JsonNode findById(JsonNode array, String id) {
+    for (JsonNode item : array) {
+      if (id.equals(item.path("id").asText())) {
+        return item;
+      }
+    }
+    throw new AssertionError("item not found: " + id);
+  }
+
+  private String objectField(String json, String fieldName) {
+    try {
+      return objectMapper.readTree(json).path(fieldName).asText();
+    } catch (Exception ex) {
+      throw new AssertionError("invalid JSON", ex);
+    }
+  }
+
+  private Set<String> actionNames(JsonNode events) {
+    Set<String> result = new LinkedHashSet<>();
+    events.forEach(event -> result.add(event.path("action").asText()));
+    return result;
+  }
+
+  private List<JsonNode> eventsForAction(JsonNode events, String action) {
+    List<JsonNode> result = new ArrayList<>();
+    events.forEach(
+        event -> {
+          if (action.equals(event.path("action").asText())) {
+            result.add(event);
+          }
+        });
+    return result;
+  }
+
+  private Set<String> actorIds(JsonNode events, String action) {
+    Set<String> result = new LinkedHashSet<>();
+    eventsForAction(events, action)
+        .forEach(event -> result.add(event.path("actorId").asText()));
+    return result;
+  }
+
+  private void assertAuditPayloads(JsonNode events) {
+    for (JsonNode event : events) {
+      assertThat(event.path("tenantId").asText()).isEqualTo(identities.tenantId());
+      assertThat(event.path("actorId").asText()).isNotBlank();
+      assertThat(event.path("action").asText()).isNotBlank();
+      assertThat(event.path("resourceType").asText()).isNotBlank();
+      assertThat(event.path("resourceId").asText()).isNotBlank();
+      assertThat(event.path("createdAt").asText()).isNotBlank();
+    }
+  }
+
+  private record Tokens(String admin, String userA, String userB) {}
+
+  private static final class ScenarioState {
+    private final String suffix;
+
+    private String dictCode;
+    private String p2ItemId;
+    private String calendarId;
+    private String templateId;
+    private String v1Id;
+    private String v2Id;
+    private String userARecordV1;
+    private String userBRecordV1;
+    private String userARecordV2;
+    private String userAOldTitle;
+    private String userBOtherTitle;
+    private String userANewTitle;
+
+    private ScenarioState(String suffix) {
+      this.suffix = suffix;
+    }
+  }
+}
