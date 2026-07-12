@@ -3,14 +3,14 @@ import {
   Command,
   GalleryVerticalEnd,
 } from 'lucide-react'
+import { t, type MessageKey } from '@/i18n'
 import { filterNavigation } from '@/components/layout/filter-navigation'
 import { navigation } from '@/components/layout/navigation'
 import { useAuthStore } from '@/stores/auth-store'
 import type { NavGroup, SidebarData } from '@/components/layout/types'
 
-const groupTitle: Record<string, string> = {
-  'nav.workRecords.group': '工作记录',
-  'nav.platform.group': '平台管理',
+function translate(key: string): string {
+  return t(key as MessageKey) || key
 }
 
 function buildNavGroups(): NavGroup[] {
@@ -23,10 +23,10 @@ function buildNavGroups(): NavGroup[] {
   for (const item of visible) {
     if (item.to && !item.children?.length) {
       groups.push({
-        title: '通用',
+        title: translate(item.titleKey),
         items: [
           {
-            title: item.titleKey,
+            title: () => translate(item.titleKey),
             icon: item.icon,
             url: item.to,
           },
@@ -38,9 +38,9 @@ function buildNavGroups(): NavGroup[] {
     if (!item.children?.length) continue
 
     groups.push({
-      title: groupTitle[item.titleKey] ?? item.titleKey,
+      title: translate(item.titleKey),
       items: item.children.map((child) => ({
-        title: child.titleKey,
+        title: () => translate(child.titleKey),
         icon: child.icon,
         url: child.to ?? '',
       })),
