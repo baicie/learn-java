@@ -3,8 +3,10 @@
 # aiops-server 镜像：
 #   1. portal-build : node:20 + pnpm 装 web/portal 依赖，build 出 web/portal/dist
 #   2. server-build : maven 离线打 server fat-jar；portal 的 dist 复制到 static/portal
-#   3. runtime      : eclipse-temurin 17-jre-alpine 跑 jar，暴露 8080
+#   3. runtime      : eclipse-temurin 21-jre-alpine 跑 jar，暴露 8080
 #
+# 镜像 JDK 与 pom.xml 的 java.version=21 保持一致：
+#   maven:3.9.9-eclipse-temurin-21 + eclipse-temurin:21-jre-alpine。
 # 前端是 web/portal（shadcn-admin 派生），console 已废弃。
 
 FROM node:20-bookworm-slim AS portal-build
@@ -22,7 +24,7 @@ COPY web/portal web/portal
 RUN pnpm --dir web/portal build
 
 
-FROM maven:3.9-eclipse-temurin-17 AS server-build
+FROM maven:3.9.9-eclipse-temurin-21 AS server-build
 WORKDIR /workspace
 
 COPY pom.xml ./
@@ -38,7 +40,7 @@ COPY --from=portal-build /workspace/web/portal/dist apps/aiops-server/src/main/r
 RUN mvn -pl apps/aiops-server -am package -DskipTests
 
 
-FROM eclipse-temurin:17-jre-alpine AS runtime
+FROM eclipse-temurin:21-jre-alpine AS runtime
 
 ENV TZ=UTC
 ENV JAVA_OPTS="-XX:MaxRAMPercentage=75 -XX:+ExitOnOutOfMemoryError"
