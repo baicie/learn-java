@@ -1,7 +1,8 @@
 # syntax=docker/dockerfile:1.7
 #
 # aiops-server 镜像：
-#   1. build     : node:20 + JDK 21 + maven；先 pnpm 出 portal/dist，再用 mvn 打 server fat-jar
+#   1. build     : eclipse-temurin:21-jdk-bookworm + node + maven(从 maven 镜像 COPY)
+#                  先 pnpm 出 portal/dist，再用 mvn 打 server fat-jar
 #   2. runtime   : eclipse-temurin 21-jre-alpine 跑 jar，暴露 8080
 #
 # 镜像 JDK 与 pom.xml 的 java.version=21 保持一致。
@@ -10,36 +11,37 @@
 #   - aiops-persistence 的 exec-maven-plugin 在 generate-sources 阶段
 #     调 `node scripts/prepare-jooq-ddl.mjs` 做 jOOQ DDL 预处理
 #   - aiops-server 的 exec-maven-plugin 在 generate-resources 阶段调 pnpm
-# 所以选 node:20 当基础再装 JDK 21 + maven，比 maven 镜像手动装 node 更稳。
+# 基础镜像组合：
+#   - temurin:21-jdk-bookworm  -> JDK 21，免 apt 装 JDK 21
+#   - maven:3.9.9-eclipse-temurin-21  -> maven 二进制，免 archive.apache.org 下载
+#   - nodejs.org tarball      -> node 20，免 corepack 拉取器离线不稳
 #
 # 前端是 web/portal（shadcn-admin 派生），console 已废弃。
 
-FROM node:20-bookworm-slim AS build
+FROM maven:3.9.9-eclipse-temurin-21 AS maven-base
+
+
+FROM eclipse-temurin:21-jdk-bookworm AS build
 
 ENV DEBIAN_FRONTEND=noninteractive \
-    JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64 \
-    MAVEN_HOME=/opt/maven \
-    MAVEN_VERSION=3.9.9 \
-    PATH=/usr/lib/jvm/java-21-openjdk-amd64/bin:/opt/maven/bin:$PATH
+    NODE_VERSION=20.18.0 \
+    MAVEN_HOME=/usr/share/maven
 
-RUN corepack enable \
-    && apt-get update \
+RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         ca-certificates \
         curl \
-        gnupg \
         git \
-    && echo 'deb http://deb.debian.org/debian bookworm-backports main' > /etc/apt/sources.list.d/backports.list \
-    && apt-get update \
-    && apt-get install -y --no-install-recommends -t bookworm-backports \
-        openjdk-21-jdk-headless \
-    && curl -fsSL "https://archive.apache.org/dist/maven/maven-3/${MAVEN_VERSION}/binaries/apache-maven-${MAVEN_VERSION}-bin.tar.gz" \
-        | tar -xz -C /opt \
-    && mv "/opt/apache-maven-${MAVEN_VERSION}" "${MAVEN_HOME}" \
-    && rm -rf /opt/apache-maven-${MAVEN_VERSION} \
-    && apt-get purge -y --auto-remove gnupg \
+        xz-utils \
+    && curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.xz" \
+        | tar -xJ -C /usr/local --strip-components=1 --no-same-owner \
+    && corepack enable \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
+
+# 从 maven 官方镜像拷贝 maven 二进制，避免 archive.apache.org 下载
+COPY --from=maven-base ${MAVEN_HOME} ${MAVEN_HOME}
+RUN ln -s ${MAVEN_HOME}/bin/mvn /usr/local/bin/mvn
 
 WORKDIR /workspace
 
@@ -53,7 +55,6 @@ RUN pnpm --dir web/portal build
 
 # ---- server：把 portal 静态产物塞进 server 的 static/portal，再让 mvn 打 fat-jar ----
 # 不放 static/ 根，因为 server 自己可能有 swagger / actuator 资源
-# portal/dist 先 cp 到 server resource，mvn 打包时通过 resources 阶段包含进去
 COPY pom.xml ./
 COPY modules modules
 COPY apps apps
