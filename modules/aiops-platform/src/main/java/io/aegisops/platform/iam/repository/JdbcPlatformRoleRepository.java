@@ -45,7 +45,8 @@ public class JdbcPlatformRoleRepository implements PlatformRoleRepository {
                     role.system(),
                     role.enabled(),
                     perms.getOrDefault(role.code(), Collections.emptySet()),
-                    scopes.getOrDefault(role.code(), Collections.emptyMap())))
+                    scopes.getOrDefault(role.code(), Collections.emptyMap()),
+                    0))
         .toList();
   }
 
@@ -116,7 +117,8 @@ public class JdbcPlatformRoleRepository implements PlatformRoleRepository {
             system,
             enabled,
             Collections.emptySet(),
-            Collections.emptyMap()));
+            Collections.emptyMap(),
+            0));
   }
 
   @Override
@@ -286,5 +288,6 @@ public class JdbcPlatformRoleRepository implements PlatformRoleRepository {
               rs.getBoolean("is_system"),
               rs.getBoolean("enabled"),
               Collections.emptySet(),
-              Collections.emptyMap());
+              Collections.emptyMap(),
+              0);
 }
