@@ -21,7 +21,7 @@
 FROM maven:3.9.9-eclipse-temurin-21 AS maven-base
 
 
-FROM eclipse-temurin:21-jdk-bookworm AS build
+FROM eclipse-temurin:21-jdk-jammy AS build
 
 ENV DEBIAN_FRONTEND=noninteractive \
     NODE_VERSION=20.18.0 \
