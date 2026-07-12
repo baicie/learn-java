@@ -1,7 +1,6 @@
 import {
   CalendarDays,
   ClipboardList,
-  FileSpreadsheet,
   LayoutDashboard,
   Library,
   ListChecks,
@@ -33,22 +32,13 @@ export const navigation: NavigationItem[] = [
         titleKey: 'nav.workRecords.records',
         to: '/work-records',
         icon: ListChecks,
-        anyPermissions: [
-          'work-record:read:self',
-          'work-record:read:all',
-        ],
+        anyPermissions: ['work-record:read:self', 'work-record:read:all'],
       },
       {
         titleKey: 'nav.workRecords.designer',
         to: '/work-records/designer',
         icon: Library,
         anyPermissions: ['work-record:template:read'],
-      },
-      {
-        titleKey: 'nav.workRecords.tasks',
-        to: '/work-records/tasks',
-        icon: FileSpreadsheet,
-        anyPermissions: ['work-record:import', 'work-record:export'],
       },
     ],
   },
@@ -88,4 +78,4 @@ export const navigation: NavigationItem[] = [
       },
     ],
   },
-] as const satisfies NavigationItem[];
+] as const satisfies NavigationItem[]

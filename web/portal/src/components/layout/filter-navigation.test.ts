@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
+import type { AuthorizationPrincipal } from '@/features/auth/authorization-types'
 import { filterNavigation } from './filter-navigation'
 import { navigation } from './navigation'
-import type { AuthorizationPrincipal } from '@/features/auth/authorization-types'
 
 function principal(
   permissions: string[],
@@ -62,6 +62,6 @@ describe('filterNavigation', () => {
     const serialized = JSON.stringify(result)
     expect(serialized).toContain('/work-records')
     expect(serialized).toContain('/work-records/designer')
-    expect(serialized).toContain('/work-records/tasks')
+    expect(serialized).not.toContain('/work-records/tasks')
   })
 })
