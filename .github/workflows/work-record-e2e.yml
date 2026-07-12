@@ -180,7 +180,7 @@ jobs:
 
       - name: Upload Playwright report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: work-record-playwright-report
           path: web/portal/playwright-report
@@ -189,7 +189,7 @@ jobs:
 
       - name: Upload Playwright traces
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: work-record-playwright-traces
           path: web/portal/test-results
@@ -198,7 +198,7 @@ jobs:
 
       - name: Upload service logs
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: work-record-e2e-service-logs
           path: |
