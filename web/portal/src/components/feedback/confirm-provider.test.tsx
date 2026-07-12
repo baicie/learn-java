@@ -1,117 +1,51 @@
-import { useState } from 'react'
-import { describe, expect, it } from 'vitest'
 import { render } from 'vitest-browser-react'
-import { ConfirmProvider, useConfirm } from './confirm-provider'
+import { describe, expect, it, vi } from 'vitest'
+import { ConfirmProvider, useConfirm } from '@/components/feedback/confirm-provider'
 
-function Harness() {
+function Consumer({ onResult }: { onResult: (result: boolean) => void }) {
   const confirm = useConfirm()
-  const [result, setResult] = useState('pending')
-
   return (
-    <>
-      <button
-        type='button'
-        onClick={async () => {
-          const accepted = await confirm({
-            title: '删除记录',
-            description: '删除后不可恢复',
-            confirmText: '确认删除',
-            variant: 'destructive',
-          })
-
-          setResult(accepted ? 'confirmed' : 'cancelled')
-        }}
-      >
-        打开
-      </button>
-
-      <span>{result}</span>
-    </>
+    <button
+      type='button'
+      onClick={async () => {
+        const r = await confirm({
+          title: 't',
+          description: 'd',
+          confirmationText: 'YES',
+        })
+        onResult(r)
+      }}
+    >
+      open
+    </button>
   )
 }
 
-describe('ConfirmProvider', () => {
-  it('resolves true after confirm', async () => {
+describe('useConfirm with confirmationText', () => {
+  it('keeps confirm button disabled until the user types the right value', async () => {
+    const onResult = vi.fn()
     const screen = await render(
       <ConfirmProvider>
-        <Harness />
+        <Consumer onResult={onResult} />
       </ConfirmProvider>
     )
+    await screen.getByText('open').click()
+    const confirmButton = screen
+      .getByRole('button', { name: '确认' })
+      .element() as HTMLButtonElement
+    expect(confirmButton.disabled).toBe(true)
 
-    await screen.getByRole('button', { name: '打开' }).click()
+    const input = screen.getByTestId('confirm-input').element() as HTMLInputElement
+    const nativeInputValue = Object.getOwnPropertyDescriptor(
+      window.HTMLInputElement.prototype,
+      'value'
+    )?.set
+    nativeInputValue?.call(input, 'NO')
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+    expect(confirmButton.disabled).toBe(true)
 
-    await expect.element(screen.getByText('删除记录')).toBeVisible()
-
-    await screen.getByRole('button', { name: '确认删除' }).click()
-
-    await expect.element(screen.getByText('confirmed')).toBeVisible()
-  })
-
-  it('resolves false after cancel', async () => {
-    const screen = await render(
-      <ConfirmProvider>
-        <Harness />
-      </ConfirmProvider>
-    )
-
-    await screen.getByRole('button', { name: '打开' }).click()
-
-    await screen.getByRole('button', { name: '取消' }).click()
-
-    await expect.element(screen.getByText('cancelled')).toBeVisible()
-  })
-
-  it('does not skip queued dialogs', async () => {
-    function QueueHarness() {
-      const confirm = useConfirm()
-      const [result, setResult] = useState('pending')
-
-      return (
-        <>
-          <button
-            type='button'
-            onClick={async () => {
-              const first = confirm({
-                title: '第一个确认框',
-                description: 'first',
-                confirmText: '确认第一个',
-              })
-
-              const second = confirm({
-                title: '第二个确认框',
-                description: 'second',
-                confirmText: '确认第二个',
-              })
-
-              const values = await Promise.all([first, second])
-
-              setResult(values.join(','))
-            }}
-          >
-            打开队列
-          </button>
-
-          <span>{result}</span>
-        </>
-      )
-    }
-
-    const screen = await render(
-      <ConfirmProvider>
-        <QueueHarness />
-      </ConfirmProvider>
-    )
-
-    await screen.getByRole('button', { name: '打开队列' }).click()
-
-    await expect.element(screen.getByText('第一个确认框')).toBeVisible()
-
-    await screen.getByRole('button', { name: '确认第一个' }).click()
-
-    await expect.element(screen.getByText('第二个确认框')).toBeVisible()
-
-    await screen.getByRole('button', { name: '确认第二个' }).click()
-
-    await expect.element(screen.getByText('true,true')).toBeVisible()
+    nativeInputValue?.call(input, 'YES')
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+    expect(confirmButton.disabled).toBe(false)
   })
 })

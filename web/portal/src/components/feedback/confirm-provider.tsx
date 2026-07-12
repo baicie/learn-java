@@ -10,6 +10,7 @@ import {
 import * as AlertDialog from '@radix-ui/react-alert-dialog'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 
 export type ConfirmVariant = 'default' | 'warning' | 'destructive'
 
@@ -20,6 +21,10 @@ export type ConfirmOptions = {
   cancelText?: string
   variant?: ConfirmVariant
   details?: ReactNode
+  /** When set, the user must type this exact value into a confirmation input
+   *  before the confirm button becomes enabled. Useful for destructive
+   *  operations like "请输入 username 以确认禁用". */
+  confirmationText?: string
 }
 
 type PendingConfirm = {
@@ -92,6 +97,18 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
   )
 
   const variant = active?.options.variant ?? 'default'
+  const requiresTyping =
+    typeof active?.options.confirmationText === 'string' &&
+    active.options.confirmationText.length > 0
+  const [typed, setTyped] = useState('')
+  const confirmEnabled = !requiresTyping || typed === active?.options.confirmationText
+
+  // Reset typed value whenever a new prompt becomes active so the user must
+  // re-type the confirmation each time.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setTyped('')
+  }, [active?.id])
 
   return (
     <ConfirmContext.Provider value={{ confirm }}>
@@ -125,6 +142,24 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
               </div>
             ) : null}
 
+            {requiresTyping ? (
+              <label className='flex flex-col gap-2 text-sm'>
+                <span className='text-muted-foreground'>
+                  请输入&nbsp;
+                  <code className='rounded bg-muted px-1 font-mono'>
+                    {active?.options.confirmationText}
+                  </code>
+                  &nbsp;以继续：
+                </span>
+                <Input
+                  autoFocus
+                  value={typed}
+                  onChange={(event) => setTyped(event.target.value)}
+                  data-testid='confirm-input'
+                />
+              </label>
+            ) : null}
+
             <div className='flex flex-col-reverse gap-2 sm:flex-row sm:justify-end'>
               {/*
                 Dialog 由 active state 完全控制。
@@ -146,6 +181,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
                   variant === 'warning' &&
                     'bg-amber-600 text-white hover:bg-amber-700'
                 )}
+                disabled={!confirmEnabled}
                 onClick={() => settle(true)}
               >
                 {active?.options.confirmText ?? '确认'}

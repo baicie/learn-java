@@ -18,4 +18,32 @@ export const platform = {
   'platform.dictionaries.description': '维护工作记录和平台通用枚举。',
   'platform.roles.title': '角色权限',
   'platform.roles.description': '管理角色与权限分配。',
+  'platform.users.title': '用户管理',
+  'platform.users.description': '管理租户用户、状态、角色与数据范围。',
+  'platform.users.create': '新建用户',
+  'platform.users.empty.title': '暂无用户',
+  'platform.users.empty.description': '创建第一个真实平台用户。',
+  'platform.users.error.version_conflict':
+    '用户信息已变更，请刷新后重试。',
+  'platform.users.error.username_conflict': '用户名已被占用。',
+  'platform.users.error.not_found': '用户不存在或已被删除。',
+  'platform.users.confirm.disable.title': '禁用用户 {name}',
+  'platform.users.confirm.disable.description': '禁用后该用户将无法登录。',
+  'platform.users.confirm.disable.confirmLabel': '确认禁用',
+  'platform.users.createDialog.title': '新建用户',
+  'platform.users.createDialog.submit': '创建',
+  'platform.roles.create': '新建角色',
+  'platform.roles.delete.system': '系统角色不可删除',
+  'platform.roles.dirty.confirmLeave':
+    '当前角色的修改尚未保存，切换会丢失这些修改。',
+  'platform.roles.danger.title': '危险权限确认',
+  'platform.roles.danger.description':
+    '以下权限涉及高风险操作，必须输入变更原因并明确确认。',
+  'platform.roles.error.protected': '系统角色不可修改或删除。',
+  'platform.roles.error.hasActiveUsers': '当前角色仍有活跃用户，无法删除。',
+  'platform.roles.error.permissionRemoved':
+    '无法移除仍被活跃用户持有的权限。',
+  'platform.roles.error.versionConflict':
+    '角色配置已变更，请刷新后重试。',
+  'platform.roles.error.notFound': '角色不存在或已被删除。',
 } as const
