@@ -14,7 +14,7 @@ export const test = base.extend<
   }
 >({
   scenario: [
-    async ({}, use) => {
+    async ({ _: _fixture }, use) => {
       const scenario = await seedEnterpriseScenario()
       await use(scenario)
     },

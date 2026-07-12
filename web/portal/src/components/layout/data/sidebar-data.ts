@@ -1,44 +1,66 @@
 import {
-  Construction,
-  LayoutDashboard,
-  Monitor,
-  Bug,
-  BookOpen,
-  ClipboardList,
-  ListTodo,
-  FileX,
-  HelpCircle,
-  Lock,
-  Bell,
-  Package,
-  Palette,
-  ServerOff,
-  Settings,
-  Wrench,
-  UserCog,
-  UserX,
-  Users,
-  MessagesSquare,
-  ShieldCheck,
   AudioWaveform,
   Command,
   GalleryVerticalEnd,
 } from 'lucide-react'
-import { ClerkLogo } from '@/assets/clerk-logo'
-import { t } from '@/i18n'
-import { type SidebarData } from '../types'
+import { filterNavigation } from '@/components/layout/filter-navigation'
+import { navigation } from '@/components/layout/navigation'
+import { useAuthStore } from '@/stores/auth-store'
+import type { NavGroup, SidebarData } from '@/components/layout/types'
+
+const groupTitle: Record<string, string> = {
+  'nav.workRecords.group': '工作记录',
+  'nav.platform.group': '平台管理',
+}
+
+function buildNavGroups(): NavGroup[] {
+  const principal = useAuthStore.getState().auth.principal
+
+  const visible = filterNavigation(navigation, principal)
+
+  const groups: NavGroup[] = []
+
+  for (const item of visible) {
+    if (item.to && !item.children?.length) {
+      groups.push({
+        title: '通用',
+        items: [
+          {
+            title: item.titleKey,
+            icon: item.icon,
+            url: item.to,
+          },
+        ],
+      })
+      continue
+    }
+
+    if (!item.children?.length) continue
+
+    groups.push({
+      title: groupTitle[item.titleKey] ?? item.titleKey,
+      items: item.children.map((child) => ({
+        title: child.titleKey,
+        icon: child.icon,
+        url: child.to ?? '',
+      })),
+    })
+  }
+
+  return groups
+}
 
 export const sidebarData: SidebarData = {
   user: {
-    name: 'satnaing',
-    email: 'satnaingdev@gmail.com',
+    name: 'aegisops',
+    email: 'aegisops@local',
     avatar: '/avatars/shadcn.jpg',
   },
   teams: [
     {
-      name: 'Shadcn Admin',
+      name: 'AegisOps',
       logo: Command,
-      plan: 'Vite + ShadcnUI',
+      plan: 'AIOps Platform',
     },
     {
       name: 'Acme Inc',
@@ -51,193 +73,9 @@ export const sidebarData: SidebarData = {
       plan: 'Startup',
     },
   ],
-  navGroups: [
-    {
-      title: 'General',
-      items: [
-        {
-          title: () => t('workRecords.nav.root'),
-          icon: ClipboardList,
-          items: [
-            {
-              title: () => t('workRecords.nav.list'),
-              url: '/work-records',
-            },
-            {
-              title: () => t('workRecords.nav.designer'),
-              url: '/work-records/designer',
-            },
-          ],
-        },
-        {
-          title: () => t('platform.nav.root'),
-          icon: ShieldCheck,
-          items: [
-            {
-              title: () => t('platform.nav.users'),
-              url: '/users',
-              icon: Users,
-            },
-            {
-              title: () => t('platform.nav.roles'),
-              url: '/platform/roles',
-              icon: ShieldCheck,
-            },
-            {
-              title: () => t('platform.nav.dictionaries'),
-              url: '/platform/dictionaries',
-              icon: BookOpen,
-            },
-          ],
-        },
-        {
-          title: 'Dashboard',
-          url: '/',
-          icon: LayoutDashboard,
-        },
-        {
-          title: 'Tasks',
-          url: '/tasks',
-          icon: ListTodo,
-        },
-        {
-          title: 'Apps',
-          url: '/apps',
-          icon: Package,
-        },
-        {
-          title: 'Chats',
-          url: '/chats',
-          badge: '3',
-          icon: MessagesSquare,
-        },
-        {
-          title: 'Users',
-          url: '/users',
-          icon: Users,
-        },
-        {
-          title: 'Secured by Clerk',
-          icon: ClerkLogo,
-          items: [
-            {
-              title: 'Sign In',
-              url: '/clerk/sign-in',
-            },
-            {
-              title: 'Sign Up',
-              url: '/clerk/sign-up',
-            },
-            {
-              title: 'User Management',
-              url: '/clerk/user-management',
-            },
-          ],
-        },
-      ],
-    },
-    {
-      title: 'Pages',
-      items: [
-        {
-          title: 'Auth',
-          icon: ShieldCheck,
-          items: [
-            {
-              title: 'Sign In',
-              url: '/sign-in',
-            },
-            {
-              title: 'Sign In (2 Col)',
-              url: '/sign-in-2',
-            },
-            {
-              title: 'Sign Up',
-              url: '/sign-up',
-            },
-            {
-              title: 'Forgot Password',
-              url: '/forgot-password',
-            },
-            {
-              title: 'OTP',
-              url: '/otp',
-            },
-          ],
-        },
-        {
-          title: 'Errors',
-          icon: Bug,
-          items: [
-            {
-              title: 'Unauthorized',
-              url: '/errors/unauthorized',
-              icon: Lock,
-            },
-            {
-              title: 'Forbidden',
-              url: '/errors/forbidden',
-              icon: UserX,
-            },
-            {
-              title: 'Not Found',
-              url: '/errors/not-found',
-              icon: FileX,
-            },
-            {
-              title: 'Internal Server Error',
-              url: '/errors/internal-server-error',
-              icon: ServerOff,
-            },
-            {
-              title: 'Maintenance Error',
-              url: '/errors/maintenance-error',
-              icon: Construction,
-            },
-          ],
-        },
-      ],
-    },
-    {
-      title: 'Other',
-      items: [
-        {
-          title: 'Settings',
-          icon: Settings,
-          items: [
-            {
-              title: 'Profile',
-              url: '/settings',
-              icon: UserCog,
-            },
-            {
-              title: 'Account',
-              url: '/settings/account',
-              icon: Wrench,
-            },
-            {
-              title: 'Appearance',
-              url: '/settings/appearance',
-              icon: Palette,
-            },
-            {
-              title: 'Notifications',
-              url: '/settings/notifications',
-              icon: Bell,
-            },
-            {
-              title: 'Display',
-              url: '/settings/display',
-              icon: Monitor,
-            },
-          ],
-        },
-        {
-          title: 'Help Center',
-          url: '/help-center',
-          icon: HelpCircle,
-        },
-      ],
-    },
-  ],
+  navGroups: buildNavGroups(),
+}
+
+export function refreshSidebarData(): SidebarData {
+  return { ...sidebarData, navGroups: buildNavGroups() }
 }
