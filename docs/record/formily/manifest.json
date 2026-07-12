@@ -1,0 +1,26 @@
+{
+  "repository": "baicie/ai-ops",
+  "branch": "feat/record-doc-portal",
+  "generated_at": "2026-07-12",
+  "baseline_note": "Branch compared against 43d1631 and was 3 commits ahead at generation time.",
+  "inspected_files": [
+    "web/portal/package.json",
+    "web/portal/src/features/users/index.tsx",
+    "web/portal/src/features/users/data/users.ts",
+    "web/portal/src/features/roles/index.tsx",
+    "web/portal/src/features/work-records/designer/form-canvas.tsx",
+    "web/portal/src/features/work-records/designer/form-preview.tsx",
+    "web/portal/src/features/work-records/designer/types.ts",
+    "modules/aiops-security/src/main/java/io/aegisops/security/AuthorizationService.java"
+  ],
+  "documents": [
+    "00-README-基线与实施总览.md",
+    "01-Portal清理与导航代码.md",
+    "02-IAM数据库后端完整代码.md",
+    "03-用户与角色Portal完整代码.md",
+    "04-Formily-Shadcn统一运行时完整代码.md",
+    "05-DesignerDocument与设计器V2完整代码.md",
+    "06-Designer后端编译兼容与迁移代码.md",
+    "07-测试CI与企业验收.md"
+  ]
+}
