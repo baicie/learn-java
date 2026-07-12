@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { apiClient } from '@/lib/api-client'
 import type { AuthorizationPrincipal } from './authorization-types'
 
-const principalSchema = z.object({
+export const principalSchema = z.object({
   userId: z.string(),
   tenantId: z.string(),
   username: z.string(),
@@ -12,11 +12,11 @@ const principalSchema = z.object({
   dataScopes: z.record(z.string(), z.enum(['SELF', 'ALL'])),
 })
 
-const responseSchema = z.object({
+export const responseSchema = z.object({
   success: z.literal(true),
   data: principalSchema,
-  errorCode: z.null(),
-  message: z.null(),
+  errorCode: z.string().nullable().optional(),
+  message: z.string().nullable().optional(),
   timestamp: z.string(),
 })
 

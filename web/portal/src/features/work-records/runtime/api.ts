@@ -28,16 +28,16 @@ const templateSchema = z.object({
   tenantId: z.string(),
   code: z.string(),
   name: z.string(),
-  description: z.string().nullable(),
+  description: z.string().nullable().optional(),
   status: templateStatusSchema,
   enabled: z.boolean(),
-  currentVersionId: z.string().nullable(),
+  currentVersionId: z.string().nullable().optional(),
   draftSchemaJson: z.string(),
   draftDesignerJson: z.string(),
   createdBy: z.string(),
   createdAt: z.string(),
   updatedAt: z.string(),
-  deletedAt: z.string().nullable(),
+  deletedAt: z.string().nullable().optional(),
 })
 
 const recordFieldSchema = z.object({
@@ -49,11 +49,11 @@ const recordFieldSchema = z.object({
   fieldCode: z.string(),
   fieldType: fieldTypeSchema,
   required: z.boolean(),
-  defaultValue: z.string().nullable(),
+  defaultValue: z.string().nullable().optional(),
   optionSource: optionSourceSchema,
-  dictCode: z.string().nullable(),
+  dictCode: z.string().nullable().optional(),
   optionsJson: z.string(),
-  schemaPath: z.string().nullable(),
+  schemaPath: z.string().nullable().optional(),
   listVisible: z.boolean(),
   filterable: z.boolean(),
   exportable: z.boolean(),
@@ -84,7 +84,7 @@ const recordSchema = z.object({
   templateVersionId: z.string(),
   title: z.string(),
   status: statusSchema,
-  ownerId: z.string().nullable(),
+  ownerId: z.string().nullable().optional(),
   creatorId: z.string(),
   recordTime: z.string(),
   builtinDataJson: z.string(),
@@ -92,7 +92,7 @@ const recordSchema = z.object({
   rowVersion: z.number(),
   createdAt: z.string(),
   updatedAt: z.string(),
-  deletedAt: z.string().nullable(),
+  deletedAt: z.string().nullable().optional(),
 })
 
 export async function listPublishedTemplates(): Promise<WorkRecordTemplate[]> {

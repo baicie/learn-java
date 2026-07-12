@@ -21,7 +21,7 @@ const recordSchema = z.object({
   templateVersionId: z.string(),
   title: z.string(),
   status: recordStatusSchema,
-  ownerId: z.string().nullable(),
+  ownerId: z.string().nullable().optional(),
   creatorId: z.string(),
   recordTime: z.string(),
   builtinDataJson: z.string(),
@@ -29,7 +29,7 @@ const recordSchema = z.object({
   rowVersion: z.number(),
   createdAt: z.string(),
   updatedAt: z.string(),
-  deletedAt: z.string().nullable(),
+  deletedAt: z.string().nullable().optional().optional(),
 })
 
 const pageSchema = z.object({
@@ -43,10 +43,10 @@ const columnSchema = z.object({
   key: z.string(),
   title: z.string(),
   source: z.enum(['builtin', 'custom']),
-  fieldCode: z.string().nullable(),
+  fieldCode: z.string().nullable().optional(),
   fieldType: z.string(),
-  optionSource: z.string().nullable(),
-  dictCode: z.string().nullable(),
+  optionSource: z.string().nullable().optional(),
+  dictCode: z.string().nullable().optional(),
   optionsJson: z.string(),
   visibleByDefault: z.boolean(),
   sortable: z.boolean(),
@@ -61,7 +61,7 @@ const templateSchema = z
     name: z.string(),
     status: z.enum(['draft', 'published', 'disabled', 'archived']),
     enabled: z.boolean(),
-    currentVersionId: z.string().nullable(),
+    currentVersionId: z.string().nullable().optional(),
   })
   .passthrough()
 
@@ -123,8 +123,8 @@ const workdaySummarySchema = z.object({
   periodStart: z.string(),
   periodEnd: z.string(),
   workdayCount: z.number().int().nonnegative(),
-  firstWorkday: z.string().nullable(),
-  lastWorkday: z.string().nullable(),
+  firstWorkday: z.string().nullable().optional(),
+  lastWorkday: z.string().nullable().optional(),
 })
 
 export async function fetchWorkdaySummary(

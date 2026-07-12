@@ -8,7 +8,7 @@ import {
 } from './types'
 
 export function buildInitialFormValue(input: {
-  templates?: { id: string; currentVersionId: string | null }[]
+  templates?: { id: string; currentVersionId?: string | null }[]
   record?: WorkRecord
 }): WorkRecordRuntimeFormValue {
   const firstTemplate = input.templates?.[0]

@@ -26,7 +26,7 @@ export type WorkRecord = {
   templateVersionId: string
   title: string
   status: WorkRecordStatus
-  ownerId: string | null
+  ownerId?: string | null
   creatorId: string
   recordTime: string
   builtinDataJson: string
@@ -34,7 +34,7 @@ export type WorkRecord = {
   rowVersion: number
   createdAt: string
   updatedAt: string
-  deletedAt: string | null
+  deletedAt?: string | null
 }
 
 export type WorkRecordTemplate = {
@@ -43,17 +43,17 @@ export type WorkRecordTemplate = {
   name: string
   status: 'draft' | 'published' | 'disabled' | 'archived'
   enabled: boolean
-  currentVersionId: string | null
+  currentVersionId?: string | null
 }
 
 export type RecordListColumn = {
   key: string
   title: string
   source: 'builtin' | 'custom'
-  fieldCode: string | null
+  fieldCode?: string | null
   fieldType: string
-  optionSource: string | null
-  dictCode: string | null
+  optionSource?: string | null
+  dictCode?: string | null
   optionsJson: string
   visibleByDefault: boolean
   sortable: boolean
@@ -95,8 +95,8 @@ export type RecordWorkdaySummary = {
   periodStart: string
   periodEnd: string
   workdayCount: number
-  firstWorkday: string | null
-  lastWorkday: string | null
+  firstWorkday?: string | null
+  lastWorkday?: string | null
 }
 
 export type ListQueryState = {

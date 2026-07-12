@@ -37,16 +37,16 @@ export type WorkRecordTemplate = {
   tenantId: string
   code: string
   name: string
-  description: string | null
+  description?: string | null
   status: 'draft' | 'published' | 'disabled' | 'archived'
   enabled: boolean
-  currentVersionId: string | null
+  currentVersionId?: string | null
   draftSchemaJson: string
   draftDesignerJson: string
   createdBy: string
   createdAt: string
   updatedAt: string
-  deletedAt: string | null
+  deletedAt?: string | null
 }
 
 export type WorkRecordTemplateVersion = {
@@ -54,7 +54,7 @@ export type WorkRecordTemplateVersion = {
   tenantId: string
   templateId: string
   versionNo: number
-  versionName: string | null
+  versionName?: string | null
   schemaJson: string
   designerJson: string
   fieldIndexJson: string
@@ -72,11 +72,11 @@ export type WorkRecordVersionField = {
   fieldCode: string
   fieldType: WorkRecordFieldType
   required: boolean
-  defaultValue: string | null
+  defaultValue?: string | null
   optionSource: WorkRecordOptionSource
-  dictCode: string | null
+  dictCode?: string | null
   optionsJson: string
-  schemaPath: string | null
+  schemaPath?: string | null
   listVisible: boolean
   filterable: boolean
   exportable: boolean
