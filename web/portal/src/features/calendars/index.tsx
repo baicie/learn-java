@@ -2,20 +2,21 @@ import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Check, Plus, Upload } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Calendar, type CalendarDayButton } from '@/components/ui/calendar'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { notify } from '@/components/feedback/app-toaster'
 import {
   EmptyState,
   ErrorState,
   PageLoadingState,
   QueryStateBoundary,
-  TableLoadingState,
 } from '@/components/feedback/async-state'
 import { useConfirm } from '@/components/feedback/confirm-provider'
-import { ResponsiveTable } from '@/components/layout/responsive-table'
 import { PermissionGate } from '@/components/permission-gate'
+import { useAuthorization } from '@/features/auth/use-authorization'
 import {
   createCalendar,
   getDefaultCalendar,
@@ -25,6 +26,14 @@ import {
   setDefaultCalendar,
   updateCalendarDay,
 } from './api'
+import {
+  buildDayMap,
+  formatDayKey,
+  getDayClassName,
+  lookupDay,
+} from './calendar-helpers'
+
+const WRITE_PERMISSION = 'platform:calendar:write'
 
 function monthRange(year: number, month: number) {
   const start = `${year}-${String(month).padStart(2, '0')}-01`
@@ -33,10 +42,80 @@ function monthRange(year: number, month: number) {
   return { start, end }
 }
 
+function fromMonthParts(year: number, month: number) {
+  return new Date(year, month - 1, 1)
+}
+
+type DayCellProps = React.ComponentProps<typeof CalendarDayButton> & {
+  dayData: ReturnType<typeof lookupDay>
+  canWrite: boolean
+  onToggleDay: (date: Date) => void
+}
+
+function CalendarDayCell({
+  day,
+  modifiers,
+  dayData,
+  canWrite,
+  onToggleDay,
+  className,
+  ...props
+}: DayCellProps) {
+  const { t } = useTranslation()
+  const dayNumber = day.date.getDate()
+  const holidayLabel = dayData?.holidayName?.trim()
+
+  const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    if (!canWrite || modifiers.outside || !dayData) return
+    event.preventDefault()
+    onToggleDay(day.date)
+  }
+
+  const colorClass = getDayClassName({
+    dayData,
+    outside: Boolean(modifiers.outside),
+    today: Boolean(modifiers.today),
+  })
+
+  return (
+    <Button
+      {...props}
+      type='button'
+      variant='ghost'
+      size='icon'
+      onClick={handleClick}
+      data-day={formatDayKey(day.date)}
+      data-day-type={dayData?.dayType ?? 'unknown'}
+      data-readonly={!canWrite || !dayData}
+      title={
+        modifiers.outside
+          ? undefined
+          : (holidayLabel ??
+            (canWrite && dayData ? t('calendars.day.tooltip') : undefined))
+      }
+      className={cn(
+        'h-full w-full min-w-(--cell-size) flex-col gap-0.5 px-0 py-1 text-xs font-normal',
+        colorClass,
+        className
+      )}
+    >
+      <span className='text-sm leading-none font-medium'>{dayNumber}</span>
+      {!modifiers.outside && holidayLabel ? (
+        <span className='line-clamp-1 text-[10px] opacity-80'>
+          {holidayLabel}
+        </span>
+      ) : null}
+    </Button>
+  )
+}
+
 export function CalendarsPage() {
   const queryClient = useQueryClient()
   const confirm = useConfirm()
   const { t } = useTranslation()
+  const principal = useAuthorization()
+  const canWrite = principal?.permissions.includes(WRITE_PERMISSION) ?? false
+
   const now = new Date()
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth() + 1)
@@ -84,6 +163,8 @@ export function CalendarsPage() {
       listCalendarDays(selectedCalendar!.id, range.start, range.end),
     enabled: Boolean(selectedCalendar?.id),
   })
+
+  const dayMap = useMemo(() => buildDayMap(days.data ?? []), [days.data])
 
   const invalidate = async () => {
     await queryClient.invalidateQueries({
@@ -171,10 +252,52 @@ ${year}-01-01,HOLIDAY,false,元旦,
     onError: (error) => notify.error(error, t('calendars.day.failed')),
   })
 
-  const confirmImport = async () => {
-    if (!selectedCalendar) {
+  const submitUpdateDay = async (dateObj: Date) => {
+    if (!selectedCalendar) return
+    const dayData = lookupDay(dayMap, dateObj)
+    const date = formatDayKey(dateObj)
+    if (!dayData) {
+      notify.error(
+        new Error(t('calendars.day.missing', { date })),
+        t('calendars.day.failed')
+      )
       return
     }
+
+    const accepted = await confirm({
+      title: t('calendars.day.confirmTitle'),
+      description: t('calendars.day.confirmDescription'),
+      details: (
+        <div>
+          {date}:
+          {dayData.workday
+            ? t('calendars.day.workdayToOff')
+            : t('calendars.day.offToWorkday')}
+        </div>
+      ),
+      confirmText: t('calendars.day.confirmAction'),
+      variant: 'warning',
+    })
+
+    if (!accepted) return
+
+    updateDayMutation.mutate({
+      calendarId: selectedCalendar.id,
+      date,
+      input: {
+        dayType: dayData.workday ? 'HOLIDAY' : 'ADJUSTED_WORKDAY',
+        workday: !dayData.workday,
+        holidayName: dayData.workday
+          ? t('calendars.day.manualHoliday')
+          : undefined,
+        sourceType: 'manual',
+        remark: 'portal override',
+      },
+    })
+  }
+
+  const confirmImport = async () => {
+    if (!selectedCalendar) return
 
     const accepted = await confirm({
       title: t('calendars.import.confirmTitle'),
@@ -194,9 +317,7 @@ ${year}-01-01,HOLIDAY,false,元旦,
   }
 
   const confirmDefault = async () => {
-    if (!selectedCalendar) {
-      return
-    }
+    if (!selectedCalendar) return
 
     const accepted = await confirm({
       title: t('calendars.default.confirmTitle'),
@@ -215,41 +336,15 @@ ${year}-01-01,HOLIDAY,false,元旦,
     }
   }
 
-  const submitUpdateDay = async (
-    calendarId: string,
-    day: {
-      calendarDate: string
-      workday: boolean
-    }
-  ) => {
-    const accepted = await confirm({
-      title: t('calendars.day.confirmTitle'),
-      description: t('calendars.day.confirmDescription'),
-      details: (
-        <div>
-          {day.calendarDate}:
-          {day.workday
-            ? t('calendars.day.workdayToOff')
-            : t('calendars.day.offToWorkday')}
-        </div>
-      ),
-      confirmText: t('calendars.day.confirmAction'),
-      variant: 'warning',
-    })
+  const handleMonthChange = (next: Date) => {
+    setYear(next.getFullYear())
+    setMonth(next.getMonth() + 1)
+  }
 
-    if (!accepted) return
-
-    updateDayMutation.mutate({
-      calendarId,
-      date: day.calendarDate,
-      input: {
-        dayType: day.workday ? 'HOLIDAY' : 'ADJUSTED_WORKDAY',
-        workday: !day.workday,
-        holidayName: day.workday ? t('calendars.day.manualHoliday') : undefined,
-        sourceType: 'manual',
-        remark: 'portal override',
-      },
-    })
+  const handleYearChange = (next: number) => {
+    if (next === year) return
+    setSelectedCalendarId('')
+    setYear(next)
   }
 
   if (calendars.isLoading) {
@@ -281,33 +376,22 @@ ${year}-01-01,HOLIDAY,false,元旦,
       </header>
 
       <Card>
-        <CardHeader className='flex flex-row items-center justify-between'>
-          <CardTitle>{t('calendars.title')}</CardTitle>
-          <div className='flex flex-wrap gap-2'>
-            <input
-              className='w-24 rounded-md border px-2 py-1 text-sm'
-              type='number'
-              value={year}
-              onChange={(event) => {
-                const next = Number(event.target.value)
-                if (next !== year) {
-                  setSelectedCalendarId('')
+        <CardHeader className='flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between'>
+          <div className='flex flex-wrap items-center gap-2'>
+            <label className='flex items-center gap-2 text-sm'>
+              <span className='text-muted-foreground'>
+                {t('calendars.year')}
+              </span>
+              <input
+                className='w-24 rounded-md border px-2 py-1 text-sm'
+                type='number'
+                value={year}
+                onChange={(event) =>
+                  handleYearChange(Number(event.target.value))
                 }
-                setYear(next)
-              }}
-            />
-            <select
-              className='rounded-md border px-2 py-1 text-sm'
-              value={month}
-              onChange={(event) => setMonth(Number(event.target.value))}
-            >
-              {Array.from({ length: 12 }).map((_, index) => (
-                <option key={index + 1} value={index + 1}>
-                  {index + 1} {t('calendars.month')}
-                </option>
-              ))}
-            </select>
-            <PermissionGate any={['platform:calendar:write']}>
+              />
+            </label>
+            <PermissionGate any={[WRITE_PERMISSION]}>
               <Button
                 size='sm'
                 onClick={() => createMutation.mutate()}
@@ -318,7 +402,7 @@ ${year}-01-01,HOLIDAY,false,元旦,
               </Button>
             </PermissionGate>
             {selectedCalendar ? (
-              <PermissionGate any={['platform:calendar:write']}>
+              <PermissionGate any={[WRITE_PERMISSION]}>
                 <Button
                   size='sm'
                   variant='outline'
@@ -331,6 +415,34 @@ ${year}-01-01,HOLIDAY,false,元旦,
               </PermissionGate>
             ) : null}
           </div>
+          {selectedCalendar ? (
+            <div className='flex items-center gap-2 text-sm'>
+              <span className='text-muted-foreground'>
+                {defaultCalendar.isError
+                  ? t('calendars.default.unset')
+                  : `${t('calendars.default.label')}：${
+                      defaultCalendar.data?.calendarName ?? t('common.loading')
+                    }`}
+              </span>
+              {defaultCalendar.data?.id === selectedCalendar.id ? (
+                <Badge variant='secondary'>
+                  <Check className='mr-1 size-3' />
+                  {t('calendars.default.currentBadge')}
+                </Badge>
+              ) : (
+                <PermissionGate any={[WRITE_PERMISSION]}>
+                  <Button
+                    size='sm'
+                    variant='outline'
+                    disabled={defaultMutation.isPending}
+                    onClick={() => void confirmDefault()}
+                  >
+                    {t('calendars.default.set')}
+                  </Button>
+                </PermissionGate>
+              )}
+            </div>
+          ) : null}
         </CardHeader>
         <CardContent className='grid gap-4'>
           {yearCalendars.length === 0 ? (
@@ -352,41 +464,11 @@ ${year}-01-01,HOLIDAY,false,元旦,
                 ))}
               </select>
 
-              {selectedCalendar ? (
-                <div className='flex items-center gap-2 text-sm'>
-                  <span className='text-muted-foreground'>
-                    {defaultCalendar.isError
-                      ? t('calendars.default.unset')
-                      : `${t('calendars.default.label')}：${
-                          defaultCalendar.data?.calendarName ??
-                          t('common.loading')
-                        }`}
-                  </span>
-                  {defaultCalendar.data?.id === selectedCalendar.id ? (
-                    <Badge variant='secondary'>
-                      <Check className='mr-1 size-3' />
-                      {t('calendars.default.currentBadge')}
-                    </Badge>
-                  ) : (
-                    <PermissionGate any={['platform:calendar:write']}>
-                      <Button
-                        size='sm'
-                        variant='outline'
-                        disabled={defaultMutation.isPending}
-                        onClick={() => void confirmDefault()}
-                      >
-                        {t('calendars.default.set')}
-                      </Button>
-                    </PermissionGate>
-                  )}
-                </div>
-              ) : null}
-
               <QueryStateBoundary
                 loading={days.isLoading}
                 error={days.error}
                 empty={!selectedCalendar || (days.data?.length ?? 0) === 0}
-                loadingFallback={<TableLoadingState columns={6} />}
+                loadingFallback={<CalendarSkeleton />}
                 errorFallback={
                   <ErrorState
                     compact
@@ -402,71 +484,83 @@ ${year}-01-01,HOLIDAY,false,元旦,
                   />
                 }
               >
-                <ResponsiveTable>
-                  <table className='w-full text-sm'>
-                    <thead>
-                      <tr className='border-b bg-muted/40'>
-                        <th className='p-2 text-left'>
-                          {t('calendars.days.columns.date')}
-                        </th>
-                        <th className='p-2 text-left'>
-                          {t('calendars.days.columns.week')}
-                        </th>
-                        <th className='p-2 text-left'>
-                          {t('calendars.days.columns.type')}
-                        </th>
-                        <th className='p-2 text-left'>
-                          {t('calendars.days.columns.workday')}
-                        </th>
-                        <th className='p-2 text-left'>
-                          {t('calendars.days.columns.holiday')}
-                        </th>
-                        <th className='p-2 text-left'>
-                          {t('calendars.days.columns.action')}
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {days.data?.map((day) => (
-                        <tr key={day.id} className='border-b'>
-                          <td className='p-2'>{day.calendarDate}</td>
-                          <td className='p-2'>{day.dayOfWeek}</td>
-                          <td className='p-2'>{day.dayType}</td>
-                          <td className='p-2'>
-                            {day.workday
-                              ? t('calendars.days.workday')
-                              : t('calendars.days.off')}
-                          </td>
-                          <td className='p-2'>{day.holidayName ?? '-'}</td>
-                          <td className='p-2'>
-                            {selectedCalendar ? (
-                              <PermissionGate any={['platform:calendar:write']}>
-                                <Button
-                                  size='sm'
-                                  variant='outline'
-                                  disabled={updateDayMutation.isPending}
-                                  onClick={() =>
-                                    void submitUpdateDay(
-                                      selectedCalendar.id,
-                                      day
-                                    )
-                                  }
-                                >
-                                  {t('calendars.days.toggle')}
-                                </Button>
-                              </PermissionGate>
-                            ) : null}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </ResponsiveTable>
+                <div className='flex justify-center'>
+                  <Calendar
+                    month={fromMonthParts(year, month)}
+                    onMonthChange={handleMonthChange}
+                    onDayClick={(date, modifiers) => {
+                      if (modifiers.outside) return
+                      const dayData = lookupDay(dayMap, date)
+                      if (!dayData) return
+                      if (!canWrite) return
+                      void submitUpdateDay(date)
+                    }}
+                    className='rounded-lg border [--cell-size:--spacing(12)]'
+                    classNames={{
+                      day: 'h-full',
+                    }}
+                    components={{
+                      DayButton: (
+                        props: React.ComponentProps<typeof CalendarDayButton>
+                      ) => (
+                        <CalendarDayCell
+                          {...props}
+                          dayData={lookupDay(dayMap, props.day.date)}
+                          canWrite={canWrite}
+                          onToggleDay={submitUpdateDay}
+                        />
+                      ),
+                    }}
+                  />
+                </div>
+
+                <DayLegend canWrite={canWrite} />
               </QueryStateBoundary>
             </>
           )}
         </CardContent>
       </Card>
     </main>
+  )
+}
+
+function DayLegend({ canWrite }: { canWrite: boolean }) {
+  const { t } = useTranslation()
+  return (
+    <div
+      className='flex flex-wrap items-center gap-3 text-xs text-muted-foreground'
+      data-testid='calendar-legend'
+    >
+      <span className='flex items-center gap-1'>
+        <span className='inline-block size-3 rounded-sm border bg-background' />
+        {t('calendars.legend.workday')}
+      </span>
+      <span className='flex items-center gap-1'>
+        <span className='inline-block size-3 rounded-sm border bg-red-100 dark:bg-red-950/40' />
+        {t('calendars.legend.holiday')}
+      </span>
+      <span className='flex items-center gap-1'>
+        <span className='inline-block size-3 rounded-sm border bg-emerald-100 dark:bg-emerald-950/40' />
+        {t('calendars.legend.adjusted')}
+      </span>
+      <span className='ml-auto'>
+        {canWrite
+          ? t('calendars.legend.editable')
+          : t('calendars.legend.readonly')}
+      </span>
+    </div>
+  )
+}
+
+function CalendarSkeleton() {
+  const { t } = useTranslation()
+  return (
+    <div
+      role='status'
+      aria-label='calendar-loading'
+      className='grid h-[360px] w-full place-items-center rounded-lg border bg-muted/20 text-sm text-muted-foreground'
+    >
+      {t('calendars.calendar.loading')}
+    </div>
   )
 }

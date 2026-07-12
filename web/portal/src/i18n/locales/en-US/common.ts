@@ -34,6 +34,18 @@ export const common = {
   'calendars.subtitle':
     'Maintain workdays, holidays and adjusted workdays used by daily reports, monthly reports, scheduling and statistics.',
   'calendars.month': 'Month',
+  'calendars.year': 'Year',
+  'calendars.legend.workday': 'Workday',
+  'calendars.legend.holiday': 'Public holiday',
+  'calendars.legend.adjusted': 'Adjusted workday',
+  'calendars.legend.editable':
+    'Click a date to toggle between workday and holiday.',
+  'calendars.legend.readonly':
+    'Read-only — current account has no write permission.',
+  'calendars.day.tooltip': 'Click to toggle workday',
+  'calendars.day.missing':
+    'Date {date} is not part of this calendar and cannot be toggled.',
+  'calendars.calendar.loading': 'Loading calendar…',
   'calendars.create.button': 'Create annual calendar',
   'calendars.create.success': 'Annual calendar created',
   'calendars.create.failed': 'Failed to create annual calendar',
