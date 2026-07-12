@@ -100,7 +100,11 @@ export function UserAuthForm({
             <FormItem className='relative'>
               <FormLabel>密码</FormLabel>
               <FormControl>
-                <PasswordInput placeholder='请输入密码' {...field} />
+                <PasswordInput
+                  autoComplete='current-password'
+                  placeholder='请输入密码'
+                  {...field}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
