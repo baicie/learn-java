@@ -1,43 +1,66 @@
 # syntax=docker/dockerfile:1.7
 #
 # aiops-server 镜像：
-#   1. portal-build : node:20 + pnpm 装 web/portal 依赖，build 出 web/portal/dist
-#   2. server-build : maven 离线打 server fat-jar；portal 的 dist 复制到 static/portal
-#   3. runtime      : eclipse-temurin 21-jre-alpine 跑 jar，暴露 8080
+#   1. build     : node:20 + JDK 21 + maven；先 pnpm 出 portal/dist，再用 mvn 打 server fat-jar
+#   2. runtime   : eclipse-temurin 21-jre-alpine 跑 jar，暴露 8080
 #
-# 镜像 JDK 与 pom.xml 的 java.version=21 保持一致：
-#   maven:3.9.9-eclipse-temurin-21 + eclipse-temurin:21-jre-alpine。
+# 镜像 JDK 与 pom.xml 的 java.version=21 保持一致。
+# build 阶段必须同时提供 node 和 maven，因为：
+#   - portal-build 阶段需要 node + pnpm
+#   - aiops-persistence 的 exec-maven-plugin 在 generate-sources 阶段
+#     调 `node scripts/prepare-jooq-ddl.mjs` 做 jOOQ DDL 预处理
+#   - aiops-server 的 exec-maven-plugin 在 generate-resources 阶段调 pnpm
+# 所以选 node:20 当基础再装 JDK 21 + maven，比 maven 镜像手动装 node 更稳。
+#
 # 前端是 web/portal（shadcn-admin 派生），console 已废弃。
 
-FROM node:20-bookworm-slim AS portal-build
+FROM node:20-bookworm-slim AS build
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64 \
+    MAVEN_HOME=/opt/maven \
+    MAVEN_VERSION=3.9.9 \
+    PATH=/usr/lib/jvm/java-21-openjdk-amd64/bin:/opt/maven/bin:$PATH
+
+RUN corepack enable \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends \
+        openjdk-21-jdk-headless \
+        ca-certificates \
+        curl \
+        git \
+    && curl -fsSL "https://archive.apache.org/dist/maven/maven-3/${MAVEN_VERSION}/binaries/apache-maven-${MAVEN_VERSION}-bin.tar.gz" \
+        | tar -xz -C /opt \
+        && mv "/opt/apache-maven-${MAVEN_VERSION}" "${MAVEN_HOME}" \
+        && rm -rf /opt/apache-maven-${MAVEN_VERSION} \
+        && apt-get clean \
+        && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /workspace
 
-RUN corepack enable
-
-# 复制 lockfile + 子项目 package.json，最大化缓存命中
+# ---- portal：先用 lockfile + package.json 最大化 pnpm 缓存命中 ----
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY web/portal/package.json web/portal/package.json
-
 RUN pnpm install --frozen-lockfile
 
 COPY web/portal web/portal
 RUN pnpm --dir web/portal build
 
-
-FROM maven:3.9.9-eclipse-temurin-21 AS server-build
-WORKDIR /workspace
-
+# ---- server：把 portal 静态产物塞进 server 的 static/portal，再让 mvn 打 fat-jar ----
+# 不放 static/ 根，因为 server 自己可能有 swagger / actuator 资源
+# portal/dist 先 cp 到 server resource，mvn 打包时通过 resources 阶段包含进去
 COPY pom.xml ./
 COPY modules modules
 COPY apps apps
 COPY contracts contracts
 COPY infra/checkstyle infra/checkstyle
 
-# portal 静态产物塞进 server jar 的 static/portal
-# 不放 static/ 根，因为 server 自己可能有 swagger / actuator 资源
-COPY --from=portal-build /workspace/web/portal/dist apps/aiops-server/src/main/resources/static/portal
+RUN mkdir -p apps/aiops-server/src/main/resources/static/portal \
+    && cp -R web/portal/dist/. apps/aiops-server/src/main/resources/static/portal/
 
-RUN mvn -pl apps/aiops-server -am package -DskipTests
+# 把 m2 仓放到 buildkit cache，避免每次拉依赖
+RUN --mount=type=cache,target=/root/.m2 \
+    mvn -pl apps/aiops-server -am package -DskipTests
 
 
 FROM eclipse-temurin:21-jre-alpine AS runtime
@@ -53,13 +76,13 @@ RUN addgroup -S aiops && adduser -S aiops -G aiops \
 
 WORKDIR /app
 
-COPY --from=server-build /workspace/apps/aiops-server/target/aiops-server-0.1.0-SNAPSHOT.jar /app/app.jar
+COPY --from=build /workspace/apps/aiops-server/target/aiops-server-0.1.0-SNAPSHOT.jar /app/app.jar
 
 USER aiops
 
 EXPOSE 8080
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
-  CMD wget -qO- "http://127.0.0.1:8080/actuator/health" || exit 1
+    CMD wget -qO- "http://127.0.0.1:8080/actuator/health" || exit 1
 
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar /app/app.jar"]
