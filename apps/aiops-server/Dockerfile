@@ -25,16 +25,21 @@ ENV DEBIAN_FRONTEND=noninteractive \
 RUN corepack enable \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
-        openjdk-21-jdk-headless \
         ca-certificates \
         curl \
+        gnupg \
         git \
+    && echo 'deb http://deb.debian.org/debian bookworm-backports main' > /etc/apt/sources.list.d/backports.list \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends -t bookworm-backports \
+        openjdk-21-jdk-headless \
     && curl -fsSL "https://archive.apache.org/dist/maven/maven-3/${MAVEN_VERSION}/binaries/apache-maven-${MAVEN_VERSION}-bin.tar.gz" \
         | tar -xz -C /opt \
-        && mv "/opt/apache-maven-${MAVEN_VERSION}" "${MAVEN_HOME}" \
-        && rm -rf /opt/apache-maven-${MAVEN_VERSION} \
-        && apt-get clean \
-        && rm -rf /var/lib/apt/lists/*
+    && mv "/opt/apache-maven-${MAVEN_VERSION}" "${MAVEN_HOME}" \
+    && rm -rf /opt/apache-maven-${MAVEN_VERSION} \
+    && apt-get purge -y --auto-remove gnupg \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /workspace
 
