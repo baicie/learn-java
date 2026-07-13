@@ -17,6 +17,19 @@ services:
       retries: 10
     restart: unless-stopped
 
+  redis:
+    image: redis:7-alpine
+    container_name: aegisops-redis
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
   aiops-server:
     image: ${AIOPS_SERVER_IMAGE:?AIOPS_SERVER_IMAGE is required}
     container_name: aegisops-server
@@ -25,6 +38,8 @@ services:
       AIOPS_DB_URL: jdbc:postgresql://postgres:5432/aegisops
       AIOPS_DB_USERNAME: aegisops
       AIOPS_DB_PASSWORD: aegisops
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
       AIOPS_JWT_SECRET: ${AIOPS_JWT_SECRET:-dev-secret-change-me-change-me-change-me}
       AIOPS_AGENT_BASE_URL: http://aiops-agent:9008
       AIOPS_AGENT_INTERNAL_TOKEN: dev-internal-agent-token
@@ -34,6 +49,8 @@ services:
       - "8080:8080"
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
       aiops-agent:
         condition: service_started
@@ -87,8 +104,10 @@ services:
     healthcheck:
       test:
         [
-          "CMD-SHELL",
-          "wget -q -O - http://localhost:9008/health >/dev/null || exit 1",
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:9008/health', timeout=3).read()",
         ]
       interval: 10s
       timeout: 5s
@@ -172,3 +191,4 @@ services:
 
 volumes:
   postgres_data:
+  redis_data:

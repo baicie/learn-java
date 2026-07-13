@@ -69,6 +69,13 @@
           <skip>false</skip>
           <mainClass>io.aegisops.runner.AiOpsRunnerApplication</mainClass>
         </configuration>
+        <executions>
+          <execution>
+            <goals>
+              <goal>repackage</goal>
+            </goals>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>

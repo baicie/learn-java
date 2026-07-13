@@ -76,7 +76,18 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
 
       - name: Validate release descriptors
-        run: bash scripts/ci/release-preflight.sh
+        run: |
+          set -o pipefail
+          bash scripts/ci/release-preflight.sh 2>&1 | tee release-preflight.log
+
+      - name: Upload release preflight diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-preflight-diagnostics
+          path: release-preflight.log
+          if-no-files-found: error
+          retention-days: 14
 
   container-build:
     name: Container ${{ matrix.name }}
@@ -126,3 +137,145 @@ jobs:
           cache-from: type=gha,scope=${{ matrix.name }}
           cache-to: type=gha,mode=max,scope=${{ matrix.name }}
           provenance: false
+
+  runtime-smoke:
+    name: Compose runtime smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: container-build
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Load aiops-server image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./apps/aiops-server/Dockerfile
+          platforms: linux/amd64
+          load: true
+          tags: local/aegisops:verify-server
+          cache-from: type=gha,scope=aiops-server
+          provenance: false
+
+      - name: Load aiops-agent image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./apps/aiops-agent
+          file: ./apps/aiops-agent/Dockerfile
+          platforms: linux/amd64
+          load: true
+          tags: local/aegisops:verify-agent
+          cache-from: type=gha,scope=aiops-agent
+          provenance: false
+
+      - name: Load aiops-worker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./deploy/docker/java-app.Dockerfile
+          build-args: |
+            APP_MODULE=apps/aiops-worker
+            APP_NAME=aiops-worker
+            APP_PORT=8081
+          platforms: linux/amd64
+          load: true
+          tags: local/aegisops:verify-worker
+          cache-from: type=gha,scope=aiops-worker
+          provenance: false
+
+      - name: Load aiops-runner image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./apps/aiops-runner/Dockerfile
+          platforms: linux/amd64
+          load: true
+          tags: local/aegisops:verify-runner
+          cache-from: type=gha,scope=aiops-runner
+          provenance: false
+
+      - name: Start full runtime and verify container health
+        env:
+          AIOPS_SERVER_IMAGE: local/aegisops:verify-server
+          AIOPS_AGENT_IMAGE: local/aegisops:verify-agent
+          AIOPS_WORKER_IMAGE: local/aegisops:verify-worker
+          AIOPS_RUNNER_IMAGE: local/aegisops:verify-runner
+        run: |
+          set -Eeuo pipefail
+
+          compose() {
+            docker compose -f deploy/docker-compose.app.yml "$@"
+          }
+
+          wait_health() {
+            local container=$1
+            local timeout_seconds=$2
+            local elapsed=0
+            local status=""
+
+            while [ "$elapsed" -lt "$timeout_seconds" ]; do
+              status="$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$container" 2>/dev/null || true)"
+              case "$status" in
+                healthy)
+                  echo "$container healthy after ${elapsed}s"
+                  return 0
+                  ;;
+                unhealthy|exited|dead)
+                  echo "$container status=$status" >&2
+                  return 1
+                  ;;
+              esac
+              sleep 2
+              elapsed=$((elapsed + 2))
+            done
+
+            echo "$container did not become healthy within ${timeout_seconds}s (lastStatus=${status:-missing})" >&2
+            return 1
+          }
+
+          diagnose() {
+            compose ps || true
+            compose logs --no-color --tail=160 || true
+          }
+          trap diagnose ERR
+
+          compose up -d --no-build
+          wait_health aegisops-postgres 120
+          wait_health aegisops-redis 120
+          wait_health aegisops-agent 120
+          wait_health aegisops-server 240
+          wait_health aegisops-worker 180
+          wait_health aegisops-runner 180
+          compose ps
+
+      - name: Capture runtime diagnostics
+        if: failure()
+        env:
+          AIOPS_SERVER_IMAGE: local/aegisops:verify-server
+          AIOPS_AGENT_IMAGE: local/aegisops:verify-agent
+          AIOPS_WORKER_IMAGE: local/aegisops:verify-worker
+          AIOPS_RUNNER_IMAGE: local/aegisops:verify-runner
+        run: bash scripts/ci/capture-runtime-diagnostics.sh
+
+      - name: Upload runtime diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: compose-runtime-diagnostics
+          path: runtime-diagnostics
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Cleanup runtime smoke
+        if: always()
+        env:
+          AIOPS_SERVER_IMAGE: local/aegisops:verify-server
+          AIOPS_AGENT_IMAGE: local/aegisops:verify-agent
+          AIOPS_WORKER_IMAGE: local/aegisops:verify-worker
+          AIOPS_RUNNER_IMAGE: local/aegisops:verify-runner
+        run: docker compose -f deploy/docker-compose.app.yml down --volumes --remove-orphans || true

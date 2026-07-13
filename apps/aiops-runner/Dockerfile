@@ -25,7 +25,15 @@ COPY scripts ./scripts
 
 RUN --mount=type=cache,target=/root/.m2 \
     node --version \
-    && mvn -pl apps/aiops-runner -am -DskipTests package
+    && mvn -pl apps/aiops-runner -am -DskipTests package \
+    && APP_JAR="$(find /workspace/apps/aiops-runner/target -maxdepth 1 -type f -name 'aiops-runner-*.jar' ! -name '*.original' -print -quit)" \
+    && test -n "$APP_JAR" \
+    && rm -rf /tmp/boot-jar-check \
+    && mkdir -p /tmp/boot-jar-check \
+    && cd /tmp/boot-jar-check \
+    && jar xf "$APP_JAR" META-INF/MANIFEST.MF \
+    && grep -Fq "Main-Class: org.springframework.boot.loader.launch.JarLauncher" META-INF/MANIFEST.MF \
+    && cp "$APP_JAR" /tmp/app.jar
 
 FROM ${RUNTIME_IMAGE} AS runtime
 
@@ -54,7 +62,7 @@ RUN groupadd --system aiops \
 
 WORKDIR /app
 
-COPY --from=build /workspace/apps/aiops-runner/target/aiops-runner-*.jar /app/app.jar
+COPY --from=build /tmp/app.jar /app/app.jar
 
 USER aiops
 
