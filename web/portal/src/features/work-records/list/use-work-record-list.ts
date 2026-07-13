@@ -7,8 +7,8 @@ import {
   fetchRecordList,
   fetchRecordListMeta,
   fetchWorkdaySummary,
-} from './api'
-import type { ListQueryState } from './types'
+} from '@/api/work-records/records'
+import type { ListQueryState } from '@/lib/work-records/list/types'
 
 export function useWorkRecordList(
   query: ListQueryState,
