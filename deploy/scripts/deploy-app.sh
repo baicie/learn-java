@@ -12,10 +12,11 @@ if [ ! -f "$COMPOSE_FILE" ]; then
   exit 1
 fi
 
-export AIOPS_SERVER_IMAGE="${IMAGE_PREFIX}:${IMAGE_TAG}"
-export AIOPS_AGENT_IMAGE="${IMAGE_PREFIX}/aiops-agent:${IMAGE_TAG}"
-export AIOPS_WORKER_IMAGE="${IMAGE_PREFIX}/aiops-worker:${IMAGE_TAG}"
-export AIOPS_RUNNER_IMAGE="${IMAGE_PREFIX}/aiops-runner:${IMAGE_TAG}"
+# 单个 Docker Hub 仓库承载四个服务，服务名编码在不可变标签中。
+export AIOPS_SERVER_IMAGE="${IMAGE_PREFIX}:${IMAGE_TAG}-server"
+export AIOPS_AGENT_IMAGE="${IMAGE_PREFIX}:${IMAGE_TAG}-agent"
+export AIOPS_WORKER_IMAGE="${IMAGE_PREFIX}:${IMAGE_TAG}-worker"
+export AIOPS_RUNNER_IMAGE="${IMAGE_PREFIX}:${IMAGE_TAG}-runner"
 
 compose() {
   docker compose -f "$COMPOSE_FILE" "$@"
