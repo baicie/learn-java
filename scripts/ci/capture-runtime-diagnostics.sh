@@ -11,7 +11,7 @@ docker compose -f "$COMPOSE_FILE" config >"$OUTPUT_DIR/compose-config.yml" 2>&1 
 docker compose -f "$COMPOSE_FILE" logs --no-color >"$OUTPUT_DIR/compose.log" 2>&1 || true
 docker network ls >"$OUTPUT_DIR/network/list.txt" 2>&1 || true
 
-for container in aegisops-postgres aegisops-agent aegisops-server aegisops-worker aegisops-runner; do
+for container in aegisops-postgres aegisops-redis aegisops-agent aegisops-server aegisops-worker aegisops-runner; do
   docker inspect "$container" >"$OUTPUT_DIR/inspect/${container}.json" 2>&1 || true
 done
 
