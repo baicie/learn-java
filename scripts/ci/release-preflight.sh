@@ -36,7 +36,7 @@ if grep -Fq '<artifactId>aiops-security</artifactId>' modules/aiops-observabilit
   echo "aiops-observability must not pull the complete aiops-security runtime into worker/runner." >&2
   exit 1
 fi
-"$MAVEN" -B -ntp -pl modules/aiops-observability -am -DskipTests compile
+"$MAVEN" -B -ntp -pl modules/aiops-observability -am test
 
 echo "==> Validate executable Spring Boot JAR contract"
 grep -Fq '<goal>repackage</goal>' apps/aiops-worker/pom.xml
