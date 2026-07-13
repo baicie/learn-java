@@ -45,6 +45,7 @@ COPY apps apps
 COPY contracts contracts
 COPY infra/checkstyle infra/checkstyle
 COPY web web
+COPY scripts scripts
 
 RUN --mount=type=cache,target=/root/.m2 \
     mvn -pl apps/aiops-server -am package -DskipTests -P with-portal
