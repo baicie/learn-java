@@ -3,6 +3,8 @@ set -Eeuo pipefail
 
 : "${IMAGE_PREFIX:?IMAGE_PREFIX is required}"
 : "${IMAGE_TAG:?IMAGE_TAG is required}"
+: "${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME is required}"
+: "${DOCKERHUB_TOKEN:?DOCKERHUB_TOKEN is required}"
 
 APP_DIR="${APP_DIR:-$HOME/workspace/aegisops}"
 COMPOSE_FILE="${COMPOSE_FILE:-$APP_DIR/deploy/docker-compose.app.yml}"
@@ -11,6 +13,19 @@ if [ ! -f "$COMPOSE_FILE" ]; then
   echo "Compose file not found: $COMPOSE_FILE" >&2
   exit 1
 fi
+
+require_command() {
+  local command_name=$1
+  if ! command -v "$command_name" >/dev/null 2>&1; then
+    echo "Required command is not available: ${command_name}" >&2
+    exit 1
+  fi
+}
+
+require_command bash
+require_command curl
+require_command docker
+require_command mktemp
 
 # 单个 Docker Hub 仓库承载四个服务，服务名编码在不可变标签中。
 export AIOPS_SERVER_IMAGE="${IMAGE_PREFIX}:${IMAGE_TAG}-server"
@@ -40,9 +55,22 @@ if [ -n "$PREVIOUS_SERVER_IMAGE" ] \
 fi
 
 DEPLOYMENT_STARTED=0
+DEPLOY_STAGE="initialization"
+DOCKER_CONFIG_DIR=""
+
+cleanup_registry_auth() {
+  if [ -z "$DOCKER_CONFIG_DIR" ] || [ ! -d "$DOCKER_CONFIG_DIR" ]; then
+    return
+  fi
+
+  DOCKER_CONFIG="$DOCKER_CONFIG_DIR" docker logout >/dev/null 2>&1 || true
+  rm -f "$DOCKER_CONFIG_DIR/config.json"
+  rmdir "$DOCKER_CONFIG_DIR" 2>/dev/null || true
+}
+trap cleanup_registry_auth EXIT
 
 print_diagnostics() {
-  echo "==> Deployment diagnostics"
+  echo "==> Deployment diagnostics (stage=${DEPLOY_STAGE})"
   compose ps || true
   compose logs --no-color --tail=120 aiops-server aiops-agent aiops-worker aiops-runner || true
 }
@@ -51,7 +79,7 @@ rollback() {
   local exit_code=$?
   trap - ERR
 
-  echo "::error::Deployment failed for image tag ${IMAGE_TAG}"
+  echo "::error::Deployment failed at stage=${DEPLOY_STAGE} for image tag ${IMAGE_TAG}"
   print_diagnostics
 
   if [ "$DEPLOYMENT_STARTED" = "1" ] && [ "$ROLLBACK_READY" = "1" ]; then
@@ -83,6 +111,12 @@ retry() {
     sleep $((attempt * 10))
     attempt=$((attempt + 1))
   done
+}
+
+pull_image() {
+  local image=$1
+  echo "==> Pulling ${image}"
+  retry 5 docker pull "$image"
 }
 
 wait_http() {
@@ -136,20 +170,36 @@ wait_container_health() {
   return 1
 }
 
+DEPLOY_STAGE="docker-preflight"
 echo "==> Docker versions"
 docker version --format 'Docker {{.Server.Version}}'
 docker compose version
+docker info >/dev/null
 
+DEPLOY_STAGE="registry-login"
+DOCKER_CONFIG_DIR="$(mktemp -d "${TMPDIR:-/tmp}/aegisops-docker-config.XXXXXX")"
+chmod 700 "$DOCKER_CONFIG_DIR"
+export DOCKER_CONFIG="$DOCKER_CONFIG_DIR"
+printf '%s' "$DOCKERHUB_TOKEN" \
+  | docker login --username "$DOCKERHUB_USERNAME" --password-stdin
+
+DEPLOY_STAGE="compose-validation"
 echo "==> Validating deployment descriptor"
 compose config --quiet
 
+DEPLOY_STAGE="image-pull"
 echo "==> Pulling immutable release images (${IMAGE_TAG})"
-retry 5 compose pull aiops-server aiops-agent aiops-worker aiops-runner
+pull_image "$AIOPS_SERVER_IMAGE"
+pull_image "$AIOPS_AGENT_IMAGE"
+pull_image "$AIOPS_WORKER_IMAGE"
+pull_image "$AIOPS_RUNNER_IMAGE"
 
+DEPLOY_STAGE="compose-up"
 echo "==> Applying release without stopping PostgreSQL or healthy unchanged containers"
 DEPLOYMENT_STARTED=1
 compose up -d --remove-orphans --no-build
 
+DEPLOY_STAGE="health-check"
 echo "==> Waiting for services"
 wait_container_health aegisops-postgres 120
 wait_http aegisops-agent http://127.0.0.1:9008/health 120
@@ -157,6 +207,7 @@ wait_http aegisops-server http://127.0.0.1:8080/actuator/health 240
 wait_http aegisops-worker http://127.0.0.1:8081/actuator/health 180
 wait_http aegisops-runner http://127.0.0.1:8092/actuator/health 180
 
+DEPLOY_STAGE="complete"
 echo "==> Deployment succeeded"
 compose ps
 
