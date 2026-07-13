@@ -8,6 +8,7 @@ APP_DIR="${APP_DIR:-$HOME/workspace/aegisops}"
 COMPOSE_FILE="${COMPOSE_FILE:-$APP_DIR/deploy/docker-compose.app.yml}"
 APP_SERVICES=(aiops-server aiops-agent aiops-worker aiops-runner)
 APP_CONTAINERS=(aegisops-server aegisops-agent aegisops-worker aegisops-runner)
+export AIOPS_SERVER_HOST_PORT="${AIOPS_SERVER_HOST_PORT:-18080}"
 
 if [ ! -f "$COMPOSE_FILE" ]; then
   echo "Compose file not found: $COMPOSE_FILE" >&2
@@ -108,7 +109,7 @@ print_diagnostics() {
   echo "==> Deployment diagnostics (stage=${DEPLOY_STAGE})"
   compose ps || true
   compose logs --no-color --tail=120 "${APP_SERVICES[@]}" || true
-  for port in 5432 8080 8081 8092 9008; do
+  for port in 5432 "$AIOPS_SERVER_HOST_PORT" 8081 8092 9008; do
     print_port_diagnostics "$port"
   done
 }
@@ -174,6 +175,11 @@ retry() {
     sleep $((attempt * 10))
     attempt=$((attempt + 1))
   done
+}
+
+registry_login() {
+  printf '%s' "$DOCKERHUB_TOKEN" \
+    | docker login --username "$DOCKERHUB_USERNAME" --password-stdin
 }
 
 pull_image() {
@@ -271,7 +277,7 @@ ensure_port_available() {
 validate_host_ports() {
   # PostgreSQL 数据端口不做自动接管，避免误停其它数据库实例。
   ensure_port_available 5432 aegisops-postgres false
-  ensure_port_available 8080 aegisops-server true
+  ensure_port_available "$AIOPS_SERVER_HOST_PORT" aegisops-server true
   ensure_port_available 8081 aegisops-worker true
   ensure_port_available 8092 aegisops-runner true
   ensure_port_available 9008 aegisops-agent true
@@ -322,8 +328,7 @@ if [ -n "${DOCKERHUB_USERNAME:-}" ] || [ -n "${DOCKERHUB_TOKEN:-}" ]; then
   DOCKER_CONFIG_DIR="$(mktemp -d "${TMPDIR:-/tmp}/aegisops-docker-config.XXXXXX")"
   chmod 700 "$DOCKER_CONFIG_DIR"
   export DOCKER_CONFIG="$DOCKER_CONFIG_DIR"
-  printf '%s' "$DOCKERHUB_TOKEN" \
-    | docker login --username "$DOCKERHUB_USERNAME" --password-stdin
+  retry 5 registry_login
 else
   echo "==> Registry login skipped; using existing Docker credentials or public images"
 fi
