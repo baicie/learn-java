@@ -76,7 +76,18 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
 
       - name: Validate release descriptors
-        run: bash scripts/ci/release-preflight.sh
+        run: |
+          set -o pipefail
+          bash scripts/ci/release-preflight.sh 2>&1 | tee release-preflight.log
+
+      - name: Upload release preflight diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-preflight-diagnostics
+          path: release-preflight.log
+          if-no-files-found: error
+          retention-days: 14
 
   container-build:
     name: Container ${{ matrix.name }}
@@ -235,6 +246,7 @@ jobs:
 
           compose up -d --no-build
           wait_health aegisops-postgres 120
+          wait_health aegisops-redis 120
           wait_health aegisops-agent 120
           wait_health aegisops-server 240
           wait_health aegisops-worker 180
