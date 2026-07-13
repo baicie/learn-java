@@ -192,10 +192,58 @@ jobs:
       - name: Validate release descriptors
         run: bash scripts/ci/release-preflight.sh
 
+  container-build:
+    name: Container ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: aiops-server
+            context: .
+            dockerfile: ./apps/aiops-server/Dockerfile
+            build_args: ""
+          - name: aiops-agent
+            context: ./apps/aiops-agent
+            dockerfile: ./apps/aiops-agent/Dockerfile
+            build_args: ""
+          - name: aiops-worker
+            context: .
+            dockerfile: ./deploy/docker/java-app.Dockerfile
+            build_args: |
+              APP_MODULE=apps/aiops-worker
+              APP_NAME=aiops-worker
+              APP_PORT=8081
+          - name: aiops-runner
+            context: .
+            dockerfile: ./apps/aiops-runner/Dockerfile
+            build_args: ""
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Smoke-build image
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          build-args: ${{ matrix.build_args }}
+          platforms: linux/amd64
+          push: false
+          cache-from: type=gha,scope=${{ matrix.name }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.name }}
+          provenance: false
+
   summary:
     name: CI Summary
     runs-on: ubuntu-latest
-    needs: [docs, backend, frontend, agent, release-contract]
+    needs: [docs, backend, frontend, agent, release-contract, container-build]
     if: always()
 
     steps:
@@ -205,13 +253,15 @@ jobs:
             || [ "${{ needs.backend.result }}" != "success" ] \
             || [ "${{ needs.frontend.result }}" != "success" ] \
             || [ "${{ needs.agent.result }}" != "success" ] \
-            || [ "${{ needs.release-contract.result }}" != "success" ]; then
+            || [ "${{ needs.release-contract.result }}" != "success" ] \
+            || [ "${{ needs.container-build.result }}" != "success" ]; then
             echo "::error::One or more CI jobs failed. See:"
             echo "::error::  docs=${{ needs.docs.result }}"
             echo "::error::  backend=${{ needs.backend.result }}"
             echo "::error::  frontend=${{ needs.frontend.result }}"
             echo "::error::  agent=${{ needs.agent.result }}"
             echo "::error::  release-contract=${{ needs.release-contract.result }}"
+            echo "::error::  container-build=${{ needs.container-build.result }}"
             exit 1
           fi
           echo "All CI jobs passed."
