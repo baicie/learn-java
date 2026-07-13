@@ -3,7 +3,6 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-
 if len(sys.argv) != 2:
     raise SystemExit('usage: fix-typecheck.py <phase21-runtime-package>')
 
@@ -12,11 +11,14 @@ if not (package / 'scripts/apply-all.sh').is_file():
     raise SystemExit(f'invalid Phase 21 package: {package}')
 
 
-def replace_required(path: Path, old: str, new: str, label: str) -> None:
+def replace_if_present(path: Path, old: str, new: str) -> bool:
+    if not path.exists():
+        return False
     content = path.read_text(encoding='utf-8')
     if old not in content:
-        raise SystemExit(f'{label}: marker not found in {path}')
+        return False
     path.write_text(content.replace(old, new), encoding='utf-8')
+    return True
 
 
 authorization_api = package / 'patch/web/portal/src/auth/authorization-api.ts'
@@ -54,36 +56,24 @@ export async function fetchCurrentAuthorization(): Promise<AuthorizationPrincipa
     encoding='utf-8',
 )
 
-designer_test = package / (
-    'patch/web/portal/src/pages/work-records/'
-    'WorkRecordTemplateDesignerPage.test.tsx'
-)
-replace_required(
-    designer_test,
-    "vi.mock('../api',",
-    "vi.mock('@/api/work-records/templates',",
-    'designer api mock',
-)
-replace_required(
-    designer_test,
-    "vi.mock('../query-keys',",
-    "vi.mock('@/api/work-records/query-keys',",
-    'designer query-key mock',
-)
-
-template_list_test = package / (
-    'patch/web/portal/src/pages/work-records/'
-    'WorkRecordTemplateListPage.test.tsx'
-)
-content = template_list_test.read_text(encoding='utf-8')
-content = content.replace("vi.mock('./api',", "vi.mock('@/api/work-records/templates',")
-content = content.replace(
-    "typeof import('./api')>('./api')",
-    "typeof import('@/api/work-records/templates')>(\n"
-    "    '@/api/work-records/templates'\n"
-    "  )",
-)
-template_list_test.write_text(content, encoding='utf-8')
+for rel, pairs in {
+    'patch/web/portal/src/pages/work-records/WorkRecordTemplateDesignerPage.test.tsx': [
+        ("vi.mock('../api',", "vi.mock('@/api/work-records/templates',"),
+        ("vi.mock('../query-keys',", "vi.mock('@/api/work-records/query-keys',"),
+    ],
+    'patch/web/portal/src/pages/work-records/WorkRecordTemplateListPage.test.tsx': [
+        ("vi.mock('./api',", "vi.mock('@/api/work-records/templates',"),
+        (
+            "typeof import('./api')>('./api')",
+            "typeof import('@/api/work-records/templates')>(\n"
+            "    '@/api/work-records/templates'\n"
+            "  )",
+        ),
+    ],
+}.items():
+    path = package / rel
+    for old, new in pairs:
+        replace_if_present(path, old, new)
 
 calendar_helpers = package / 'patch/web/portal/src/lib/platform/calendar-helpers.ts'
 calendar_helpers.write_text(
@@ -132,8 +122,7 @@ export function getDayClassName(input: {
 export function pickDayKind(dayData: PlatformCalendarDay | undefined): {
   label: 'workday' | 'off'
 } {
-  if (!dayData) return { label: 'workday' }
-  return { label: dayData.workday ? 'workday' : 'off' }
+  return { label: dayData?.workday === false ? 'off' : 'workday' }
 }
 """,
     encoding='utf-8',
@@ -142,19 +131,24 @@ export function pickDayKind(dayData: PlatformCalendarDay | undefined): {
 fix_targets = package / 'scripts/fix-typecheck-targets.py'
 fix_targets.write_text(
     r'''from pathlib import Path
+import re
+
+ROOT = Path('web/portal')
+SRC = ROOT / 'src'
 
 
-def replace(path: Path, old: str, new: str, *, required: bool = True) -> None:
+def replace(path: Path, old: str, new: str, *, required: bool = False) -> bool:
     if not path.exists():
         if required:
             raise SystemExit(f'missing target: {path}')
-        return
+        return False
     content = path.read_text(encoding='utf-8')
     if old not in content:
         if required:
             raise SystemExit(f'marker not found in {path}: {old!r}')
-        return
+        return False
     path.write_text(content.replace(old, new), encoding='utf-8')
+    return True
 
 
 def move(source: Path, target: Path) -> Path:
@@ -168,12 +162,14 @@ def move(source: Path, target: Path) -> Path:
 
 
 replace(
-    Path('web/portal/src/api/work-records/records.ts'),
+    SRC / 'api/work-records/records.ts',
     "from './types'",
     "from '@/lib/work-records/list/types'",
+    required=True,
 )
+(SRC / 'api/work-records/types.ts').unlink(missing_ok=True)
 
-Path('web/portal/src/auth/permission-gate.tsx').write_text(
+(SRC / 'auth/permission-gate.tsx').write_text(
     """import type { PropsWithChildren, ReactNode } from 'react'
 import { useAuthorization } from './use-authorization'
 
@@ -205,44 +201,32 @@ export function PermissionGate({
 """,
     encoding='utf-8',
 )
+(SRC / 'components/permission-gate.tsx').write_text(
+    "export { PermissionGate } from '@/auth/permission-gate'\n",
+    encoding='utf-8',
+)
 
-Path(
-    'web/portal/src/components/work-records/designer/'
-    'work-record-designer-page.test.tsx'
-).unlink(missing_ok=True)
+(SRC / 'components/work-records/designer/work-record-designer-page.test.tsx').unlink(
+    missing_ok=True
+)
 
 list_page_test = move(
-    Path(
-        'web/portal/src/components/work-records/list/'
-        'work-record-list-page.test.tsx'
+    SRC / 'components/work-records/list/work-record-list-page.test.tsx',
+    SRC / 'pages/work-records/WorkRecordListPage.test.tsx',
+)
+for old, new in [
+    ("from './work-record-list-page'", "from './WorkRecordListPage'"),
+    ("vi.mock('./api',", "vi.mock('@/api/work-records/records',"),
+    ("await import('./api')", "await import('@/api/work-records/records')"),
+    (
+        "vi.mock('@/pages/platform/DictionariesPage/api',",
+        "vi.mock('@/api/platform/dictionaries',",
     ),
-    Path('web/portal/src/pages/work-records/WorkRecordListPage.test.tsx'),
-)
-replace(
-    list_page_test,
-    "from './work-record-list-page'",
-    "from './WorkRecordListPage'",
-)
-replace(
-    list_page_test,
-    "vi.mock('./api',",
-    "vi.mock('@/api/work-records/records',",
-)
-replace(
-    list_page_test,
-    "await import('./api')",
-    "await import('@/api/work-records/records')",
-)
+]:
+    replace(list_page_test, old, new)
 
-export_test = Path(
-    'web/portal/src/components/work-records/list/'
-    'work-record-export-dialog.test.tsx'
-)
-replace(
-    export_test,
-    "from './export-api'",
-    "from '@/lib/work-records/list/export-api'",
-)
+export_test = SRC / 'components/work-records/list/work-record-export-dialog.test.tsx'
+replace(export_test, "from './export-api'", "from '@/lib/work-records/list/export-api'")
 replace(
     export_test,
     "vi.mock('./export-api',",
@@ -250,67 +234,121 @@ replace(
 )
 
 runtime_page_test = move(
-    Path('web/portal/src/components/work-records/runtime/pages.test.tsx'),
-    Path('web/portal/src/pages/work-records/WorkRecordRuntimePages.test.tsx'),
+    SRC / 'components/work-records/runtime/pages.test.tsx',
+    SRC / 'pages/work-records/WorkRecordRuntimePages.test.tsx',
 )
-replace(
-    runtime_page_test,
-    "import { DetailRecordPage } from './detail-record-page'",
-    "import { WorkRecordDetailPage } from './WorkRecordDetailPage'",
-)
-replace(
-    runtime_page_test,
-    "import { EditRecordPage } from './edit-record-page'",
-    "import { WorkRecordEditPage } from './WorkRecordEditPage'",
-)
-replace(
-    runtime_page_test,
-    "import { NewRecordPage } from './new-record-page'",
-    "import { WorkRecordCreatePage } from './WorkRecordCreatePage'",
-)
-replace(runtime_page_test, '<NewRecordPage />', '<WorkRecordCreatePage />')
-replace(runtime_page_test, '<EditRecordPage />', '<WorkRecordEditPage />')
-replace(runtime_page_test, '<DetailRecordPage />', '<WorkRecordDetailPage />')
-replace(
-    runtime_page_test,
-    "vi.mock('./api',",
-    "vi.mock('@/api/work-records/runtime',",
-)
+for old, new in [
+    (
+        "import { DetailRecordPage } from './detail-record-page'",
+        "import { WorkRecordDetailPage } from './WorkRecordDetailPage'",
+    ),
+    (
+        "import { EditRecordPage } from './edit-record-page'",
+        "import { WorkRecordEditPage } from './WorkRecordEditPage'",
+    ),
+    (
+        "import { NewRecordPage } from './new-record-page'",
+        "import { WorkRecordCreatePage } from './WorkRecordCreatePage'",
+    ),
+    ('<NewRecordPage />', '<WorkRecordCreatePage />'),
+    ('<EditRecordPage />', '<WorkRecordEditPage />'),
+    ('<DetailRecordPage />', '<WorkRecordDetailPage />'),
+    ("vi.mock('./api',", "vi.mock('@/api/work-records/runtime',"),
+    (
+        "vi.mock('@/pages/platform/DictionariesPage/api',",
+        "vi.mock('@/api/platform/dictionaries',",
+    ),
+]:
+    replace(runtime_page_test, old, new)
 
 replace(
-    Path('web/portal/src/hooks/platform/use-dictionaries.ts'),
+    SRC / 'hooks/platform/use-dictionaries.ts',
     "from '../api'",
     "from '@/api/platform/dictionaries'",
+    required=True,
 )
+calendar_test = SRC / 'lib/platform/calendar-helpers.test.ts'
+replace(calendar_test, "from './api'", "from '@/api/platform/calendars'")
+replace(calendar_test, 'Partial<CalendarDay>): CalendarDay', 'Partial<PlatformCalendarDay>): PlatformCalendarDay')
+replace(calendar_test, 'type { CalendarDay }', 'type { PlatformCalendarDay }')
+replace(calendar_test, "toContain('bg-red-100')", "toContain('bg-destructive/10')")
+replace(calendar_test, "toContain('bg-emerald-100')", "toContain('bg-primary/10')")
 replace(
-    Path('web/portal/src/lib/platform/calendar-helpers.test.ts'),
-    "from './api'",
-    "from '@/api/platform/calendars'",
+    SRC / 'pages/platform/PlatformRolesPage.test.tsx',
+    '../hooks/use-platform-roles',
+    '@/hooks/platform/use-platform-roles',
 )
 
-roles_test = Path('web/portal/src/pages/platform/PlatformRolesPage.test.tsx')
-replace(
-    roles_test,
-    "../hooks/use-platform-roles",
-    "@/hooks/platform/use-platform-roles",
-)
+for path, pairs in {
+    SRC / 'pages/work-records/WorkRecordTemplateDesignerPage.test.tsx': [
+        ("vi.mock('../api',", "vi.mock('@/api/work-records/templates',"),
+        ("vi.mock('../query-keys',", "vi.mock('@/api/work-records/query-keys',"),
+    ],
+    SRC / 'pages/work-records/WorkRecordTemplateListPage.test.tsx': [
+        ("vi.mock('./api',", "vi.mock('@/api/work-records/templates',"),
+        (
+            "typeof import('./api')>('./api')",
+            "typeof import('@/api/work-records/templates')>(\n"
+            "    '@/api/work-records/templates'\n"
+            "  )",
+        ),
+    ],
+}.items():
+    for old, new in pairs:
+        replace(path, old, new)
 
-role_editor = Path('web/portal/src/components/platform/iam/role-editor.tsx')
+users_test = SRC / 'pages/platform/PlatformUsersPage.test.tsx'
+replace(
+    users_test,
+    "import { useAuthStore } from '@/stores/auth-store'",
+    "import { Button } from '@/components/ui/button'\n"
+    "import { useAuthStore } from '@/stores/auth-store'",
+)
+replace(users_test, '<button>新建用户</button>', '<Button>新建用户</Button>')
+
+for shim, import_spec in [
+    (SRC / 'hooks/work-records/api.ts', '@/hooks/work-records/api'),
+    (SRC / 'lib/schemas/platform-user.ts', '@/lib/schemas/platform-user'),
+]:
+    consumers = []
+    for path in SRC.rglob('*'):
+        if path == shim or path.suffix not in {'.ts', '.tsx'}:
+            continue
+        if import_spec in path.read_text(encoding='utf-8', errors='ignore'):
+            consumers.append(path)
+    if not consumers:
+        shim.unlink(missing_ok=True)
+
+role_editor = SRC / 'components/platform/iam/role-editor.tsx'
 if role_editor.exists():
     content = role_editor.read_text(encoding='utf-8')
     marker = 'export function useRoleEditor('
-    if (
-        marker in content
-        and 'eslint-disable-next-line react-refresh/only-export-components'
-        not in content
-    ):
-        content = content.replace(
-            marker,
-            '// eslint-disable-next-line react-refresh/only-export-components\n'
-            + marker,
-            1,
-        )
-        role_editor.write_text(content, encoding='utf-8')
+    annotation = '// eslint-disable-next-line react-refresh/only-export-components\n'
+    if marker in content and annotation + marker not in content:
+        role_editor.write_text(content.replace(marker, annotation + marker, 1), encoding='utf-8')
+
+pattern = re.compile(
+    r"(?:from\s+|import\s*\(\s*|vi\.mock\(\s*|"
+    r"vi\.importActual(?:<[^>]+>)?\(\s*)['\"]([^'\"]+)['\"]"
+)
+extensions = ['.ts', '.tsx', '.js', '.jsx', '.json']
+indexes = ['/index.ts', '/index.tsx', '/index.js', '/index.jsx']
+missing: list[str] = []
+for path in SRC.rglob('*'):
+    if path.suffix not in {'.ts', '.tsx'}:
+        continue
+    for specifier in pattern.findall(path.read_text(encoding='utf-8', errors='ignore')):
+        if specifier.startswith('.'):
+            base = path.parent / specifier
+        elif specifier.startswith('@/'):
+            base = SRC / specifier[2:]
+        else:
+            continue
+        candidates = [Path(str(base) + ext) for ext in extensions + indexes]
+        if not any(candidate.exists() for candidate in candidates):
+            missing.append(f'{path}: {specifier}')
+if missing:
+    raise SystemExit('unresolved internal imports:\n' + '\n'.join(sorted(set(missing))))
 ''',
     encoding='utf-8',
 )
@@ -318,9 +356,15 @@ if role_editor.exists():
 phase7 = package / 'scripts/phase21-07-cleanup.sh'
 content = phase7.read_text(encoding='utf-8')
 marker = 'python3 "$PACKAGE_ROOT/scripts/fix-migration-paths.py"\n'
-replacement = marker + 'python3 "$PACKAGE_ROOT/scripts/fix-typecheck-targets.py"\n'
-if marker not in content:
-    raise SystemExit('phase21-07 migration path marker not found')
-phase7.write_text(content.replace(marker, replacement, 1), encoding='utf-8')
+call = 'python3 "$PACKAGE_ROOT/scripts/fix-typecheck-targets.py"\n'
+if call not in content:
+    if marker in content:
+        content = content.replace(marker, marker + call, 1)
+    else:
+        fallback = 'node scripts/ci/check-portal-no-features.mjs\n'
+        if fallback not in content:
+            raise SystemExit('phase21-07 typecheck insertion marker not found')
+        content = content.replace(fallback, call + fallback, 1)
+phase7.write_text(content, encoding='utf-8')
 
 print(f'patched typecheck/test targets in {package}')
