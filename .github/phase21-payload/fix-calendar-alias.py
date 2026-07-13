@@ -28,6 +28,88 @@ content = target.read_text(encoding='utf-8')
 ui_block = r'''# Complete the shadcn-style primitives referenced by migrated screens.
 ui_dir = SRC / 'components/ui'
 ui_dir.mkdir(parents=True, exist_ok=True)
+(ui_dir / 'empty.tsx').write_text(
+    """import type { ComponentProps } from 'react'
+import { cn } from '@/lib/utils'
+
+export function Empty({ className, ...props }: ComponentProps<'div'>) {
+  return (
+    <div
+      data-slot='empty'
+      className={cn(
+        'flex min-w-0 flex-1 flex-col items-center justify-center gap-6 rounded-lg border border-dashed p-6 text-center md:p-12',
+        className
+      )}
+      {...props}
+    />
+  )
+}
+
+export function EmptyHeader({ className, ...props }: ComponentProps<'div'>) {
+  return (
+    <div
+      data-slot='empty-header'
+      className={cn('flex max-w-sm flex-col items-center gap-2', className)}
+      {...props}
+    />
+  )
+}
+
+export function EmptyMedia({ className, ...props }: ComponentProps<'div'>) {
+  return (
+    <div
+      data-slot='empty-media'
+      className={cn(
+        'flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground [&_svg]:size-6',
+        className
+      )}
+      {...props}
+    />
+  )
+}
+
+export function EmptyTitle({ className, ...props }: ComponentProps<'h3'>) {
+  return (
+    <h3
+      data-slot='empty-title'
+      className={cn('text-lg font-medium', className)}
+      {...props}
+    />
+  )
+}
+
+export function EmptyDescription({ className, ...props }: ComponentProps<'p'>) {
+  return (
+    <p
+      data-slot='empty-description'
+      className={cn('text-sm text-muted-foreground', className)}
+      {...props}
+    />
+  )
+}
+
+export function EmptyContent({ className, ...props }: ComponentProps<'div'>) {
+  return (
+    <div
+      data-slot='empty-content'
+      className={cn('flex max-w-sm flex-col items-center gap-4', className)}
+      {...props}
+    />
+  )
+}
+
+export function EmptyAction({ className, ...props }: ComponentProps<'div'>) {
+  return (
+    <div
+      data-slot='empty-action'
+      className={cn('flex items-center justify-center gap-2', className)}
+      {...props}
+    />
+  )
+}
+""",
+    encoding='utf-8',
+)
 (ui_dir / 'spinner.tsx').write_text(
     """import type { ComponentProps } from 'react'
 import { LoaderCircle } from 'lucide-react'
