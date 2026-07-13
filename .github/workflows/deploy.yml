@@ -1,10 +1,10 @@
 name: Deploy
 
 on:
-  # 只在 mvp 的 CI 全部通过后自动发布，避免部署任务充当“下一层错误发现器”。
+  # 只在 mvp 的发布验证全部通过后自动发布。
   workflow_run:
     workflows:
-      - CI
+      - Release Verify
     types:
       - completed
     branches:
