@@ -65,17 +65,17 @@ jobs:
       matrix:
         include:
           - name: aiops-server
-            image_suffix: ""
+            tag_suffix: server
             context: .
             dockerfile: ./apps/aiops-server/Dockerfile
             build_args: ""
           - name: aiops-agent
-            image_suffix: /aiops-agent
+            tag_suffix: agent
             context: ./apps/aiops-agent
             dockerfile: ./apps/aiops-agent/Dockerfile
             build_args: ""
           - name: aiops-worker
-            image_suffix: /aiops-worker
+            tag_suffix: worker
             context: .
             dockerfile: ./deploy/docker/java-app.Dockerfile
             build_args: |
@@ -83,7 +83,7 @@ jobs:
               APP_NAME=aiops-worker
               APP_PORT=8081
           - name: aiops-runner
-            image_suffix: /aiops-runner
+            tag_suffix: runner
             context: .
             dockerfile: ./apps/aiops-runner/Dockerfile
             build_args: ""
@@ -111,7 +111,7 @@ jobs:
           build-args: ${{ matrix.build_args }}
           platforms: linux/amd64
           push: true
-          tags: ${{ env.IMAGE_PREFIX }}${{ matrix.image_suffix }}:${{ env.IMAGE_TAG }}
+          tags: ${{ env.IMAGE_PREFIX }}:${{ env.IMAGE_TAG }}-${{ matrix.tag_suffix }}
           cache-from: type=gha,scope=${{ matrix.name }}
           cache-to: type=gha,mode=max,scope=${{ matrix.name }}
           provenance: false
