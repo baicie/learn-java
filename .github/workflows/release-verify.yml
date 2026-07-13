@@ -241,6 +241,24 @@ jobs:
           wait_health aegisops-runner 180
           compose ps
 
+      - name: Capture runtime diagnostics
+        if: failure()
+        env:
+          AIOPS_SERVER_IMAGE: local/aegisops:verify-server
+          AIOPS_AGENT_IMAGE: local/aegisops:verify-agent
+          AIOPS_WORKER_IMAGE: local/aegisops:verify-worker
+          AIOPS_RUNNER_IMAGE: local/aegisops:verify-runner
+        run: bash scripts/ci/capture-runtime-diagnostics.sh
+
+      - name: Upload runtime diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: compose-runtime-diagnostics
+          path: runtime-diagnostics
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Cleanup runtime smoke
         if: always()
         env:
