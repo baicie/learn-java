@@ -1,215 +1,250 @@
+[90msrc/components/feedback/app-toaster.tsx[39m 33ms (unchanged)
+[90msrc/components/feedback/async-state.test.tsx[39m 7ms (unchanged)
+[90msrc/components/feedback/async-state.tsx[39m 29ms (unchanged)
+src/components/feedback/confirm-provider.test.tsx 17ms
+src/components/feedback/confirm-provider.tsx 27ms
+[90msrc/components/form/form-field-shell.tsx[39m 27ms (unchanged)
+[90msrc/components/layout/app-sidebar.tsx[39m 12ms (unchanged)
+[90msrc/components/layout/app-title.tsx[39m 11ms (unchanged)
+[90msrc/components/layout/authenticated-layout.tsx[39m 8ms (unchanged)
+src/components/layout/AuthLayout.tsx 5ms
+src/components/layout/data/sidebar-data.ts 19ms
+[90msrc/components/layout/detail-page-layout.tsx[39m 14ms (unchanged)
+src/components/layout/filter-navigation.test.ts 10ms
+src/components/layout/filter-navigation.ts 7ms
+[90msrc/components/layout/header.tsx[39m 12ms (unchanged)
+[90msrc/components/layout/main.tsx[39m 9ms (unchanged)
+[90msrc/components/layout/nav-group.tsx[39m 49ms (unchanged)
+[90msrc/components/layout/nav-user.tsx[39m 25ms (unchanged)
+[90msrc/components/layout/navigation.ts[39m 8ms (unchanged)
+[90msrc/components/layout/responsive-table.tsx[39m 5ms (unchanged)
+[90msrc/components/layout/table-toolbar.tsx[39m 9ms (unchanged)
+[90msrc/components/layout/team-switcher.tsx[39m 8ms (unchanged)
+[90msrc/components/layout/top-nav.tsx[39m 8ms (unchanged)
+[90msrc/components/layout/types.ts[39m 7ms (unchanged)
+[90msrc/components/learn-more.tsx[39m 9ms (unchanged)
+[90msrc/components/long-text.tsx[39m 11ms (unchanged)
+[90msrc/components/navigation-progress.tsx[39m 5ms (unchanged)
+[90msrc/components/password-input.test.tsx[39m 22ms (unchanged)
+[90msrc/components/password-input.tsx[39m 9ms (unchanged)
+src/components/permission-gate.tsx 6ms
+src/components/platform/iam/permission-matrix.test.tsx 20ms
+src/components/platform/iam/permission-matrix.tsx 37ms
+src/components/platform/iam/platform-user-toolbar.test.tsx 10ms
+src/components/platform/iam/platform-user-toolbar.tsx 13ms
+src/components/platform/iam/PlatformUserCreateDialog.tsx 27ms
+src/components/platform/iam/PlatformUserTable.tsx 37ms
 src/components/platform/iam/PlatformUserToolbar.tsx 9ms
-src/components/platform/iam/role-editor.test.tsx 15ms
-src/components/platform/iam/role-editor.tsx 32ms
-[90msrc/components/profile-dropdown.tsx[39m 14ms (unchanged)
-[90msrc/components/search.tsx[39m 17ms (unchanged)
+src/components/platform/iam/role-editor.test.tsx 18ms
+src/components/platform/iam/role-editor.tsx 24ms
+[90msrc/components/profile-dropdown.tsx[39m 11ms (unchanged)
+[90msrc/components/search.tsx[39m 6ms (unchanged)
 [90msrc/components/select-dropdown.tsx[39m 10ms (unchanged)
-[90msrc/components/sign-out-dialog.test.tsx[39m 12ms (unchanged)
+[90msrc/components/sign-out-dialog.test.tsx[39m 13ms (unchanged)
 [90msrc/components/sign-out-dialog.tsx[39m 8ms (unchanged)
 [90msrc/components/skip-to-main.tsx[39m 5ms (unchanged)
-[90msrc/components/theme-switch.tsx[39m 13ms (unchanged)
-[90msrc/components/ui/alert-dialog.tsx[39m 23ms (unchanged)
-[90msrc/components/ui/alert.tsx[39m 9ms (unchanged)
-[90msrc/components/ui/avatar.tsx[39m 5ms (unchanged)
-[90msrc/components/ui/badge.tsx[39m 6ms (unchanged)
-[90msrc/components/ui/button.tsx[39m 7ms (unchanged)
+[90msrc/components/theme-switch.tsx[39m 21ms (unchanged)
+[90msrc/components/ui/alert-dialog.tsx[39m 24ms (unchanged)
+[90msrc/components/ui/alert.tsx[39m 10ms (unchanged)
+[90msrc/components/ui/avatar.tsx[39m 8ms (unchanged)
+[90msrc/components/ui/badge.tsx[39m 8ms (unchanged)
+[90msrc/components/ui/button.tsx[39m 9ms (unchanged)
 [90msrc/components/ui/calendar.tsx[39m 34ms (unchanged)
-[90msrc/components/ui/card.tsx[39m 12ms (unchanged)
-[90msrc/components/ui/checkbox.tsx[39m 8ms (unchanged)
+[90msrc/components/ui/card.tsx[39m 20ms (unchanged)
+[90msrc/components/ui/checkbox.tsx[39m 13ms (unchanged)
 [90msrc/components/ui/collapsible.tsx[39m 6ms (unchanged)
-[90msrc/components/ui/command.tsx[39m 20ms (unchanged)
-[90msrc/components/ui/dialog.tsx[39m 17ms (unchanged)
-[90msrc/components/ui/dropdown-menu.tsx[39m 29ms (unchanged)
-src/components/ui/empty.tsx 14ms
-src/components/ui/field.tsx 13ms
-[90msrc/components/ui/form.tsx[39m 22ms (unchanged)
-[90msrc/components/ui/input-otp.tsx[39m 8ms (unchanged)
+[90msrc/components/ui/command.tsx[39m 43ms (unchanged)
+[90msrc/components/ui/dialog.tsx[39m 15ms (unchanged)
+[90msrc/components/ui/dropdown-menu.tsx[39m 28ms (unchanged)
+src/components/ui/empty.tsx 18ms
+src/components/ui/field.tsx 12ms
+[90msrc/components/ui/form.tsx[39m 23ms (unchanged)
+[90msrc/components/ui/input-otp.tsx[39m 11ms (unchanged)
 [90msrc/components/ui/input.tsx[39m 4ms (unchanged)
-[90msrc/components/ui/label.tsx[39m 4ms (unchanged)
-[90msrc/components/ui/popover.tsx[39m 5ms (unchanged)
+[90msrc/components/ui/label.tsx[39m 3ms (unchanged)
+[90msrc/components/ui/popover.tsx[39m 6ms (unchanged)
 [90msrc/components/ui/radio-group.tsx[39m 5ms (unchanged)
 [90msrc/components/ui/scroll-area.tsx[39m 10ms (unchanged)
-[90msrc/components/ui/select.tsx[39m 18ms (unchanged)
+[90msrc/components/ui/select.tsx[39m 19ms (unchanged)
 [90msrc/components/ui/separator.tsx[39m 4ms (unchanged)
-[90msrc/components/ui/sheet.tsx[39m 14ms (unchanged)
-[90msrc/components/ui/sidebar.tsx[39m 106ms (unchanged)
+[90msrc/components/ui/sheet.tsx[39m 17ms (unchanged)
+[90msrc/components/ui/sidebar.tsx[39m 105ms (unchanged)
 [90msrc/components/ui/skeleton.tsx[39m 4ms (unchanged)
 [90msrc/components/ui/sonner.tsx[39m 5ms (unchanged)
-src/components/ui/spinner.tsx 4ms
-[90msrc/components/ui/switch.tsx[39m 5ms (unchanged)
-[90msrc/components/ui/table.tsx[39m 14ms (unchanged)
-[90msrc/components/ui/tabs.tsx[39m 8ms (unchanged)
-[90msrc/components/ui/textarea.tsx[39m 4ms (unchanged)
+src/components/ui/spinner.tsx 3ms
+[90msrc/components/ui/switch.tsx[39m 4ms (unchanged)
+[90msrc/components/ui/table.tsx[39m 9ms (unchanged)
+[90msrc/components/ui/tabs.tsx[39m 7ms (unchanged)
+[90msrc/components/ui/textarea.tsx[39m 3ms (unchanged)
 src/components/ui/toggle-group.tsx 8ms
-src/components/ui/toggle.tsx 6ms
-[90msrc/components/ui/tooltip.tsx[39m 7ms (unchanged)
-src/components/work-records/designer/field-library.tsx 11ms
+src/components/ui/toggle.tsx 5ms
+[90msrc/components/ui/tooltip.tsx[39m 8ms (unchanged)
+src/components/work-records/designer/field-library.tsx 14ms
 src/components/work-records/designer/form-canvas.tsx 13ms
 src/components/work-records/designer/form-preview.tsx 16ms
-[90msrc/components/work-records/designer/locked-field-code-input.test.tsx[39m 9ms (unchanged)
-[90msrc/components/work-records/designer/locked-field-code-input.tsx[39m 6ms (unchanged)
-src/components/work-records/designer/property-panel.test.tsx 11ms
-src/components/work-records/designer/property-panel.tsx 22ms
-src/components/work-records/designer/schema-diff-panel.tsx 13ms
-src/components/work-records/designer/use-work-record-designer.test.tsx 12ms
-[90msrc/components/work-records/designer/work-record-designer-page.test.tsx[39m 26ms (unchanged)
-src/components/work-records/list/column-control.tsx 23ms
-src/components/work-records/list/dynamic-filter-panel.tsx 23ms
-src/components/work-records/list/list-toolbar.tsx 23ms
-src/components/work-records/list/quick-view-tabs.tsx 8ms
-src/components/work-records/list/record-table.test.tsx 8ms
-src/components/work-records/list/record-table.tsx 23ms
-src/components/work-records/list/work-record-export-dialog.test.tsx 15ms
-src/components/work-records/list/work-record-export-dialog.tsx 18ms
-[90msrc/components/work-records/list/work-record-list-page.test.tsx[39m 18ms (unchanged)
-src/components/work-records/list/workday-summary-card.test.tsx 13ms
-src/components/work-records/list/workday-summary-card.tsx 11ms
-src/components/work-records/runtime/dynamic-field-control.test.tsx 18ms
-src/components/work-records/runtime/dynamic-field-control.tsx 35ms
-[90msrc/components/work-records/runtime/pages.test.tsx[39m 16ms (unchanged)
-src/components/work-records/runtime/record-history-card.test.tsx 7ms
-src/components/work-records/runtime/record-history-card.tsx 21ms
-src/components/work-records/runtime/record-readonly-view.test.tsx 9ms
-src/components/work-records/runtime/record-readonly-view.tsx 24ms
-src/components/work-records/runtime/record-runtime-form.test.tsx 18ms
-src/components/work-records/runtime/record-runtime-form.tsx 37ms
-[90msrc/components/work-records/runtime/template-switch-select.test.tsx[39m 9ms (unchanged)
+[90msrc/components/work-records/designer/locked-field-code-input.test.tsx[39m 8ms (unchanged)
+[90msrc/components/work-records/designer/locked-field-code-input.tsx[39m 7ms (unchanged)
+src/components/work-records/designer/property-panel.test.tsx 9ms
+src/components/work-records/designer/property-panel.tsx 27ms
+src/components/work-records/designer/schema-diff-panel.tsx 12ms
+src/components/work-records/designer/use-work-record-designer.test.tsx 8ms
+src/components/work-records/list/column-control.tsx 19ms
+src/components/work-records/list/dynamic-filter-panel.tsx 12ms
+src/components/work-records/list/list-toolbar.tsx 24ms
+src/components/work-records/list/quick-view-tabs.tsx 12ms
+src/components/work-records/list/record-table.test.tsx 18ms
+src/components/work-records/list/record-table.tsx 19ms
+src/components/work-records/list/work-record-export-dialog.test.tsx 22ms
+src/components/work-records/list/work-record-export-dialog.tsx 28ms
+src/components/work-records/list/workday-summary-card.test.tsx 5ms
+src/components/work-records/list/workday-summary-card.tsx 14ms
+src/components/work-records/runtime/dynamic-field-control.test.tsx 16ms
+src/components/work-records/runtime/dynamic-field-control.tsx 43ms
+src/components/work-records/runtime/record-history-card.test.tsx 10ms
+src/components/work-records/runtime/record-history-card.tsx 30ms
+src/components/work-records/runtime/record-readonly-view.test.tsx 10ms
+src/components/work-records/runtime/record-readonly-view.tsx 15ms
+src/components/work-records/runtime/record-runtime-form.test.tsx 32ms
+src/components/work-records/runtime/record-runtime-form.tsx 42ms
+[90msrc/components/work-records/runtime/template-switch-select.test.tsx[39m 10ms (unchanged)
 [90msrc/components/work-records/runtime/template-switch-select.tsx[39m 11ms (unchanged)
-[90msrc/config/fonts.ts[39m 5ms (unchanged)
-[90msrc/context/direction-provider.tsx[39m 10ms (unchanged)
-[90msrc/context/font-provider.tsx[39m 9ms (unchanged)
-[90msrc/context/layout-provider.tsx[39m 9ms (unchanged)
-[90msrc/context/search-provider.test.tsx[39m 54ms (unchanged)
-[90msrc/context/search-provider.tsx[39m 7ms (unchanged)
+[90msrc/config/fonts.ts[39m 7ms (unchanged)
+[90msrc/context/direction-provider.tsx[39m 12ms (unchanged)
+[90msrc/context/font-provider.tsx[39m 8ms (unchanged)
+[90msrc/context/layout-provider.tsx[39m 14ms (unchanged)
+[90msrc/context/search-provider.test.tsx[39m 25ms (unchanged)
+[90msrc/context/search-provider.tsx[39m 8ms (unchanged)
 [90msrc/context/theme-provider.tsx[39m 12ms (unchanged)
-[90msrc/hooks/platform/use-dictionaries.ts[39m 12ms (unchanged)
-src/hooks/platform/use-dictionary-options.ts 12ms
-src/hooks/platform/use-platform-roles.test.tsx 12ms
-src/hooks/platform/use-platform-roles.ts 19ms
-src/hooks/platform/use-platform-users.test.tsx 20ms
-src/hooks/platform/use-platform-users.ts 13ms
-[90msrc/hooks/use-dialog-state.tsx[39m 6ms (unchanged)
-[90msrc/hooks/use-dirty-snapshot.ts[39m 12ms (unchanged)
-[90msrc/hooks/use-mobile.tsx[39m 6ms (unchanged)
-[90msrc/hooks/use-table-url-state.test.ts[39m 62ms (unchanged)
-[90msrc/hooks/use-table-url-state.ts[39m 29ms (unchanged)
-[90msrc/hooks/use-unsaved-changes-guard.test.ts[39m 4ms (unchanged)
-[90msrc/hooks/use-unsaved-changes-guard.ts[39m 8ms (unchanged)
-[90msrc/hooks/work-records/api.ts[39m 5ms (unchanged)
-src/hooks/work-records/use-work-record-designer.ts 40ms
+[90msrc/hooks/platform/use-dictionaries.ts[39m 10ms (unchanged)
+src/hooks/platform/use-dictionary-options.ts 17ms
+src/hooks/platform/use-platform-roles.test.tsx 15ms
+src/hooks/platform/use-platform-roles.ts 12ms
+src/hooks/platform/use-platform-users.test.tsx 18ms
+src/hooks/platform/use-platform-users.ts 12ms
+[90msrc/hooks/use-dialog-state.tsx[39m 4ms (unchanged)
+[90msrc/hooks/use-dirty-snapshot.ts[39m 11ms (unchanged)
+[90msrc/hooks/use-mobile.tsx[39m 4ms (unchanged)
+[90msrc/hooks/use-table-url-state.test.ts[39m 74ms (unchanged)
+[90msrc/hooks/use-table-url-state.ts[39m 48ms (unchanged)
+[90msrc/hooks/use-unsaved-changes-guard.test.ts[39m 7ms (unchanged)
+[90msrc/hooks/use-unsaved-changes-guard.ts[39m 6ms (unchanged)
+[90msrc/hooks/work-records/api.ts[39m 6ms (unchanged)
+src/hooks/work-records/use-work-record-designer.ts 47ms
 src/hooks/work-records/use-work-record-list.ts 14ms
-[90msrc/i18n/i18n.test.ts[39m 8ms (unchanged)
-src/i18n/index.ts 9ms
-[90msrc/i18n/key-parity.test.ts[39m 10ms (unchanged)
-[90msrc/i18n/locales/en-US/common.ts[39m 17ms (unchanged)
-[90msrc/i18n/locales/en-US/index.ts[39m 4ms (unchanged)
+[90msrc/i18n/i18n.test.ts[39m 10ms (unchanged)
+src/i18n/index.ts 7ms
+[90msrc/i18n/key-parity.test.ts[39m 8ms (unchanged)
+[90msrc/i18n/locales/en-US/common.ts[39m 14ms (unchanged)
+[90msrc/i18n/locales/en-US/index.ts[39m 3ms (unchanged)
 src/i18n/locales/en-US/platform.ts 5ms
-[90msrc/i18n/locales/en-US/work-records.ts[39m 21ms (unchanged)
-[90msrc/i18n/locales/zh-CN/common.ts[39m 10ms (unchanged)
+[90msrc/i18n/locales/en-US/work-records.ts[39m 14ms (unchanged)
+[90msrc/i18n/locales/zh-CN/common.ts[39m 13ms (unchanged)
 [90msrc/i18n/locales/zh-CN/index.ts[39m 3ms (unchanged)
-src/i18n/locales/zh-CN/platform.ts 4ms
+src/i18n/locales/zh-CN/platform.ts 6ms
 [90msrc/i18n/locales/zh-CN/work-records.ts[39m 22ms (unchanged)
-[90msrc/lib/api-client.ts[39m 9ms (unchanged)
-[90msrc/lib/api-error.test.ts[39m 8ms (unchanged)
-[90msrc/lib/api-error.ts[39m 7ms (unchanged)
-[90msrc/lib/api-response.ts[39m 6ms (unchanged)
-[90msrc/lib/cookies.test.ts[39m 5ms (unchanged)
+[90msrc/lib/api-client.ts[39m 10ms (unchanged)
+[90msrc/lib/api-error.test.ts[39m 7ms (unchanged)
+[90msrc/lib/api-error.ts[39m 11ms (unchanged)
+[90msrc/lib/api-response.ts[39m 5ms (unchanged)
+[90msrc/lib/cookies.test.ts[39m 14ms (unchanged)
 [90msrc/lib/cookies.ts[39m 5ms (unchanged)
-[90msrc/lib/handle-server-error.test.ts[39m 8ms (unchanged)
-[90msrc/lib/handle-server-error.ts[39m 4ms (unchanged)
-[90msrc/lib/platform/calendar-helpers.test.ts[39m 19ms (unchanged)
-src/lib/platform/calendar-helpers.ts 6ms
+[90msrc/lib/handle-server-error.test.ts[39m 9ms (unchanged)
+[90msrc/lib/handle-server-error.ts[39m 5ms (unchanged)
+[90msrc/lib/platform/calendar-helpers.test.ts[39m 22ms (unchanged)
+[90msrc/lib/platform/calendar-helpers.ts[39m 8ms (unchanged)
 src/lib/platform/iam-api-error.test.ts 5ms
-src/lib/platform/iam-api-error.ts 7ms
-src/lib/platform/iam-axios-error.test.ts 8ms
-[90msrc/lib/schemas/platform-user.ts[39m 5ms (unchanged)
+src/lib/platform/iam-api-error.ts 8ms
+src/lib/platform/iam-axios-error.test.ts 7ms
+[90msrc/lib/schemas/platform-user.ts[39m 6ms (unchanged)
 [90msrc/lib/show-submitted-data.tsx[39m 4ms (unchanged)
 [90msrc/lib/utils.test.ts[39m 7ms (unchanged)
-[90msrc/lib/utils.ts[39m 11ms (unchanged)
-[90msrc/lib/work-records/designer/field-delete-risk.tsx[39m 14ms (unchanged)
-src/lib/work-records/designer/schema.test.ts 28ms
-[90msrc/lib/work-records/designer/schema.ts[39m 49ms (unchanged)
-[90msrc/lib/work-records/designer/types.ts[39m 7ms (unchanged)
-[90msrc/lib/work-records/list/export-api.test.ts[39m 9ms (unchanged)
-[90msrc/lib/work-records/list/export-api.ts[39m 13ms (unchanged)
-[90msrc/lib/work-records/list/search.test.ts[39m 8ms (unchanged)
-src/lib/work-records/list/search.ts 25ms
-[90msrc/lib/work-records/list/types.ts[39m 30ms (unchanged)
-src/lib/work-records/runtime/api.test.ts 7ms
-src/lib/work-records/runtime/record-form-validation.test.ts 18ms
-[90msrc/lib/work-records/runtime/record-form-validation.ts[39m 38ms (unchanged)
-src/lib/work-records/runtime/schema.test.ts 17ms
-src/lib/work-records/runtime/schema.ts 17ms
-[90msrc/lib/work-records/runtime/types.ts[39m 15ms (unchanged)
-[90msrc/lib/zod-v4-resolver.ts[39m 5ms (unchanged)
-[90msrc/main.tsx[39m 13ms (unchanged)
-src/pages/auth/SignInPage.tsx 27ms
-src/pages/DashboardPage.tsx 27ms
-[90msrc/pages/errors/forbidden-page.tsx[39m 8ms (unchanged)
-[90msrc/pages/errors/forbidden.tsx[39m 5ms (unchanged)
-[90msrc/pages/errors/general-error.tsx[39m 9ms (unchanged)
-[90msrc/pages/errors/maintenance-error.tsx[39m 5ms (unchanged)
-[90msrc/pages/errors/not-found-error.tsx[39m 5ms (unchanged)
-[90msrc/pages/errors/unauthorized-error.tsx[39m 7ms (unchanged)
-src/pages/platform/CalendarsPage.tsx 41ms
-src/pages/platform/DictionariesPage.tsx 28ms
-src/pages/platform/PlatformRolesPage.test.tsx 5ms
-src/pages/platform/PlatformRolesPage.tsx 20ms
-src/pages/platform/PlatformUsersPage.test.tsx 7ms
+[90msrc/lib/utils.ts[39m 10ms (unchanged)
+[90msrc/lib/work-records/designer/field-delete-risk.tsx[39m 13ms (unchanged)
+src/lib/work-records/designer/schema.test.ts 16ms
+[90msrc/lib/work-records/designer/schema.ts[39m 63ms (unchanged)
+[90msrc/lib/work-records/designer/types.ts[39m 8ms (unchanged)
+[90msrc/lib/work-records/list/export-api.test.ts[39m 12ms (unchanged)
+[90msrc/lib/work-records/list/export-api.ts[39m 18ms (unchanged)
+[90msrc/lib/work-records/list/search.test.ts[39m 9ms (unchanged)
+src/lib/work-records/list/search.ts 22ms
+[90msrc/lib/work-records/list/types.ts[39m 32ms (unchanged)
+src/lib/work-records/runtime/api.test.ts 9ms
+src/lib/work-records/runtime/record-form-validation.test.ts 12ms
+[90msrc/lib/work-records/runtime/record-form-validation.ts[39m 11ms (unchanged)
+src/lib/work-records/runtime/schema.test.ts 24ms
+src/lib/work-records/runtime/schema.ts 20ms
+[90msrc/lib/work-records/runtime/types.ts[39m 27ms (unchanged)
+[90msrc/lib/zod-v4-resolver.ts[39m 4ms (unchanged)
+[90msrc/main.tsx[39m 12ms (unchanged)
+src/pages/auth/SignInPage.tsx 22ms
+src/pages/DashboardPage.tsx 23ms
+[90msrc/pages/errors/forbidden-page.tsx[39m 9ms (unchanged)
+[90msrc/pages/errors/forbidden.tsx[39m 6ms (unchanged)
+[90msrc/pages/errors/general-error.tsx[39m 6ms (unchanged)
+[90msrc/pages/errors/maintenance-error.tsx[39m 4ms (unchanged)
+[90msrc/pages/errors/not-found-error.tsx[39m 7ms (unchanged)
+[90msrc/pages/errors/unauthorized-error.tsx[39m 4ms (unchanged)
+src/pages/platform/CalendarsPage.tsx 55ms
+src/pages/platform/DictionariesPage.tsx 29ms
+src/pages/platform/PlatformRolesPage.test.tsx 6ms
+src/pages/platform/PlatformRolesPage.tsx 13ms
+src/pages/platform/PlatformUsersPage.test.tsx 15ms
 src/pages/platform/PlatformUsersPage.tsx 13ms
-[90msrc/pages/settings/account/account-form.tsx[39m 29ms (unchanged)
-[90msrc/pages/settings/account/index.tsx[39m 3ms (unchanged)
-src/pages/settings/appearance/appearance-form.tsx 28ms
+[90msrc/pages/settings/account/account-form.tsx[39m 22ms (unchanged)
+[90msrc/pages/settings/account/index.tsx[39m 2ms (unchanged)
+src/pages/settings/appearance/appearance-form.tsx 26ms
 [90msrc/pages/settings/appearance/index.tsx[39m 3ms (unchanged)
-[90msrc/pages/settings/components/content-section.tsx[39m 13ms (unchanged)
-[90msrc/pages/settings/components/sidebar-nav.tsx[39m 10ms (unchanged)
-[90msrc/pages/settings/display/display-form.tsx[39m 18ms (unchanged)
-[90msrc/pages/settings/display/index.tsx[39m 3ms (unchanged)
-[90msrc/pages/settings/index.tsx[39m 11ms (unchanged)
-[90msrc/pages/settings/notifications/index.tsx[39m 7ms (unchanged)
-[90msrc/pages/settings/notifications/notifications-form.tsx[39m 24ms (unchanged)
-[90msrc/pages/settings/profile/index.tsx[39m 8ms (unchanged)
-[90msrc/pages/settings/profile/profile-form.tsx[39m 17ms (unchanged)
-src/pages/work-records/WorkRecordCreatePage.tsx 40ms
-src/pages/work-records/WorkRecordDetailPage.tsx 11ms
-src/pages/work-records/WorkRecordEditPage.tsx 24ms
-src/pages/work-records/WorkRecordListPage.tsx 26ms
-[90msrc/pages/work-records/WorkRecordTemplateDesignerPage.test.tsx[39m 16ms (unchanged)
-src/pages/work-records/WorkRecordTemplateDesignerPage.tsx 32ms
-src/pages/work-records/WorkRecordTemplateListPage.test.tsx 16ms
-src/pages/work-records/WorkRecordTemplateListPage.tsx 77ms
-src/routes/__root.tsx 16ms
-src/routes/_authenticated/errors/$error.tsx 17ms
-[90msrc/routes/_authenticated/index.tsx[39m 4ms (unchanged)
-src/routes/_authenticated/platform/calendars.tsx 7ms
+[90msrc/pages/settings/components/content-section.tsx[39m 11ms (unchanged)
+[90msrc/pages/settings/components/sidebar-nav.tsx[39m 15ms (unchanged)
+[90msrc/pages/settings/display/display-form.tsx[39m 17ms (unchanged)
+[90msrc/pages/settings/display/index.tsx[39m 2ms (unchanged)
+[90msrc/pages/settings/index.tsx[39m 8ms (unchanged)
+[90msrc/pages/settings/notifications/index.tsx[39m 9ms (unchanged)
+[90msrc/pages/settings/notifications/notifications-form.tsx[39m 25ms (unchanged)
+[90msrc/pages/settings/profile/index.tsx[39m 13ms (unchanged)
+[90msrc/pages/settings/profile/profile-form.tsx[39m 18ms (unchanged)
+src/pages/work-records/WorkRecordCreatePage.tsx 56ms
+src/pages/work-records/WorkRecordDetailPage.tsx 12ms
+src/pages/work-records/WorkRecordEditPage.tsx 30ms
+[90msrc/pages/work-records/WorkRecordListPage.test.tsx[39m 37ms (unchanged)
+src/pages/work-records/WorkRecordListPage.tsx 24ms
+src/pages/work-records/WorkRecordRuntimePages.test.tsx 38ms
+[90msrc/pages/work-records/WorkRecordTemplateDesignerPage.test.tsx[39m 21ms (unchanged)
+src/pages/work-records/WorkRecordTemplateDesignerPage.tsx 27ms
+src/pages/work-records/WorkRecordTemplateListPage.test.tsx 15ms
+src/pages/work-records/WorkRecordTemplateListPage.tsx 79ms
+src/routes/__root.tsx 19ms
+src/routes/_authenticated/errors/$error.tsx 16ms
+[90msrc/routes/_authenticated/index.tsx[39m 2ms (unchanged)
+src/routes/_authenticated/platform/calendars.tsx 10ms
 src/routes/_authenticated/platform/dictionaries.tsx 3ms
-src/routes/_authenticated/platform/roles.tsx 4ms
-[90msrc/routes/_authenticated/platform/users/index.tsx[39m 14ms (unchanged)
-src/routes/_authenticated/route.tsx 3ms
-[90msrc/routes/_authenticated/settings/account.tsx[39m 7ms (unchanged)
-[90msrc/routes/_authenticated/settings/appearance.tsx[39m 3ms (unchanged)
-[90msrc/routes/_authenticated/settings/display.tsx[39m 3ms (unchanged)
-[90msrc/routes/_authenticated/settings/index.tsx[39m 3ms (unchanged)
+src/routes/_authenticated/platform/roles.tsx 3ms
+[90msrc/routes/_authenticated/platform/users/index.tsx[39m 13ms (unchanged)
+src/routes/_authenticated/route.tsx 2ms
+[90msrc/routes/_authenticated/settings/account.tsx[39m 9ms (unchanged)
+[90msrc/routes/_authenticated/settings/appearance.tsx[39m 2ms (unchanged)
+[90msrc/routes/_authenticated/settings/display.tsx[39m 2ms (unchanged)
+[90msrc/routes/_authenticated/settings/index.tsx[39m 2ms (unchanged)
 [90msrc/routes/_authenticated/settings/notifications.tsx[39m 2ms (unchanged)
-[90msrc/routes/_authenticated/settings/route.tsx[39m 4ms (unchanged)
-src/routes/_authenticated/work-records/$recordId.edit.tsx 12ms
-src/routes/_authenticated/work-records/$recordId.tsx 3ms
-src/routes/_authenticated/work-records/index.tsx 3ms
+[90msrc/routes/_authenticated/settings/route.tsx[39m 2ms (unchanged)
+src/routes/_authenticated/work-records/$recordId.edit.tsx 9ms
+src/routes/_authenticated/work-records/$recordId.tsx 2ms
+src/routes/_authenticated/work-records/index.tsx 2ms
 src/routes/_authenticated/work-records/new.tsx 3ms
-[90msrc/routes/_authenticated/work-records/templates/$templateId.designer.tsx[39m 8ms (unchanged)
+[90msrc/routes/_authenticated/work-records/templates/$templateId.designer.tsx[39m 11ms (unchanged)
 src/routes/_authenticated/work-records/templates/index.tsx 3ms
-src/routes/(auth)/sign-in.tsx 6ms
-[90msrc/routes/(errors)/401.tsx[39m 6ms (unchanged)
+src/routes/(auth)/sign-in.tsx 8ms
+[90msrc/routes/(errors)/401.tsx[39m 7ms (unchanged)
 [90msrc/routes/(errors)/403.tsx[39m 3ms (unchanged)
 [90msrc/routes/(errors)/404.tsx[39m 2ms (unchanged)
-[90msrc/routes/(errors)/500.tsx[39m 6ms (unchanged)
+[90msrc/routes/(errors)/500.tsx[39m 2ms (unchanged)
 [90msrc/routes/(errors)/503.tsx[39m 3ms (unchanged)
-[90msrc/stores/auth-store.test.ts[39m 9ms (unchanged)
-src/stores/auth-store.ts 6ms
-[90msrc/styles/index.css[39m 29ms (unchanged)
-[90msrc/styles/theme.css[39m 25ms (unchanged)
+[90msrc/stores/auth-store.test.ts[39m 13ms (unchanged)
+src/stores/auth-store.ts 9ms
+[90msrc/styles/index.css[39m 36ms (unchanged)
+[90msrc/styles/theme.css[39m 27ms (unchanged)
 [90msrc/tanstack-table.d.ts[39m 4ms (unchanged)
-[90msrc/test-utils/cookies.ts[39m 7ms (unchanged)
+[90msrc/test-utils/cookies.ts[39m 10ms (unchanged)
 [90msrc/test-utils/tanstack-table.ts[39m 4ms (unchanged)
 [90msrc/test-utils/vitest-setup.ts[39m 2ms (unchanged)
 [90msrc/vite-env.d.ts[39m 2ms (unchanged)
@@ -237,7 +272,7 @@ Scope: all 2 workspace projects
 │   to run scripts.                                                            │
 │                                                                              │
 ╰──────────────────────────────────────────────────────────────────────────────╯
-Done in 1.3s using pnpm v10.33.4
+Done in 1.4s using pnpm v10.33.4
 [web/portal] pnpm run format:check
 
 > aegisops-portal@2.2.1 format:check /home/runner/work/ai-ops/ai-ops/web/portal
@@ -251,50 +286,15 @@ All matched files use Prettier code style!
 > eslint .
 
 
-/home/runner/work/ai-ops/ai-ops/web/portal/src/components/platform/iam/role-editor.tsx
-  36:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
-
 /home/runner/work/ai-ops/ai-ops/web/portal/src/routes/_authenticated/work-records/templates/$templateId.designer.tsx
   12:10  warning  Fast refresh only works when a file only exports components. Move your component(s) to a separate file. If all exports are HOCs, add them to the `extraHOCs` option  react-refresh/only-export-components
 
-✖ 2 problems (0 errors, 2 warnings)
+✖ 1 problem (0 errors, 1 warning)
 
 [web/portal] pnpm run typecheck
 
 > aegisops-portal@2.2.1 typecheck /home/runner/work/ai-ops/ai-ops/web/portal
 > tsc -b --pretty false
 
-src/api/work-records/records.ts(5,3): error TS2305: Module '"./types"' has no exported member 'ListQueryState'.
-src/api/work-records/records.ts(6,3): error TS2305: Module '"./types"' has no exported member 'PageResult'.
-src/api/work-records/records.ts(7,3): error TS2305: Module '"./types"' has no exported member 'RecordListMeta'.
-src/api/work-records/records.ts(8,3): error TS2305: Module '"./types"' has no exported member 'RecordWorkdaySummary'.
-src/auth/authorization-schema.test.ts(2,10): error TS2305: Module '"./authorization-api"' has no exported member 'principalSchema'.
-src/auth/authorization-schema.test.ts(2,27): error TS2305: Module '"./authorization-api"' has no exported member 'responseSchema'.
-src/auth/permission-gate.test.tsx(25,23): error TS2322: Type '{ children: Element; any: string[]; }' is not assignable to type 'IntrinsicAttributes & { anyOf?: string[] | undefined; allOf?: string[] | undefined; fallback?: ReactNode; } & { children?: ReactNode; }'.
-  Property 'any' does not exist on type 'IntrinsicAttributes & { anyOf?: string[] | undefined; allOf?: string[] | undefined; fallback?: ReactNode; } & { children?: ReactNode; }'.
-src/auth/permission-gate.test.tsx(36,9): error TS2322: Type '{ children: Element; any: string[]; fallback: Element; }' is not assignable to type 'IntrinsicAttributes & { anyOf?: string[] | undefined; allOf?: string[] | undefined; fallback?: ReactNode; } & { children?: ReactNode; }'.
-  Property 'any' does not exist on type 'IntrinsicAttributes & { anyOf?: string[] | undefined; allOf?: string[] | undefined; fallback?: ReactNode; } & { children?: ReactNode; }'.
-src/auth/permission-gate.test.tsx(49,25): error TS2322: Type '{ children: Element; all: string[]; }' is not assignable to type 'IntrinsicAttributes & { anyOf?: string[] | undefined; allOf?: string[] | undefined; fallback?: ReactNode; } & { children?: ReactNode; }'.
-  Property 'all' does not exist on type 'IntrinsicAttributes & { anyOf?: string[] | undefined; allOf?: string[] | undefined; fallback?: ReactNode; } & { children?: ReactNode; }'.
-src/auth/permission-gate.test.tsx(52,25): error TS2322: Type '{ children: Element; all: string[]; }' is not assignable to type 'IntrinsicAttributes & { anyOf?: string[] | undefined; allOf?: string[] | undefined; fallback?: ReactNode; } & { children?: ReactNode; }'.
-  Property 'all' does not exist on type 'IntrinsicAttributes & { anyOf?: string[] | undefined; allOf?: string[] | undefined; fallback?: ReactNode; } & { children?: ReactNode; }'.
-src/auth/permission-gate.test.tsx(61,23): error TS2322: Type '{ children: Element; all: string[]; }' is not assignable to type 'IntrinsicAttributes & { anyOf?: string[] | undefined; allOf?: string[] | undefined; fallback?: ReactNode; } & { children?: ReactNode; }'.
-  Property 'all' does not exist on type 'IntrinsicAttributes & { anyOf?: string[] | undefined; allOf?: string[] | undefined; fallback?: ReactNode; } & { children?: ReactNode; }'.
-src/components/work-records/designer/work-record-designer-page.test.tsx(5,40): error TS2307: Cannot find module './work-record-designer-page' or its corresponding type declarations.
-src/components/work-records/list/work-record-export-dialog.test.tsx(8,51): error TS2307: Cannot find module './export-api' or its corresponding type declarations.
-src/components/work-records/list/work-record-list-page.test.tsx(8,36): error TS2307: Cannot find module './work-record-list-page' or its corresponding type declarations.
-src/components/work-records/list/work-record-list-page.test.tsx(166,30): error TS2307: Cannot find module './api' or its corresponding type declarations.
-src/components/work-records/runtime/pages.test.tsx(7,34): error TS2307: Cannot find module './detail-record-page' or its corresponding type declarations.
-src/components/work-records/runtime/pages.test.tsx(8,32): error TS2307: Cannot find module './edit-record-page' or its corresponding type declarations.
-src/components/work-records/runtime/pages.test.tsx(9,31): error TS2307: Cannot find module './new-record-page' or its corresponding type declarations.
-src/hooks/platform/use-dictionaries.ts(7,8): error TS2307: Cannot find module '../api' or its corresponding type declarations.
-src/hooks/work-records/use-work-record-list.ts(73,30): error TS7006: Parameter 'column' implicitly has an 'any' type.
-src/hooks/work-records/use-work-record-list.ts(78,28): error TS7006: Parameter 'column' implicitly has an 'any' type.
-src/lib/platform/calendar-helpers.test.ts(2,34): error TS2307: Cannot find module './api' or its corresponding type declarations.
-src/lib/platform/calendar-helpers.test.ts(8,3): error TS2305: Module '"./calendar-helpers"' has no exported member 'pickDayKind'.
-src/pages/platform/PlatformRolesPage.test.tsx(28,30): error TS2307: Cannot find module '../hooks/use-platform-roles' or its corresponding type declarations.
-src/pages/platform/PlatformUsersPage.test.tsx(13,23): error TS2322: Type '{ children: Element; any: string[]; }' is not assignable to type 'IntrinsicAttributes & { anyOf?: string[] | undefined; allOf?: string[] | undefined; fallback?: ReactNode; } & { children?: ReactNode; }'.
-  Property 'any' does not exist on type 'IntrinsicAttributes & { anyOf?: string[] | undefined; allOf?: string[] | undefined; fallback?: ReactNode; } & { children?: ReactNode; }'.
-src/pages/work-records/WorkRecordListPage.tsx(116,14): error TS7006: Parameter 'column' implicitly has an 'any' type.
-src/pages/work-records/WorkRecordTemplateListPage.test.tsx(7,54): error TS2307: Cannot find module './api' or its corresponding type declarations.
+src/lib/platform/calendar-helpers.test.ts(2,15): error TS2305: Module '"@/api/platform/calendars"' has no exported member 'CalendarDay'.
  ELIFECYCLE  Command failed with exit code 2.
