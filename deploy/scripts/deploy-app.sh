@@ -3,8 +3,6 @@ set -Eeuo pipefail
 
 : "${IMAGE_PREFIX:?IMAGE_PREFIX is required}"
 : "${IMAGE_TAG:?IMAGE_TAG is required}"
-: "${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME is required}"
-: "${DOCKERHUB_TOKEN:?DOCKERHUB_TOKEN is required}"
 
 APP_DIR="${APP_DIR:-$HOME/workspace/aegisops}"
 COMPOSE_FILE="${COMPOSE_FILE:-$APP_DIR/deploy/docker-compose.app.yml}"
@@ -69,10 +67,26 @@ cleanup_registry_auth() {
 }
 trap cleanup_registry_auth EXIT
 
+print_port_diagnostics() {
+  local port=$1
+  echo "==> Port ${port} diagnostics"
+  docker ps --filter "publish=${port}" \
+    --format 'container={{.ID}} name={{.Names}} image={{.Image}} ports={{.Ports}}' || true
+
+  if command -v ss >/dev/null 2>&1; then
+    ss -ltnp 2>/dev/null | awk -v suffix=":${port}" '$4 ~ (suffix "$" ) { print }' || true
+  elif command -v lsof >/dev/null 2>&1; then
+    lsof -nP -iTCP:"${port}" -sTCP:LISTEN 2>/dev/null || true
+  fi
+}
+
 print_diagnostics() {
   echo "==> Deployment diagnostics (stage=${DEPLOY_STAGE})"
   compose ps || true
   compose logs --no-color --tail=120 aiops-server aiops-agent aiops-worker aiops-runner || true
+  for port in 5432 8080 8081 8092 9008; do
+    print_port_diagnostics "$port"
+  done
 }
 
 rollback() {
@@ -117,6 +131,120 @@ pull_image() {
   local image=$1
   echo "==> Pulling ${image}"
   retry 5 docker pull "$image"
+}
+
+container_name_by_id() {
+  docker inspect --format '{{.Name}}' "$1" 2>/dev/null | sed 's#^/##'
+}
+
+container_image_by_id() {
+  docker inspect --format '{{.Config.Image}}' "$1" 2>/dev/null || true
+}
+
+is_managed_aegisops_container() {
+  local container_id=$1
+  local container_name container_image
+
+  container_name="$(container_name_by_id "$container_id")"
+  container_image="$(container_image_by_id "$container_id")"
+
+  [[ "$container_name" == aegisops-* ]] \
+    || [[ "$container_image" == "${IMAGE_PREFIX}:"* ]]
+}
+
+port_is_listening() {
+  local port=$1
+
+  if command -v ss >/dev/null 2>&1; then
+    ss -H -ltn 2>/dev/null \
+      | awk -v suffix=":${port}" '$4 ~ (suffix "$" ) { found=1 } END { exit found ? 0 : 1 }'
+    return
+  fi
+
+  if command -v lsof >/dev/null 2>&1; then
+    lsof -nP -iTCP:"${port}" -sTCP:LISTEN >/dev/null 2>&1
+    return
+  fi
+
+  # 无宿主机端口检查工具时只依赖 Docker publish 检查。
+  return 1
+}
+
+wait_port_free() {
+  local port=$1
+  local attempt
+
+  for attempt in 1 2 3 4 5; do
+    if ! port_is_listening "$port"; then
+      return 0
+    fi
+    sleep 1
+  done
+
+  return 1
+}
+
+ensure_port_available() {
+  local port=$1
+  local expected_container=$2
+  local auto_reclaim=$3
+  local owner_id owner_name
+  local expected_owner_found=0
+  local foreign_owner_found=0
+  local stale_owner_removed=0
+
+  while IFS= read -r owner_id; do
+    [ -n "$owner_id" ] || continue
+    owner_name="$(container_name_by_id "$owner_id")"
+
+    if [ "$owner_name" = "$expected_container" ]; then
+      expected_owner_found=1
+      echo "Port ${port} is currently owned by expected container ${expected_container}; Compose will update it in place."
+      continue
+    fi
+
+    if [ "$auto_reclaim" = "true" ] && is_managed_aegisops_container "$owner_id"; then
+      echo "Removing stale AegisOps container ${owner_name:-$owner_id} that occupies port ${port}."
+      docker rm -f "$owner_id"
+      stale_owner_removed=1
+      continue
+    fi
+
+    foreign_owner_found=1
+    echo "Port ${port} is occupied by unmanaged container ${owner_name:-$owner_id}; refusing to stop it automatically." >&2
+  done < <(docker ps --filter "publish=${port}" --format '{{.ID}}')
+
+  if [ "$foreign_owner_found" = "1" ]; then
+    print_port_diagnostics "$port"
+    return 1
+  fi
+
+  if [ "$expected_owner_found" = "1" ]; then
+    return 0
+  fi
+
+  if [ "$stale_owner_removed" = "1" ] && ! wait_port_free "$port"; then
+    echo "Port ${port} is still occupied after removing stale AegisOps containers." >&2
+    print_port_diagnostics "$port"
+    return 1
+  fi
+
+  if port_is_listening "$port"; then
+    echo "Port ${port} is occupied by a host process or an undetected runtime; refusing to terminate it automatically." >&2
+    print_port_diagnostics "$port"
+    return 1
+  fi
+
+  echo "Port ${port} is available."
+}
+
+validate_host_ports() {
+  # PostgreSQL 数据端口不做自动接管，避免误停其它数据库实例。
+  ensure_port_available 5432 aegisops-postgres false
+  ensure_port_available 8080 aegisops-server true
+  ensure_port_available 8081 aegisops-worker true
+  ensure_port_available 8092 aegisops-runner true
+  ensure_port_available 9008 aegisops-agent true
 }
 
 wait_http() {
@@ -176,12 +304,19 @@ docker version --format 'Docker {{.Server.Version}}'
 docker compose version
 docker info >/dev/null
 
-DEPLOY_STAGE="registry-login"
-DOCKER_CONFIG_DIR="$(mktemp -d "${TMPDIR:-/tmp}/aegisops-docker-config.XXXXXX")"
-chmod 700 "$DOCKER_CONFIG_DIR"
-export DOCKER_CONFIG="$DOCKER_CONFIG_DIR"
-printf '%s' "$DOCKERHUB_TOKEN" \
-  | docker login --username "$DOCKERHUB_USERNAME" --password-stdin
+if [ -n "${DOCKERHUB_USERNAME:-}" ] || [ -n "${DOCKERHUB_TOKEN:-}" ]; then
+  : "${DOCKERHUB_USERNAME:?DOCKERHUB_USERNAME and DOCKERHUB_TOKEN must be provided together}"
+  : "${DOCKERHUB_TOKEN:?DOCKERHUB_USERNAME and DOCKERHUB_TOKEN must be provided together}"
+
+  DEPLOY_STAGE="registry-login"
+  DOCKER_CONFIG_DIR="$(mktemp -d "${TMPDIR:-/tmp}/aegisops-docker-config.XXXXXX")"
+  chmod 700 "$DOCKER_CONFIG_DIR"
+  export DOCKER_CONFIG="$DOCKER_CONFIG_DIR"
+  printf '%s' "$DOCKERHUB_TOKEN" \
+    | docker login --username "$DOCKERHUB_USERNAME" --password-stdin
+else
+  echo "==> Registry login skipped; using existing Docker credentials or public images"
+fi
 
 DEPLOY_STAGE="compose-validation"
 echo "==> Validating deployment descriptor"
@@ -193,6 +328,10 @@ pull_image "$AIOPS_SERVER_IMAGE"
 pull_image "$AIOPS_AGENT_IMAGE"
 pull_image "$AIOPS_WORKER_IMAGE"
 pull_image "$AIOPS_RUNNER_IMAGE"
+
+DEPLOY_STAGE="port-preflight"
+echo "==> Validating required host ports"
+validate_host_ports
 
 DEPLOY_STAGE="compose-up"
 echo "==> Applying release without stopping PostgreSQL or healthy unchanged containers"
