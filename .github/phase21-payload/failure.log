@@ -1,0 +1,1 @@
+fatal: destination exists, source=web/portal/src/features/dictionaries/index.tsx, destination=web/portal/src/pages/platform/DictionariesPage.tsx
