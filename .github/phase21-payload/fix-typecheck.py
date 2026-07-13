@@ -19,8 +19,6 @@ def replace_required(path: Path, old: str, new: str, label: str) -> None:
     path.write_text(content.replace(old, new), encoding='utf-8')
 
 
-# Preserve the stricter legacy auth response contract while exposing the new
-# canonical schema name used by the authorization client.
 authorization_api = package / 'patch/web/portal/src/auth/authorization-api.ts'
 authorization_api.write_text(
     """import { z } from 'zod'
@@ -56,8 +54,6 @@ export async function fetchCurrentAuthorization(): Promise<AuthorizationPrincipa
     encoding='utf-8',
 )
 
-# The new tests must mock the canonical API/query-key modules, not siblings of
-# the page directory.
 designer_test = package / (
     'patch/web/portal/src/pages/work-records/'
     'WorkRecordTemplateDesignerPage.test.tsx'
@@ -89,8 +85,6 @@ content = content.replace(
 )
 template_list_test.write_text(content, encoding='utf-8')
 
-# Retain all calendar helpers covered by the existing tests after moving the
-# module into lib/platform.
 calendar_helpers = package / 'patch/web/portal/src/lib/platform/calendar-helpers.ts'
 calendar_helpers.write_text(
     """import type { PlatformCalendarDay } from '@/api/platform/calendars'
@@ -145,10 +139,9 @@ export function pickDayKind(dayData: PlatformCalendarDay | undefined): {
     encoding='utf-8',
 )
 
-# Final-target corrections run after all git mv/copy/rewrite operations.
 fix_targets = package / 'scripts/fix-typecheck-targets.py'
 fix_targets.write_text(
-    """from pathlib import Path
+    r'''from pathlib import Path
 
 
 def replace(path: Path, old: str, new: str, *, required: bool = True) -> None:
@@ -174,15 +167,12 @@ def move(source: Path, target: Path) -> Path:
     return target
 
 
-# API modules must depend on domain/list types, never an API-barrel sibling.
 replace(
     Path('web/portal/src/api/work-records/records.ts'),
     "from './types'",
     "from '@/lib/work-records/list/types'",
 )
 
-# Keep old and new permission prop names during the controlled migration so
-# route/page tests and callers do not need a flag-day update.
 Path('web/portal/src/auth/permission-gate.tsx').write_text(
     """import type { PropsWithChildren, ReactNode } from 'react'
 import { useAuthorization } from './use-authorization'
@@ -216,15 +206,11 @@ export function PermissionGate({
     encoding='utf-8',
 )
 
-# The old page selected a global/first template. The new resource-route page
-# has dedicated multi-template tests, so the obsolete test must not survive.
 Path(
     'web/portal/src/components/work-records/designer/'
     'work-record-designer-page.test.tsx'
 ).unlink(missing_ok=True)
 
-# List page tests belong with the page. Component-level export tests stay with
-# the component but import API/list types through their canonical layers.
 list_page_test = move(
     Path(
         'web/portal/src/components/work-records/list/'
@@ -263,8 +249,6 @@ replace(
     "vi.mock('@/lib/work-records/list/export-api',",
 )
 
-# Runtime page tests move out of the component directory and mock the runtime
-# API through its canonical top-level module.
 runtime_page_test = move(
     Path('web/portal/src/components/work-records/runtime/pages.test.tsx'),
     Path('web/portal/src/pages/work-records/WorkRecordRuntimePages.test.tsx'),
@@ -293,8 +277,6 @@ replace(
     "vi.mock('@/api/work-records/runtime',",
 )
 
-# Platform hooks/tests must not retain relative paths from the former feature
-# directory depth.
 replace(
     Path('web/portal/src/hooks/platform/use-dictionaries.ts'),
     "from '../api'",
@@ -313,7 +295,6 @@ replace(
     "@/hooks/platform/use-platform-roles",
 )
 
-# Avoid a Fast Refresh warning without weakening the repository-wide rule.
 role_editor = Path('web/portal/src/components/platform/iam/role-editor.tsx')
 if role_editor.exists():
     content = role_editor.read_text(encoding='utf-8')
@@ -325,12 +306,12 @@ if role_editor.exists():
     ):
         content = content.replace(
             marker,
-            '// eslint-disable-next-line react-refresh/only-export-components\\n'
+            '// eslint-disable-next-line react-refresh/only-export-components\n'
             + marker,
             1,
         )
         role_editor.write_text(content, encoding='utf-8')
-""",
+''',
     encoding='utf-8',
 )
 
