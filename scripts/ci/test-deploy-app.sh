@@ -20,6 +20,7 @@ make_mock_env() {
   mkdir -p "$mock_bin" "$case_dir/app/deploy" "$case_dir/home" "$case_dir/tmp"
   printf 'services: {}\n' >"$case_dir/app/deploy/docker-compose.app.yml"
   : >"$case_dir/docker.log"
+  printf '0\n' >"$case_dir/compose-up-count"
 
   cat >"$mock_bin/docker" <<'MOCK_DOCKER'
 #!/usr/bin/env bash
@@ -59,9 +60,14 @@ case "${1:-}" in
         foreign123) echo "nginx:latest" ;;
       esac
     elif [[ "$*" == *".State.Health"* ]]; then
-      echo "healthy"
-    elif [[ "$*" == *".State.Running"* ]]; then
-      echo "true"
+      up_count="$(cat "$MOCK_STATE_DIR/compose-up-count")"
+      if [ "$MOCK_CONFLICT_MODE" = "rollback" ] \
+        && [ "$last_arg" = "aegisops-worker" ] \
+        && [ "$up_count" = "1" ]; then
+        echo "unhealthy"
+      else
+        echo "healthy"
+      fi
     fi
     ;;
   ps)
@@ -95,18 +101,16 @@ case "${1:-}" in
     if [[ "$*" == *" version"* ]]; then
       echo "Docker Compose version v2.30.0"
     fi
+    if [[ "$*" == *" up -d "* ]]; then
+      up_count="$(cat "$MOCK_STATE_DIR/compose-up-count")"
+      printf '%s\n' "$((up_count + 1))" >"$MOCK_STATE_DIR/compose-up-count"
+    fi
     ;;
   image)
     ;;
 esac
 MOCK_DOCKER
   chmod +x "$mock_bin/docker"
-
-  cat >"$mock_bin/curl" <<'MOCK_CURL'
-#!/usr/bin/env bash
-exit 0
-MOCK_CURL
-  chmod +x "$mock_bin/curl"
 
   cat >"$mock_bin/ss" <<'MOCK_SS'
 #!/usr/bin/env bash
@@ -178,9 +182,14 @@ run_case() {
 
 stale_dir="$(run_case stale-managed stale success)"
 grep -Fq "rm -f stale123" "$stale_dir/docker.log"
+grep -Fq "rm -f aegisops-server" "$stale_dir/docker.log"
+grep -Fq "rm -f aegisops-agent" "$stale_dir/docker.log"
+grep -Fq "rm -f aegisops-worker" "$stale_dir/docker.log"
+grep -Fq "rm -f aegisops-runner" "$stale_dir/docker.log"
 grep -Fq "up -d --remove-orphans --no-build" "$stale_dir/docker.log"
 grep -Fq "logout" "$stale_dir/docker.log"
 grep -Fq "Removing stale AegisOps container" "$stale_dir/output.log"
+grep -Fq "Recreating stateless application containers" "$stale_dir/output.log"
 
 foreign_dir="$(run_case foreign-container foreign failure)"
 if grep -Fq "rm -f foreign123" "$foreign_dir/docker.log"; then
@@ -192,11 +201,18 @@ grep -Fq "refusing to stop it automatically" "$foreign_dir/output.log"
 host_dir="$(run_case host-process host failure)"
 grep -Fq "occupied by a host process" "$host_dir/output.log"
 
-for dir in "$stale_dir" "$foreign_dir" "$host_dir"; do
+rollback_dir="$(run_case unhealthy-worker rollback failure)"
+grep -Fq "aegisops-worker status=unhealthy" "$rollback_dir/output.log"
+grep -Fq "Rolling back to the previously running images" "$rollback_dir/output.log"
+[ "$(cat "$rollback_dir/compose-up-count")" = "2" ]
+[ "$(grep -Fc "rm -f aegisops-server" "$rollback_dir/docker.log")" -eq 2 ]
+[ "$(grep -Fc "rm -f aegisops-worker" "$rollback_dir/docker.log")" -eq 2 ]
+
+for dir in "$stale_dir" "$foreign_dir" "$host_dir" "$rollback_dir"; do
   if grep -Fq "super-secret-token" "$dir/docker.log" "$dir/output.log"; then
     echo "Docker Hub token leaked in case $dir." >&2
     exit 1
   fi
 done
 
-echo "Deployment port-conflict simulation passed."
+echo "Deployment runtime and port-conflict simulation passed."
