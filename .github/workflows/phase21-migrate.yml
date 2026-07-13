@@ -63,10 +63,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python3 - <<'PY'
+          normalizer="$RUNNER_TEMP/phase21-normalize.py"
+          cp .github/phase21-payload/normalize.py "$normalizer"
+          python3 - "$normalizer" <<'PY'
+          import sys
           from pathlib import Path
 
-          path = Path('.github/phase21-payload/normalize.py')
+          path = Path(sys.argv[1])
           content = path.read_text(encoding='utf-8')
           old = "ui_fix_source = textwrap.dedent(\n    '''\\\n"
           new = "ui_fix_source = textwrap.dedent(\n    r'''\\\n"
@@ -74,7 +77,7 @@ jobs:
               raise SystemExit('ui_fix_source raw-string marker not found')
           path.write_text(content.replace(old, new), encoding='utf-8')
           PY
-          python3 .github/phase21-payload/normalize.py \
+          python3 "$normalizer" \
             "$RUNNER_TEMP/phase21-runtime/phase21-runtime-package"
 
       - name: Configure Git
