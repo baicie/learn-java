@@ -31,6 +31,13 @@ echo "==> Parse release POMs"
 "$MAVEN" -B -ntp -f apps/aiops-worker/pom.xml validate
 "$MAVEN" -B -ntp -f apps/aiops-runner/pom.xml validate
 
+echo "==> Validate observability dependency boundary"
+if grep -Fq '<artifactId>aiops-security</artifactId>' modules/aiops-observability/pom.xml; then
+  echo "aiops-observability must not pull the complete aiops-security runtime into worker/runner." >&2
+  exit 1
+fi
+"$MAVEN" -B -ntp -pl modules/aiops-observability -am -DskipTests compile
+
 echo "==> Validate executable Spring Boot JAR contract"
 grep -Fq '<goal>repackage</goal>' apps/aiops-worker/pom.xml
 grep -Fq '<goal>repackage</goal>' apps/aiops-runner/pom.xml
@@ -53,6 +60,9 @@ grep -Fq 'refusing to stop it automatically' scripts/ci/test-deploy-app.sh
 echo "==> Validate container health contract"
 grep -Fq 'urllib.request.urlopen' deploy/docker-compose.app.yml
 grep -Fq 'urllib.request.urlopen' apps/aiops-agent/Dockerfile
+grep -Fq 'image: redis:7-alpine' deploy/docker-compose.app.yml
+grep -Fq 'SPRING_DATA_REDIS_HOST: redis' deploy/docker-compose.app.yml
+grep -Fq 'condition: service_healthy' deploy/docker-compose.app.yml
 if grep -Fq 'wget -q -O - http://localhost:9008/health' deploy/docker-compose.app.yml; then
   echo "Agent health check still depends on wget, which is absent from python:3.12-slim." >&2
   exit 1
