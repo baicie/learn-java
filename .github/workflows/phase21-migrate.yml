@@ -135,6 +135,36 @@ jobs:
                   risk_source.unlink()
               else:
                   risk_source.rename(risk_target)
+
+          replace(
+              Path('web/portal/src/pages/work-records/WorkRecordCreatePage.tsx'),
+              'type { WorkRecordRuntimeFormValue, WorkRecordStatus }',
+              'type { WorkRecordStatus }',
+          )
+
+          designer_route = Path(
+              'web/portal/src/routes/_authenticated/work-records/templates/'
+              '$templateId.designer.tsx'
+          )
+          designer_route.write_text(
+              """import { createFileRoute } from '@tanstack/react-router'
+          import { requireAnyPermission } from '@/auth/permission'
+          import { WorkRecordTemplateDesignerPage } from '@/pages/work-records/WorkRecordTemplateDesignerPage'
+
+          export const Route = createFileRoute(
+            '/_authenticated/work-records/templates/$templateId/designer'
+          )({
+            beforeLoad: () => requireAnyPermission(['work-record:template:read']),
+            component: WorkRecordTemplateDesignerRoute,
+          })
+
+          function WorkRecordTemplateDesignerRoute() {
+            const { templateId } = Route.useParams()
+            return <WorkRecordTemplateDesignerPage templateId={templateId} />
+          }
+          """,
+              encoding='utf-8',
+          )
           PY
           python3 -m py_compile "$package/scripts/fix-migration-paths.py"
 
