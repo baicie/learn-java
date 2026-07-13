@@ -5,6 +5,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 DEPLOY_SCRIPT="${DEPLOY_SCRIPT:-$ROOT_DIR/deploy/scripts/deploy-app.sh}"
 TMP_ROOT="$(mktemp -d)"
+SERVER_HOST_PORT=18080
 
 cleanup() {
   rm -rf "$TMP_ROOT"
@@ -71,14 +72,14 @@ case "${1:-}" in
     fi
     ;;
   ps)
-    if [[ "$*" == *"publish=8080"* ]]; then
+    if [[ "$*" == *"publish=18080"* ]]; then
       case "$MOCK_CONFLICT_MODE" in
         stale)
           if [ ! -f "$MOCK_STATE_DIR/stale-removed" ]; then
             if [[ "$*" == *"{{.ID}}"* ]]; then
               echo "stale123"
             else
-              echo "container=stale123 name=legacy-aegisops-server image=test-user/aegisops:legacy-server ports=0.0.0.0:8080->8080/tcp"
+              echo "container=stale123 name=legacy-aegisops-server image=test-user/aegisops:legacy-server ports=0.0.0.0:18080->8080/tcp"
             fi
           fi
           ;;
@@ -86,7 +87,7 @@ case "${1:-}" in
           if [[ "$*" == *"{{.ID}}"* ]]; then
             echo "foreign123"
           else
-            echo "container=foreign123 name=foreign-web image=nginx:latest ports=0.0.0.0:8080->80/tcp"
+            echo "container=foreign123 name=foreign-web image=nginx:latest ports=0.0.0.0:18080->80/tcp"
           fi
           ;;
       esac
@@ -117,18 +118,18 @@ MOCK_DOCKER
 set -Eeuo pipefail
 if [ "$MOCK_CONFLICT_MODE" = "host" ]; then
   if [[ "$*" == *"-H"* ]]; then
-    echo "LISTEN 0 4096 0.0.0.0:8080 0.0.0.0:*"
+    echo "LISTEN 0 4096 0.0.0.0:18080 0.0.0.0:*"
   else
-    echo "LISTEN 0 4096 0.0.0.0:8080 0.0.0.0:* users:((\"java\",pid=1234,fd=7))"
+    echo "LISTEN 0 4096 0.0.0.0:18080 0.0.0.0:* users:((\"java\",pid=1234,fd=7))"
   fi
   exit 0
 fi
 
 if [ "$MOCK_CONFLICT_MODE" = "stale" ] && [ ! -f "$MOCK_STATE_DIR/stale-removed" ]; then
   if [[ "$*" == *"-H"* ]]; then
-    echo "LISTEN 0 4096 0.0.0.0:8080 0.0.0.0:*"
+    echo "LISTEN 0 4096 0.0.0.0:18080 0.0.0.0:*"
   else
-    echo "LISTEN 0 4096 0.0.0.0:8080 0.0.0.0:* users:((\"docker-proxy\",pid=2222,fd=7))"
+    echo "LISTEN 0 4096 0.0.0.0:18080 0.0.0.0:* users:((\"docker-proxy\",pid=2222,fd=7))"
   fi
   exit 0
 fi
@@ -158,6 +159,7 @@ run_case() {
   HOME="$case_dir/home" \
   TMPDIR="$case_dir/tmp" \
   APP_DIR="$case_dir/app" \
+  AIOPS_SERVER_HOST_PORT="$SERVER_HOST_PORT" \
   IMAGE_PREFIX="test-user/aegisops" \
   IMAGE_TAG="sha123" \
   DOCKERHUB_USERNAME="test-user" \
@@ -181,6 +183,7 @@ run_case() {
 }
 
 stale_dir="$(run_case stale-managed stale success)"
+grep -Fq "publish=18080" "$stale_dir/docker.log"
 grep -Fq "rm -f stale123" "$stale_dir/docker.log"
 grep -Fq "rm -f aegisops-server" "$stale_dir/docker.log"
 grep -Fq "rm -f aegisops-agent" "$stale_dir/docker.log"
