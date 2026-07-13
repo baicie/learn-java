@@ -59,6 +59,43 @@ jobs:
           mkdir -p "$RUNNER_TEMP/phase21-runtime"
           tar -xJf "$archive" -C "$RUNNER_TEMP/phase21-runtime"
 
+      - name: Normalize idempotent file moves
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          root = Path("${{ runner.temp }}") / "phase21-runtime" / "phase21-runtime-package" / "scripts"
+          old = '''move_if_exists() {
+            local from="$1" to="$2"
+            if [ -e "$from" ]; then
+              mkdir -p "$(dirname "$to")"
+              git mv "$from" "$to"
+            fi
+          }'''
+          new = '''move_if_exists() {
+            local from="$1" to="$2"
+            if [ -e "$from" ]; then
+              mkdir -p "$(dirname "$to")"
+              if [ -e "$to" ]; then
+                rm -rf "$from"
+              else
+                git mv "$from" "$to"
+              fi
+            fi
+          }'''
+          changed = 0
+          for path in sorted(root.glob("phase21-*.sh")):
+              text = path.read_text(encoding="utf-8")
+              if old in text:
+                  path.write_text(text.replace(old, new), encoding="utf-8")
+                  changed += 1
+          if changed == 0:
+              raise SystemExit("没有找到需要修正的 move_if_exists")
+          print(f"normalized move_if_exists in {changed} scripts")
+          PY
+
       - name: Configure Git
         run: |
           git config user.name "github-actions[bot]"
@@ -82,7 +119,7 @@ jobs:
           HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
         run: |
           set -euo pipefail
-          tail -n 200 "$RUNNER_TEMP/phase21-apply.log" > "$RUNNER_TEMP/phase21-failure.log"
+          tail -n 300 "$RUNNER_TEMP/phase21-apply.log" > "$RUNNER_TEMP/phase21-failure.log"
           git reset --hard HEAD
           cp "$RUNNER_TEMP/phase21-failure.log" .github/phase21-payload/failure.log
           git add -f .github/phase21-payload/failure.log
