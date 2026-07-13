@@ -1,5 +1,6 @@
 package io.aegisops.security;
 
+import io.aegisops.common.security.AuthenticatedActor;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.Map;
@@ -8,7 +9,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
-public final class UserPrincipal implements UserDetails {
+public final class UserPrincipal implements UserDetails, AuthenticatedActor {
   private final String id;
   private final String tenantId;
   private final String username;
@@ -37,10 +38,12 @@ public final class UserPrincipal implements UserDetails {
     this.dataScopes = dataScopes == null ? Map.of() : Map.copyOf(dataScopes);
   }
 
+  @Override
   public String id() {
     return id;
   }
 
+  @Override
   public String tenantId() {
     return tenantId;
   }
