@@ -116,11 +116,43 @@ jobs:
           cache-to: type=gha,mode=max,scope=${{ matrix.name }}
           provenance: false
 
+  runtime-smoke:
+    name: Runtime smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: build-images
+    environment:
+      name: aegisops-prod
+
+    steps:
+      - name: Checkout exact release commit
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ env.RELEASE_REF }}
+
+      - name: Start immutable release and verify health
+        env:
+          APP_DIR: ${{ github.workspace }}
+          IMAGE_PREFIX: ${{ env.IMAGE_PREFIX }}
+          IMAGE_TAG: ${{ env.IMAGE_TAG }}
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: bash deploy/scripts/deploy-app.sh
+
+      - name: Cleanup runtime smoke
+        if: always()
+        env:
+          AIOPS_SERVER_IMAGE: ${{ env.IMAGE_PREFIX }}:${{ env.IMAGE_TAG }}-server
+          AIOPS_AGENT_IMAGE: ${{ env.IMAGE_PREFIX }}:${{ env.IMAGE_TAG }}-agent
+          AIOPS_WORKER_IMAGE: ${{ env.IMAGE_PREFIX }}:${{ env.IMAGE_TAG }}-worker
+          AIOPS_RUNNER_IMAGE: ${{ env.IMAGE_PREFIX }}:${{ env.IMAGE_TAG }}-runner
+        run: docker compose -f deploy/docker-compose.app.yml down --volumes --remove-orphans || true
+
   deploy:
     name: Deploy to Tencent Cloud VM
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    needs: build-images
+    needs: runtime-smoke
     environment:
       name: aegisops-prod
 
@@ -149,6 +181,8 @@ jobs:
         env:
           IMAGE_PREFIX: ${{ env.IMAGE_PREFIX }}
           IMAGE_TAG: ${{ env.IMAGE_TAG }}
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
         with:
           host: ${{ secrets.PERF_VM_HOST }}
           username: ${{ secrets.PERF_VM_USER }}
@@ -157,12 +191,14 @@ jobs:
           port: ${{ secrets.PERF_VM_SSH_PORT || '22' }}
           timeout: 10m
           command_timeout: 20m
-          envs: IMAGE_PREFIX,IMAGE_TAG
+          envs: IMAGE_PREFIX,IMAGE_TAG,DOCKERHUB_USERNAME,DOCKERHUB_TOKEN
           script: |
-            set -euo pipefail
-            APP_DIR="$HOME/workspace/aegisops"
-            chmod +x "$APP_DIR/deploy/scripts/deploy-app.sh"
-            APP_DIR="$APP_DIR" \
-              IMAGE_PREFIX="$IMAGE_PREFIX" \
-              IMAGE_TAG="$IMAGE_TAG" \
-              bash "$APP_DIR/deploy/scripts/deploy-app.sh"
+            bash -lc '
+              set -Eeuo pipefail
+              APP_DIR="$HOME/workspace/aegisops"
+              DEPLOY_SCRIPT="$APP_DIR/deploy/scripts/deploy-app.sh"
+              test -f "$DEPLOY_SCRIPT"
+              chmod +x "$DEPLOY_SCRIPT"
+              export APP_DIR
+              exec bash "$DEPLOY_SCRIPT"
+            '
