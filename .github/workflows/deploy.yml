@@ -65,28 +65,28 @@ jobs:
       matrix:
         include:
           - name: aiops-server
-            image-suffix: ""
+            image_suffix: ""
             context: .
             dockerfile: ./apps/aiops-server/Dockerfile
-            build-args: ""
+            build_args: ""
           - name: aiops-agent
-            image-suffix: /aiops-agent
+            image_suffix: /aiops-agent
             context: ./apps/aiops-agent
             dockerfile: ./apps/aiops-agent/Dockerfile
-            build-args: ""
+            build_args: ""
           - name: aiops-worker
-            image-suffix: /aiops-worker
+            image_suffix: /aiops-worker
             context: .
             dockerfile: ./deploy/docker/java-app.Dockerfile
-            build-args: |
+            build_args: |
               APP_MODULE=apps/aiops-worker
               APP_NAME=aiops-worker
               APP_PORT=8081
           - name: aiops-runner
-            image-suffix: /aiops-runner
+            image_suffix: /aiops-runner
             context: .
             dockerfile: ./apps/aiops-runner/Dockerfile
-            build-args: ""
+            build_args: ""
 
     steps:
       - name: Checkout exact release commit
@@ -108,10 +108,10 @@ jobs:
         with:
           context: ${{ matrix.context }}
           file: ${{ matrix.dockerfile }}
-          build-args: ${{ matrix.build-args }}
+          build-args: ${{ matrix.build_args }}
           platforms: linux/amd64
           push: true
-          tags: ${{ env.IMAGE_PREFIX }}${{ matrix.image-suffix }}:${{ env.IMAGE_TAG }}
+          tags: ${{ env.IMAGE_PREFIX }}${{ matrix.image_suffix }}:${{ env.IMAGE_TAG }}
           cache-from: type=gha,scope=${{ matrix.name }}
           cache-to: type=gha,mode=max,scope=${{ matrix.name }}
           provenance: false
