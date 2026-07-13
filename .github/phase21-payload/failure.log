@@ -1,3 +1,121 @@
-  File "/home/runner/work/_temp/phase21-runtime/phase21-runtime-package/scripts/fix-remaining-ui.py", line 2
-    from pathlib import Path
-IndentationError: unexpected indent
+Progress: resolved 1, reused 0, downloaded 0, added 0
+Progress: resolved 51, reused 0, downloaded 24, added 0
+Progress: resolved 106, reused 0, downloaded 87, added 0
+Progress: resolved 292, reused 0, downloaded 264, added 0
+Packages: +307
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Progress: resolved 307, reused 0, downloaded 307, added 307, done
+- Checking registry.
+✔ Checking registry.
+- Updating files.
+✔ Created 1 file:
+  - src/components/ui/empty.tsx
+- Checking registry.
+✔ Checking registry.
+- Updating files.
+✔ Created 1 file:
+  - src/components/ui/spinner.tsx
+- Checking registry.
+✔ Checking registry.
+- Installing dependencies.
+- Installing dependencies.
+✔ Installing dependencies.
+- Updating files.
+✔ Created 2 files:
+  - src/components/ui/toggle.tsx
+  - src/components/ui/toggle-group.tsx
+Scope: all 2 workspace projects
+
+../.. postinstall$ simple-git-hooks
+../.. postinstall: [INFO] Successfully set the pre-commit with command: pnpm lint-staged
+../.. postinstall: [INFO] Successfully set the commit-msg with command: node -e "import('@baicie/scripts').then(m => m.verifyCommit())"
+../.. postinstall: [INFO] Successfully set all git hooks
+../.. postinstall: Done
+╭ Warning ─────────────────────────────────────────────────────────────────────╮
+│                                                                              │
+│   Ignored build scripts: esbuild@0.28.1, simple-git-hooks@2.13.1.            │
+│   Run "pnpm approve-builds" to pick which dependencies should be allowed     │
+│   to run scripts.                                                            │
+│                                                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+Done in 1.3s using pnpm v10.33.4
+[36mvite v8.1.4 [32mbuilding client environment for production...[36m[39m
+[2Ktransforming...✓ 3364 modules transformed.
+[31m✗[39m Build failed in 1.14s
+[31merror during build:
+[31mBuild failed with 7 errors:
+
+[31m[UNRESOLVED_IMPORT] [0mCould not resolve './components/analytics' in src/pages/DashboardPage.tsx
+    [38;5;246m╭[0m[38;5;246m─[0m[38;5;246m[[0m src/pages/DashboardPage.tsx:11:27 [38;5;246m][0m
+    [38;5;246m│[0m
+ [38;5;246m11 │[0m [38;5;249mi[0m[38;5;249mm[0m[38;5;249mp[0m[38;5;249mo[0m[38;5;249mr[0m[38;5;249mt[0m[38;5;249m [0m[38;5;249m{[0m[38;5;249m [0m[38;5;249mA[0m[38;5;249mn[0m[38;5;249ma[0m[38;5;249ml[0m[38;5;249my[0m[38;5;249mt[0m[38;5;249mi[0m[38;5;249mc[0m[38;5;249ms[0m[38;5;249m [0m[38;5;249m}[0m[38;5;249m [0m[38;5;249mf[0m[38;5;249mr[0m[38;5;249mo[0m[38;5;249mm[0m[38;5;249m [0m"./components/analytics"[38;5;249m;[0m
+ [38;5;240m   │[0m                           ────────────┬───────────  
+ [38;5;240m   │[0m                                       ╰───────────── Module not found.
+ [38;5;240m   │[0m 
+ [38;5;240m   │[0m [38;5;115mHelp[0m: 'src/pages/DashboardPage.tsx' is imported by the following path:
+ [38;5;240m   │[0m         - src/pages/DashboardPage.tsx
+ [38;5;240m   │[0m         - src/routes/_authenticated/index.tsx?tsr-split=component
+ [38;5;240m   │[0m         - src/routes/_authenticated/index.tsx
+ [38;5;240m   │[0m         - src/routeTree.gen.ts
+ [38;5;240m   │[0m         - src/main.tsx
+ [38;5;240m   │[0m         - index.html
+[38;5;246m────╯[0m
+
+[31m[UNRESOLVED_IMPORT] [0mCould not resolve './components/overview' in src/pages/DashboardPage.tsx
+    [38;5;246m╭[0m[38;5;246m─[0m[38;5;246m[[0m src/pages/DashboardPage.tsx:12:26 [38;5;246m][0m
+    [38;5;246m│[0m
+ [38;5;246m12 │[0m [38;5;249mi[0m[38;5;249mm[0m[38;5;249mp[0m[38;5;249mo[0m[38;5;249mr[0m[38;5;249mt[0m[38;5;249m [0m[38;5;249m{[0m[38;5;249m [0m[38;5;249mO[0m[38;5;249mv[0m[38;5;249me[0m[38;5;249mr[0m[38;5;249mv[0m[38;5;249mi[0m[38;5;249me[0m[38;5;249mw[0m[38;5;249m [0m[38;5;249m}[0m[38;5;249m [0m[38;5;249mf[0m[38;5;249mr[0m[38;5;249mo[0m[38;5;249mm[0m[38;5;249m [0m"./components/overview"[38;5;249m;[0m
+ [38;5;240m   │[0m                          ───────────┬───────────  
+ [38;5;240m   │[0m                                     ╰───────────── Module not found.
+ [38;5;240m   │[0m 
+ [38;5;240m   │[0m [38;5;115mHelp[0m: 'src/pages/DashboardPage.tsx' is imported by the following path:
+ [38;5;240m   │[0m         - src/pages/DashboardPage.tsx
+ [38;5;240m   │[0m         - src/routes/_authenticated/index.tsx?tsr-split=component
+ [38;5;240m   │[0m         - src/routes/_authenticated/index.tsx
+ [38;5;240m   │[0m         - src/routeTree.gen.ts
+ [38;5;240m   │[0m         - src/main.tsx
+ [38;5;240m   │[0m         - index.html
+[38;5;246m────╯[0m
+
+[31m[UNRESOLVED_IMPORT] [0mCould not resolve './components/recent-sales' in src/pages/DashboardPage.tsx
+    [38;5;246m╭[0m[38;5;246m─[0m[38;5;246m[[0m src/pages/DashboardPage.tsx:13:29 [38;5;246m][0m
+    [38;5;246m│[0m
+ [38;5;246m13 │[0m [38;5;249mi[0m[38;5;249mm[0m[38;5;249mp[0m[38;5;249mo[0m[38;5;249mr[0m[38;5;249mt[0m[38;5;249m [0m[38;5;249m{[0m[38;5;249m [0m[38;5;249mR[0m[38;5;249me[0m[38;5;249mc[0m[38;5;249me[0m[38;5;249mn[0m[38;5;249mt[0m[38;5;249mS[0m[38;5;249ma[0m[38;5;249ml[0m[38;5;249me[0m[38;5;249ms[0m[38;5;249m [0m[38;5;249m}[0m[38;5;249m [0m[38;5;249mf[0m[38;5;249mr[0m[38;5;249mo[0m[38;5;249mm[0m[38;5;249m [0m"./components/recent-sales"[38;5;249m;[0m
+ [38;5;240m   │[0m                             ─────────────┬─────────────  
+ [38;5;240m   │[0m                                          ╰─────────────── Module not found.
+ [38;5;240m   │[0m 
+ [38;5;240m   │[0m [38;5;115mHelp[0m: 'src/pages/DashboardPage.tsx' is imported by the following path:
+ [38;5;240m   │[0m         - src/pages/DashboardPage.tsx
+ [38;5;240m   │[0m         - src/routes/_authenticated/index.tsx?tsr-split=component
+ [38;5;240m   │[0m         - src/routes/_authenticated/index.tsx
+ [38;5;240m   │[0m         - src/routeTree.gen.ts
+ [38;5;240m   │[0m         - src/main.tsx
+ [38;5;240m   │[0m         - index.html
+[38;5;246m────╯[0m
+
+[31m[UNLOADABLE_DEPENDENCY] [0mCould not load src/lib/work-records/designer/field-delete-risk
+    [38;5;246m╭[0m[38;5;246m─[0m[38;5;246m[[0m src/pages/work-records/WorkRecordTemplateDesignerPage.tsx:14:43 [38;5;246m][0m
+    [38;5;246m│[0m
+ [38;5;246m14 │[0m [38;5;249mi[0m[38;5;249mm[0m[38;5;249mp[0m[38;5;249mo[0m[38;5;249mr[0m[38;5;249mt[0m[38;5;249m [0m[38;5;249m{[0m[38;5;249m [0m[38;5;249mf[0m[38;5;249mi[0m[38;5;249me[0m[38;5;249ml[0m[38;5;249md[0m[38;5;249mD[0m[38;5;249me[0m[38;5;249ml[0m[38;5;249me[0m[38;5;249mt[0m[38;5;249me[0m[38;5;249mC[0m[38;5;249mo[0m[38;5;249mn[0m[38;5;249mf[0m[38;5;249mi[0m[38;5;249mr[0m[38;5;249mm[0m[38;5;249mO[0m[38;5;249mp[0m[38;5;249mt[0m[38;5;249mi[0m[38;5;249mo[0m[38;5;249mn[0m[38;5;249ms[0m[38;5;249m [0m[38;5;249m}[0m[38;5;249m [0m[38;5;249mf[0m[38;5;249mr[0m[38;5;249mo[0m[38;5;249mm[0m[38;5;249m [0m"@/lib/work-records/designer/field-delete-risk"[38;5;249m;[0m
+ [38;5;240m   │[0m                                           ───────────────────────┬───────────────────────  
+ [38;5;240m   │[0m                                                                  ╰───────────────────────── No such file or directory (os error 2)
+[38;5;246m────╯[0m
+
+[31m[UNLOADABLE_DEPENDENCY] [0mCould not load src/components/platform/iam/PlatformUserCreateDialog
+    [38;5;246m╭[0m[38;5;246m─[0m[38;5;246m[[0m src/pages/platform/PlatformUsersPage.tsx:14:42 [38;5;246m][0m
+    [38;5;246m│[0m
+ [38;5;246m14 │[0m [38;5;249mi[0m[38;5;249mm[0m[38;5;249mp[0m[38;5;249mo[0m[38;5;249mr[0m[38;5;249mt[0m[38;5;249m [0m[38;5;249m{[0m[38;5;249m [0m[38;5;249mP[0m[38;5;249ml[0m[38;5;249ma[0m[38;5;249mt[0m[38;5;249mf[0m[38;5;249mo[0m[38;5;249mr[0m[38;5;249mm[0m[38;5;249mU[0m[38;5;249ms[0m[38;5;249me[0m[38;5;249mr[0m[38;5;249mC[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249ma[0m[38;5;249mt[0m[38;5;249me[0m[38;5;249mD[0m[38;5;249mi[0m[38;5;249ma[0m[38;5;249ml[0m[38;5;249mo[0m[38;5;249mg[0m[38;5;249m [0m[38;5;249m}[0m[38;5;249m [0m[38;5;249mf[0m[38;5;249mr[0m[38;5;249mo[0m[38;5;249mm[0m[38;5;249m [0m"@/components/platform/iam/PlatformUserCreateDialog"[38;5;249m;[0m
+ [38;5;240m   │[0m                                          ──────────────────────────┬─────────────────────────  
+ [38;5;240m   │[0m                                                                    ╰─────────────────────────── No such file or directory (os error 2)
+[38;5;246m────╯[0m
+
+...[31m
+    at aggregateBindingErrorsIntoJsError (file:///home/runner/work/ai-ops/ai-ops/node_modules/.pnpm/rolldown@1.1.5/node_modules/rolldown/dist/shared/error-BHRSI0R7.mjs:48:18)
+    at unwrapBindingResult (file:///home/runner/work/ai-ops/ai-ops/node_modules/.pnpm/rolldown@1.1.5/node_modules/rolldown/dist/shared/error-BHRSI0R7.mjs:18:128)
+    at #build (file:///home/runner/work/ai-ops/ai-ops/node_modules/.pnpm/rolldown@1.1.5/node_modules/rolldown/dist/shared/rolldown-build-CtPvmZgJ.mjs:3276:34)
+    at async buildEnvironment (file:///home/runner/work/ai-ops/ai-ops/node_modules/.pnpm/vite@8.1.4_@types+node@26.1.1_esbuild@0.28.1_jiti@2.7.0_tsx@4.23.0_yaml@2.9.0/node_modules/vite/dist/node/chunks/node.js:33011:66)
+    at async Object.build (file:///home/runner/work/ai-ops/ai-ops/node_modules/.pnpm/vite@8.1.4_@types+node@26.1.1_esbuild@0.28.1_jiti@2.7.0_tsx@4.23.0_yaml@2.9.0/node_modules/vite/dist/node/chunks/node.js:33433:19)
+    at async Object.buildApp (file:///home/runner/work/ai-ops/ai-ops/node_modules/.pnpm/vite@8.1.4_@types+node@26.1.1_esbuild@0.28.1_jiti@2.7.0_tsx@4.23.0_yaml@2.9.0/node_modules/vite/dist/node/chunks/node.js:33430:153)
+    at async CAC.<anonymous> (file:///home/runner/work/ai-ops/ai-ops/node_modules/.pnpm/vite@8.1.4_@types+node@26.1.1_esbuild@0.28.1_jiti@2.7.0_tsx@4.23.0_yaml@2.9.0/node_modules/vite/dist/node/cli.js:776:3) {
+  errors: [Getter/Setter]
+}[39m
