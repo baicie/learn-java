@@ -1,57 +1,62 @@
 # syntax=docker/dockerfile:1.7
 #
 # aiops-server 镜像：
-#   1. build     : eclipse-temurin:21-jdk-jammy + maven(从 maven 镜像 COPY)
-#                  + node 20（仅给 aiops-persistence 的 exec-maven-plugin
-#                  在 generate-sources 阶段跑 `node scripts/prepare-jooq-ddl.mjs` 用）。
-#                  前端打包由 server 的 pom 反向调用 web/portal/pom.xml 完成
-#                  （-P with-portal），不再在 docker 里直接调 pnpm。
-#   2. runtime   : eclipse-temurin 21-jre-alpine 跑 jar，暴露 8080
+#   1. portal-build：固定 Node/pnpm 版本，独立构建 React Portal；
+#   2. build：Maven/JDK 21 构建 Java，并把 Portal dist 作为静态资源打包；
+#   3. runtime：JRE 21 运行最终 fat jar。
 #
-# 镜像 JDK 与 pom.xml 的 java.version=21 保持一致。
+# 前端构建不再由 Maven 递归启动 web/portal/pom.xml，避免重复下载 Node、
+# 嵌套 Maven 日志难定位以及前端 POM 配置漂移。
 
-FROM maven:3.9.9-eclipse-temurin-21 AS maven-base
+ARG NODE_IMAGE=node:22-bookworm-slim
+ARG MAVEN_IMAGE=maven:3.9.9-eclipse-temurin-21
+ARG RUNTIME_IMAGE=eclipse-temurin:21-jre-alpine
 
-
-FROM eclipse-temurin:21-jdk-jammy AS build
-
-ENV DEBIAN_FRONTEND=noninteractive \
-    NODE_VERSION=20.20.2 \
-    MAVEN_HOME=/usr/share/maven
-
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-        ca-certificates \
-        curl \
-        git \
-        xz-utils \
-    && curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.xz" \
-        | tar -xJ -C /usr/local --strip-components=1 --no-same-owner \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
-# 从 maven 官方镜像拷贝 maven 二进制，避免 archive.apache.org 下载
-COPY --from=maven-base ${MAVEN_HOME} ${MAVEN_HOME}
-RUN ln -s ${MAVEN_HOME}/bin/mvn /usr/local/bin/mvn
+FROM ${NODE_IMAGE} AS portal-build
 
 WORKDIR /workspace
 
-# server 构建：pom 反向触发 web/portal/pom.xml，由它自己装 node/pnpm + pnpm build，
-# 产物 web/portal/dist 被 server pom 的 maven-resources-plugin 在 process-resources
-# 阶段拷到 static/。
+RUN npm install --global pnpm@10.33.4
+
+# 先只复制依赖清单，提高源码变化时的依赖层命中率。
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY web/portal/package.json web/portal/package.json
+
+RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
+    pnpm config set store-dir /pnpm/store \
+    && pnpm install --frozen-lockfile --filter aegisops-portal...
+
+COPY web/portal web/portal
+
+RUN pnpm --filter aegisops-portal build
+
+FROM ${MAVEN_IMAGE} AS build
+
+WORKDIR /workspace
+
+# aiops-persistence 在 generate-sources 阶段使用 Node 预处理 Flyway DDL。
+COPY --from=portal-build /usr/local/bin/node /usr/local/bin/node
+
 COPY pom.xml ./
 COPY modules modules
 COPY apps apps
 COPY contracts contracts
 COPY infra/checkstyle infra/checkstyle
-COPY web web
 COPY scripts scripts
+COPY --from=portal-build /workspace/web/portal/dist web/portal/dist
 
+# with-portal 只负责把已构建的 dist 拷进 static；显式跳过其旧的嵌套前端构建。
 RUN --mount=type=cache,target=/root/.m2 \
-    mvn -pl apps/aiops-server -am package -DskipTests -P with-portal
+    node --version \
+    && mvn -B -ntp \
+       -pl apps/aiops-server \
+       -am \
+       package \
+       -DskipTests \
+       -P with-portal \
+       -Daiops.portal.skipBuild=true
 
-
-FROM eclipse-temurin:21-jre-alpine AS runtime
+FROM ${RUNTIME_IMAGE} AS runtime
 
 ENV TZ=UTC
 ENV JAVA_OPTS="-XX:MaxRAMPercentage=75 -XX:+ExitOnOutOfMemoryError"
