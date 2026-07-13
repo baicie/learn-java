@@ -1,7 +1,21 @@
-unresolved internal imports:
-web/portal/src/components/work-records/list/quick-view-tabs.tsx: @/components/ui/toggle-group
-web/portal/src/components/work-records/runtime/record-runtime-form.tsx: @/components/ui/spinner
-web/portal/src/pages/auth/SignInPage.tsx: @/components/ui/spinner
-web/portal/src/pages/platform/CalendarsPage.tsx: @/components/ui/spinner
-web/portal/src/pages/work-records/WorkRecordTemplateListPage.tsx: @/components/ui/spinner
-web/portal/src/routeTree.gen.ts: ./routes/_authenticated/work-records/designer
+Progress: resolved 1, reused 0, downloaded 0, added 0
+Progress: resolved 100, reused 0, downloaded 40, added 0
+Progress: resolved 246, reused 0, downloaded 199, added 0
+Packages: +307
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Progress: resolved 307, reused 0, downloaded 307, added 307, done
+- Checking registry.
+✔ Checking registry.
+- Updating files.
+✔ Created 1 file:
+  - src/components/ui/empty.tsx
+Scope: all 2 workspace projects
+ ERR_PNPM_OUTDATED_LOCKFILE  Cannot install with "frozen-lockfile" because pnpm-lock.yaml is not up to date with <ROOT>/web/portal/package.json
+
+Note that in CI environments this setting is true by default. If you still need to run install in such cases, use "pnpm install --no-frozen-lockfile"
+
+  Failure reason:
+  specifiers in the lockfile don't match specifiers in package.json:
+* 1 dependencies are mismatched:
+  - typescript (lockfile: ~7.0.2, manifest: ~6.0.3)
+
