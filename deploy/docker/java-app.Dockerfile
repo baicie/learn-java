@@ -26,9 +26,9 @@ COPY modules ./modules
 COPY contracts ./contracts
 COPY scripts ./scripts
 
-RUN node --version \
-    && --mount=type=cache,target=/root/.m2 \
-       mvn -pl "${APP_MODULE}" -am -DskipTests package
+RUN --mount=type=cache,target=/root/.m2 \
+    node --version \
+    && mvn -pl "${APP_MODULE}" -am -DskipTests package
 
 FROM ${RUNTIME_IMAGE} AS runtime
 
