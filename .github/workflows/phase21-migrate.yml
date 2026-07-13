@@ -65,11 +65,33 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
       - name: Apply portal migration and run frontend CI
+        id: apply_migration
+        continue-on-error: true
         shell: bash
         run: |
+          set -o pipefail
+          {
+            bash "$RUNNER_TEMP/phase21-runtime/phase21-runtime-package/scripts/apply-all.sh"
+            pnpm --dir web/portal run knip
+          } 2>&1 | tee "$RUNNER_TEMP/phase21-apply.log"
+
+      - name: Publish migration failure details
+        if: steps.apply_migration.outcome == 'failure'
+        shell: bash
+        env:
+          HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
+        run: |
           set -euo pipefail
-          bash "$RUNNER_TEMP/phase21-runtime/phase21-runtime-package/scripts/apply-all.sh"
-          pnpm --dir web/portal run knip
+          tail -n 200 "$RUNNER_TEMP/phase21-apply.log" > "$RUNNER_TEMP/phase21-failure.log"
+          git reset --hard HEAD
+          cp "$RUNNER_TEMP/phase21-failure.log" .github/phase21-payload/failure.log
+          git add -f .github/phase21-payload/failure.log
+          if ! git diff --cached --quiet; then
+            git commit --no-verify -m 'chore(portal): 回写统一迁移失败日志 [skip ci]'
+            git push origin "HEAD:${HEAD_BRANCH}"
+          fi
+          cat .github/phase21-payload/failure.log
+          exit 1
 
       - name: Validate documentation
         shell: bash
