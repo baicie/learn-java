@@ -46,7 +46,7 @@ services:
       AIOPS_EVIDENCE_VICTORIA_BASE_URL: http://victoriametrics:8428
       AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN: dev-zabbix-webhook-token
     ports:
-      - "${AIOPS_SERVER_HOST_PORT:-18080}:8080"
+      - "8080:8080"
     depends_on:
       postgres:
         condition: service_healthy
