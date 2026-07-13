@@ -2,9 +2,9 @@
 <!--
   web/portal 自身构建入口。
 
-  原因：docker build 不再直接调 pnpm install / pnpm build，
-  改为统一调 mvn，由 frontend-maven-plugin 在 generate-resources
-  阶段完成 node/pnpm 安装 + 依赖安装 + vite build。
+  原因：docker build 不再直接调用 pnpm 的安装和构建命令，
+  改为统一调用 Maven，由 frontend-maven-plugin 在 generate-resources
+  阶段完成 Node/pnpm 安装、依赖安装和 Vite 构建。
 
   本 pom 跟 apps/aiops-server 平行，server 通过
   ${maven.multiModuleProjectDirectory}/web/portal/pom.xml 反向引用即可。
@@ -35,7 +35,7 @@
         <artifactId>frontend-maven-plugin</artifactId>
         <version>${frontend-maven-plugin.version}</version>
         <executions>
-          <!-- 1) 装 node + pnpm 到 ${project.build.directory}/node -->
+          <!-- Step 1: install Node and pnpm into the build directory. -->
           <execution>
             <id>install-node-and-pnpm</id>
             <goals>
@@ -48,7 +48,7 @@
             </configuration>
           </execution>
 
-          <!-- 2) pnpm install --frozen-lockfile -->
+          <!-- Step 2: install dependencies using the frozen lockfile. -->
           <execution>
             <id>pnpm-install</id>
             <goals>
@@ -61,7 +61,7 @@
             </configuration>
           </execution>
 
-          <!-- 3) pnpm build (= tsc -b && vite build) -->
+          <!-- Step 3: run the production frontend build. -->
           <execution>
             <id>pnpm-build</id>
             <goals>
