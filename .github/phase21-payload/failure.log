@@ -1,221 +1,221 @@
 src/components/platform/iam/PlatformUserToolbar.tsx 9ms
 src/components/platform/iam/role-editor.test.tsx 15ms
-src/components/platform/iam/role-editor.tsx 47ms
-[90msrc/components/profile-dropdown.tsx[39m 13ms (unchanged)
-[90msrc/components/search.tsx[39m 8ms (unchanged)
-[90msrc/components/select-dropdown.tsx[39m 13ms (unchanged)
-[90msrc/components/sign-out-dialog.test.tsx[39m 10ms (unchanged)
-[90msrc/components/sign-out-dialog.tsx[39m 6ms (unchanged)
-[90msrc/components/skip-to-main.tsx[39m 3ms (unchanged)
-[90msrc/components/theme-switch.tsx[39m 14ms (unchanged)
-[90msrc/components/ui/alert-dialog.tsx[39m 20ms (unchanged)
-[90msrc/components/ui/alert.tsx[39m 12ms (unchanged)
+src/components/platform/iam/role-editor.tsx 32ms
+[90msrc/components/profile-dropdown.tsx[39m 14ms (unchanged)
+[90msrc/components/search.tsx[39m 17ms (unchanged)
+[90msrc/components/select-dropdown.tsx[39m 10ms (unchanged)
+[90msrc/components/sign-out-dialog.test.tsx[39m 12ms (unchanged)
+[90msrc/components/sign-out-dialog.tsx[39m 8ms (unchanged)
+[90msrc/components/skip-to-main.tsx[39m 5ms (unchanged)
+[90msrc/components/theme-switch.tsx[39m 13ms (unchanged)
+[90msrc/components/ui/alert-dialog.tsx[39m 23ms (unchanged)
+[90msrc/components/ui/alert.tsx[39m 9ms (unchanged)
 [90msrc/components/ui/avatar.tsx[39m 5ms (unchanged)
 [90msrc/components/ui/badge.tsx[39m 6ms (unchanged)
-[90msrc/components/ui/button.tsx[39m 6ms (unchanged)
-[90msrc/components/ui/calendar.tsx[39m 37ms (unchanged)
-[90msrc/components/ui/card.tsx[39m 17ms (unchanged)
-[90msrc/components/ui/checkbox.tsx[39m 6ms (unchanged)
-[90msrc/components/ui/collapsible.tsx[39m 4ms (unchanged)
-[90msrc/components/ui/command.tsx[39m 30ms (unchanged)
-[90msrc/components/ui/dialog.tsx[39m 19ms (unchanged)
+[90msrc/components/ui/button.tsx[39m 7ms (unchanged)
+[90msrc/components/ui/calendar.tsx[39m 34ms (unchanged)
+[90msrc/components/ui/card.tsx[39m 12ms (unchanged)
+[90msrc/components/ui/checkbox.tsx[39m 8ms (unchanged)
+[90msrc/components/ui/collapsible.tsx[39m 6ms (unchanged)
+[90msrc/components/ui/command.tsx[39m 20ms (unchanged)
+[90msrc/components/ui/dialog.tsx[39m 17ms (unchanged)
 [90msrc/components/ui/dropdown-menu.tsx[39m 29ms (unchanged)
-src/components/ui/empty.tsx 17ms
-src/components/ui/field.tsx 17ms
-[90msrc/components/ui/form.tsx[39m 29ms (unchanged)
-[90msrc/components/ui/input-otp.tsx[39m 7ms (unchanged)
+src/components/ui/empty.tsx 14ms
+src/components/ui/field.tsx 13ms
+[90msrc/components/ui/form.tsx[39m 22ms (unchanged)
+[90msrc/components/ui/input-otp.tsx[39m 8ms (unchanged)
 [90msrc/components/ui/input.tsx[39m 4ms (unchanged)
-[90msrc/components/ui/label.tsx[39m 3ms (unchanged)
-[90msrc/components/ui/popover.tsx[39m 6ms (unchanged)
+[90msrc/components/ui/label.tsx[39m 4ms (unchanged)
+[90msrc/components/ui/popover.tsx[39m 5ms (unchanged)
 [90msrc/components/ui/radio-group.tsx[39m 5ms (unchanged)
 [90msrc/components/ui/scroll-area.tsx[39m 10ms (unchanged)
-[90msrc/components/ui/select.tsx[39m 22ms (unchanged)
+[90msrc/components/ui/select.tsx[39m 18ms (unchanged)
 [90msrc/components/ui/separator.tsx[39m 4ms (unchanged)
-[90msrc/components/ui/sheet.tsx[39m 13ms (unchanged)
-[90msrc/components/ui/sidebar.tsx[39m 100ms (unchanged)
+[90msrc/components/ui/sheet.tsx[39m 14ms (unchanged)
+[90msrc/components/ui/sidebar.tsx[39m 106ms (unchanged)
 [90msrc/components/ui/skeleton.tsx[39m 4ms (unchanged)
 [90msrc/components/ui/sonner.tsx[39m 5ms (unchanged)
 src/components/ui/spinner.tsx 4ms
 [90msrc/components/ui/switch.tsx[39m 5ms (unchanged)
-[90msrc/components/ui/table.tsx[39m 10ms (unchanged)
-[90msrc/components/ui/tabs.tsx[39m 10ms (unchanged)
-[90msrc/components/ui/textarea.tsx[39m 3ms (unchanged)
-src/components/ui/toggle-group.tsx 11ms
-src/components/ui/toggle.tsx 5ms
-[90msrc/components/ui/tooltip.tsx[39m 6ms (unchanged)
+[90msrc/components/ui/table.tsx[39m 14ms (unchanged)
+[90msrc/components/ui/tabs.tsx[39m 8ms (unchanged)
+[90msrc/components/ui/textarea.tsx[39m 4ms (unchanged)
+src/components/ui/toggle-group.tsx 8ms
+src/components/ui/toggle.tsx 6ms
+[90msrc/components/ui/tooltip.tsx[39m 7ms (unchanged)
 src/components/work-records/designer/field-library.tsx 11ms
 src/components/work-records/designer/form-canvas.tsx 13ms
-src/components/work-records/designer/form-preview.tsx 13ms
-[90msrc/components/work-records/designer/locked-field-code-input.test.tsx[39m 8ms (unchanged)
-[90msrc/components/work-records/designer/locked-field-code-input.tsx[39m 5ms (unchanged)
-src/components/work-records/designer/property-panel.test.tsx 8ms
-src/components/work-records/designer/property-panel.tsx 24ms
-src/components/work-records/designer/schema-diff-panel.tsx 16ms
-src/components/work-records/designer/use-work-record-designer.test.tsx 13ms
-[90msrc/components/work-records/designer/work-record-designer-page.test.tsx[39m 23ms (unchanged)
-src/components/work-records/list/column-control.tsx 19ms
-src/components/work-records/list/dynamic-filter-panel.tsx 15ms
-src/components/work-records/list/list-toolbar.tsx 21ms
-src/components/work-records/list/quick-view-tabs.tsx 9ms
-src/components/work-records/list/record-table.test.tsx 12ms
-src/components/work-records/list/record-table.tsx 19ms
-src/components/work-records/list/work-record-export-dialog.test.tsx 16ms
+src/components/work-records/designer/form-preview.tsx 16ms
+[90msrc/components/work-records/designer/locked-field-code-input.test.tsx[39m 9ms (unchanged)
+[90msrc/components/work-records/designer/locked-field-code-input.tsx[39m 6ms (unchanged)
+src/components/work-records/designer/property-panel.test.tsx 11ms
+src/components/work-records/designer/property-panel.tsx 22ms
+src/components/work-records/designer/schema-diff-panel.tsx 13ms
+src/components/work-records/designer/use-work-record-designer.test.tsx 12ms
+[90msrc/components/work-records/designer/work-record-designer-page.test.tsx[39m 26ms (unchanged)
+src/components/work-records/list/column-control.tsx 23ms
+src/components/work-records/list/dynamic-filter-panel.tsx 23ms
+src/components/work-records/list/list-toolbar.tsx 23ms
+src/components/work-records/list/quick-view-tabs.tsx 8ms
+src/components/work-records/list/record-table.test.tsx 8ms
+src/components/work-records/list/record-table.tsx 23ms
+src/components/work-records/list/work-record-export-dialog.test.tsx 15ms
 src/components/work-records/list/work-record-export-dialog.tsx 18ms
 [90msrc/components/work-records/list/work-record-list-page.test.tsx[39m 18ms (unchanged)
-src/components/work-records/list/workday-summary-card.test.tsx 6ms
-src/components/work-records/list/workday-summary-card.tsx 9ms
+src/components/work-records/list/workday-summary-card.test.tsx 13ms
+src/components/work-records/list/workday-summary-card.tsx 11ms
 src/components/work-records/runtime/dynamic-field-control.test.tsx 18ms
-src/components/work-records/runtime/dynamic-field-control.tsx 30ms
-[90msrc/components/work-records/runtime/pages.test.tsx[39m 18ms (unchanged)
+src/components/work-records/runtime/dynamic-field-control.tsx 35ms
+[90msrc/components/work-records/runtime/pages.test.tsx[39m 16ms (unchanged)
 src/components/work-records/runtime/record-history-card.test.tsx 7ms
-src/components/work-records/runtime/record-history-card.tsx 17ms
-src/components/work-records/runtime/record-readonly-view.test.tsx 7ms
-src/components/work-records/runtime/record-readonly-view.tsx 22ms
-src/components/work-records/runtime/record-runtime-form.test.tsx 17ms
-src/components/work-records/runtime/record-runtime-form.tsx 31ms
-[90msrc/components/work-records/runtime/template-switch-select.test.tsx[39m 8ms (unchanged)
-[90msrc/components/work-records/runtime/template-switch-select.tsx[39m 9ms (unchanged)
+src/components/work-records/runtime/record-history-card.tsx 21ms
+src/components/work-records/runtime/record-readonly-view.test.tsx 9ms
+src/components/work-records/runtime/record-readonly-view.tsx 24ms
+src/components/work-records/runtime/record-runtime-form.test.tsx 18ms
+src/components/work-records/runtime/record-runtime-form.tsx 37ms
+[90msrc/components/work-records/runtime/template-switch-select.test.tsx[39m 9ms (unchanged)
+[90msrc/components/work-records/runtime/template-switch-select.tsx[39m 11ms (unchanged)
 [90msrc/config/fonts.ts[39m 5ms (unchanged)
-[90msrc/context/direction-provider.tsx[39m 9ms (unchanged)
-[90msrc/context/font-provider.tsx[39m 14ms (unchanged)
-[90msrc/context/layout-provider.tsx[39m 10ms (unchanged)
-[90msrc/context/search-provider.test.tsx[39m 31ms (unchanged)
-[90msrc/context/search-provider.tsx[39m 6ms (unchanged)
-[90msrc/context/theme-provider.tsx[39m 13ms (unchanged)
-[90msrc/hooks/platform/use-dictionaries.ts[39m 8ms (unchanged)
-src/hooks/platform/use-dictionary-options.ts 11ms
-src/hooks/platform/use-platform-roles.test.tsx 8ms
-src/hooks/platform/use-platform-roles.ts 16ms
+[90msrc/context/direction-provider.tsx[39m 10ms (unchanged)
+[90msrc/context/font-provider.tsx[39m 9ms (unchanged)
+[90msrc/context/layout-provider.tsx[39m 9ms (unchanged)
+[90msrc/context/search-provider.test.tsx[39m 54ms (unchanged)
+[90msrc/context/search-provider.tsx[39m 7ms (unchanged)
+[90msrc/context/theme-provider.tsx[39m 12ms (unchanged)
+[90msrc/hooks/platform/use-dictionaries.ts[39m 12ms (unchanged)
+src/hooks/platform/use-dictionary-options.ts 12ms
+src/hooks/platform/use-platform-roles.test.tsx 12ms
+src/hooks/platform/use-platform-roles.ts 19ms
 src/hooks/platform/use-platform-users.test.tsx 20ms
-src/hooks/platform/use-platform-users.ts 20ms
-[90msrc/hooks/use-dialog-state.tsx[39m 5ms (unchanged)
-[90msrc/hooks/use-dirty-snapshot.ts[39m 14ms (unchanged)
-[90msrc/hooks/use-mobile.tsx[39m 4ms (unchanged)
-[90msrc/hooks/use-table-url-state.test.ts[39m 70ms (unchanged)
-[90msrc/hooks/use-table-url-state.ts[39m 25ms (unchanged)
+src/hooks/platform/use-platform-users.ts 13ms
+[90msrc/hooks/use-dialog-state.tsx[39m 6ms (unchanged)
+[90msrc/hooks/use-dirty-snapshot.ts[39m 12ms (unchanged)
+[90msrc/hooks/use-mobile.tsx[39m 6ms (unchanged)
+[90msrc/hooks/use-table-url-state.test.ts[39m 62ms (unchanged)
+[90msrc/hooks/use-table-url-state.ts[39m 29ms (unchanged)
 [90msrc/hooks/use-unsaved-changes-guard.test.ts[39m 4ms (unchanged)
-[90msrc/hooks/use-unsaved-changes-guard.ts[39m 10ms (unchanged)
+[90msrc/hooks/use-unsaved-changes-guard.ts[39m 8ms (unchanged)
 [90msrc/hooks/work-records/api.ts[39m 5ms (unchanged)
-src/hooks/work-records/use-work-record-designer.ts 25ms
-src/hooks/work-records/use-work-record-list.ts 13ms
+src/hooks/work-records/use-work-record-designer.ts 40ms
+src/hooks/work-records/use-work-record-list.ts 14ms
 [90msrc/i18n/i18n.test.ts[39m 8ms (unchanged)
-src/i18n/index.ts 6ms
-[90msrc/i18n/key-parity.test.ts[39m 8ms (unchanged)
-[90msrc/i18n/locales/en-US/common.ts[39m 19ms (unchanged)
-[90msrc/i18n/locales/en-US/index.ts[39m 3ms (unchanged)
-src/i18n/locales/en-US/platform.ts 4ms
-[90msrc/i18n/locales/en-US/work-records.ts[39m 24ms (unchanged)
-[90msrc/i18n/locales/zh-CN/common.ts[39m 12ms (unchanged)
+src/i18n/index.ts 9ms
+[90msrc/i18n/key-parity.test.ts[39m 10ms (unchanged)
+[90msrc/i18n/locales/en-US/common.ts[39m 17ms (unchanged)
+[90msrc/i18n/locales/en-US/index.ts[39m 4ms (unchanged)
+src/i18n/locales/en-US/platform.ts 5ms
+[90msrc/i18n/locales/en-US/work-records.ts[39m 21ms (unchanged)
+[90msrc/i18n/locales/zh-CN/common.ts[39m 10ms (unchanged)
 [90msrc/i18n/locales/zh-CN/index.ts[39m 3ms (unchanged)
-src/i18n/locales/zh-CN/platform.ts 3ms
-[90msrc/i18n/locales/zh-CN/work-records.ts[39m 15ms (unchanged)
-[90msrc/lib/api-client.ts[39m 12ms (unchanged)
+src/i18n/locales/zh-CN/platform.ts 4ms
+[90msrc/i18n/locales/zh-CN/work-records.ts[39m 22ms (unchanged)
+[90msrc/lib/api-client.ts[39m 9ms (unchanged)
 [90msrc/lib/api-error.test.ts[39m 8ms (unchanged)
-[90msrc/lib/api-error.ts[39m 6ms (unchanged)
-[90msrc/lib/api-response.ts[39m 4ms (unchanged)
-[90msrc/lib/cookies.test.ts[39m 6ms (unchanged)
+[90msrc/lib/api-error.ts[39m 7ms (unchanged)
+[90msrc/lib/api-response.ts[39m 6ms (unchanged)
+[90msrc/lib/cookies.test.ts[39m 5ms (unchanged)
 [90msrc/lib/cookies.ts[39m 5ms (unchanged)
-[90msrc/lib/handle-server-error.test.ts[39m 12ms (unchanged)
+[90msrc/lib/handle-server-error.test.ts[39m 8ms (unchanged)
 [90msrc/lib/handle-server-error.ts[39m 4ms (unchanged)
-[90msrc/lib/platform/calendar-helpers.test.ts[39m 13ms (unchanged)
-src/lib/platform/calendar-helpers.ts 5ms
-src/lib/platform/iam-api-error.test.ts 4ms
-src/lib/platform/iam-api-error.ts 6ms
-src/lib/platform/iam-axios-error.test.ts 7ms
-[90msrc/lib/schemas/platform-user.ts[39m 9ms (unchanged)
-[90msrc/lib/show-submitted-data.tsx[39m 3ms (unchanged)
-[90msrc/lib/utils.test.ts[39m 6ms (unchanged)
-[90msrc/lib/utils.ts[39m 10ms (unchanged)
-[90msrc/lib/work-records/designer/field-delete-risk.tsx[39m 11ms (unchanged)
-src/lib/work-records/designer/schema.test.ts 23ms
-[90msrc/lib/work-records/designer/schema.ts[39m 39ms (unchanged)
-[90msrc/lib/work-records/designer/types.ts[39m 10ms (unchanged)
-[90msrc/lib/work-records/list/export-api.test.ts[39m 15ms (unchanged)
-[90msrc/lib/work-records/list/export-api.ts[39m 12ms (unchanged)
-[90msrc/lib/work-records/list/search.test.ts[39m 6ms (unchanged)
-src/lib/work-records/list/search.ts 24ms
-[90msrc/lib/work-records/list/types.ts[39m 25ms (unchanged)
-src/lib/work-records/runtime/api.test.ts 8ms
-src/lib/work-records/runtime/record-form-validation.test.ts 12ms
-[90msrc/lib/work-records/runtime/record-form-validation.ts[39m 16ms (unchanged)
-src/lib/work-records/runtime/schema.test.ts 12ms
-src/lib/work-records/runtime/schema.ts 25ms
-[90msrc/lib/work-records/runtime/types.ts[39m 11ms (unchanged)
+[90msrc/lib/platform/calendar-helpers.test.ts[39m 19ms (unchanged)
+src/lib/platform/calendar-helpers.ts 6ms
+src/lib/platform/iam-api-error.test.ts 5ms
+src/lib/platform/iam-api-error.ts 7ms
+src/lib/platform/iam-axios-error.test.ts 8ms
+[90msrc/lib/schemas/platform-user.ts[39m 5ms (unchanged)
+[90msrc/lib/show-submitted-data.tsx[39m 4ms (unchanged)
+[90msrc/lib/utils.test.ts[39m 7ms (unchanged)
+[90msrc/lib/utils.ts[39m 11ms (unchanged)
+[90msrc/lib/work-records/designer/field-delete-risk.tsx[39m 14ms (unchanged)
+src/lib/work-records/designer/schema.test.ts 28ms
+[90msrc/lib/work-records/designer/schema.ts[39m 49ms (unchanged)
+[90msrc/lib/work-records/designer/types.ts[39m 7ms (unchanged)
+[90msrc/lib/work-records/list/export-api.test.ts[39m 9ms (unchanged)
+[90msrc/lib/work-records/list/export-api.ts[39m 13ms (unchanged)
+[90msrc/lib/work-records/list/search.test.ts[39m 8ms (unchanged)
+src/lib/work-records/list/search.ts 25ms
+[90msrc/lib/work-records/list/types.ts[39m 30ms (unchanged)
+src/lib/work-records/runtime/api.test.ts 7ms
+src/lib/work-records/runtime/record-form-validation.test.ts 18ms
+[90msrc/lib/work-records/runtime/record-form-validation.ts[39m 38ms (unchanged)
+src/lib/work-records/runtime/schema.test.ts 17ms
+src/lib/work-records/runtime/schema.ts 17ms
+[90msrc/lib/work-records/runtime/types.ts[39m 15ms (unchanged)
 [90msrc/lib/zod-v4-resolver.ts[39m 5ms (unchanged)
-[90msrc/main.tsx[39m 14ms (unchanged)
-src/pages/auth/SignInPage.tsx 25ms
-src/pages/DashboardPage.tsx 21ms
-[90msrc/pages/errors/forbidden-page.tsx[39m 7ms (unchanged)
+[90msrc/main.tsx[39m 13ms (unchanged)
+src/pages/auth/SignInPage.tsx 27ms
+src/pages/DashboardPage.tsx 27ms
+[90msrc/pages/errors/forbidden-page.tsx[39m 8ms (unchanged)
 [90msrc/pages/errors/forbidden.tsx[39m 5ms (unchanged)
-[90msrc/pages/errors/general-error.tsx[39m 6ms (unchanged)
-[90msrc/pages/errors/maintenance-error.tsx[39m 3ms (unchanged)
+[90msrc/pages/errors/general-error.tsx[39m 9ms (unchanged)
+[90msrc/pages/errors/maintenance-error.tsx[39m 5ms (unchanged)
 [90msrc/pages/errors/not-found-error.tsx[39m 5ms (unchanged)
-[90msrc/pages/errors/unauthorized-error.tsx[39m 5ms (unchanged)
-src/pages/platform/CalendarsPage.tsx 49ms
-src/pages/platform/DictionariesPage.tsx 27ms
-src/pages/platform/PlatformRolesPage.test.tsx 6ms
+[90msrc/pages/errors/unauthorized-error.tsx[39m 7ms (unchanged)
+src/pages/platform/CalendarsPage.tsx 41ms
+src/pages/platform/DictionariesPage.tsx 28ms
+src/pages/platform/PlatformRolesPage.test.tsx 5ms
 src/pages/platform/PlatformRolesPage.tsx 20ms
-src/pages/platform/PlatformUsersPage.test.tsx 8ms
-src/pages/platform/PlatformUsersPage.tsx 12ms
-[90msrc/pages/settings/account/account-form.tsx[39m 38ms (unchanged)
+src/pages/platform/PlatformUsersPage.test.tsx 7ms
+src/pages/platform/PlatformUsersPage.tsx 13ms
+[90msrc/pages/settings/account/account-form.tsx[39m 29ms (unchanged)
 [90msrc/pages/settings/account/index.tsx[39m 3ms (unchanged)
-src/pages/settings/appearance/appearance-form.tsx 20ms
+src/pages/settings/appearance/appearance-form.tsx 28ms
 [90msrc/pages/settings/appearance/index.tsx[39m 3ms (unchanged)
-[90msrc/pages/settings/components/content-section.tsx[39m 14ms (unchanged)
-[90msrc/pages/settings/components/sidebar-nav.tsx[39m 9ms (unchanged)
+[90msrc/pages/settings/components/content-section.tsx[39m 13ms (unchanged)
+[90msrc/pages/settings/components/sidebar-nav.tsx[39m 10ms (unchanged)
 [90msrc/pages/settings/display/display-form.tsx[39m 18ms (unchanged)
-[90msrc/pages/settings/display/index.tsx[39m 2ms (unchanged)
+[90msrc/pages/settings/display/index.tsx[39m 3ms (unchanged)
 [90msrc/pages/settings/index.tsx[39m 11ms (unchanged)
 [90msrc/pages/settings/notifications/index.tsx[39m 7ms (unchanged)
-[90msrc/pages/settings/notifications/notifications-form.tsx[39m 49ms (unchanged)
+[90msrc/pages/settings/notifications/notifications-form.tsx[39m 24ms (unchanged)
 [90msrc/pages/settings/profile/index.tsx[39m 8ms (unchanged)
-[90msrc/pages/settings/profile/profile-form.tsx[39m 15ms (unchanged)
-src/pages/work-records/WorkRecordCreatePage.tsx 55ms
-src/pages/work-records/WorkRecordDetailPage.tsx 14ms
+[90msrc/pages/settings/profile/profile-form.tsx[39m 17ms (unchanged)
+src/pages/work-records/WorkRecordCreatePage.tsx 40ms
+src/pages/work-records/WorkRecordDetailPage.tsx 11ms
 src/pages/work-records/WorkRecordEditPage.tsx 24ms
-src/pages/work-records/WorkRecordListPage.tsx 17ms
-[90msrc/pages/work-records/WorkRecordTemplateDesignerPage.test.tsx[39m 15ms (unchanged)
-src/pages/work-records/WorkRecordTemplateDesignerPage.tsx 27ms
-src/pages/work-records/WorkRecordTemplateListPage.test.tsx 20ms
-src/pages/work-records/WorkRecordTemplateListPage.tsx 55ms
-src/routes/__root.tsx 8ms
-src/routes/_authenticated/errors/$error.tsx 14ms
-[90msrc/routes/_authenticated/index.tsx[39m 3ms (unchanged)
-src/routes/_authenticated/platform/calendars.tsx 11ms
-src/routes/_authenticated/platform/dictionaries.tsx 2ms
+src/pages/work-records/WorkRecordListPage.tsx 26ms
+[90msrc/pages/work-records/WorkRecordTemplateDesignerPage.test.tsx[39m 16ms (unchanged)
+src/pages/work-records/WorkRecordTemplateDesignerPage.tsx 32ms
+src/pages/work-records/WorkRecordTemplateListPage.test.tsx 16ms
+src/pages/work-records/WorkRecordTemplateListPage.tsx 77ms
+src/routes/__root.tsx 16ms
+src/routes/_authenticated/errors/$error.tsx 17ms
+[90msrc/routes/_authenticated/index.tsx[39m 4ms (unchanged)
+src/routes/_authenticated/platform/calendars.tsx 7ms
+src/routes/_authenticated/platform/dictionaries.tsx 3ms
 src/routes/_authenticated/platform/roles.tsx 4ms
-[90msrc/routes/_authenticated/platform/users/index.tsx[39m 15ms (unchanged)
-src/routes/_authenticated/route.tsx 2ms
+[90msrc/routes/_authenticated/platform/users/index.tsx[39m 14ms (unchanged)
+src/routes/_authenticated/route.tsx 3ms
 [90msrc/routes/_authenticated/settings/account.tsx[39m 7ms (unchanged)
-[90msrc/routes/_authenticated/settings/appearance.tsx[39m 2ms (unchanged)
-[90msrc/routes/_authenticated/settings/display.tsx[39m 2ms (unchanged)
-[90msrc/routes/_authenticated/settings/index.tsx[39m 2ms (unchanged)
+[90msrc/routes/_authenticated/settings/appearance.tsx[39m 3ms (unchanged)
+[90msrc/routes/_authenticated/settings/display.tsx[39m 3ms (unchanged)
+[90msrc/routes/_authenticated/settings/index.tsx[39m 3ms (unchanged)
 [90msrc/routes/_authenticated/settings/notifications.tsx[39m 2ms (unchanged)
-[90msrc/routes/_authenticated/settings/route.tsx[39m 2ms (unchanged)
-src/routes/_authenticated/work-records/$recordId.edit.tsx 7ms
-src/routes/_authenticated/work-records/$recordId.tsx 2ms
+[90msrc/routes/_authenticated/settings/route.tsx[39m 4ms (unchanged)
+src/routes/_authenticated/work-records/$recordId.edit.tsx 12ms
+src/routes/_authenticated/work-records/$recordId.tsx 3ms
 src/routes/_authenticated/work-records/index.tsx 3ms
 src/routes/_authenticated/work-records/new.tsx 3ms
 [90msrc/routes/_authenticated/work-records/templates/$templateId.designer.tsx[39m 8ms (unchanged)
-src/routes/_authenticated/work-records/templates/index.tsx 2ms
+src/routes/_authenticated/work-records/templates/index.tsx 3ms
 src/routes/(auth)/sign-in.tsx 6ms
 [90msrc/routes/(errors)/401.tsx[39m 6ms (unchanged)
-[90msrc/routes/(errors)/403.tsx[39m 2ms (unchanged)
+[90msrc/routes/(errors)/403.tsx[39m 3ms (unchanged)
 [90msrc/routes/(errors)/404.tsx[39m 2ms (unchanged)
-[90msrc/routes/(errors)/500.tsx[39m 2ms (unchanged)
+[90msrc/routes/(errors)/500.tsx[39m 6ms (unchanged)
 [90msrc/routes/(errors)/503.tsx[39m 3ms (unchanged)
 [90msrc/stores/auth-store.test.ts[39m 9ms (unchanged)
 src/stores/auth-store.ts 6ms
 [90msrc/styles/index.css[39m 29ms (unchanged)
-[90msrc/styles/theme.css[39m 23ms (unchanged)
-[90msrc/tanstack-table.d.ts[39m 3ms (unchanged)
-[90msrc/test-utils/cookies.ts[39m 6ms (unchanged)
-[90msrc/test-utils/tanstack-table.ts[39m 3ms (unchanged)
-[90msrc/test-utils/vitest-setup.ts[39m 1ms (unchanged)
+[90msrc/styles/theme.css[39m 25ms (unchanged)
+[90msrc/tanstack-table.d.ts[39m 4ms (unchanged)
+[90msrc/test-utils/cookies.ts[39m 7ms (unchanged)
+[90msrc/test-utils/tanstack-table.ts[39m 4ms (unchanged)
+[90msrc/test-utils/vitest-setup.ts[39m 2ms (unchanged)
 [90msrc/vite-env.d.ts[39m 2ms (unchanged)
 [90mtsconfig.json[39m 2ms (unchanged)
 [90mtsconfig.node.json[39m 2ms (unchanged)
-[90mvite.config.ts[39m 7ms (unchanged)
+[90mvite.config.ts[39m 6ms (unchanged)
 portal feature-directory guard passed
 portal UI primitive guard passed
 ==> Frontend CI
