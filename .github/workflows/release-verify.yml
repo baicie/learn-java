@@ -1,0 +1,128 @@
+name: Release Verify
+
+on:
+  pull_request:
+    branches:
+      - mvp
+    paths:
+      - "apps/**"
+      - "modules/**"
+      - "web/**"
+      - "contracts/**"
+      - "deploy/**"
+      - "scripts/**"
+      - "infra/checkstyle/**"
+      - "pom.xml"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - ".dockerignore"
+      - ".github/workflows/release-verify.yml"
+      - ".github/workflows/deploy.yml"
+
+  push:
+    branches:
+      - mvp
+      - "fix/**"
+    paths:
+      - "apps/**"
+      - "modules/**"
+      - "web/**"
+      - "contracts/**"
+      - "deploy/**"
+      - "scripts/**"
+      - "infra/checkstyle/**"
+      - "pom.xml"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - ".dockerignore"
+      - ".github/workflows/release-verify.yml"
+      - ".github/workflows/deploy.yml"
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-verify-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  JAVA_VERSION: "21"
+  NODE_VERSION: "22"
+
+jobs:
+  preflight:
+    name: Release contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: maven
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Validate release descriptors
+        run: bash scripts/ci/release-preflight.sh
+
+  container-build:
+    name: Container ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    needs: preflight
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: aiops-server
+            context: .
+            dockerfile: ./apps/aiops-server/Dockerfile
+            build_args: ""
+          - name: aiops-agent
+            context: ./apps/aiops-agent
+            dockerfile: ./apps/aiops-agent/Dockerfile
+            build_args: ""
+          - name: aiops-worker
+            context: .
+            dockerfile: ./deploy/docker/java-app.Dockerfile
+            build_args: |
+              APP_MODULE=apps/aiops-worker
+              APP_NAME=aiops-worker
+              APP_PORT=8081
+          - name: aiops-runner
+            context: .
+            dockerfile: ./apps/aiops-runner/Dockerfile
+            build_args: ""
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Smoke-build image
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          build-args: ${{ matrix.build_args }}
+          platforms: linux/amd64
+          push: false
+          cache-from: type=gha,scope=${{ matrix.name }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.name }}
+          provenance: false
