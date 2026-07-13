@@ -92,6 +92,122 @@ jobs:
           PY
           python3 -m py_compile "$package/scripts/fix-remaining-ui.py"
 
+          cat > "$package/scripts/fix-migration-paths.py" <<'PY'
+          from pathlib import Path
+
+
+          dashboard = Path('web/portal/src/pages/DashboardPage.tsx')
+          content = dashboard.read_text(encoding='utf-8')
+          content = content.replace(
+              "from './components/",
+              "from '@/components/dashboard/",
+          )
+          dashboard.write_text(content, encoding='utf-8')
+
+          iam_dir = Path('web/portal/src/components/platform/iam')
+          create_dialog_source = iam_dir / 'platform-user-create-dialog.tsx'
+          create_dialog_target = iam_dir / 'PlatformUserCreateDialog.tsx'
+          if create_dialog_source.exists():
+              if create_dialog_target.exists():
+                  create_dialog_source.unlink()
+              else:
+                  create_dialog_source.rename(create_dialog_target)
+
+          field_delete_risk = Path(
+              'web/portal/src/lib/work-records/designer/field-delete-risk.ts'
+          )
+          field_delete_risk.parent.mkdir(parents=True, exist_ok=True)
+          field_delete_risk.write_text(
+              """import type { TFunction } from 'i18next'
+          import type { ConfirmOptions } from '@/components/feedback/confirm-provider'
+
+          type FieldDeleteRiskInput = {
+            fieldName: string
+            fieldCode: string
+            published: boolean
+            required: boolean
+            filterable: boolean
+            exportable: boolean
+            t: TFunction
+          }
+
+          export function fieldDeleteConfirmOptions({
+            fieldName,
+            fieldCode,
+            published,
+            required,
+            filterable,
+            exportable,
+            t,
+          }: FieldDeleteRiskInput): ConfirmOptions {
+            const impacts = [
+              required
+                ? t('workRecords.designer.deleteRisk.required', {
+                    defaultValue: '该字段当前为必填字段',
+                  })
+                : null,
+              filterable
+                ? t('workRecords.designer.deleteRisk.filterable', {
+                    defaultValue: '该字段已用于列表筛选',
+                  })
+                : null,
+              exportable
+                ? t('workRecords.designer.deleteRisk.exportable', {
+                    defaultValue: '该字段已用于导出',
+                  })
+                : null,
+            ].filter((item): item is string => Boolean(item))
+
+            if (published) {
+              return {
+                title: t('workRecords.designer.disableFieldTitle', {
+                  defaultValue: `禁用字段“${fieldName}”`,
+                }),
+                description: t('workRecords.designer.disableFieldDescription', {
+                  defaultValue:
+                    '该字段已发布或已被记录引用，不能物理删除。确认后将停止新记录继续使用该字段，历史数据仍可回显。',
+                }),
+                confirmText: t('common.disable', { defaultValue: '确认禁用' }),
+                variant: 'warning',
+                details: impacts.length > 0 ? impacts.join('；') : undefined,
+                confirmationText: fieldCode,
+              }
+            }
+
+            return {
+              title: t('workRecords.designer.deleteFieldTitle', {
+                defaultValue: `删除字段“${fieldName}”`,
+              }),
+              description: t('workRecords.designer.deleteFieldDescription', {
+                defaultValue: '删除后该字段及其当前配置将从模板草稿中移除。',
+              }),
+              confirmText: t('common.delete', { defaultValue: '确认删除' }),
+              variant: 'destructive',
+              details: impacts.length > 0 ? impacts.join('；') : undefined,
+            }
+          }
+          """,
+              encoding='utf-8',
+          )
+          PY
+          python3 -m py_compile "$package/scripts/fix-migration-paths.py"
+
+          python3 - "$package/scripts/phase21-07-cleanup.sh" <<'PY'
+          import sys
+          from pathlib import Path
+
+          path = Path(sys.argv[1])
+          content = path.read_text(encoding='utf-8')
+          marker = 'python3 "$PACKAGE_ROOT/scripts/fix-remaining-ui.py"\n'
+          replacement = (
+              marker
+              + 'python3 "$PACKAGE_ROOT/scripts/fix-migration-paths.py"\n'
+          )
+          if marker not in content:
+              raise SystemExit('phase21-07 UI fix marker not found')
+          path.write_text(content.replace(marker, replacement, 1), encoding='utf-8')
+          PY
+
       - name: Configure Git
         run: |
           git config user.name "github-actions[bot]"
