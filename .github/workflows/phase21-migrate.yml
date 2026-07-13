@@ -63,6 +63,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          package="$RUNNER_TEMP/phase21-runtime/phase21-runtime-package"
           normalizer="$RUNNER_TEMP/phase21-normalize.py"
           cp .github/phase21-payload/normalize.py "$normalizer"
           python3 - "$normalizer" <<'PY'
@@ -77,8 +78,19 @@ jobs:
               raise SystemExit('ui_fix_source raw-string marker not found')
           path.write_text(content.replace(old, new), encoding='utf-8')
           PY
-          python3 "$normalizer" \
-            "$RUNNER_TEMP/phase21-runtime/phase21-runtime-package"
+          python3 "$normalizer" "$package"
+          python3 - "$package/scripts/fix-remaining-ui.py" <<'PY'
+          import sys
+          import textwrap
+          from pathlib import Path
+
+          path = Path(sys.argv[1])
+          content = path.read_text(encoding='utf-8')
+          if content.startswith('\\\n'):
+              content = content[2:]
+          path.write_text(textwrap.dedent(content).lstrip('\n'), encoding='utf-8')
+          PY
+          python3 -m py_compile "$package/scripts/fix-remaining-ui.py"
 
       - name: Configure Git
         run: |
