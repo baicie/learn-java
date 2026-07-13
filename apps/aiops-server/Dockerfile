@@ -24,7 +24,7 @@ FROM maven:3.9.9-eclipse-temurin-21 AS maven-base
 FROM eclipse-temurin:21-jdk-jammy AS build
 
 ENV DEBIAN_FRONTEND=noninteractive \
-    NODE_VERSION=20.18.0 \
+    NODE_VERSION=20.20.2 \
     MAVEN_HOME=/usr/share/maven
 
 # corepack 0.31（node 20.18 内置）尚未包含 pnpm 较新的签名公钥
