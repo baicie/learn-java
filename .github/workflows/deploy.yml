@@ -1,44 +1,98 @@
 name: Deploy
 
-# 触发模式：
-#   - workflow_dispatch：手动触发
-#   - push 到 main/master：自动触发
 on:
-  push:
+  # 只在 mvp 的发布验证全部通过后自动发布。
+  workflow_run:
+    workflows:
+      - Release Verify
+    types:
+      - completed
     branches:
-      - main
       - mvp
-    paths:
-      - "apps/**"
-      - "modules/**"
-      - "web/**"
-      - "contracts/**"
-      - "deploy/**"
-      - "infra/docker-compose.yml"
-      - ".github/workflows/deploy.yml"
-      - "pom.xml"
-      - "pnpm-lock.yaml"
-      - "package.json"
 
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 concurrency:
-  group: deploy-aegisops-${{ github.ref }}
-  cancel-in-progress: false # 串行，避免两个 deploy 撞同一个 VM
+  group: deploy-aegisops-mvp
+  cancel-in-progress: false
 
 env:
   IMAGE_PREFIX: ${{ secrets.DOCKERHUB_USERNAME }}/aegisops
+  IMAGE_TAG: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+  RELEASE_REF: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
 
 jobs:
-  deploy:
+  preflight:
+    name: Release preflight
     runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
+    timeout-minutes: 10
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+
+    steps:
+      - name: Checkout exact release commit
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ env.RELEASE_REF }}
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+
+      - name: Validate release descriptors
+        run: bash scripts/ci/release-preflight.sh
+
+  build-images:
+    name: Build ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    needs: preflight
     environment:
       name: aegisops-prod
 
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: aiops-server
+            tag_suffix: server
+            context: .
+            dockerfile: ./apps/aiops-server/Dockerfile
+            build_args: ""
+          - name: aiops-agent
+            tag_suffix: agent
+            context: ./apps/aiops-agent
+            dockerfile: ./apps/aiops-agent/Dockerfile
+            build_args: ""
+          - name: aiops-worker
+            tag_suffix: worker
+            context: .
+            dockerfile: ./deploy/docker/java-app.Dockerfile
+            build_args: |
+              APP_MODULE=apps/aiops-worker
+              APP_NAME=aiops-worker
+              APP_PORT=8081
+          - name: aiops-runner
+            tag_suffix: runner
+            context: .
+            dockerfile: ./apps/aiops-runner/Dockerfile
+            build_args: ""
+
     steps:
-      - name: Checkout
+      - name: Checkout exact release commit
         uses: actions/checkout@v5
+        with:
+          ref: ${{ env.RELEASE_REF }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -49,202 +103,66 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # ---- 镜像 metadata（每个 image 一份，便于在 steps 中按 service 引用） ----
-      - name: Extract metadata (server)
-        id: meta-server
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.IMAGE_PREFIX }}
-          tags: |
-            type=ref,event=branch
-            type=sha,format=long
-            type=sha,prefix=git-
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
-
-      - name: Extract metadata (agent)
-        id: meta-agent
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.IMAGE_PREFIX }}/aiops-agent
-          tags: |
-            type=ref,event=branch
-            type=sha,format=long
-            type=sha,prefix=git-
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
-
-      - name: Extract metadata (worker)
-        id: meta-worker
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.IMAGE_PREFIX }}/aiops-worker
-          tags: |
-            type=ref,event=branch
-            type=sha,format=long
-            type=sha,prefix=git-
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
-
-      - name: Extract metadata (runner)
-        id: meta-runner
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.IMAGE_PREFIX }}/aiops-runner
-          tags: |
-            type=ref,event=branch
-            type=sha,format=long
-            type=sha,prefix=git-
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
-
-      # ---- 构建 & 推送 ----
-      - name: Build and push aiops-server
+      - name: Build and push immutable image
         uses: docker/build-push-action@v6
         with:
-          context: .
-          file: ./apps/aiops-server/Dockerfile
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          build-args: ${{ matrix.build_args }}
+          platforms: linux/amd64
           push: true
-          tags: ${{ steps.meta-server.outputs.tags }}
-          labels: ${{ steps.meta-server.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          tags: ${{ env.IMAGE_PREFIX }}:${{ env.IMAGE_TAG }}-${{ matrix.tag_suffix }}
+          cache-from: type=gha,scope=${{ matrix.name }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.name }}
           provenance: false
 
-      - name: Build and push aiops-agent
-        uses: docker/build-push-action@v6
+  deploy:
+    name: Deploy to Tencent Cloud VM
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: build-images
+    environment:
+      name: aegisops-prod
+
+    steps:
+      - name: Checkout exact release commit
+        uses: actions/checkout@v5
         with:
-          context: ./apps/aiops-agent
-          file: ./apps/aiops-agent/Dockerfile
-          push: true
-          tags: ${{ steps.meta-agent.outputs.tags }}
-          labels: ${{ steps.meta-agent.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          provenance: false
+          ref: ${{ env.RELEASE_REF }}
 
-      - name: Build and push aiops-worker
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./deploy/docker/java-app.Dockerfile
-          build-args: |
-            APP_MODULE=apps/aiops-worker
-            APP_NAME=aiops-worker
-            APP_PORT=8081
-          push: true
-          tags: ${{ steps.meta-worker.outputs.tags }}
-          labels: ${{ steps.meta-worker.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          provenance: false
-
-      - name: Build and push aiops-runner
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./apps/aiops-runner/Dockerfile
-          push: true
-          tags: ${{ steps.meta-runner.outputs.tags }}
-          labels: ${{ steps.meta-runner.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          provenance: false
-
-      # ---- 部署到 VM ----
-      - name: Deploy to Tencent Cloud VM
-        uses: appleboy/ssh-action@v1
+      - name: Copy deployment descriptors
+        uses: appleboy/scp-action@v1
         with:
           host: ${{ secrets.PERF_VM_HOST }}
           username: ${{ secrets.PERF_VM_USER }}
           key: ${{ secrets.PERF_VM_KEY }}
           password: ${{ secrets.PERF_VM_PASSWORD }}
           port: ${{ secrets.PERF_VM_SSH_PORT || '22' }}
-          timeout: 30m
-          command_timeout: 30m
+          source: "deploy/docker-compose.app.yml,deploy/scripts/deploy-app.sh"
+          target: "~/workspace/aegisops"
+          overwrite: true
+          timeout: 10m
+          command_timeout: 10m
+
+      - name: Apply immutable release
+        uses: appleboy/ssh-action@v1
+        env:
+          IMAGE_PREFIX: ${{ env.IMAGE_PREFIX }}
+          IMAGE_TAG: ${{ env.IMAGE_TAG }}
+        with:
+          host: ${{ secrets.PERF_VM_HOST }}
+          username: ${{ secrets.PERF_VM_USER }}
+          key: ${{ secrets.PERF_VM_KEY }}
+          password: ${{ secrets.PERF_VM_PASSWORD }}
+          port: ${{ secrets.PERF_VM_SSH_PORT || '22' }}
+          timeout: 10m
+          command_timeout: 20m
+          envs: IMAGE_PREFIX,IMAGE_TAG
           script: |
             set -euo pipefail
-
-            IMAGE_PREFIX='${{ env.IMAGE_PREFIX }}'
-            SHA_TAG='${{ github.sha }}'
-            SHORT_TAG=$(echo "$SHA_TAG" | cut -c1-7)
             APP_DIR="$HOME/workspace/aegisops"
-
-            configure_mirror() {
-              echo "::group::Configuring Docker mirror"
-              sudo mkdir -p /etc/docker
-              printf '%s\n' '{"registry-mirrors":["https://mirror.ccs.tencentyun.com"]}' | sudo tee /etc/docker/daemon.json
-              sudo systemctl daemon-reload 2>/dev/null || true
-              sudo systemctl restart docker 2>/dev/null || true
-              sleep 8
-              docker info | grep -A 3 "Registry Mirrors" || true
-              echo "::endgroup::"
-            }
-
-            pull_with_retry() {
-              for i in 1 2 3 4 5; do
-                echo "::group::Pull attempt $i ($1)"
-                if docker pull "$1"; then
-                  echo "::endgroup::"
-                  echo "Pull OK: $1"
-                  return 0
-                fi
-                echo "Pull failed, retrying in $((i * 15))s"
-                echo "::endgroup::"
-                sleep $((i * 15))
-              done
-              return 1
-            }
-
-            configure_mirror
-
-            pull_with_retry "${IMAGE_PREFIX}:${SHA_TAG}"            || { echo "::error::Failed to pull server image"; exit 1; }
-            pull_with_retry "${IMAGE_PREFIX}/aiops-agent:${SHA_TAG}" || { echo "::error::Failed to pull agent image"; exit 1; }
-            pull_with_retry "${IMAGE_PREFIX}/aiops-worker:${SHA_TAG}" || { echo "::error::Failed to pull worker image"; exit 1; }
-            pull_with_retry "${IMAGE_PREFIX}/aiops-runner:${SHA_TAG}" || { echo "::error::Failed to pull runner image"; exit 1; }
-
-            if [ ! -d "$APP_DIR" ]; then
-              mkdir -p "$(dirname "$APP_DIR")"
-              git clone https://github.com/${{ github.repository }}.git "$APP_DIR" --depth 1
-            fi
-
-            cd "$APP_DIR"
-            git pull origin ${{ github.ref_name }} || true
-
-            echo "::group::Updating compose file with new images"
-            sed -i -E "s|image: *${IMAGE_PREFIX}(:[A-Za-z0-9._-]+)? *|image: ${IMAGE_PREFIX}:${SHA_TAG} |" deploy/docker-compose.app.yml
-            sed -i -E "s|image: *${IMAGE_PREFIX}/aiops-agent(:[A-Za-z0-9._-]+)? *|image: ${IMAGE_PREFIX}/aiops-agent:${SHA_TAG} |" deploy/docker-compose.app.yml
-            sed -i -E "s|image: *${IMAGE_PREFIX}/aiops-worker(:[A-Za-z0-9._-]+)? *|image: ${IMAGE_PREFIX}/aiops-worker:${SHA_TAG} |" deploy/docker-compose.app.yml
-            sed -i -E "s|image: *${IMAGE_PREFIX}/aiops-runner(:[A-Za-z0-9._-]+)? *|image: ${IMAGE_PREFIX}/aiops-runner:${SHA_TAG} |" deploy/docker-compose.app.yml
-            cat deploy/docker-compose.app.yml
-            echo "::endgroup::"
-
-            docker compose -f deploy/docker-compose.app.yml pull
-            docker compose -f deploy/docker-compose.app.yml down
-            docker compose -f deploy/docker-compose.app.yml up -d
-
-            echo "::group::Waiting for services health"
-            sleep 10
-
-            check_health() {
-              local name=$1 url=$2 max=$3
-              for i in $(seq 1 "$max"); do
-                if curl -fsS "$url" >/dev/null 2>&1; then
-                  echo "$name healthy after ${i}s"
-                  return 0
-                fi
-                sleep 2
-              done
-              echo "::warning::$name did not become healthy in $((max*2))s"
-              return 1
-            }
-
-            check_health "aiops-server"  "http://127.0.0.1:8080/actuator/health" 30
-            check_health "aiops-agent"   "http://127.0.0.1:9008/health"             15
-            check_health "aiops-worker"  "http://127.0.0.1:8081/actuator/health"  30
-            check_health "aiops-runner"  "http://127.0.0.1:8092/actuator/health"  30
-            echo "::endgroup::"
-
-            echo "::group::Verifying deployment"
-            curl -fsS http://127.0.0.1:8080/actuator/health | tee /tmp/health.json || echo "Server health check failed"
-            docker compose -f deploy/docker-compose.app.yml ps | tee /tmp/ps.txt
-            echo "::endgroup::"
-
-            docker image prune -f >/dev/null 2>&1 || true
-            echo "::notice::Deployed ${IMAGE_PREFIX}:${SHORT_TAG} (sha=${SHA_TAG}) to $(hostname)"
+            chmod +x "$APP_DIR/deploy/scripts/deploy-app.sh"
+            APP_DIR="$APP_DIR" \
+              IMAGE_PREFIX="$IMAGE_PREFIX" \
+              IMAGE_TAG="$IMAGE_TAG" \
+              bash "$APP_DIR/deploy/scripts/deploy-app.sh"
