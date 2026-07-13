@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Button } from '@/components/ui/button'
+import {
+  Button,
+} from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Dialog,
   DialogContent,
@@ -133,7 +136,7 @@ export function WorkRecordExportDialog({
             </div>
 
             {overLimit ? (
-              <div className='mt-2 text-red-600'>
+              <div className='mt-2 text-destructive'>
                 当前结果超过导出上限，请继续添加筛选条件。
               </div>
             ) : null}
@@ -171,10 +174,9 @@ export function WorkRecordExportDialog({
                 key={column.key}
                 className='flex items-center gap-2 text-sm'
               >
-                <input
-                  type='checkbox'
+                <Checkbox
                   checked={selectedKeys.includes(column.key)}
-                  onChange={() => toggleColumn(column.key)}
+                  onCheckedChange={() => toggleColumn(column.key)}
                 />
 
                 <span>{column.title}</span>
@@ -189,17 +191,16 @@ export function WorkRecordExportDialog({
           </div>
 
           <label className='flex items-start gap-2 rounded-md border p-3 text-sm'>
-            <input
-              type='checkbox'
+            <Checkbox
               checked={confirmed}
-              onChange={(event) => setConfirmed(event.target.checked)}
+              onCheckedChange={(checked) => setConfirmed(checked === true)}
             />
 
             <span>我确认导出当前筛选结果。导出行为会被记录到审计日志。</span>
           </label>
 
           {error ? (
-            <div className='rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700'>
+            <div className='rounded-md border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive'>
               {error}
             </div>
           ) : null}
