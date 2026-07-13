@@ -52,6 +52,7 @@ grep -Fq 'refusing to stop it automatically' scripts/ci/test-deploy-app.sh
 
 echo "==> Validate container health contract"
 grep -Fq 'urllib.request.urlopen' deploy/docker-compose.app.yml
+grep -Fq 'urllib.request.urlopen' apps/aiops-agent/Dockerfile
 if grep -Fq 'wget -q -O - http://localhost:9008/health' deploy/docker-compose.app.yml; then
   echo "Agent health check still depends on wget, which is absent from python:3.12-slim." >&2
   exit 1
@@ -62,6 +63,7 @@ grep -Fq "bash -lc '" .github/workflows/deploy.yml
 grep -Fq "envs: IMAGE_PREFIX,IMAGE_TAG,DOCKERHUB_USERNAME,DOCKERHUB_TOKEN" \
   .github/workflows/deploy.yml
 grep -Fq "needs: runtime-smoke" .github/workflows/deploy.yml
+grep -Fq "name: Compose runtime smoke" .github/workflows/release-verify.yml
 
 echo "==> Validate jOOQ DDL preparation"
 TMP_SCHEMA="$(mktemp)"
