@@ -1,1 +1,3 @@
-fatal: destination exists, source=web/portal/src/features/dictionaries/index.tsx, destination=web/portal/src/pages/platform/DictionariesPage.tsx
+  File "/home/runner/work/_temp/phase21-runtime/phase21-runtime-package/scripts/fix-remaining-ui.py", line 1
+    from pathlib import Path
+IndentationError: unexpected indent
