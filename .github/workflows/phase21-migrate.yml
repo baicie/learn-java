@@ -211,6 +211,18 @@ jobs:
             pnpm --dir web/portal run knip
           } 2>&1 | tee "$RUNNER_TEMP/phase21-apply.log"
 
+      - name: Upload failed migrated Portal tree
+        if: steps.apply_migration.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase21-failed-worktree-${{ github.run_id }}
+          path: |
+            web/portal/src
+            web/portal/package.json
+            pnpm-lock.yaml
+          if-no-files-found: error
+          retention-days: 1
+
       - name: Publish migration failure details
         if: steps.apply_migration.outcome == 'failure'
         shell: bash
