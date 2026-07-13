@@ -1,6 +1,6 @@
 import { AxiosError } from 'axios'
 import type { z } from 'zod'
-import { iamApiErrorEnvelopeSchema } from '../schemas/platform-user'
+import { iamApiErrorEnvelopeSchema } from '@/api/platform/schemas/platform-user'
 
 export type IamRequestError = {
   code: string
@@ -57,7 +57,9 @@ export function toIamRequestError(error: unknown): IamRequestError {
   }
 }
 
-function tryParseEnvelope(payload: unknown): z.infer<typeof envelopeSchema> | null {
+function tryParseEnvelope(
+  payload: unknown
+): z.infer<typeof envelopeSchema> | null {
   try {
     return envelopeSchema.parse(payload)
   } catch {
