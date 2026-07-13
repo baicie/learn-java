@@ -31,6 +31,14 @@ echo "==> Parse standalone portal POM"
 
 echo "==> Validate deployment shell"
 bash -n deploy/scripts/deploy-app.sh
+bash -n scripts/ci/test-deploy-app.sh
+bash scripts/ci/test-deploy-app.sh
+
+echo "==> Validate remote deployment contract"
+grep -Fq "bash -lc '" .github/workflows/deploy.yml
+grep -Fq "envs: IMAGE_PREFIX,IMAGE_TAG,DOCKERHUB_USERNAME,DOCKERHUB_TOKEN" \
+  .github/workflows/deploy.yml
+grep -Fq "needs: runtime-smoke" .github/workflows/deploy.yml
 
 echo "==> Validate jOOQ DDL preparation"
 TMP_SCHEMA="$(mktemp)"
