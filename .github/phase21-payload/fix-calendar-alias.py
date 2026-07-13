@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import subprocess
 import sys
 from pathlib import Path
 
@@ -18,6 +19,14 @@ replacement = marker + (
     "export type Calendar = PlatformCalendar\n"
     "export type CalendarDay = PlatformCalendarDay\n"
 )
-if marker not in content:
-    raise SystemExit('calendar type alias marker not found')
-path.write_text(content.replace(marker, replacement, 1), encoding='utf-8')
+if marker in content and "export type Calendar = PlatformCalendar\n" not in content:
+    path.write_text(content.replace(marker, replacement, 1), encoding='utf-8')
+
+subprocess.run(
+    [
+        sys.executable,
+        '.github/phase21-payload/fix-ui-primitives.py',
+        str(package),
+    ],
+    check=True,
+)
