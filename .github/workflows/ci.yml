@@ -27,6 +27,7 @@ on:
       - main
       - develop
       - mvp
+      - "fix/**"
     paths:
       - "apps/**"
       - "modules/**"
