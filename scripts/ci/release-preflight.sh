@@ -48,14 +48,20 @@ grep -Fq 'Main-Class: org.springframework.boot.loader.launch.JarLauncher' \
 
 echo "==> Validate deployment shell"
 bash -n deploy/scripts/deploy-app.sh
+bash -n deploy/scripts/configure-docker-mirror.sh
 bash -n scripts/ci/test-deploy-app.sh
+bash -n scripts/ci/test-configure-docker-mirror.sh
 bash scripts/ci/test-deploy-app.sh
+bash scripts/ci/test-configure-docker-mirror.sh
 grep -Fq 'DEPLOY_STAGE="port-preflight"' deploy/scripts/deploy-app.sh
 grep -Fq 'DEPLOY_STAGE="application-recreate"' deploy/scripts/deploy-app.sh
 grep -Fq 'remove_application_containers' deploy/scripts/deploy-app.sh
 grep -Fq 'wait_container_health aegisops-agent' deploy/scripts/deploy-app.sh
 grep -Fq 'wait_container_health aegisops-server' deploy/scripts/deploy-app.sh
+grep -Fq 'Registry login skipped; using existing Docker credentials or public images' deploy/scripts/deploy-app.sh
 grep -Fq 'refusing to stop it automatically' scripts/ci/test-deploy-app.sh
+grep -Fq 'https://mirror.ccs.tencentyun.com' deploy/scripts/configure-docker-mirror.sh
+grep -Fq 'restoring the previous daemon configuration' deploy/scripts/configure-docker-mirror.sh
 
 echo "==> Validate container health contract"
 grep -Fq 'urllib.request.urlopen' deploy/docker-compose.app.yml
@@ -70,10 +76,20 @@ fi
 
 echo "==> Validate remote deployment contract"
 grep -Fq "bash -lc '" .github/workflows/deploy.yml
-grep -Fq "envs: IMAGE_PREFIX,IMAGE_TAG,DOCKERHUB_USERNAME,DOCKERHUB_TOKEN" \
-  .github/workflows/deploy.yml
-grep -Fq "needs: runtime-smoke" .github/workflows/deploy.yml
-grep -Fq "name: Compose runtime smoke" .github/workflows/release-verify.yml
+grep -Fq 'name: Configure Tencent Cloud Docker mirror' .github/workflows/deploy.yml
+grep -Fq 'deploy/scripts/configure-docker-mirror.sh' .github/workflows/deploy.yml
+grep -Fq 'envs: IMAGE_PREFIX,IMAGE_TAG' .github/workflows/deploy.yml
+grep -Fq 'needs: runtime-smoke' .github/workflows/deploy.yml
+grep -Fq 'name: Compose runtime smoke' .github/workflows/release-verify.yml
+if grep -Fq 'envs: IMAGE_PREFIX,IMAGE_TAG,DOCKERHUB_USERNAME,DOCKERHUB_TOKEN' \
+  .github/workflows/deploy.yml; then
+  echo "Tencent Cloud VM must not receive Docker Hub credentials." >&2
+  exit 1
+fi
+if grep -Fq ':latest' .github/workflows/deploy.yml; then
+  echo "Production deployment must use immutable commit tags instead of :latest." >&2
+  exit 1
+fi
 
 echo "==> Validate jOOQ DDL preparation"
 TMP_SCHEMA="$(mktemp)"
