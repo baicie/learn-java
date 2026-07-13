@@ -1,6 +1,6 @@
 package io.aegisops.observability;
 
-import io.aegisops.security.UserPrincipal;
+import io.aegisops.common.security.AuthenticatedActor;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -48,23 +48,21 @@ public class OperationLogFilter extends OncePerRequestFilter {
     } finally {
       int status = response.getStatus();
 
-      boolean shouldLog =
-          MUTATING_METHODS.contains(request.getMethod()) || status >= 400;
+      boolean shouldLog = MUTATING_METHODS.contains(request.getMethod()) || status >= 400;
 
       if (!shouldLog) {
         return;
       }
 
       long durationMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - started);
-
-      UserPrincipal principal = principal();
+      String userId = currentActorId();
 
       log.atInfo()
           .addKeyValue("event", "api_operation")
           .addKeyValue("requestId", MDC.get(ObservabilityConstants.MDC_REQUEST_ID))
           .addKeyValue("traceId", MDC.get(ObservabilityConstants.MDC_TRACE_ID))
           .addKeyValue("tenantId", MDC.get(ObservabilityConstants.MDC_TENANT_ID))
-          .addKeyValue("userId", principal == null ? null : principal.id())
+          .addKeyValue("userId", userId)
           .addKeyValue("method", request.getMethod())
           .addKeyValue("path", request.getRequestURI())
           .addKeyValue("status", status)
@@ -74,13 +72,16 @@ public class OperationLogFilter extends OncePerRequestFilter {
     }
   }
 
-  private UserPrincipal principal() {
-    Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+  private String currentActorId() {
+    return actorId(SecurityContextHolder.getContext().getAuthentication());
+  }
 
+  static String actorId(Authentication authentication) {
     if (authentication == null) {
       return null;
     }
 
-    return authentication.getPrincipal() instanceof UserPrincipal value ? value : null;
+    Object principal = authentication.getPrincipal();
+    return principal instanceof AuthenticatedActor actor ? actor.id() : null;
   }
 }
