@@ -18,7 +18,7 @@ services:
     restart: unless-stopped
 
   aiops-server:
-    image: DOCKERHUB_USERNAME_REPLACE_ME/aegisops:git-SHA_REPLACE_ME
+    image: ${AIOPS_SERVER_IMAGE:?AIOPS_SERVER_IMAGE is required}
     container_name: aegisops-server
     environment:
       AIOPS_SERVER_PORT: 8080
@@ -49,7 +49,7 @@ services:
     restart: unless-stopped
 
   aiops-agent:
-    image: DOCKERHUB_USERNAME_REPLACE_ME/aegisops/aiops-agent:git-SHA_REPLACE_ME
+    image: ${AIOPS_AGENT_IMAGE:?AIOPS_AGENT_IMAGE is required}
     container_name: aegisops-agent
     environment:
       AIOPS_AGENT_INTERNAL_AGENT_TOKEN: dev-internal-agent-token
@@ -98,7 +98,7 @@ services:
   # Worker: 异步消费 outbox + 跑 Incident 聚合 / RCA / Zabbix sync / 复盘草稿。
   # 共享 server 同一 Postgres；不暴露给外部。
   aiops-worker:
-    image: DOCKERHUB_USERNAME_REPLACE_ME/aegisops/aiops-worker:git-SHA_REPLACE_ME
+    image: ${AIOPS_WORKER_IMAGE:?AIOPS_WORKER_IMAGE is required}
     container_name: aegisops-worker
     environment:
       AIOPS_DB_URL: jdbc:postgresql://postgres:5432/aegisops
@@ -129,7 +129,7 @@ services:
   # Runner: 隔离执行 ansible / webhook 步骤；MVP 阶段跑在同主机，但作为独立进程保证故障隔离。
   # 跑 ansible 需要 sshpass + openssh-client，基础镜像里已装。
   aiops-runner:
-    image: DOCKERHUB_USERNAME_REPLACE_ME/aegisops/aiops-runner:git-SHA_REPLACE_ME
+    image: ${AIOPS_RUNNER_IMAGE:?AIOPS_RUNNER_IMAGE is required}
     container_name: aegisops-runner
     environment:
       AIOPS_DB_URL: jdbc:postgresql://postgres:5432/aegisops
@@ -160,7 +160,7 @@ services:
       test:
         [
           "CMD-SHELL",
-          "wget -q -O - http://localhost:8092/actuator/health >/dev/null || exit 1",
+          "curl -fsS http://localhost:8092/actuator/health >/dev/null || exit 1",
         ]
       interval: 10s
       timeout: 5s
