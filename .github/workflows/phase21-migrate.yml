@@ -1,0 +1,99 @@
+name: Phase 21 Portal Migration
+
+on:
+  pull_request:
+    branches:
+      - mvp
+    types:
+      - opened
+      - synchronize
+      - reopened
+
+permissions:
+  contents: write
+
+concurrency:
+  group: phase21-portal-migration-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  migrate:
+    if: github.event.pull_request.head.ref == 'feat/portal-remove-features-shadcn-multi-template'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout migration branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.20.0
+          cache: pnpm
+          cache-dependency-path: |
+            pnpm-lock.yaml
+            web/portal/pnpm-lock.yaml
+
+      - name: Reconstruct and verify migration package
+        shell: bash
+        run: |
+          set -euo pipefail
+          payload=.github/phase21-payload
+          archive_b64="$RUNNER_TEMP/phase21-runtime-package.tar.xz.b64"
+          archive="$RUNNER_TEMP/phase21-runtime-package.tar.xz"
+          cat "$payload/chunk-00.b64" "$payload/chunk-01.b64" > "$archive_b64"
+          while IFS= read -r part; do
+            tail -n +2 "$part" >> "$archive_b64"
+          done < <(find "$payload" -maxdepth 1 -name 'part-*.txt' -print | sort -V)
+          base64 --decode "$archive_b64" > "$archive"
+          echo '20645f0aeff0a738507ac58e535bf808d77f4bb92459d234f32e0a28edb59f23  '"$archive" | sha256sum --check --strict -
+          mkdir -p "$RUNNER_TEMP/phase21-runtime"
+          tar -xJf "$archive" -C "$RUNNER_TEMP/phase21-runtime"
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Apply portal migration and run frontend CI
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash "$RUNNER_TEMP/phase21-runtime/phase21-runtime-package/scripts/apply-all.sh"
+          pnpm --dir web/portal run knip
+
+      - name: Validate documentation
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm install --frozen-lockfile
+          bash scripts/ci/docs.sh
+
+      - name: Remove one-time migration assets
+        run: |
+          rm -rf .github/phase21-payload
+          rm -f .github/workflows/phase21-migrate.yml
+
+      - name: Commit verified migration
+        env:
+          HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add -A
+          git diff --cached --stat
+          if git diff --cached --quiet; then
+            echo 'No migration changes to commit.'
+            exit 0
+          fi
+          git commit --no-verify -m 'refactor(portal): 移除 features 并完成多模板 shadcn 迁移'
+          git push origin "HEAD:${HEAD_BRANCH}"
