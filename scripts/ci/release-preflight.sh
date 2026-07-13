@@ -55,6 +55,9 @@ grep -Fq 'DEPLOY_STAGE="application-recreate"' deploy/scripts/deploy-app.sh
 grep -Fq 'remove_application_containers' deploy/scripts/deploy-app.sh
 grep -Fq 'wait_container_health aegisops-agent' deploy/scripts/deploy-app.sh
 grep -Fq 'wait_container_health aegisops-server' deploy/scripts/deploy-app.sh
+grep -Fq 'export AIOPS_SERVER_HOST_PORT="${AIOPS_SERVER_HOST_PORT:-18080}"' deploy/scripts/deploy-app.sh
+grep -Fq 'ensure_port_available "$AIOPS_SERVER_HOST_PORT" aegisops-server true' deploy/scripts/deploy-app.sh
+grep -Fq 'retry 5 registry_login' deploy/scripts/deploy-app.sh
 grep -Fq 'refusing to stop it automatically' scripts/ci/test-deploy-app.sh
 
 echo "==> Validate container health contract"
@@ -63,6 +66,7 @@ grep -Fq 'urllib.request.urlopen' apps/aiops-agent/Dockerfile
 grep -Fq 'image: redis:7-alpine' deploy/docker-compose.app.yml
 grep -Fq 'SPRING_DATA_REDIS_HOST: redis' deploy/docker-compose.app.yml
 grep -Fq 'condition: service_healthy' deploy/docker-compose.app.yml
+grep -Fq '${AIOPS_SERVER_HOST_PORT:-18080}:8080' deploy/docker-compose.app.yml
 if grep -Fq 'wget -q -O - http://localhost:9008/health' deploy/docker-compose.app.yml; then
   echo "Agent health check still depends on wget, which is absent from python:3.12-slim." >&2
   exit 1
@@ -70,7 +74,8 @@ fi
 
 echo "==> Validate remote deployment contract"
 grep -Fq "bash -lc '" .github/workflows/deploy.yml
-grep -Fq "envs: IMAGE_PREFIX,IMAGE_TAG,DOCKERHUB_USERNAME,DOCKERHUB_TOKEN" \
+grep -Fq 'AIOPS_SERVER_HOST_PORT: "18080"' .github/workflows/deploy.yml
+grep -Fq "envs: IMAGE_PREFIX,IMAGE_TAG,AIOPS_SERVER_HOST_PORT,DOCKERHUB_USERNAME,DOCKERHUB_TOKEN" \
   .github/workflows/deploy.yml
 grep -Fq "needs: runtime-smoke" .github/workflows/deploy.yml
 grep -Fq "name: Compose runtime smoke" .github/workflows/release-verify.yml
@@ -84,6 +89,7 @@ node scripts/prepare-jooq-ddl.mjs \
 test -s "$TMP_SCHEMA"
 
 echo "==> Validate Docker Compose interpolation and structure"
+AIOPS_SERVER_HOST_PORT=18080 \
 AIOPS_SERVER_IMAGE=example.invalid/aegisops:test \
 AIOPS_AGENT_IMAGE=example.invalid/aegisops/aiops-agent:test \
 AIOPS_WORKER_IMAGE=example.invalid/aegisops/aiops-worker:test \
