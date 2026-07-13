@@ -12,7 +12,17 @@ if not target.is_file():
     raise SystemExit(f'missing generated typecheck fixer: {target}')
 
 content = target.read_text(encoding='utf-8')
-marker = '# Final architecture must not contain unresolved internal imports.\n'
+src_declaration = "SRC = Path('web/portal/src')\n"
+if src_declaration not in content:
+    import_marker = 'from pathlib import Path\n'
+    if import_marker not in content:
+        raise SystemExit('Path import marker not found in typecheck fixer')
+    content = content.replace(
+        import_marker,
+        import_marker + '\n' + src_declaration,
+        1,
+    )
+
 ui_block = r'''# Complete the shadcn-style primitives referenced by migrated screens.
 ui_dir = SRC / 'components/ui'
 ui_dir.mkdir(parents=True, exist_ok=True)
@@ -121,17 +131,10 @@ export function ToggleGroupItem({
 """,
     encoding='utf-8',
 )
-
 '''
 if ui_block not in content:
-    if marker not in content:
-        raise SystemExit('internal import scan marker not found')
-    content = content.replace(marker, ui_block + marker, 1)
+    content = content.rstrip() + '\n\n' + ui_block + '\n'
 
-old_loop = "for path in SRC.rglob('*'):\n    if path.suffix not in {'.ts', '.tsx'}:\n        continue\n"
-new_loop = "for path in SRC.rglob('*'):\n    if path.name == 'routeTree.gen.ts':\n        continue\n    if path.suffix not in {'.ts', '.tsx'}:\n        continue\n"
-if old_loop in content:
-    content = content.replace(old_loop, new_loop, 1)
 target.write_text(content, encoding='utf-8')
 
 phase7 = package / 'scripts/phase21-07-cleanup.sh'
