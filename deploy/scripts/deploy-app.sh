@@ -6,6 +6,8 @@ set -Eeuo pipefail
 
 APP_DIR="${APP_DIR:-$HOME/workspace/aegisops}"
 COMPOSE_FILE="${COMPOSE_FILE:-$APP_DIR/deploy/docker-compose.app.yml}"
+APP_SERVICES=(aiops-server aiops-agent aiops-worker aiops-runner)
+APP_CONTAINERS=(aegisops-server aegisops-agent aegisops-worker aegisops-runner)
 
 if [ ! -f "$COMPOSE_FILE" ]; then
   echo "Compose file not found: $COMPOSE_FILE" >&2
@@ -21,7 +23,6 @@ require_command() {
 }
 
 require_command bash
-require_command curl
 require_command docker
 require_command mktemp
 
@@ -35,8 +36,31 @@ compose() {
   docker compose -f "$COMPOSE_FILE" "$@"
 }
 
+container_exists() {
+  docker inspect "$1" >/dev/null 2>&1
+}
+
 container_image() {
   docker inspect --format '{{.Config.Image}}' "$1" 2>/dev/null || true
+}
+
+container_name_by_id() {
+  docker inspect --format '{{.Name}}' "$1" 2>/dev/null | sed 's#^/##'
+}
+
+container_image_by_id() {
+  docker inspect --format '{{.Config.Image}}' "$1" 2>/dev/null || true
+}
+
+is_managed_aegisops_container() {
+  local container_id=$1
+  local container_name container_image_value
+
+  container_name="$(container_name_by_id "$container_id")"
+  container_image_value="$(container_image_by_id "$container_id")"
+
+  [[ "$container_name" == aegisops-* ]] \
+    || [[ "$container_image_value" == "${IMAGE_PREFIX}:"* ]]
 }
 
 PREVIOUS_SERVER_IMAGE="$(container_image aegisops-server)"
@@ -83,27 +107,52 @@ print_port_diagnostics() {
 print_diagnostics() {
   echo "==> Deployment diagnostics (stage=${DEPLOY_STAGE})"
   compose ps || true
-  compose logs --no-color --tail=120 aiops-server aiops-agent aiops-worker aiops-runner || true
+  compose logs --no-color --tail=120 "${APP_SERVICES[@]}" || true
   for port in 5432 8080 8081 8092 9008; do
     print_port_diagnostics "$port"
+  done
+}
+
+remove_application_containers() {
+  local container_name
+
+  echo "==> Recreating stateless application containers on the current Compose network"
+  for container_name in "${APP_CONTAINERS[@]}"; do
+    if ! container_exists "$container_name"; then
+      continue
+    fi
+
+    if ! is_managed_aegisops_container "$container_name"; then
+      echo "Container ${container_name} is not recognized as AegisOps managed; refusing to remove it." >&2
+      return 1
+    fi
+
+    echo "Removing existing application container ${container_name}."
+    docker rm -f "$container_name"
   done
 }
 
 rollback() {
   local exit_code=$?
   trap - ERR
+  set +e
 
   echo "::error::Deployment failed at stage=${DEPLOY_STAGE} for image tag ${IMAGE_TAG}"
   print_diagnostics
 
   if [ "$DEPLOYMENT_STARTED" = "1" ] && [ "$ROLLBACK_READY" = "1" ]; then
+    DEPLOY_STAGE="rollback"
     echo "==> Rolling back to the previously running images"
     export AIOPS_SERVER_IMAGE="$PREVIOUS_SERVER_IMAGE"
     export AIOPS_AGENT_IMAGE="$PREVIOUS_AGENT_IMAGE"
     export AIOPS_WORKER_IMAGE="$PREVIOUS_WORKER_IMAGE"
     export AIOPS_RUNNER_IMAGE="$PREVIOUS_RUNNER_IMAGE"
-    compose up -d --remove-orphans --no-build || true
-    compose ps || true
+
+    # 先删除失败版本的无状态应用容器，避免旧 endpoint 继续占用宿主机端口，
+    # PostgreSQL 容器与数据卷始终保留。
+    remove_application_containers
+    compose up -d --remove-orphans --no-build
+    compose ps
   else
     echo "::warning::Rollback skipped because a complete previous release was not found"
   fi
@@ -131,25 +180,6 @@ pull_image() {
   local image=$1
   echo "==> Pulling ${image}"
   retry 5 docker pull "$image"
-}
-
-container_name_by_id() {
-  docker inspect --format '{{.Name}}' "$1" 2>/dev/null | sed 's#^/##'
-}
-
-container_image_by_id() {
-  docker inspect --format '{{.Config.Image}}' "$1" 2>/dev/null || true
-}
-
-is_managed_aegisops_container() {
-  local container_id=$1
-  local container_name container_image
-
-  container_name="$(container_name_by_id "$container_id")"
-  container_image="$(container_image_by_id "$container_id")"
-
-  [[ "$container_name" == aegisops-* ]] \
-    || [[ "$container_image" == "${IMAGE_PREFIX}:"* ]]
 }
 
 port_is_listening() {
@@ -199,7 +229,7 @@ ensure_port_available() {
 
     if [ "$owner_name" = "$expected_container" ]; then
       expected_owner_found=1
-      echo "Port ${port} is currently owned by expected container ${expected_container}; Compose will update it in place."
+      echo "Port ${port} is currently owned by expected container ${expected_container}; it will be recreated safely."
       continue
     fi
 
@@ -247,31 +277,6 @@ validate_host_ports() {
   ensure_port_available 9008 aegisops-agent true
 }
 
-wait_http() {
-  local name=$1
-  local url=$2
-  local timeout_seconds=$3
-  local elapsed=0
-
-  while [ "$elapsed" -lt "$timeout_seconds" ]; do
-    if curl -fsS "$url" >/dev/null 2>&1; then
-      echo "${name} is healthy after ${elapsed}s"
-      return 0
-    fi
-
-    if [ "$(docker inspect --format '{{.State.Running}}' "$name" 2>/dev/null || true)" = "false" ]; then
-      echo "${name} exited before becoming healthy" >&2
-      return 1
-    fi
-
-    sleep 2
-    elapsed=$((elapsed + 2))
-  done
-
-  echo "${name} did not become healthy within ${timeout_seconds}s" >&2
-  return 1
-}
-
 wait_container_health() {
   local name=$1
   local timeout_seconds=$2
@@ -281,20 +286,25 @@ wait_container_health() {
   while [ "$elapsed" -lt "$timeout_seconds" ]; do
     status="$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$name" 2>/dev/null || true)"
     case "$status" in
-      healthy|running)
-        echo "${name} status=${status} after ${elapsed}s"
+      healthy)
+        echo "${name} status=healthy after ${elapsed}s"
         return 0
         ;;
       unhealthy|exited|dead)
         echo "${name} status=${status}" >&2
         return 1
         ;;
+      running)
+        # 没有声明 HEALTHCHECK 的容器只能退化为 running；生产 Compose 中五个容器均应有健康检查。
+        echo "${name} has no health status; accepting running state after ${elapsed}s"
+        return 0
+        ;;
     esac
     sleep 2
     elapsed=$((elapsed + 2))
   done
 
-  echo "${name} did not become healthy within ${timeout_seconds}s" >&2
+  echo "${name} did not become healthy within ${timeout_seconds}s (lastStatus=${status:-missing})" >&2
   return 1
 }
 
@@ -333,18 +343,21 @@ DEPLOY_STAGE="port-preflight"
 echo "==> Validating required host ports"
 validate_host_ports
 
-DEPLOY_STAGE="compose-up"
-echo "==> Applying release without stopping PostgreSQL or healthy unchanged containers"
+DEPLOY_STAGE="application-recreate"
 DEPLOYMENT_STARTED=1
+remove_application_containers
+
+DEPLOY_STAGE="compose-up"
+echo "==> Starting release while preserving PostgreSQL and its data volume"
 compose up -d --remove-orphans --no-build
 
 DEPLOY_STAGE="health-check"
-echo "==> Waiting for services"
+echo "==> Waiting for container health"
 wait_container_health aegisops-postgres 120
-wait_http aegisops-agent http://127.0.0.1:9008/health 120
-wait_http aegisops-server http://127.0.0.1:8080/actuator/health 240
-wait_http aegisops-worker http://127.0.0.1:8081/actuator/health 180
-wait_http aegisops-runner http://127.0.0.1:8092/actuator/health 180
+wait_container_health aegisops-agent 120
+wait_container_health aegisops-server 240
+wait_container_health aegisops-worker 180
+wait_container_health aegisops-runner 180
 
 DEPLOY_STAGE="complete"
 echo "==> Deployment succeeded"
