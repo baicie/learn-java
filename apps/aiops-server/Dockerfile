@@ -27,6 +27,8 @@ ENV DEBIAN_FRONTEND=noninteractive \
     NODE_VERSION=20.18.0 \
     MAVEN_HOME=/usr/share/maven
 
+# corepack 0.31（node 20.18 内置）尚未包含 pnpm 较新的签名公钥
+# 用 npm 把 corepack 升到 0.34+，pnpm 版本由 package.json 的 packageManager 字段锁定
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         ca-certificates \
@@ -35,6 +37,7 @@ RUN apt-get update \
         xz-utils \
     && curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.xz" \
         | tar -xJ -C /usr/local --strip-components=1 --no-same-owner \
+    && npm install -g corepack@0.34.1 \
     && corepack enable \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
