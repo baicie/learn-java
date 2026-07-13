@@ -63,6 +63,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          sed -i "s/ui_fix_source = textwrap.dedent(/ui_fix_source = textwrap.dedent(r/" \
+            .github/phase21-payload/normalize.py
           python3 .github/phase21-payload/normalize.py \
             "$RUNNER_TEMP/phase21-runtime/phase21-runtime-package"
 
