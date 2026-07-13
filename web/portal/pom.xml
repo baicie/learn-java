@@ -35,7 +35,7 @@
         <artifactId>frontend-maven-plugin</artifactId>
         <version>${frontend-maven-plugin.version}</version>
         <executions>
-          <!-- 1) 装 node + pnpm 到 ${project.build.directory}/node -->
+          <!-- 1) 安装 node + pnpm 到 ${project.build.directory}/node -->
           <execution>
             <id>install-node-and-pnpm</id>
             <goals>
@@ -48,7 +48,7 @@
             </configuration>
           </execution>
 
-          <!-- 2) pnpm install --frozen-lockfile -->
+          <!-- 2) 使用锁文件安装依赖；XML 注释中不能出现连续两个连字符 -->
           <execution>
             <id>pnpm-install</id>
             <goals>
@@ -61,7 +61,7 @@
             </configuration>
           </execution>
 
-          <!-- 3) pnpm build (= tsc -b && vite build) -->
+          <!-- 3) pnpm build（tsc -b + vite build） -->
           <execution>
             <id>pnpm-build</id>
             <goals>
