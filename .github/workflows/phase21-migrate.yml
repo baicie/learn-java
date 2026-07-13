@@ -197,6 +197,7 @@ jobs:
 
           python3 .github/phase21-payload/fix-typecheck.py "$package"
           python3 -m py_compile "$package/scripts/fix-typecheck-targets.py"
+          python3 .github/phase21-payload/fix-calendar-alias.py "$package"
 
       - name: Configure Git
         run: |
