@@ -1,0 +1,338 @@
+name: Portal Phase 21 Apply
+
+on:
+  push:
+    branches:
+      - feat/portal-remove-features-shadcn-multi-template
+    paths:
+      - .automation/portal-phase21-artifact.part-*
+      - .github/workflows/portal-phase21-apply.yml
+  pull_request:
+    branches:
+      - mvp
+    types:
+      - opened
+      - synchronize
+      - reopened
+
+permissions:
+  contents: write
+  pull-requests: read
+
+concurrency:
+  group: portal-phase21-apply
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: feat/portal-remove-features-shadcn-multi-template
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.20.2
+
+      - name: Install pnpm
+        run: npm install --global pnpm@10.33.4
+
+      - name: Decode implementation package
+        run: |
+          rm -rf /tmp/phase21
+          mkdir -p /tmp/phase21
+          cat .automation/portal-phase21-artifact.part-* | base64 --decode > /tmp/phase21/package.tar.xz
+          tar -xJf /tmp/phase21/package.tar.xz -C /tmp/phase21
+          test -f /tmp/phase21/phase21-exec-package/scripts/apply-all.sh
+
+      - name: Normalize migration phase ownership and imports
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          package = Path('/tmp/phase21/phase21-exec-package')
+
+          phase2 = package / 'scripts/phase21-02-iam.sh'
+          content = phase2.read_text(encoding='utf-8')
+          old = 'copy_patch "$PACKAGE_ROOT" web/portal/src/pages/platform\ncopy_patch "$PACKAGE_ROOT" web/portal/src/components/platform/iam\n'
+          new = (
+              'copy_patch "$PACKAGE_ROOT" web/portal/src/pages/platform/PlatformUsersPage.tsx\n'
+              'copy_patch "$PACKAGE_ROOT" web/portal/src/pages/platform/PlatformRolesPage.tsx\n'
+              'copy_patch "$PACKAGE_ROOT" web/portal/src/components/platform/iam\n'
+          )
+          if old not in content:
+              raise SystemExit('phase21-02 ownership patch target not found')
+          phase2.write_text(content.replace(old, new), encoding='utf-8')
+
+          phase6 = package / 'scripts/phase21-06-routes.sh'
+          content = phase6.read_text(encoding='utf-8')
+          marker = 'copy_patch "$PACKAGE_ROOT" web/portal/src/routes\n'
+          if marker not in content:
+              raise SystemExit('phase21-06 route marker not found')
+          phase6.write_text(
+              content.replace(
+                  marker,
+                  'rm -f web/portal/src/routes/_authenticated/work-records/designer.tsx\n' + marker,
+              ),
+              encoding='utf-8',
+          )
+
+          rewrite = package / 'scripts/rewrite-imports.py'
+          content = rewrite.read_text(encoding='utf-8')
+          marker = "    '@/features/auth/permission': '@/auth/permission',\n"
+          additions = (
+              "    '@/features/auth/authorization-types': '@/auth/authorization-types',\n"
+              "    '@/features/settings': '@/pages/settings',\n"
+          )
+          if marker not in content:
+              raise SystemExit('rewrite import marker not found')
+          rewrite.write_text(content.replace(marker, marker + additions), encoding='utf-8')
+
+          field_source = """import * as React from 'react'
+          import { cn } from '@/lib/utils'
+          import { Label } from '@/components/ui/label'
+
+          function FieldSet({ className, ...props }: React.ComponentProps<'fieldset'>) {
+            return <fieldset data-slot='field-set' className={cn('flex flex-col gap-4', className)} {...props} />
+          }
+
+          function FieldLegend({ className, ...props }: React.ComponentProps<'legend'>) {
+            return <legend data-slot='field-legend' className={cn('mb-2 font-medium', className)} {...props} />
+          }
+
+          function FieldGroup({ className, ...props }: React.ComponentProps<'div'>) {
+            return <div data-slot='field-group' className={cn('flex flex-col gap-4', className)} {...props} />
+          }
+
+          function Field({
+            className,
+            orientation = 'vertical',
+            ...props
+          }: React.ComponentProps<'div'> & { orientation?: 'vertical' | 'horizontal' | 'responsive' }) {
+            return (
+              <div
+                data-slot='field'
+                data-orientation={orientation}
+                className={cn(
+                  'group/field flex gap-2 data-[orientation=vertical]:flex-col data-[orientation=horizontal]:items-center',
+                  className
+                )}
+                {...props}
+              />
+            )
+          }
+
+          function FieldLabel({ className, ...props }: React.ComponentProps<typeof Label>) {
+            return <Label data-slot='field-label' className={cn('font-medium', className)} {...props} />
+          }
+
+          function FieldDescription({ className, ...props }: React.ComponentProps<'p'>) {
+            return <p data-slot='field-description' className={cn('text-sm text-muted-foreground', className)} {...props} />
+          }
+
+          function FieldError({ className, ...props }: React.ComponentProps<'p'>) {
+            return <p data-slot='field-error' role='alert' className={cn('text-sm text-destructive', className)} {...props} />
+          }
+
+          export {
+            Field,
+            FieldDescription,
+            FieldError,
+            FieldGroup,
+            FieldLabel,
+            FieldLegend,
+            FieldSet,
+          }
+          """
+          field_patch = package / 'patch/web/portal/src/components/ui/field.tsx'
+          field_patch.parent.mkdir(parents=True, exist_ok=True)
+          field_patch.write_text(field_source, encoding='utf-8')
+
+          ui_fix_source = '''from pathlib import Path
+
+          def read(path: str) -> tuple[Path, str]:
+              target = Path(path)
+              return target, target.read_text(encoding="utf-8")
+
+          def write(target: Path, content: str) -> None:
+              target.write_text(content, encoding="utf-8")
+
+          account, content = read("web/portal/src/pages/settings/account/account-form.tsx")
+          content = content.replace(
+              "import { CaretSortIcon, CheckIcon } from '@radix-ui/react-icons'",
+              "import { Check, ChevronsUpDown } from 'lucide-react'",
+          )
+          content = content.replace("<CaretSortIcon", "<ChevronsUpDown")
+          content = content.replace("<CheckIcon", "<Check")
+          write(account, content)
+
+          appearance, content = read("web/portal/src/pages/settings/appearance/appearance-form.tsx")
+          content = content.replace("import { ChevronDownIcon } from '@radix-ui/react-icons'\n", "")
+          content = content.replace("import { cn } from '@/lib/utils'\n", "")
+          content = content.replace(
+              "import { Button, buttonVariants } from '@/components/ui/button'",
+              "import { Button } from '@/components/ui/button'",
+          )
+          radio_import = "import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'\n"
+          select_import = """import {
+            Select,
+            SelectContent,
+            SelectItem,
+            SelectTrigger,
+            SelectValue,
+          } from '@/components/ui/select'
+          """
+          if radio_import not in content:
+              raise SystemExit("appearance radio import marker not found")
+          content = content.replace(radio_import, radio_import + select_import)
+          start_marker = "              <div className='relative w-max'>"
+          end_marker = "              <FormDescription className='font-manrope'>"
+          start = content.index(start_marker)
+          end = content.index(end_marker, start)
+          select_block = """              <Select value={field.value} onValueChange={field.onChange}>
+                <FormControl>
+                  <SelectTrigger className='w-50 capitalize'>
+                    <SelectValue placeholder='Select font' />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {fonts.map((font) => (
+                    <SelectItem key={font} value={font} className='capitalize'>
+                      {font}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+          """
+          content = content[:start] + select_block + content[end:]
+          write(appearance, content)
+
+          export_dialog, content = read("web/portal/src/components/work-records/list/work-record-export-dialog.tsx")
+          content = content.replace(
+              "import { Button } from '@/components/ui/button'\n",
+              "import { Button } from '@/components/ui/button'\nimport { Checkbox } from '@/components/ui/checkbox'\n",
+          )
+          content = content.replace(
+              "import { downloadExport, exportWorkRecords } from './export-api'",
+              "import { downloadExport, exportWorkRecords } from '@/lib/work-records/list/export-api'",
+          )
+          content = content.replace(
+              """                <input
+                  type='checkbox'
+                  checked={selectedKeys.includes(column.key)}
+                  onChange={() => toggleColumn(column.key)}
+                />""",
+              """                <Checkbox
+                  checked={selectedKeys.includes(column.key)}
+                  onCheckedChange={() => toggleColumn(column.key)}
+                />""",
+          )
+          content = content.replace(
+              """            <input
+              type='checkbox'
+              checked={confirmed}
+              onChange={(event) => setConfirmed(event.target.checked)}
+            />""",
+              """            <Checkbox
+              checked={confirmed}
+              onCheckedChange={(checked) => setConfirmed(checked === true)}
+            />""",
+          )
+          write(export_dialog, content)
+
+          Path("web/portal/src/components/platform/iam/platform-user-table.tsx").unlink(missing_ok=True)
+          '''
+          ui_fix = package / 'scripts/fix-remaining-ui.py'
+          ui_fix.write_text(ui_fix_source, encoding='utf-8')
+
+          phase7 = package / 'scripts/phase21-07-cleanup.sh'
+          content = phase7.read_text(encoding='utf-8')
+          marker = 'rm -rf web/portal/src/features\n'
+          if marker not in content:
+              raise SystemExit('phase21-07 cleanup marker not found')
+          content = content.replace(
+              marker,
+              marker
+              + 'copy_patch "$PACKAGE_ROOT" web/portal/src/components/ui/field.tsx\n'
+              + 'python3 "$PACKAGE_ROOT/scripts/fix-remaining-ui.py"\n',
+          )
+          content = content.replace(
+              'for component in field empty spinner toggle-group; do',
+              'for component in empty spinner toggle-group; do',
+          )
+          phase7.write_text(content, encoding='utf-8')
+          PY
+
+      - name: Install portal dependencies
+        run: pnpm --dir web/portal install
+
+      - name: Apply directory, multi-template and shadcn migration
+        id: apply_migration
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          bash /tmp/phase21/phase21-exec-package/scripts/apply-all.sh 2>&1 | tee /tmp/phase21/apply.log
+
+      - name: Publish migration failure details
+        if: steps.apply_migration.outcome == 'failure'
+        shell: bash
+        run: |
+          tail -n 160 /tmp/phase21/apply.log > /tmp/phase21/failure.log
+          git reset --hard HEAD
+          cp /tmp/phase21/failure.log .automation/phase21-failure.log
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -f .automation/phase21-failure.log
+          if ! git diff --cached --quiet; then
+            git commit -m 'chore(portal): 回写 Phase 21 失败日志 [skip ci]'
+            git push origin HEAD:feat/portal-remove-features-shadcn-multi-template
+          fi
+          cat .automation/phase21-failure.log
+          exit 1
+
+      - name: Synchronize repository rules and CI guards
+        run: python3 /tmp/phase21/phase21-exec-package/scripts/post-apply.py
+
+      - name: Format changed sources
+        run: |
+          pnpm --dir web/portal run format
+          web/portal/node_modules/.bin/prettier --write \
+            .agents/skills/portal/SKILL.md \
+            .agents/skills/portal/references/portal-frontend-conventions.md \
+            docs/adr/0099-portal-responsibility-oriented-directory-layout.md \
+            scripts/ci/check-portal-no-features.mjs \
+            scripts/ci/check-portal-ui-primitives.mjs
+
+      - name: Validate portal architecture
+        run: |
+          test ! -d web/portal/src/features
+          if git grep -n '@/features/' -- web/portal/src; then
+            echo 'legacy features import remains' >&2
+            exit 1
+          fi
+          node scripts/ci/check-portal-no-features.mjs
+          node scripts/ci/check-portal-ui-primitives.mjs
+
+      - name: Run frontend verification
+        run: bash scripts/ci/frontend.sh
+
+      - name: Run documentation verification
+        run: bash scripts/ci/docs.sh
+
+      - name: Commit completed migration
+        run: |
+          rm -rf .automation
+          rm -f .github/workflows/portal-phase21-apply.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git diff --cached --stat
+          git diff --cached --quiet && { echo 'No changes to commit'; exit 0; }
+          git commit -m 'refactor(portal): 移除 features 并完成多模板与 shadcn 重构'
+          git push origin HEAD:feat/portal-remove-features-shadcn-multi-template
