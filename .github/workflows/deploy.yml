@@ -151,7 +151,7 @@ jobs:
   deploy:
     name: Deploy to Tencent Cloud VM
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     needs: runtime-smoke
     environment:
       name: aegisops-prod
@@ -170,19 +170,36 @@ jobs:
           key: ${{ secrets.PERF_VM_KEY }}
           password: ${{ secrets.PERF_VM_PASSWORD }}
           port: ${{ secrets.PERF_VM_SSH_PORT || '22' }}
-          source: "deploy/docker-compose.app.yml,deploy/scripts/deploy-app.sh"
+          source: "deploy/docker-compose.app.yml,deploy/scripts/deploy-app.sh,deploy/scripts/configure-docker-mirror.sh"
           target: "~/workspace/aegisops"
           overwrite: true
           timeout: 10m
           command_timeout: 10m
+
+      - name: Configure Tencent Cloud Docker mirror
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.PERF_VM_HOST }}
+          username: ${{ secrets.PERF_VM_USER }}
+          key: ${{ secrets.PERF_VM_KEY }}
+          password: ${{ secrets.PERF_VM_PASSWORD }}
+          port: ${{ secrets.PERF_VM_SSH_PORT || '22' }}
+          timeout: 10m
+          command_timeout: 10m
+          script: |
+            bash -lc '
+              set -Eeuo pipefail
+              MIRROR_SCRIPT="$HOME/workspace/aegisops/deploy/scripts/configure-docker-mirror.sh"
+              test -f "$MIRROR_SCRIPT"
+              chmod +x "$MIRROR_SCRIPT"
+              exec bash "$MIRROR_SCRIPT"
+            '
 
       - name: Apply immutable release
         uses: appleboy/ssh-action@v1
         env:
           IMAGE_PREFIX: ${{ env.IMAGE_PREFIX }}
           IMAGE_TAG: ${{ env.IMAGE_TAG }}
-          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
         with:
           host: ${{ secrets.PERF_VM_HOST }}
           username: ${{ secrets.PERF_VM_USER }}
@@ -191,7 +208,7 @@ jobs:
           port: ${{ secrets.PERF_VM_SSH_PORT || '22' }}
           timeout: 10m
           command_timeout: 20m
-          envs: IMAGE_PREFIX,IMAGE_TAG,DOCKERHUB_USERNAME,DOCKERHUB_TOKEN
+          envs: IMAGE_PREFIX,IMAGE_TAG
           script: |
             bash -lc '
               set -Eeuo pipefail
