@@ -23,6 +23,7 @@ env:
   IMAGE_PREFIX: ${{ secrets.DOCKERHUB_USERNAME }}/aegisops
   IMAGE_TAG: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
   RELEASE_REF: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+  AIOPS_SERVER_HOST_PORT: "18080"
 
 jobs:
   preflight:
@@ -135,6 +136,7 @@ jobs:
           APP_DIR: ${{ github.workspace }}
           IMAGE_PREFIX: ${{ env.IMAGE_PREFIX }}
           IMAGE_TAG: ${{ env.IMAGE_TAG }}
+          AIOPS_SERVER_HOST_PORT: ${{ env.AIOPS_SERVER_HOST_PORT }}
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
         run: bash deploy/scripts/deploy-app.sh
@@ -142,6 +144,7 @@ jobs:
       - name: Cleanup runtime smoke
         if: always()
         env:
+          AIOPS_SERVER_HOST_PORT: ${{ env.AIOPS_SERVER_HOST_PORT }}
           AIOPS_SERVER_IMAGE: ${{ env.IMAGE_PREFIX }}:${{ env.IMAGE_TAG }}-server
           AIOPS_AGENT_IMAGE: ${{ env.IMAGE_PREFIX }}:${{ env.IMAGE_TAG }}-agent
           AIOPS_WORKER_IMAGE: ${{ env.IMAGE_PREFIX }}:${{ env.IMAGE_TAG }}-worker
@@ -181,6 +184,7 @@ jobs:
         env:
           IMAGE_PREFIX: ${{ env.IMAGE_PREFIX }}
           IMAGE_TAG: ${{ env.IMAGE_TAG }}
+          AIOPS_SERVER_HOST_PORT: ${{ env.AIOPS_SERVER_HOST_PORT }}
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
         with:
@@ -191,7 +195,7 @@ jobs:
           port: ${{ secrets.PERF_VM_SSH_PORT || '22' }}
           timeout: 10m
           command_timeout: 20m
-          envs: IMAGE_PREFIX,IMAGE_TAG,DOCKERHUB_USERNAME,DOCKERHUB_TOKEN
+          envs: IMAGE_PREFIX,IMAGE_TAG,AIOPS_SERVER_HOST_PORT,DOCKERHUB_USERNAME,DOCKERHUB_TOKEN
           script: |
             bash -lc '
               set -Eeuo pipefail
