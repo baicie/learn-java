@@ -251,34 +251,18 @@
             <version>3.5.0</version>
             <executions>
               <execution>
-                <id>portal-pnpm-install</id>
-                <goals>
-                  <goal>exec</goal>
-                </goals>
-                <phase>generate-resources</phase>
-                <configuration>
-                  <skip>${aiops.portal.skipInstall}</skip>
-                  <workingDirectory>${maven.multiModuleProjectDirectory}</workingDirectory>
-                  <executable>pnpm</executable>
-                  <arguments>
-                    <argument>install</argument>
-                    <argument>--frozen-lockfile</argument>
-                  </arguments>
-                </configuration>
-              </execution>
-
-              <execution>
-                <id>portal-build</id>
+                <id>run-portal-pom</id>
                 <goals>
                   <goal>exec</goal>
                 </goals>
                 <phase>generate-resources</phase>
                 <configuration>
                   <skip>${aiops.portal.skipBuild}</skip>
-                  <workingDirectory>${maven.multiModuleProjectDirectory}/web/portal</workingDirectory>
-                  <executable>pnpm</executable>
+                  <executable>mvn</executable>
                   <arguments>
-                    <argument>build</argument>
+                    <argument>-f</argument>
+                    <argument>${maven.multiModuleProjectDirectory}/web/portal/pom.xml</argument>
+                    <argument>process-resources</argument>
                   </arguments>
                 </configuration>
               </execution>
@@ -328,34 +312,18 @@
             <version>3.5.0</version>
             <executions>
               <execution>
-                <id>console-pnpm-install</id>
-                <goals>
-                  <goal>exec</goal>
-                </goals>
-                <phase>generate-resources</phase>
-                <configuration>
-                  <skip>${aiops.console.skipInstall}</skip>
-                  <workingDirectory>${maven.multiModuleProjectDirectory}</workingDirectory>
-                  <executable>pnpm</executable>
-                  <arguments>
-                    <argument>install</argument>
-                    <argument>--frozen-lockfile</argument>
-                  </arguments>
-                </configuration>
-              </execution>
-
-              <execution>
-                <id>console-build</id>
+                <id>run-console-pom</id>
                 <goals>
                   <goal>exec</goal>
                 </goals>
                 <phase>generate-resources</phase>
                 <configuration>
                   <skip>${aiops.console.skipBuild}</skip>
-                  <workingDirectory>${maven.multiModuleProjectDirectory}/web/console</workingDirectory>
-                  <executable>pnpm</executable>
+                  <executable>mvn</executable>
                   <arguments>
-                    <argument>build</argument>
+                    <argument>-f</argument>
+                    <argument>${maven.multiModuleProjectDirectory}/web/console/pom.xml</argument>
+                    <argument>process-resources</argument>
                   </arguments>
                 </configuration>
               </execution>

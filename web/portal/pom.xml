@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  web/portal 自身构建入口。
+
+  原因：docker build 不再直接调 pnpm install / pnpm build，
+  改为统一调 mvn，由 frontend-maven-plugin 在 generate-resources
+  阶段完成 node/pnpm 安装 + 依赖安装 + vite build。
+
+  本 pom 跟 apps/aiops-server 平行，server 通过
+  ${maven.multiModuleProjectDirectory}/web/portal/pom.xml 反向引用即可。
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                             http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>io.aegisops.portal</groupId>
+  <artifactId>aegisops-portal</artifactId>
+  <version>${revision}</version>
+  <packaging>pom</packaging>
+
+  <properties>
+    <revision>2.2.1</revision>
+    <frontend-maven-plugin.version>1.15.1</frontend-maven-plugin.version>
+    <node.version>v20.20.2</node.version>
+    <pnpm.version>v10.33.4</pnpm.version>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+  </properties>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>com.github.eirslett</groupId>
+        <artifactId>frontend-maven-plugin</artifactId>
+        <version>${frontend-maven-plugin.version}</version>
+        <executions>
+          <!-- 1) 装 node + pnpm 到 ${project.build.directory}/node -->
+          <execution>
+            <id>install-node-and-pnpm</id>
+            <goals>
+              <goal>install-node-and-pnpm</goal>
+            </goals>
+            <configuration>
+              <nodeVersion>${node.version}</nodeVersion>
+              <pnpmVersion>${pnpm.version}</pnpmVersion>
+              <installDirectory>${project.build.directory}/node</installDirectory>
+            </configuration>
+          </execution>
+
+          <!-- 2) pnpm install --frozen-lockfile -->
+          <execution>
+            <id>pnpm-install</id>
+            <goals>
+              <goal>pnpm</goal>
+            </goals>
+            <phase>generate-resources</phase>
+            <configuration>
+              <workingDirectory>${project.basedir}</workingDirectory>
+              <arguments>install --frozen-lockfile</arguments>
+            </configuration>
+          </execution>
+
+          <!-- 3) pnpm build (= tsc -b && vite build) -->
+          <execution>
+            <id>pnpm-build</id>
+            <goals>
+              <goal>pnpm</goal>
+            </goals>
+            <phase>generate-resources</phase>
+            <configuration>
+              <workingDirectory>${project.basedir}</workingDirectory>
+              <arguments>build</arguments>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>
