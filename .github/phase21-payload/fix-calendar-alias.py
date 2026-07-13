@@ -25,7 +25,6 @@ if aliases not in content:
 
 target = package / 'scripts/fix-typecheck-targets.py'
 content = target.read_text(encoding='utf-8')
-scan_marker = '# Final architecture must not contain unresolved internal imports.\n'
 ui_block = r'''# Complete the shadcn-style primitives referenced by migrated screens.
 ui_dir = SRC / 'components/ui'
 ui_dir.mkdir(parents=True, exist_ok=True)
@@ -137,9 +136,16 @@ export function ToggleGroupItem({
 
 '''
 if ui_block not in content:
-    if scan_marker not in content:
-        raise SystemExit('internal import scan marker not found')
-    content = content.replace(scan_marker, ui_block + scan_marker, 1)
+    insertion_markers = [
+        '# Final architecture must not contain unresolved internal imports.\n',
+        'pattern = re.compile(\n',
+    ]
+    for insertion_marker in insertion_markers:
+        if insertion_marker in content:
+            content = content.replace(insertion_marker, ui_block + insertion_marker, 1)
+            break
+    else:
+        raise SystemExit('internal import scan insertion marker not found')
 
 old_loop = (
     "for path in SRC.rglob('*'):\n"
