@@ -9,7 +9,7 @@ import {
   type WorkRecordField,
   type WorkRecordRuntimeFormValue,
   type WorkRecordTemplate,
-} from './types'
+} from '@/lib/work-records/runtime/types'
 
 const lower = (value: unknown) =>
   typeof value === 'string' ? value.toLowerCase() : value
