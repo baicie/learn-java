@@ -87,8 +87,10 @@ services:
     healthcheck:
       test:
         [
-          "CMD-SHELL",
-          "wget -q -O - http://localhost:9008/health >/dev/null || exit 1",
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:9008/health', timeout=3).read()",
         ]
       interval: 10s
       timeout: 5s
