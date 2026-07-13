@@ -33,6 +33,8 @@ echo "==> Validate deployment shell"
 bash -n deploy/scripts/deploy-app.sh
 bash -n scripts/ci/test-deploy-app.sh
 bash scripts/ci/test-deploy-app.sh
+grep -Fq 'DEPLOY_STAGE="port-preflight"' deploy/scripts/deploy-app.sh
+grep -Fq 'refusing to stop it automatically' scripts/ci/test-deploy-app.sh
 
 echo "==> Validate remote deployment contract"
 grep -Fq "bash -lc '" .github/workflows/deploy.yml
