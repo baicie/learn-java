@@ -427,7 +427,7 @@ class WorkRecordEnterpriseAcceptanceIT {
 
   private void exportLimitIsEnforced() {
     ResponseEntity<JsonNode> rejected =
-        api.postRaw(
+        api.postCsvError(
             "/api/work-record/records/export",
             tokens.admin(),
             Map.of("quickView", "all", "columns", List.of("title")));

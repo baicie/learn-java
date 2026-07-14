@@ -70,8 +70,10 @@ final class AcceptanceHttpClient {
     return rest.exchange(uri, HttpMethod.GET, new HttpEntity<>(headers(token)), JsonNode.class);
   }
 
-  ResponseEntity<JsonNode> postRaw(String path, String token, Object body) {
-    return exchangeJson(path, token, HttpMethod.POST, body);
+  ResponseEntity<JsonNode> postCsvError(String path, String token, Object body) {
+    HttpHeaders headers = headers(token);
+    headers.setAccept(List.of(new MediaType("text", "csv"), MediaType.APPLICATION_JSON));
+    return rest.exchange(path, HttpMethod.POST, new HttpEntity<>(body, headers), JsonNode.class);
   }
 
   ResponseEntity<byte[]> postCsv(String path, String token, Object body) {
