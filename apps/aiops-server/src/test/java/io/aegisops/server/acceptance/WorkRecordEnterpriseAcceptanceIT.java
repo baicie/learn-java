@@ -80,6 +80,8 @@ class WorkRecordEnterpriseAcceptanceIT {
             api.login(identities.userA().username(), identities.userA().password()),
             api.login(identities.userB().username(), identities.userB().password()));
 
+    assertAdminAuthorization();
+
     state = new ScenarioState(identities.suffix());
   }
 
@@ -235,6 +237,24 @@ class WorkRecordEnterpriseAcceptanceIT {
             state.v1Id,
             state.userBOtherTitle,
             Map.of("summary", "完成其他用户日报", "priority", "P1", "hours", 3));
+
+    assertThat(state.userARecordV1).isNotBlank().isNotEqualTo(state.userBRecordV1);
+    assertThat(state.userBRecordV1).isNotBlank();
+
+    JsonNode ownRecords =
+        api.getData(
+            "/api/work-record/records", tokens.userA(), api.query("page", "1", "pageSize", "20"));
+
+    assertThat(ownRecords.path("total").asLong()).isEqualTo(1);
+    assertThat(recordIds(ownRecords)).containsExactly(state.userARecordV1);
+  }
+
+  private void assertAdminAuthorization() {
+    JsonNode authorization = api.getData("/api/auth/me", tokens.admin());
+
+    assertThat(textValues(authorization.path("roles"))).contains("system_admin");
+    assertThat(textValues(authorization.path("permissions"))).contains("work-record:read:all");
+    assertThat(authorization.path("dataScopes").path("work-record").asText()).isEqualTo("ALL");
   }
 
   private void administratorCanReadAllRecords() {
@@ -532,6 +552,12 @@ class WorkRecordEnterpriseAcceptanceIT {
   private Set<String> fieldCodes(JsonNode fields) {
     Set<String> result = new LinkedHashSet<>();
     fields.forEach(field -> result.add(field.path("fieldCode").asText()));
+    return result;
+  }
+
+  private Set<String> textValues(JsonNode array) {
+    Set<String> result = new LinkedHashSet<>();
+    array.forEach(value -> result.add(value.asText()));
     return result;
   }
 
