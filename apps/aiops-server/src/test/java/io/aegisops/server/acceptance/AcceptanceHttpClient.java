@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import org.springframework.boot.test.web.client.TestRestTemplate;
@@ -64,8 +65,7 @@ final class AcceptanceHttpClient {
   }
 
   ResponseEntity<JsonNode> getRaw(String path, String token, MultiValueMap<String, String> query) {
-    String uri =
-        UriComponentsBuilder.fromPath(path).queryParams(query).build().encode().toUriString();
+    URI uri = UriComponentsBuilder.fromPath(path).queryParams(query).build().encode().toUri();
 
     return rest.exchange(uri, HttpMethod.GET, new HttpEntity<>(headers(token)), JsonNode.class);
   }
