@@ -103,6 +103,7 @@
           <artifactId>maven-failsafe-plugin</artifactId>
           <version>${maven-failsafe-plugin.version}</version>
           <configuration>
+            <classesDirectory>${project.build.outputDirectory}</classesDirectory>
             <includes>
               <include>**/*IT.java</include>
             </includes>
