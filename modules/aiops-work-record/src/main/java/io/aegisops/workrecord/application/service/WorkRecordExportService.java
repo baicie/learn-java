@@ -2,6 +2,7 @@ package io.aegisops.workrecord.application.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.aegisops.common.api.PageResult;
 import io.aegisops.common.exception.AppException;
 import io.aegisops.common.exception.ErrorCode;
 import io.aegisops.common.id.Ids;
@@ -19,6 +20,7 @@ import io.aegisops.workrecord.domain.model.FieldType;
 import io.aegisops.workrecord.domain.model.OptionSource;
 import io.aegisops.workrecord.domain.model.WorkRecord;
 import io.aegisops.workrecord.domain.model.WorkRecordField;
+import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
@@ -34,6 +36,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.IntConsumer;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
@@ -115,6 +118,86 @@ public class WorkRecordExportService {
       telemetry.recordExport("failed");
       throw ex;
     }
+  }
+
+  public StreamingExportResult streamCsv(
+      String tenantId,
+      RecordQuery rawQuery,
+      List<String> requestedColumnKeys,
+      UserPrincipal user,
+      Appendable output,
+      int maxRows,
+      IntConsumer progressListener)
+      throws IOException {
+    permissionService.requireExport(user);
+    if (maxRows < 1 || maxRows > 100_000) {
+      throw new IllegalArgumentException("异步导出行数上限必须在 1 到 100000 之间");
+    }
+
+    RecordQuery query = queryService.prepareEffectiveQuery(tenantId, rawQuery, user);
+    RecordListMeta meta = metaService.meta(tenantId, query.templateId());
+    List<RecordListColumn> requestedColumns =
+        resolveColumns(meta.exportColumns(), requestedColumnKeys);
+    int pageSize = 100;
+    int page = 1;
+    int exported = 0;
+
+    PageResult<WorkRecord> result =
+        recordRepository.page(tenantId, pageQuery(query, page, pageSize));
+    if (result.total() > maxRows) {
+      throw new IllegalArgumentException("导出结果超过 " + maxRows + " 行，请缩小筛选范围后重试");
+    }
+
+    List<ResolvedExportColumn> firstColumns =
+        columnResolver.resolve(tenantId, requestedColumns, result.items());
+    csvWriter.writeHeader(output, firstColumns.stream().map(ResolvedExportColumn::title).toList());
+
+    while (true) {
+      List<WorkRecord> records = result.items();
+      List<ResolvedExportColumn> columns =
+          page == 1 ? firstColumns : columnResolver.resolve(tenantId, requestedColumns, records);
+      List<ParsedRecord> parsedRecords = parseRecords(records);
+      LookupContext context = buildLookupContext(tenantId, meta, columns, parsedRecords);
+
+      for (ParsedRecord record : parsedRecords) {
+        List<String> row = new ArrayList<>(columns.size());
+        for (ResolvedExportColumn column : columns) {
+          row.add(formatCell(record, column, context));
+        }
+        csvWriter.writeRow(output, row, columns.size());
+        exported++;
+      }
+
+      progressListener.accept(exported);
+      if (exported >= result.total() || records.isEmpty()) {
+        break;
+      }
+      page++;
+      result = recordRepository.page(tenantId, pageQuery(query, page, pageSize));
+    }
+
+    return new StreamingExportResult(exported);
+  }
+
+  private RecordQuery pageQuery(RecordQuery query, int page, int pageSize) {
+    return new RecordQuery(
+        page,
+        pageSize,
+        query.templateId(),
+        query.templateVersionId(),
+        query.statuses(),
+        query.keyword(),
+        query.recordTimeFrom(),
+        query.recordTimeTo(),
+        query.creatorId(),
+        query.ownerId(),
+        query.onlySelf(),
+        query.currentUserId(),
+        query.dynamicFilters(),
+        query.sortBy(),
+        query.sortDir(),
+        query.quickView(),
+        query.workdayCount());
   }
 
   private WorkRecordExportResult doExport(
@@ -578,4 +661,6 @@ public class WorkRecordExportService {
       Map<String, String> userNames,
       Map<String, Map<String, String>> dictionaryLabels,
       Map<String, Map<String, String>> staticOptionLabels) {}
+
+  public record StreamingExportResult(int rowCount) {}
 }

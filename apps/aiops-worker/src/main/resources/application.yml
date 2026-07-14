@@ -35,9 +35,19 @@ aiops:
     trace-id-header: ${AIOPS_TRACE_ID_HEADER:X-Trace-Id}
     http-metrics-enabled: ${AIOPS_HTTP_METRICS_ENABLED:true}
   runtime:
+    app: worker
     phase: ${AIOPS_RUNTIME_PHASE:phase5}
+  object-storage:
+    endpoint: ${AIOPS_MINIO_ENDPOINT:http://localhost:9002}
+    access-key: ${AIOPS_MINIO_ACCESS_KEY:minioadmin}
+    secret-key: ${AIOPS_MINIO_SECRET_KEY:minioadmin}
+    bucket: ${AIOPS_MINIO_BUCKET:aegisops-work-record}
+    region: ${AIOPS_MINIO_REGION:us-east-1}
+    attachment-max-bytes: ${AIOPS_ATTACHMENT_MAX_BYTES:20971520}
+    download-url-expiry-seconds: ${AIOPS_DOWNLOAD_URL_EXPIRY_SECONDS:300}
   outbox:
     enabled: ${AIOPS_OUTBOX_ENABLED:true}
     poll-delay-ms: ${AIOPS_OUTBOX_POLL_MS:5000}
     batch-size: ${AIOPS_OUTBOX_BATCH:10}
     target-app: ${AIOPS_OUTBOX_TARGET_APP:worker}
+    lease-duration-ms: ${AIOPS_OUTBOX_LEASE_MS:300000}

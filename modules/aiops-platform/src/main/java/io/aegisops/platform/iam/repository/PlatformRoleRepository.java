@@ -25,5 +25,7 @@ public interface PlatformRoleRepository {
 
   int replaceDataScopes(String code, List<PlatformRole.RoleDataScope> scopes);
 
+  int softDelete(String code, int expectedVersion);
+
   void seedDefaultRolePermissions();
 }

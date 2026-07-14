@@ -44,6 +44,20 @@ export const createPlatformUserSchema = z.object({
 })
 export type CreatePlatformUserInput = z.infer<typeof createPlatformUserSchema>
 
+export const updatePlatformUserSchema = z.object({
+  displayName: z.string().min(1).max(128),
+  email: z.string().email().nullable(),
+  roleCodes: z.array(z.string()).optional(),
+})
+export type UpdatePlatformUserInput = z.infer<typeof updatePlatformUserSchema>
+
+export const resetPlatformUserPasswordSchema = z.object({
+  newPassword: z.string().min(8).max(128),
+})
+export type ResetPlatformUserPasswordInput = z.infer<
+  typeof resetPlatformUserPasswordSchema
+>
+
 export const replaceUserRolesInputSchema = z.object({
   roleCodes: z.array(z.string()),
   reason: z.string().optional(),
@@ -78,6 +92,9 @@ const iamApiErrorCodeSchema = z.enum([
   'platform.role.permission_removed_for_active_role',
   'platform.role.has_active_users',
   'platform.user.version_conflict',
+  'platform.user.self_status_change_forbidden',
+  'platform.user.self_role_removal_forbidden',
+  'platform.user.last_system_admin_required',
   'platform.role.version_conflict',
   'platform.role.protected',
   'platform.permission.denied',

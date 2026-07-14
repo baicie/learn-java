@@ -27,16 +27,56 @@ public class JooqOutboxRepository implements OutboxRepository {
   }
 
   @Override
-  public List<AutomationOutboxRecord> claimNextPending(String targetApp, int batchSize) {
-    return dsl.update(AUTOMATION_OUTBOX)
-        .set(AUTOMATION_OUTBOX.STATUS, "processing")
-        .set(AUTOMATION_OUTBOX.UPDATED_AT, OffsetDateTime.now())
-        .where(
-            AUTOMATION_OUTBOX.STATUS.eq("pending").and(AUTOMATION_OUTBOX.TARGET_APP.eq(targetApp)))
-        .orderBy(AUTOMATION_OUTBOX.CREATED_AT.asc())
-        .limit(batchSize)
-        .returning()
-        .fetch();
+  public List<AutomationOutboxRecord> claimNextPending(
+      String targetApp, int batchSize, OffsetDateTime leaseUntil) {
+    return dsl.fetch(
+            """
+                with candidates as (
+                    select id
+                      from automation_outbox
+                     where target_app = ?
+                       and status = 'pending'
+                       and available_at <= now()
+                     order by available_at, created_at
+                     for update skip locked
+                     limit ?
+                )
+                update automation_outbox outbox
+                   set status = 'processing', lease_until = ?, updated_at = now()
+                  from candidates
+                 where outbox.id = candidates.id
+                returning outbox.*
+                """,
+            targetApp,
+            batchSize,
+            leaseUntil)
+        .into(AutomationOutboxRecord.class);
+  }
+
+  @Override
+  public int recoverExpiredLeases(String targetApp, OffsetDateTime now) {
+    return dsl.execute(
+        """
+            update automation_outbox
+               set status = 'pending', lease_until = null, updated_at = now()
+             where target_app = ? and status = 'processing' and lease_until < ?
+            """,
+        targetApp,
+        now);
+  }
+
+  @Override
+  public boolean extendLease(String id, String targetApp, OffsetDateTime leaseUntil) {
+    return dsl.execute(
+            """
+            update automation_outbox
+               set lease_until = ?, updated_at = now()
+             where id = ? and target_app = ? and status = 'processing'
+            """,
+            leaseUntil,
+            id,
+            targetApp)
+        == 1;
   }
 
   @Override
@@ -48,56 +88,50 @@ public class JooqOutboxRepository implements OutboxRepository {
   @Override
   public boolean markDone(String id, OffsetDateTime processedAt) {
     int updated =
-        dsl.update(AUTOMATION_OUTBOX)
-            .set(AUTOMATION_OUTBOX.STATUS, "done")
-            .set(AUTOMATION_OUTBOX.PROCESSED_AT, processedAt)
-            .set(AUTOMATION_OUTBOX.ERROR_MESSAGE, (String) null)
-            .set(AUTOMATION_OUTBOX.UPDATED_AT, OffsetDateTime.now())
-            .where(AUTOMATION_OUTBOX.ID.eq(id))
-            .execute();
+        dsl.execute(
+            """
+                update automation_outbox
+                   set status = 'done', processed_at = ?, lease_until = null,
+                       error_message = null, updated_at = now()
+                 where id = ? and status = 'processing'
+                """,
+            processedAt,
+            id);
     return updated == 1;
   }
 
   @Override
   public boolean recordFailure(String id, String errorMessage) {
-    int nextRetry =
-        Optional.ofNullable(
-                    dsl.select(AUTOMATION_OUTBOX.RETRY_COUNT)
-                        .from(AUTOMATION_OUTBOX)
-                        .where(AUTOMATION_OUTBOX.ID.eq(id))
-                        .fetchOne(AUTOMATION_OUTBOX.RETRY_COUNT))
-                .orElse(0)
-            + 1;
-
-    int maxRetries =
-        Optional.ofNullable(
-                dsl.select(AUTOMATION_OUTBOX.MAX_RETRIES)
-                    .from(AUTOMATION_OUTBOX)
-                    .where(AUTOMATION_OUTBOX.ID.eq(id))
-                    .fetchOne(AUTOMATION_OUTBOX.MAX_RETRIES))
-            .orElse(3);
-
-    String newStatus = nextRetry >= maxRetries ? "failed" : "pending";
-
     int updated =
-        dsl.update(AUTOMATION_OUTBOX)
-            .set(AUTOMATION_OUTBOX.RETRY_COUNT, nextRetry)
-            .set(AUTOMATION_OUTBOX.STATUS, newStatus)
-            .set(AUTOMATION_OUTBOX.ERROR_MESSAGE, errorMessage)
-            .set(AUTOMATION_OUTBOX.UPDATED_AT, OffsetDateTime.now())
-            .where(AUTOMATION_OUTBOX.ID.eq(id))
-            .execute();
+        dsl.execute(
+            """
+                update automation_outbox
+                   set retry_count = retry_count + 1,
+                       status = case when retry_count + 1 >= max_retries
+                                     then 'failed' else 'pending' end,
+                       available_at = case when retry_count + 1 >= max_retries then available_at
+                                           else now() + make_interval(
+                                             secs => least(300, power(2, retry_count)::integer)) end,
+                       lease_until = null,
+                       error_message = ?,
+                       updated_at = now()
+                 where id = ? and status = 'processing'
+                """,
+            errorMessage,
+            id);
     return updated == 1;
   }
 
   @Override
   public boolean resetProcessing(String id) {
     int updated =
-        dsl.update(AUTOMATION_OUTBOX)
-            .set(AUTOMATION_OUTBOX.STATUS, "pending")
-            .set(AUTOMATION_OUTBOX.UPDATED_AT, OffsetDateTime.now())
-            .where(AUTOMATION_OUTBOX.ID.eq(id).and(AUTOMATION_OUTBOX.STATUS.eq("processing")))
-            .execute();
+        dsl.execute(
+            """
+                update automation_outbox
+                   set status = 'pending', lease_until = null, updated_at = now()
+                 where id = ? and status = 'processing'
+                """,
+            id);
     return updated == 1;
   }
 }

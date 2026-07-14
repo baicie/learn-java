@@ -7,11 +7,14 @@ import io.aegisops.platform.iam.domain.PlatformUserPage;
 import io.aegisops.platform.iam.domain.PlatformUserQuery;
 import io.aegisops.platform.iam.domain.PlatformUserStatus;
 import io.aegisops.platform.iam.domain.ReplaceUserRolesCommand;
+import io.aegisops.platform.iam.domain.ResetPlatformUserPasswordCommand;
 import io.aegisops.platform.iam.domain.UpdatePlatformUserData;
 import io.aegisops.platform.iam.service.PlatformUserService;
+import io.aegisops.security.UserPrincipal;
 import jakarta.validation.Valid;
-import java.util.Map;
 import java.util.Set;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -32,6 +35,7 @@ public class PlatformUserController {
   }
 
   @GetMapping
+  @PreAuthorize("hasAuthority('platform:user:read')")
   public PlatformUserPage list(
       @RequestParam(value = "keyword", required = false) String keyword,
       @RequestParam(value = "status", required = false) String status,
@@ -49,54 +53,54 @@ public class PlatformUserController {
   }
 
   @GetMapping("/{id}")
+  @PreAuthorize("hasAuthority('platform:user:read')")
   public PlatformUser findById(@PathVariable String id) {
     return service.findById(id);
   }
 
   @PostMapping
-  public PlatformUser create(@Valid @RequestBody CreatePlatformUserData body) {
-    String actor = currentActor();
-    return service.create(body, actor);
+  @PreAuthorize("hasAuthority('platform:user:write')")
+  public PlatformUser create(
+      @Valid @RequestBody CreatePlatformUserData body,
+      @AuthenticationPrincipal UserPrincipal actor) {
+    return service.create(body, actor.id());
   }
 
   @PutMapping("/{id}")
+  @PreAuthorize("hasAuthority('platform:user:write')")
   public PlatformUser update(
-      @PathVariable String id, @Valid @RequestBody UpdatePlatformUserData body) {
-    return service.update(id, body, currentActor());
+      @PathVariable String id,
+      @Valid @RequestBody UpdatePlatformUserData body,
+      @AuthenticationPrincipal UserPrincipal actor) {
+    return service.update(id, body, actor.id());
   }
 
   @PostMapping("/{id}/status")
-  public Map<String, Object> changeStatus(
-      @PathVariable String id, @Valid @RequestBody ChangeUserStatusCommand body) {
-    service.changeStatus(id, body, currentActor());
-    return Map.of("status", "ok", "id", id);
+  @PreAuthorize("hasAuthority('platform:user:status')")
+  public PlatformUser changeStatus(
+      @PathVariable String id,
+      @Valid @RequestBody ChangeUserStatusCommand body,
+      @AuthenticationPrincipal UserPrincipal actor) {
+    service.changeStatus(id, body, actor.id());
+    return service.findById(id);
   }
 
   @PostMapping("/{id}/reset-password")
-  public Map<String, Object> resetPassword(
-      @PathVariable String id, @Valid @RequestBody Map<String, String> body) {
-    service.resetPassword(id, body.getOrDefault("newPassword", ""), currentActor());
-    return Map.of("status", "ok", "id", id);
+  @PreAuthorize("hasAuthority('platform:user:reset-password')")
+  public PlatformUser resetPassword(
+      @PathVariable String id,
+      @Valid @RequestBody ResetPlatformUserPasswordCommand body,
+      @AuthenticationPrincipal UserPrincipal actor) {
+    service.resetPassword(id, body.newPassword(), actor.id());
+    return service.findById(id);
   }
 
-  @PostMapping("/{id}/roles")
+  @PutMapping("/{id}/roles")
+  @PreAuthorize("hasAuthority('platform:user:assign-role')")
   public PlatformUser replaceRoles(
-      @PathVariable String id, @Valid @RequestBody ReplaceUserRolesCommand body) {
-    return service.replaceRoles(id, body, currentActor());
-  }
-
-  private static String currentActor() {
-    try {
-      Object principal =
-          org.springframework.security.core.context.SecurityContextHolder.getContext()
-              .getAuthentication()
-              .getPrincipal();
-      if (principal instanceof io.aegisops.security.UserPrincipal up) {
-        return up.id();
-      }
-    } catch (Throwable ignored) {
-      // ignore - the UserPrincipal may not be wired for tests
-    }
-    return "system";
+      @PathVariable String id,
+      @Valid @RequestBody ReplaceUserRolesCommand body,
+      @AuthenticationPrincipal UserPrincipal actor) {
+    return service.replaceRoles(id, body, actor.id());
   }
 }

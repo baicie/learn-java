@@ -1,9 +1,13 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
+import { PermissionGate } from '@/auth/permission-gate'
 import type {
   PermissionModule as PermissionModuleType,
   PlatformRole,
 } from '@/lib/iam/platform-role'
-import { useReplaceRolePermissions } from '@/hooks/iam/use-platform-roles'
+import {
+  useDeletePlatformRole,
+  useReplaceRolePermissions,
+} from '@/hooks/iam/use-platform-roles'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
@@ -150,9 +154,11 @@ export function useRoleEditor(roleCode: string | undefined): RoleEditorApi {
 export function RoleEditor({
   editor,
   permissionTree,
+  onDeleted,
 }: {
   editor: RoleEditorApi
   permissionTree: ReadonlyArray<PermissionModuleType>
+  onDeleted?: () => void
 }) {
   if (!editor.state.role) {
     return (
@@ -176,15 +182,20 @@ export function RoleEditor({
           </p>
         </div>
         <div className='flex items-center gap-2'>
-          <Button
-            type='button'
-            variant='outline'
-            disabled={!editor.state.isDirty}
-            onClick={() => editor.reset()}
-          >
-            重置
-          </Button>
-          <SaveButton editor={editor} />
+          <PermissionGate anyOf={['platform:role:write']}>
+            {!role.system ? (
+              <DeleteButton role={role} onDeleted={onDeleted} />
+            ) : null}
+            <Button
+              type='button'
+              variant='outline'
+              disabled={!editor.state.isDirty}
+              onClick={() => editor.reset()}
+            >
+              重置
+            </Button>
+            <SaveButton editor={editor} />
+          </PermissionGate>
         </div>
       </header>
 
@@ -205,6 +216,39 @@ export function RoleEditor({
         </div>
       </div>
     </div>
+  )
+}
+
+function DeleteButton({
+  role,
+  onDeleted,
+}: {
+  role: PlatformRole
+  onDeleted?: () => void
+}) {
+  const remove = useDeletePlatformRole()
+  const confirm = useConfirm()
+  return (
+    <Button
+      type='button'
+      variant='destructive'
+      disabled={remove.isPending || role.userCount > 0}
+      onClick={async () => {
+        const accepted = await confirm({
+          title: `删除角色 ${role.roleName}`,
+          description: '删除后不可继续分配；已有用户时禁止删除。',
+          confirmText: '确认删除',
+          cancelText: '取消',
+          variant: 'destructive',
+          confirmationText: role.roleCode,
+        })
+        if (!accepted) return
+        await remove.mutateAsync(role.roleCode)
+        onDeleted?.()
+      }}
+    >
+      删除
+    </Button>
   )
 }
 

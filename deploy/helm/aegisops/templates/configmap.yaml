@@ -27,8 +27,9 @@ data:
   CLICKHOUSE_DB: {{ .Values.external.clickhouse.database | quote }}
   CLICKHOUSE_USER: {{ .Values.external.clickhouse.username | quote }}
 
-  MINIO_ENDPOINT: {{ .Values.external.minio.endpoint | quote }}
-  MINIO_BUCKET: {{ .Values.external.minio.bucket | quote }}
+  AIOPS_MINIO_ENDPOINT: {{ .Values.external.minio.endpoint | quote }}
+  AIOPS_MINIO_BUCKET: {{ .Values.external.minio.bucket | quote }}
+  AIOPS_MINIO_REGION: {{ .Values.external.minio.region | quote }}
 
   VICTORIA_METRICS_BASE_URL: {{ .Values.external.victoriaMetrics.baseUrl | quote }}
   AIOPS_EVIDENCE_VICTORIA_BASE_URL: {{ .Values.external.victoriaMetrics.baseUrl | quote }}

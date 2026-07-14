@@ -62,7 +62,7 @@ public class PlatformRoleService {
         normalizer.normalize(data.permissionCodes());
     PlatformRole created =
         roles
-            .insert(data.code(), data.name(), data.description(), data.system(), data.enabled())
+            .insert(data.code(), data.name(), data.description(), false, data.enabled())
             .orElseThrow(
                 () ->
                     new IamDomainException(
@@ -76,7 +76,7 @@ public class PlatformRoleService {
         data.code(),
         Map.of("permissions", List.of()),
         Map.of("permissions", normalized.permissions()),
-        Map.of("name", data.name(), "system", data.system()));
+        Map.of("name", data.name(), "system", false));
     return created;
   }
 
@@ -87,12 +87,14 @@ public class PlatformRoleService {
       throw new IamDomainException(
           IamErrorCode.PROTECTED_ROLE_MODIFIED, "system role cannot be disabled");
     }
-    roles.update(
-        code,
-        data.name(),
-        data.description(),
-        Boolean.TRUE.equals(data.enabled()),
-        expectedVersionOrZero(existing));
+    boolean enabled = data.enabled() == null ? existing.enabled() : data.enabled();
+    if (roles.update(
+            code, data.name(), data.description(), enabled, expectedVersionOrZero(existing))
+        == 0) {
+      throw new IamDomainException(
+          IamErrorCode.ROLE_VERSION_CONFLICT,
+          "role " + code + " was modified concurrently, refresh and retry");
+    }
     if (data.permissionCodes() != null) {
       PermissionNormalizer.NormalizedPermissionSet normalized =
           normalizer.normalize(data.permissionCodes());
@@ -169,9 +171,11 @@ public class PlatformRoleService {
       throw new IamDomainException(
           IamErrorCode.ROLE_HAS_ACTIVE_USERS, "role " + code + " still has active users");
     }
-    // Soft delete would be the proper path; the existing role_definition schema does not
-    // support deletion flag, so we rely on row-level guard above and let the SQL
-    // enforcement reject unattached roles via cascade.
+    if (roles.softDelete(code, existing.rowVersion()) == 0) {
+      throw new IamDomainException(
+          IamErrorCode.ROLE_VERSION_CONFLICT,
+          "role " + code + " was modified concurrently, refresh and retry");
+    }
     audit.recordChange(
         currentTenant(),
         actor,

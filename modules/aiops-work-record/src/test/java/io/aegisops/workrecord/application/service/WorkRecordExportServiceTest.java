@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.aegisops.common.api.PageResult;
 import io.aegisops.security.InMemoryDistributedLeaseService;
 import io.aegisops.security.InMemoryTenantRateLimiter;
 import io.aegisops.security.UserPrincipal;
@@ -22,6 +23,7 @@ import io.aegisops.workrecord.domain.model.OptionSource;
 import io.aegisops.workrecord.domain.model.RecordStatus;
 import io.aegisops.workrecord.domain.model.WorkRecord;
 import io.aegisops.workrecord.domain.model.WorkRecordField;
+import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Instant;
@@ -163,6 +165,32 @@ class WorkRecordExportServiceTest {
             eq("work_record.record.export"),
             eq("u1"),
             contains("\"rowCount\":1"));
+  }
+
+  @Test
+  void shouldStreamAsyncExportByPages() throws Exception {
+    RecordQuery query = query();
+    when(queryService.prepareEffectiveQuery("t1", query, user())).thenReturn(query);
+    when(metaService.meta("t1", "tpl1"))
+        .thenReturn(
+            new RecordListMeta(
+                List.of(),
+                List.of(column("title", "标题", "builtin", null, "text", null, null, true)),
+                List.of(column("title", "标题", "builtin", null, "text", null, null, true)),
+                List.of(),
+                Set.of(),
+                5000,
+                List.of("all")));
+    when(repository.page(eq("t1"), any(RecordQuery.class)))
+        .thenReturn(new PageResult<>(1, 1, 200, List.of(record())));
+    StringWriter output = new StringWriter();
+
+    var result =
+        service.streamCsv("t1", query, List.of("title"), user(), output, 100_000, ignored -> {});
+
+    assertThat(result.rowCount()).isEqualTo(1);
+    assertThat(output.toString()).contains("\"标题\"").contains("\"日报\"");
+    verify(repository).page(eq("t1"), any(RecordQuery.class));
   }
 
   @Test

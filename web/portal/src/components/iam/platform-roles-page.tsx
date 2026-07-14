@@ -11,12 +11,14 @@ import { Main } from '@/components/layout/main'
 import { ProfileDropdown } from '@/components/profile-dropdown'
 import { Search } from '@/components/search'
 import { ThemeSwitch } from '@/components/theme-switch'
+import { PlatformRoleCreateDialog } from './platform-role-create-dialog'
 import { RoleEditor, useRoleEditor } from './role-editor'
 
 export function PlatformRolesPage() {
   const rolesQuery = usePlatformRoles()
   const permissionsQuery = usePermissionTree()
   const [selectedCode, setSelectedCode] = useState<string | null>(null)
+  const [createOpen, setCreateOpen] = useState(false)
   const editor = useRoleEditor(selectedCode ?? undefined)
 
   const firstRole = rolesQuery.data?.[0]
@@ -52,7 +54,11 @@ export function PlatformRolesPage() {
             <div className='flex items-center justify-between border-b px-4 py-3'>
               <h2 className='text-sm font-semibold'>角色</h2>
               <PermissionGate anyOf={['platform:role:write']}>
-                <Button size='sm' variant='outline' disabled>
+                <Button
+                  size='sm'
+                  variant='outline'
+                  onClick={() => setCreateOpen(true)}
+                >
                   新建
                 </Button>
               </PermissionGate>
@@ -90,9 +96,14 @@ export function PlatformRolesPage() {
           <RoleEditor
             editor={editor}
             permissionTree={permissionsQuery.data ?? []}
+            onDeleted={() => setSelectedCode(null)}
           />
         </div>
       </Main>
+      <PlatformRoleCreateDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+      />
     </>
   )
 }

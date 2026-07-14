@@ -3,6 +3,7 @@ package io.aegisops.platform.iam.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -90,7 +91,9 @@ class PlatformUserServiceTest {
 
     assertThatThrownBy(() -> service.resetPassword("u1", "short", "admin"))
         .isInstanceOf(IamDomainException.class);
+    when(encoder.encode("password1")).thenReturn("new-hash");
     service.resetPassword("u1", "password1", "admin");
+    verify(users).updatePassword(eq("u1"), eq("new-hash"), any());
 
     when(roles.exists("operator")).thenReturn(true);
     service.replaceRoles("u1", new ReplaceUserRolesCommand(List.of("operator"), null, 1), "admin");
@@ -109,6 +112,40 @@ class PlatformUserServiceTest {
     assertThatThrownBy(
             () -> service.changeStatus("u1", new ChangeUserStatusCommand("disabled", null, 1), "a"))
         .isInstanceOf(IamDomainException.class);
+  }
+
+  @Test
+  void administratorCannotDisableSelfOrRemoveOwnSystemAdminRole() {
+    PlatformUser administrator =
+        user(PlatformUserStatus.ACTIVE, List.of(new PlatformUser.RoleRef("system_admin", "系统管理员")));
+    when(users.findById("u1")).thenReturn(Optional.of(administrator));
+
+    assertThatThrownBy(
+            () ->
+                service.changeStatus(
+                    "u1", new ChangeUserStatusCommand("disabled", "self", 1), "u1"))
+        .isInstanceOf(IamDomainException.class);
+
+    assertThatThrownBy(
+            () ->
+                service.replaceRoles(
+                    "u1", new ReplaceUserRolesCommand(List.of("normal_user"), "self", 1), "u1"))
+        .isInstanceOf(IamDomainException.class);
+  }
+
+  @Test
+  void lastActiveSystemAdministratorCannotBeDisabled() {
+    PlatformUser administrator =
+        user(PlatformUserStatus.ACTIVE, List.of(new PlatformUser.RoleRef("system_admin", "系统管理员")));
+    when(users.findById("u1")).thenReturn(Optional.of(administrator));
+    when(users.countActiveUsersWithRole("system_admin")).thenReturn(1);
+
+    assertThatThrownBy(
+            () ->
+                service.changeStatus(
+                    "u1", new ChangeUserStatusCommand("disabled", "rotation", 1), "u2"))
+        .isInstanceOf(IamDomainException.class);
+    verify(users).lockRoleForUpdate("system_admin");
   }
 
   private PlatformUser user(PlatformUserStatus status, List<PlatformUser.RoleRef> roles) {

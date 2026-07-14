@@ -17,10 +17,10 @@ related: []
 
 ## 数据库迁移
 
-### 4.2 V0029：评论、附件、关联对象
+### 4.2 V0032：评论、附件、关联对象
 
 ```sql
--- V0029__phase20_collaboration.sql
+-- V0032__init_phase20_collaboration.sql
 
 create table if not exists work_record.wr_comment (
     id varchar(64) primary key,
@@ -1292,7 +1292,7 @@ public class RecordRelationService {
 }
 ```
 
-`RecordRelationRepository` 的 JDBC 实现按 `V0029` 字段直接插入、查询、删除，所有 SQL 必须同时包含 `tenant_id` 和 `record_id`。
+`RecordRelationRepository` 的 JDBC 实现按 `V0032` 字段直接插入、查询、删除，所有 SQL 必须同时包含 `tenant_id` 和 `record_id`。
 
 ### 10.17 CommentServiceTest.java
 

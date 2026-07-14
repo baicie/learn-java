@@ -3,6 +3,7 @@
 
 # Except these files & folders
 !/src
+!/src/**
 !index.html
 !package.json
 !tailwind.config.js

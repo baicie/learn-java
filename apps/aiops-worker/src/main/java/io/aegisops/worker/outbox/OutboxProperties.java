@@ -14,11 +14,22 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  */
 @ConfigurationProperties(prefix = "aiops.outbox")
 public record OutboxProperties(
-    boolean enabled, @Min(100) long pollDelayMs, @Min(1) int batchSize, String targetApp) {
+    boolean enabled,
+    @Min(100) long pollDelayMs,
+    @Min(1) int batchSize,
+    String targetApp,
+    @Min(1000) long leaseDurationMs) {
+
+  public OutboxProperties(boolean enabled, long pollDelayMs, int batchSize, String targetApp) {
+    this(enabled, pollDelayMs, batchSize, targetApp, 300_000L);
+  }
 
   public OutboxProperties {
     if (targetApp == null || targetApp.isBlank()) {
       targetApp = "worker";
+    }
+    if (leaseDurationMs == 0) {
+      leaseDurationMs = 300_000L;
     }
   }
 }

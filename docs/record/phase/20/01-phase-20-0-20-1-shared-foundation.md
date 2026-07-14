@@ -11,17 +11,14 @@ related: []
 
 # Phase 20.0–20.1：共享底座、Outbox、异步任务与 MinIO
 
-> 基线：`baicie/ai-ops`，分支 `feat/record-doc-portal`，提交 `43d16315cc4b68cc705177d2c8faba1d8e42644e`。
+> 实施分支：`codex/phase-20-enterprise-enhancements`。
 >
-> 本文件由 Phase 20 总方案按主题拆分。Phase 20 开发前必须先完成 Phase 19 P0 修复。
-
-> 基线：`baicie/ai-ops`，分支 `feat/record-doc-portal`，提交 `43d16315cc4b68cc705177d2c8faba1d8e42644e`。
->
-> 重要前置：该提交仅修复 RCA lambda 参数遮蔽，Phase 19 审查中识别的生产阻断项尚未合入。Phase 20 开发分支必须先合入 Phase 19 P0 修复，再开始数据库迁移。
+> Phase 20 开发前必须先完成 Phase 19 P0 修复，并通过
+> [Phase 20 执行基线](./00-phase-20-execution-baseline.md) 中的平台 IAM 验收。
 
 ## 1. 结论
 
-Phase 20 的 17 项能力不能作为一个提交一次完成。它们共享文件存储、异步任务、通知、关联对象、字段策略、审批和 SLA 等基础设施，若并行硬写会导致：
+Phase 20 的 19 项能力不能作为一个提交一次完成。用户管理和权限管理复用平台 IAM；其余能力共享文件存储、异步任务、通知、关联对象、字段策略、审批和 SLA 等基础设施，若并行硬写会导致：
 
 - 同一种异步任务出现多套状态机；
 - 评论、附件、审批、SLA 各自重复实现时间线；
@@ -35,6 +32,7 @@ Phase 20 的 17 项能力不能作为一个提交一次完成。它们共享文�
 | 子阶段 | 能力                                         |
 | ------ | -------------------------------------------- |
 | 20.0   | Phase 19 P0 修复、outbox 租约与幂等升级      |
+| IAM    | 用户管理、角色与权限管理安全基线             |
 | 20.1   | 通用异步任务、MinIO 对象存储、任务中心       |
 | 20.2   | Excel 导入、异步导出                         |
 | 20.3   | 评论时间线、附件、关联告警/巡检/事件         |
@@ -127,7 +125,7 @@ apps/aiops-worker/src/main/java/io/aegisops/worker/job/workrecord/
 ├── WorkRecordAiMonthlyReportJob.java
 └── WorkRecordSlaScanJob.java
 
-web/portal/src/features/work-records/extensions/
+web/portal/src/components/work-records/extensions/
 ├── api.ts
 ├── types.ts
 ├── async-jobs/
@@ -145,11 +143,11 @@ web/portal/src/features/work-records/extensions/
 
 ## 数据库迁移
 
-### 4.1 V0028：Outbox 增强与异步任务
+### 4.1 V0030：Outbox 增强与异步任务
 
 ```sql
 -- apps/aiops-server/src/main/resources/db/migration/
--- V0028__phase20_async_job_and_outbox.sql
+-- V0030__phase20_async_job_and_outbox.sql
 
 alter table automation_outbox
     add column if not exists available_at timestamptz;
@@ -1458,7 +1456,7 @@ public record ObjectStorageProperties(
   }
 
   public static ObjectStorageProperties defaults() {
-    return new ObjectStorageProperties(null, null, null, null, 0, 0);
+    return new ObjectStorageProperties(null, null, null, null, 0, 0, null);
   }
 
   private static String blank(String value, String fallback) {
