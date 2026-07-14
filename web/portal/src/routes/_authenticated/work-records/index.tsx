@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { createFileRoute } from '@tanstack/react-router'
-import { requireAnyPermission } from '@/features/auth/permission'
-import { WorkRecordListPage } from '@/features/work-records/list/work-record-list-page'
+import { requireAnyPermission } from '@/auth/permission'
+import { WorkRecordListPage } from '@/components/work-records/list/work-record-list-page'
 
 const scalarValueSchema = z.union([z.string(), z.number(), z.boolean()])
 

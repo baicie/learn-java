@@ -20,8 +20,8 @@ import { Route as authSignInRouteImport } from './routes/(auth)/sign-in'
 import { Route as AuthenticatedSettingsRouteRouteImport } from './routes/_authenticated/settings/route'
 import { Route as AuthenticatedWorkRecordsIndexRouteImport } from './routes/_authenticated/work-records/index'
 import { Route as AuthenticatedSettingsIndexRouteImport } from './routes/_authenticated/settings/index'
+import { Route as AuthenticatedWorkRecordsTemplatesRouteImport } from './routes/_authenticated/work-records/templates'
 import { Route as AuthenticatedWorkRecordsNewRouteImport } from './routes/_authenticated/work-records/new'
-import { Route as AuthenticatedWorkRecordsDesignerRouteImport } from './routes/_authenticated/work-records/designer'
 import { Route as AuthenticatedWorkRecordsRecordIdRouteImport } from './routes/_authenticated/work-records/$recordId'
 import { Route as AuthenticatedSettingsNotificationsRouteImport } from './routes/_authenticated/settings/notifications'
 import { Route as AuthenticatedSettingsDisplayRouteImport } from './routes/_authenticated/settings/display'
@@ -31,8 +31,10 @@ import { Route as AuthenticatedPlatformRolesRouteImport } from './routes/_authen
 import { Route as AuthenticatedPlatformDictionariesRouteImport } from './routes/_authenticated/platform/dictionaries'
 import { Route as AuthenticatedPlatformCalendarsRouteImport } from './routes/_authenticated/platform/calendars'
 import { Route as AuthenticatedErrorsErrorRouteImport } from './routes/_authenticated/errors/$error'
+import { Route as AuthenticatedWorkRecordsTemplatesIndexRouteImport } from './routes/_authenticated/work-records/templates.index'
 import { Route as AuthenticatedPlatformUsersIndexRouteImport } from './routes/_authenticated/platform/users/index'
 import { Route as AuthenticatedWorkRecordsRecordIdEditRouteImport } from './routes/_authenticated/work-records/$recordId.edit'
+import { Route as AuthenticatedWorkRecordsTemplatesTemplateIdDesignerRouteImport } from './routes/_authenticated/work-records/templates.$templateId.designer'
 
 const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
   id: '/_authenticated',
@@ -91,16 +93,16 @@ const AuthenticatedSettingsIndexRoute =
     path: '/',
     getParentRoute: () => AuthenticatedSettingsRouteRoute,
   } as any)
+const AuthenticatedWorkRecordsTemplatesRoute =
+  AuthenticatedWorkRecordsTemplatesRouteImport.update({
+    id: '/work-records/templates',
+    path: '/work-records/templates',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedWorkRecordsNewRoute =
   AuthenticatedWorkRecordsNewRouteImport.update({
     id: '/work-records/new',
     path: '/work-records/new',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedWorkRecordsDesignerRoute =
-  AuthenticatedWorkRecordsDesignerRouteImport.update({
-    id: '/work-records/designer',
-    path: '/work-records/designer',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedWorkRecordsRecordIdRoute =
@@ -157,6 +159,12 @@ const AuthenticatedErrorsErrorRoute =
     path: '/errors/$error',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedWorkRecordsTemplatesIndexRoute =
+  AuthenticatedWorkRecordsTemplatesIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedWorkRecordsTemplatesRoute,
+  } as any)
 const AuthenticatedPlatformUsersIndexRoute =
   AuthenticatedPlatformUsersIndexRouteImport.update({
     id: '/platform/users/',
@@ -168,6 +176,12 @@ const AuthenticatedWorkRecordsRecordIdEditRoute =
     id: '/edit',
     path: '/edit',
     getParentRoute: () => AuthenticatedWorkRecordsRecordIdRoute,
+  } as any)
+const AuthenticatedWorkRecordsTemplatesTemplateIdDesignerRoute =
+  AuthenticatedWorkRecordsTemplatesTemplateIdDesignerRouteImport.update({
+    id: '/$templateId/designer',
+    path: '/$templateId/designer',
+    getParentRoute: () => AuthenticatedWorkRecordsTemplatesRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -188,12 +202,14 @@ export interface FileRoutesByFullPath {
   '/settings/display': typeof AuthenticatedSettingsDisplayRoute
   '/settings/notifications': typeof AuthenticatedSettingsNotificationsRoute
   '/work-records/$recordId': typeof AuthenticatedWorkRecordsRecordIdRouteWithChildren
-  '/work-records/designer': typeof AuthenticatedWorkRecordsDesignerRoute
   '/work-records/new': typeof AuthenticatedWorkRecordsNewRoute
+  '/work-records/templates': typeof AuthenticatedWorkRecordsTemplatesRouteWithChildren
   '/settings/': typeof AuthenticatedSettingsIndexRoute
   '/work-records/': typeof AuthenticatedWorkRecordsIndexRoute
   '/work-records/$recordId/edit': typeof AuthenticatedWorkRecordsRecordIdEditRoute
   '/platform/users/': typeof AuthenticatedPlatformUsersIndexRoute
+  '/work-records/templates/': typeof AuthenticatedWorkRecordsTemplatesIndexRoute
+  '/work-records/templates/$templateId/designer': typeof AuthenticatedWorkRecordsTemplatesTemplateIdDesignerRoute
 }
 export interface FileRoutesByTo {
   '/sign-in': typeof authSignInRoute
@@ -212,12 +228,13 @@ export interface FileRoutesByTo {
   '/settings/display': typeof AuthenticatedSettingsDisplayRoute
   '/settings/notifications': typeof AuthenticatedSettingsNotificationsRoute
   '/work-records/$recordId': typeof AuthenticatedWorkRecordsRecordIdRouteWithChildren
-  '/work-records/designer': typeof AuthenticatedWorkRecordsDesignerRoute
   '/work-records/new': typeof AuthenticatedWorkRecordsNewRoute
   '/settings': typeof AuthenticatedSettingsIndexRoute
   '/work-records': typeof AuthenticatedWorkRecordsIndexRoute
   '/work-records/$recordId/edit': typeof AuthenticatedWorkRecordsRecordIdEditRoute
   '/platform/users': typeof AuthenticatedPlatformUsersIndexRoute
+  '/work-records/templates': typeof AuthenticatedWorkRecordsTemplatesIndexRoute
+  '/work-records/templates/$templateId/designer': typeof AuthenticatedWorkRecordsTemplatesTemplateIdDesignerRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -239,12 +256,14 @@ export interface FileRoutesById {
   '/_authenticated/settings/display': typeof AuthenticatedSettingsDisplayRoute
   '/_authenticated/settings/notifications': typeof AuthenticatedSettingsNotificationsRoute
   '/_authenticated/work-records/$recordId': typeof AuthenticatedWorkRecordsRecordIdRouteWithChildren
-  '/_authenticated/work-records/designer': typeof AuthenticatedWorkRecordsDesignerRoute
   '/_authenticated/work-records/new': typeof AuthenticatedWorkRecordsNewRoute
+  '/_authenticated/work-records/templates': typeof AuthenticatedWorkRecordsTemplatesRouteWithChildren
   '/_authenticated/settings/': typeof AuthenticatedSettingsIndexRoute
   '/_authenticated/work-records/': typeof AuthenticatedWorkRecordsIndexRoute
   '/_authenticated/work-records/$recordId/edit': typeof AuthenticatedWorkRecordsRecordIdEditRoute
   '/_authenticated/platform/users/': typeof AuthenticatedPlatformUsersIndexRoute
+  '/_authenticated/work-records/templates/': typeof AuthenticatedWorkRecordsTemplatesIndexRoute
+  '/_authenticated/work-records/templates/$templateId/designer': typeof AuthenticatedWorkRecordsTemplatesTemplateIdDesignerRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -266,12 +285,14 @@ export interface FileRouteTypes {
     | '/settings/display'
     | '/settings/notifications'
     | '/work-records/$recordId'
-    | '/work-records/designer'
     | '/work-records/new'
+    | '/work-records/templates'
     | '/settings/'
     | '/work-records/'
     | '/work-records/$recordId/edit'
     | '/platform/users/'
+    | '/work-records/templates/'
+    | '/work-records/templates/$templateId/designer'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/sign-in'
@@ -290,12 +311,13 @@ export interface FileRouteTypes {
     | '/settings/display'
     | '/settings/notifications'
     | '/work-records/$recordId'
-    | '/work-records/designer'
     | '/work-records/new'
     | '/settings'
     | '/work-records'
     | '/work-records/$recordId/edit'
     | '/platform/users'
+    | '/work-records/templates'
+    | '/work-records/templates/$templateId/designer'
   id:
     | '__root__'
     | '/_authenticated'
@@ -316,12 +338,14 @@ export interface FileRouteTypes {
     | '/_authenticated/settings/display'
     | '/_authenticated/settings/notifications'
     | '/_authenticated/work-records/$recordId'
-    | '/_authenticated/work-records/designer'
     | '/_authenticated/work-records/new'
+    | '/_authenticated/work-records/templates'
     | '/_authenticated/settings/'
     | '/_authenticated/work-records/'
     | '/_authenticated/work-records/$recordId/edit'
     | '/_authenticated/platform/users/'
+    | '/_authenticated/work-records/templates/'
+    | '/_authenticated/work-records/templates/$templateId/designer'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -413,18 +437,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsIndexRouteImport
       parentRoute: typeof AuthenticatedSettingsRouteRoute
     }
+    '/_authenticated/work-records/templates': {
+      id: '/_authenticated/work-records/templates'
+      path: '/work-records/templates'
+      fullPath: '/work-records/templates'
+      preLoaderRoute: typeof AuthenticatedWorkRecordsTemplatesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/work-records/new': {
       id: '/_authenticated/work-records/new'
       path: '/work-records/new'
       fullPath: '/work-records/new'
       preLoaderRoute: typeof AuthenticatedWorkRecordsNewRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/work-records/designer': {
-      id: '/_authenticated/work-records/designer'
-      path: '/work-records/designer'
-      fullPath: '/work-records/designer'
-      preLoaderRoute: typeof AuthenticatedWorkRecordsDesignerRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/work-records/$recordId': {
@@ -490,6 +514,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedErrorsErrorRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/work-records/templates/': {
+      id: '/_authenticated/work-records/templates/'
+      path: '/'
+      fullPath: '/work-records/templates/'
+      preLoaderRoute: typeof AuthenticatedWorkRecordsTemplatesIndexRouteImport
+      parentRoute: typeof AuthenticatedWorkRecordsTemplatesRoute
+    }
     '/_authenticated/platform/users/': {
       id: '/_authenticated/platform/users/'
       path: '/platform/users'
@@ -503,6 +534,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/work-records/$recordId/edit'
       preLoaderRoute: typeof AuthenticatedWorkRecordsRecordIdEditRouteImport
       parentRoute: typeof AuthenticatedWorkRecordsRecordIdRoute
+    }
+    '/_authenticated/work-records/templates/$templateId/designer': {
+      id: '/_authenticated/work-records/templates/$templateId/designer'
+      path: '/$templateId/designer'
+      fullPath: '/work-records/templates/$templateId/designer'
+      preLoaderRoute: typeof AuthenticatedWorkRecordsTemplatesTemplateIdDesignerRouteImport
+      parentRoute: typeof AuthenticatedWorkRecordsTemplatesRoute
     }
   }
 }
@@ -545,6 +583,24 @@ const AuthenticatedWorkRecordsRecordIdRouteWithChildren =
     AuthenticatedWorkRecordsRecordIdRouteChildren,
   )
 
+interface AuthenticatedWorkRecordsTemplatesRouteChildren {
+  AuthenticatedWorkRecordsTemplatesIndexRoute: typeof AuthenticatedWorkRecordsTemplatesIndexRoute
+  AuthenticatedWorkRecordsTemplatesTemplateIdDesignerRoute: typeof AuthenticatedWorkRecordsTemplatesTemplateIdDesignerRoute
+}
+
+const AuthenticatedWorkRecordsTemplatesRouteChildren: AuthenticatedWorkRecordsTemplatesRouteChildren =
+  {
+    AuthenticatedWorkRecordsTemplatesIndexRoute:
+      AuthenticatedWorkRecordsTemplatesIndexRoute,
+    AuthenticatedWorkRecordsTemplatesTemplateIdDesignerRoute:
+      AuthenticatedWorkRecordsTemplatesTemplateIdDesignerRoute,
+  }
+
+const AuthenticatedWorkRecordsTemplatesRouteWithChildren =
+  AuthenticatedWorkRecordsTemplatesRoute._addFileChildren(
+    AuthenticatedWorkRecordsTemplatesRouteChildren,
+  )
+
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedSettingsRouteRoute: typeof AuthenticatedSettingsRouteRouteWithChildren
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
@@ -553,8 +609,8 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedPlatformDictionariesRoute: typeof AuthenticatedPlatformDictionariesRoute
   AuthenticatedPlatformRolesRoute: typeof AuthenticatedPlatformRolesRoute
   AuthenticatedWorkRecordsRecordIdRoute: typeof AuthenticatedWorkRecordsRecordIdRouteWithChildren
-  AuthenticatedWorkRecordsDesignerRoute: typeof AuthenticatedWorkRecordsDesignerRoute
   AuthenticatedWorkRecordsNewRoute: typeof AuthenticatedWorkRecordsNewRoute
+  AuthenticatedWorkRecordsTemplatesRoute: typeof AuthenticatedWorkRecordsTemplatesRouteWithChildren
   AuthenticatedWorkRecordsIndexRoute: typeof AuthenticatedWorkRecordsIndexRoute
   AuthenticatedPlatformUsersIndexRoute: typeof AuthenticatedPlatformUsersIndexRoute
 }
@@ -569,8 +625,9 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedPlatformRolesRoute: AuthenticatedPlatformRolesRoute,
   AuthenticatedWorkRecordsRecordIdRoute:
     AuthenticatedWorkRecordsRecordIdRouteWithChildren,
-  AuthenticatedWorkRecordsDesignerRoute: AuthenticatedWorkRecordsDesignerRoute,
   AuthenticatedWorkRecordsNewRoute: AuthenticatedWorkRecordsNewRoute,
+  AuthenticatedWorkRecordsTemplatesRoute:
+    AuthenticatedWorkRecordsTemplatesRouteWithChildren,
   AuthenticatedWorkRecordsIndexRoute: AuthenticatedWorkRecordsIndexRoute,
   AuthenticatedPlatformUsersIndexRoute: AuthenticatedPlatformUsersIndexRoute,
 }

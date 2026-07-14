@@ -19,8 +19,7 @@ public class OperationLogFilter extends OncePerRequestFilter {
 
   private static final Logger log = LoggerFactory.getLogger("AIOPS_OPERATION");
 
-  private static final Set<String> MUTATING_METHODS =
-      Set.of("POST", "PUT", "PATCH", "DELETE");
+  private static final Set<String> MUTATING_METHODS = Set.of("POST", "PUT", "PATCH", "DELETE");
 
   private final ObservabilityProperties properties;
 

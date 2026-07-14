@@ -17,8 +17,7 @@ class InMemoryDistributedLeaseServiceTest {
     MutableClock clock = new MutableClock(Instant.parse("2026-07-11T00:00:00Z"));
     InMemoryDistributedLeaseService service = new InMemoryDistributedLeaseService(clock);
 
-    Optional<DistributedLease> first =
-        service.tryAcquire("export:user-1", Duration.ofSeconds(30));
+    Optional<DistributedLease> first = service.tryAcquire("export:user-1", Duration.ofSeconds(30));
     assertThat(first).isPresent();
 
     Optional<DistributedLease> concurrent =

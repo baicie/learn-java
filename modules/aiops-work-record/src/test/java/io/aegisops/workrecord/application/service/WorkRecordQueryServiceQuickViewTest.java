@@ -135,10 +135,7 @@ class WorkRecordQueryServiceQuickViewTest {
   void setUpUsers() {
     cachedAdminUser =
         new UserPrincipal(
-            "u1",
-            "t1",
-            "alice",
-            "Alice",
+            new UserPrincipal.Identity("u1", "t1", "alice", "Alice"),
             Set.of("admin"),
             Set.of("work-record:read:all"),
             Map.of(
@@ -146,10 +143,7 @@ class WorkRecordQueryServiceQuickViewTest {
                 "work-record-template", io.aegisops.security.DataScope.ALL));
     cachedSelfUser =
         new UserPrincipal(
-            "u2",
-            "t1",
-            "bob",
-            "Bob",
+            new UserPrincipal.Identity("u2", "t1", "bob", "Bob"),
             Set.of("operator"),
             Set.of("work-record:read:self"),
             Map.of(

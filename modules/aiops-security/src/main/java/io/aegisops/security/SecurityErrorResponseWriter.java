@@ -13,6 +13,7 @@ import org.springframework.http.MediaType;
  * 在 Spring Security Filter Chain 中以 JSON 形式输出错误响应。
  *
  * <p>所有响应都使用项目统一的 {@link ApiResponse} 契约：
+ *
  * <pre>
  * {
  *   "success": false,
@@ -24,8 +25,7 @@ import org.springframework.http.MediaType;
  * }
  * </pre>
  *
- * <p>这一契约必须与 {@code GlobalExceptionHandler} 返回的 Controller 层错误结构保持一致，
- * 避免前端不得不区分两套错误格式。
+ * <p>这一契约必须与 {@code GlobalExceptionHandler} 返回的 Controller 层错误结构保持一致， 避免前端不得不区分两套错误格式。
  */
 public class SecurityErrorResponseWriter {
 
@@ -35,17 +35,13 @@ public class SecurityErrorResponseWriter {
     this.objectMapper = objectMapper;
   }
 
-  public void write(
-      HttpServletResponse response, int status, String code, String message) throws IOException {
+  public void write(HttpServletResponse response, int status, String code, String message)
+      throws IOException {
     write(response, status, code, message, null);
   }
 
   public void write(
-      HttpServletResponse response,
-      int status,
-      String code,
-      String message,
-      Long retryAfterSeconds)
+      HttpServletResponse response, int status, String code, String message, Long retryAfterSeconds)
       throws IOException {
     if (response.isCommitted()) {
       return;
@@ -57,8 +53,7 @@ public class SecurityErrorResponseWriter {
     response.setCharacterEncoding(StandardCharsets.UTF_8.name());
 
     if (retryAfterSeconds != null) {
-      response.setHeader(
-          HttpHeaders.RETRY_AFTER, String.valueOf(Math.max(1, retryAfterSeconds)));
+      response.setHeader(HttpHeaders.RETRY_AFTER, String.valueOf(Math.max(1, retryAfterSeconds)));
     }
 
     objectMapper.writeValue(response.getWriter(), ApiResponse.fail(code, message, requestId()));

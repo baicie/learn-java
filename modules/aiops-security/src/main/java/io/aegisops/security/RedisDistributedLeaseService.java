@@ -36,8 +36,7 @@ public class RedisDistributedLeaseService implements DistributedLeaseService {
     String token = UUID.randomUUID().toString();
 
     try {
-      Boolean acquired =
-          redis.opsForValue().setIfAbsent(redisKey, token, ttl);
+      Boolean acquired = redis.opsForValue().setIfAbsent(redisKey, token, ttl);
 
       if (!Boolean.TRUE.equals(acquired)) {
         return Optional.empty();
@@ -46,9 +45,7 @@ public class RedisDistributedLeaseService implements DistributedLeaseService {
       return Optional.of(new RedisLease(redisKey, token));
     } catch (DataAccessException ex) {
       throw new AppException(
-          ErrorCode.RATE_LIMIT_BACKEND_UNAVAILABLE,
-          "distributed lease backend is unavailable",
-          ex);
+          ErrorCode.RATE_LIMIT_BACKEND_UNAVAILABLE, "distributed lease backend is unavailable", ex);
     }
   }
 

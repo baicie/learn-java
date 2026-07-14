@@ -14,8 +14,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class WorkRecordMetricsSnapshotJob {
 
-  private static final Logger log =
-      LoggerFactory.getLogger(WorkRecordMetricsSnapshotJob.class);
+  private static final Logger log = LoggerFactory.getLogger(WorkRecordMetricsSnapshotJob.class);
 
   private final NamedParameterJdbcTemplate jdbc;
 
@@ -25,8 +24,7 @@ public class WorkRecordMetricsSnapshotJob {
 
   private final AtomicLong records = new AtomicLong();
 
-  public WorkRecordMetricsSnapshotJob(
-      NamedParameterJdbcTemplate jdbc, MeterRegistry registry) {
+  public WorkRecordMetricsSnapshotJob(NamedParameterJdbcTemplate jdbc, MeterRegistry registry) {
     this.jdbc = jdbc;
 
     Gauge.builder("aegisops_work_record_templates", templates, AtomicLong::get)

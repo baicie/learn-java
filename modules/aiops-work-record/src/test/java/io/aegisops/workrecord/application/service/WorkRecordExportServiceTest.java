@@ -369,10 +369,7 @@ class WorkRecordExportServiceTest {
   void setUpUser() {
     cachedUser =
         new UserPrincipal(
-            "u1",
-            "t1",
-            "alice",
-            "张三",
+            new UserPrincipal.Identity("u1", "t1", "alice", "张三"),
             Set.of("admin"),
             Set.of("work-record:export", "work-record:read:self"),
             java.util.Map.of());

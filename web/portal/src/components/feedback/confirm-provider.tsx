@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 
-export type ConfirmVariant = 'default' | 'warning' | 'destructive'
+type ConfirmVariant = 'default' | 'warning' | 'destructive'
 
 export type ConfirmOptions = {
   title: string
@@ -101,7 +101,8 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
     typeof active?.options.confirmationText === 'string' &&
     active.options.confirmationText.length > 0
   const [typed, setTyped] = useState('')
-  const confirmEnabled = !requiresTyping || typed === active?.options.confirmationText
+  const confirmEnabled =
+    !requiresTyping || typed === active?.options.confirmationText
 
   // Reset typed value whenever a new prompt becomes active so the user must
   // re-type the confirmation each time.

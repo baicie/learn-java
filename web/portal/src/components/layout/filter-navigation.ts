@@ -1,4 +1,4 @@
-import type { AuthorizationPrincipal } from '@/features/auth/authorization-types'
+import type { AuthorizationPrincipal } from '@/auth/authorization-types'
 import type { NavigationItem } from './navigation'
 
 export function filterNavigation(

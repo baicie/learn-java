@@ -12,7 +12,7 @@ import org.springframework.mock.web.MockHttpServletResponse;
 
 class TenantRateLimitFilterTest {
 
-  private final ObjectMapper objectMapper = new ObjectMapper();
+  private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
 
   @Test
   void loginWithoutTenantMustStillBeRateLimited() throws Exception {
@@ -63,8 +63,7 @@ class TenantRateLimitFilterTest {
   void backendFailureMustReturnUniformJson() throws Exception {
     RateLimitService broken =
         (key, limit, window) -> {
-          throw new AppException(
-              ErrorCode.RATE_LIMIT_BACKEND_UNAVAILABLE, "redis unavailable");
+          throw new AppException(ErrorCode.RATE_LIMIT_BACKEND_UNAVAILABLE, "redis unavailable");
         };
 
     TenantRateLimitFilter filter =
@@ -84,8 +83,7 @@ class TenantRateLimitFilterTest {
 
     assertThat(response.getStatus()).isEqualTo(503);
     JsonNode body = objectMapper.readTree(response.getContentAsByteArray());
-    assertThat(body.path("errorCode").asText())
-        .isEqualTo("RATE_LIMIT_BACKEND_UNAVAILABLE");
+    assertThat(body.path("errorCode").asText()).isEqualTo("RATE_LIMIT_BACKEND_UNAVAILABLE");
     assertThat(body.path("success").asBoolean()).isFalse();
   }
 

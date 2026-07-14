@@ -125,8 +125,7 @@ public class WorkRecordService {
     WorkRecord existing =
         recordRepository
             .find(tenantId, recordId)
-            .orElseThrow(
-                () -> new ResourceNotFoundException("work record not found: " + recordId));
+            .orElseThrow(() -> new ResourceNotFoundException("work record not found: " + recordId));
 
     permissionService.requireEdit(user, existing);
 
@@ -197,8 +196,7 @@ public class WorkRecordService {
     WorkRecord existing =
         recordRepository
             .find(tenantId, recordId)
-            .orElseThrow(
-                () -> new ResourceNotFoundException("work record not found: " + recordId));
+            .orElseThrow(() -> new ResourceNotFoundException("work record not found: " + recordId));
 
     permissionService.requireDelete(user, existing);
 
@@ -220,8 +218,7 @@ public class WorkRecordService {
   public WorkRecord get(String tenantId, String recordId) {
     return recordRepository
         .find(tenantId, recordId)
-        .orElseThrow(
-            () -> new ResourceNotFoundException("work record not found: " + recordId));
+        .orElseThrow(() -> new ResourceNotFoundException("work record not found: " + recordId));
   }
 
   private WorkRecordTemplateVersion resolveVersion(
@@ -230,8 +227,7 @@ public class WorkRecordService {
         .findByTemplateAndVersion(tenantId, templateId, templateVersionId)
         .orElseThrow(
             () ->
-                new ResourceNotFoundException(
-                    "template version not found: " + templateVersionId));
+                new ResourceNotFoundException("template version not found: " + templateVersionId));
   }
 
   private String normalizeObject(String json) {

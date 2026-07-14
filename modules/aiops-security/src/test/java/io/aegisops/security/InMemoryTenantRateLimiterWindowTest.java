@@ -14,31 +14,15 @@ class InMemoryTenantRateLimiterWindowTest {
     MutableClock clock = new MutableClock(Instant.parse("2026-07-11T00:00:00Z"));
     InMemoryTenantRateLimiter limiter = new InMemoryTenantRateLimiter(clock);
 
-    assertThat(
-            limiter
-                .acquire("tenant-1", 2, Duration.ofMinutes(1))
-                .allowed())
-        .isTrue();
+    assertThat(limiter.acquire("tenant-1", 2, Duration.ofMinutes(1)).allowed()).isTrue();
 
-    assertThat(
-            limiter
-                .acquire("tenant-1", 2, Duration.ofMinutes(1))
-                .allowed())
-        .isTrue();
+    assertThat(limiter.acquire("tenant-1", 2, Duration.ofMinutes(1)).allowed()).isTrue();
 
-    assertThat(
-            limiter
-                .acquire("tenant-1", 2, Duration.ofMinutes(1))
-                .allowed())
-        .isFalse();
+    assertThat(limiter.acquire("tenant-1", 2, Duration.ofMinutes(1)).allowed()).isFalse();
 
     clock.advance(Duration.ofMinutes(1));
 
-    assertThat(
-            limiter
-                .acquire("tenant-1", 2, Duration.ofMinutes(1))
-                .allowed())
-        .isTrue();
+    assertThat(limiter.acquire("tenant-1", 2, Duration.ofMinutes(1)).allowed()).isTrue();
   }
 
   private static final class MutableClock extends java.time.Clock {

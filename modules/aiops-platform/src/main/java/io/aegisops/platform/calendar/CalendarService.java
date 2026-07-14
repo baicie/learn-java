@@ -125,13 +125,14 @@ public class CalendarService {
         repository.upsertDay(
             tenantId,
             calendarId,
-            date,
-            request.dayType(),
-            request.workday(),
-            request.holidayCode(),
-            request.holidayName(),
-            request.sourceType(),
-            request.remark(),
+            new CalendarDayMutation(
+                date,
+                request.dayType(),
+                request.workday(),
+                request.holidayCode(),
+                request.holidayName(),
+                request.sourceType(),
+                request.remark()),
             defaultActor(actor));
 
     audit.recordChange(
@@ -150,21 +151,7 @@ public class CalendarService {
   @Transactional
   public int importCsv(
       String tenantId, String calendarId, ImportCalendarCsvRequest request, String actor) {
-    requireText(calendarId, "calendarId");
-
-    if (request == null) {
-      throw new IllegalArgumentException("calendar import request is required");
-    }
-
-    repository
-        .findCalendar(tenantId, calendarId)
-        .orElseThrow(() -> new IllegalArgumentException("calendar not found"));
-
-    List<CalendarCsvImporter.CalendarCsvRow> rows = csvImporter.parse(request.csv());
-
-    if (rows.size() > MAX_IMPORT_ROWS) {
-      throw new IllegalArgumentException("calendar import exceeds " + MAX_IMPORT_ROWS + " rows");
-    }
+    List<CalendarCsvImporter.CalendarCsvRow> rows = importRows(tenantId, calendarId, request);
 
     String effectiveActor = defaultActor(actor);
 
@@ -180,13 +167,14 @@ public class CalendarService {
           repository.upsertDay(
               tenantId,
               calendarId,
-              row.date(),
-              row.dayType(),
-              row.workday(),
-              null,
-              row.holidayName(),
-              "csv",
-              row.remark(),
+              new CalendarDayMutation(
+                  row.date(),
+                  row.dayType(),
+                  row.workday(),
+                  null,
+                  row.holidayName(),
+                  "csv",
+                  row.remark()),
               effectiveActor);
 
       Map<String, Object> afterSnapshot = semanticDay(after);
@@ -228,27 +216,63 @@ public class CalendarService {
           Map.of("calendarId", calendarId, "date", row.date().toString()));
     }
 
-    Map<String, Object> summary = new LinkedHashMap<>();
-    summary.put("rowCount", rows.size());
-    summary.put("createdCount", createdCount);
-    summary.put("overwrittenCount", overwrittenCount);
-    summary.put("unchangedCount", unchangedCount);
-    summary.put("changedDates", changedDates);
-    summary.put("changedDatesTruncated", (createdCount + overwrittenCount) > changedDates.size());
-    summary.put("csvSha256", sha256(request.csv()));
+    auditImport(
+        tenantId,
+        calendarId,
+        effectiveActor,
+        request.csv(),
+        rows.size(),
+        new ImportCounts(createdCount, overwrittenCount, unchangedCount, changedDates));
 
+    return rows.size();
+  }
+
+  private List<CalendarCsvImporter.CalendarCsvRow> importRows(
+      String tenantId, String calendarId, ImportCalendarCsvRequest request) {
+    requireText(calendarId, "calendarId");
+    if (request == null) {
+      throw new IllegalArgumentException("calendar import request is required");
+    }
+    repository
+        .findCalendar(tenantId, calendarId)
+        .orElseThrow(() -> new IllegalArgumentException("calendar not found"));
+    List<CalendarCsvImporter.CalendarCsvRow> rows = csvImporter.parse(request.csv());
+    if (rows.size() > MAX_IMPORT_ROWS) {
+      throw new IllegalArgumentException("calendar import exceeds " + MAX_IMPORT_ROWS + " rows");
+    }
+    return rows;
+  }
+
+  private void auditImport(
+      String tenantId,
+      String calendarId,
+      String actor,
+      String csv,
+      int rowCount,
+      ImportCounts counts) {
+    Map<String, Object> summary = new LinkedHashMap<>();
+    summary.put("rowCount", rowCount);
+    summary.put("createdCount", counts.created());
+    summary.put("overwrittenCount", counts.overwritten());
+    summary.put("unchangedCount", counts.unchanged());
+    summary.put("changedDates", counts.changedDates());
+    summary.put(
+        "changedDatesTruncated",
+        (counts.created() + counts.overwritten()) > counts.changedDates().size());
+    summary.put("csvSha256", sha256(csv));
     audit.recordChange(
         tenantId,
-        effectiveActor,
+        actor,
         "platform.calendar.import",
         "platform_calendar",
         calendarId,
         Map.of(),
         summary,
         Map.of("calendarId", calendarId, "source", "csv"));
-
-    return rows.size();
   }
+
+  private record ImportCounts(
+      int created, int overwritten, int unchanged, List<String> changedDates) {}
 
   public WorkdayCheckResponse checkWorkday(String tenantId, String calendarId, LocalDate date) {
     requireText(calendarId, "calendarId");
@@ -290,13 +314,8 @@ public class CalendarService {
               repository.upsertDay(
                   tenantId,
                   calendarId,
-                  date,
-                  derived.dayType(),
-                  derived.workday(),
-                  null,
-                  null,
-                  "generated",
-                  null,
+                  new CalendarDayMutation(
+                      date, derived.dayType(), derived.workday(), null, null, "generated", null),
                   actor);
             });
   }

@@ -43,10 +43,7 @@ public class RedisRateLimitService implements RateLimitService {
 
     try {
       List<?> result =
-          redis.execute(
-              SCRIPT,
-              List.of(namespaced(key)),
-              String.valueOf(window.toMillis()));
+          redis.execute(SCRIPT, List.of(namespaced(key)), String.valueOf(window.toMillis()));
 
       if (result == null || result.size() < 2) {
         throw new AppException(
@@ -65,9 +62,7 @@ public class RedisRateLimitService implements RateLimitService {
       return RateLimitDecision.allowed(limit - current, retryAfter);
     } catch (DataAccessException ex) {
       throw new AppException(
-          ErrorCode.RATE_LIMIT_BACKEND_UNAVAILABLE,
-          "rate limit backend is unavailable",
-          ex);
+          ErrorCode.RATE_LIMIT_BACKEND_UNAVAILABLE, "rate limit backend is unavailable", ex);
     }
   }
 

@@ -24,7 +24,8 @@ class DomainConflictRulesTest {
   @Test
   void should_not_mutation_protect_create_userdata() {
     CreatePlatformUserData data =
-        new CreatePlatformUserData("alice", "Alice", "[email protected]", "changeMe-9!", "ACTIVE", java.util.Set.of());
+        new CreatePlatformUserData(
+            "alice", "Alice", "[email protected]", "changeMe-9!", "ACTIVE", java.util.Set.of());
     data.validate();
     assertThat(data.username()).isEqualTo("alice");
   }
@@ -32,7 +33,8 @@ class DomainConflictRulesTest {
   @Test
   void should_reject_short_initial_password() {
     CreatePlatformUserData data =
-        new CreatePlatformUserData("alice", "Alice", "[email protected]", "short", "ACTIVE", java.util.Set.of());
+        new CreatePlatformUserData(
+            "alice", "Alice", "[email protected]", "short", "ACTIVE", java.util.Set.of());
     org.assertj.core.api.Assertions.assertThatThrownBy(data::validate)
         .isInstanceOf(IllegalArgumentException.class);
   }

@@ -14,13 +14,13 @@
     "modules/aiops-security/src/main/java/io/aegisops/security/AuthorizationService.java"
   ],
   "documents": [
-    "00-README-基线与实施总览.md",
-    "01-Portal清理与导航代码.md",
-    "02-IAM数据库后端完整代码.md",
-    "03-用户与角色Portal完整代码.md",
-    "04-Formily-Shadcn统一运行时完整代码.md",
-    "05-DesignerDocument与设计器V2完整代码.md",
-    "06-Designer后端编译兼容与迁移代码.md",
-    "07-测试CI与企业验收.md"
+    "00-readme-基线与实施总览.md",
+    "01-portal清理与导航代码.md",
+    "02-iam数据库后端完整代码.md",
+    "03-用户与角色portal完整代码.md",
+    "04-formily-shadcn统一运行时完整代码.md",
+    "05-designer-document与设计器v2完整代码.md",
+    "06-designer后端编译兼容与迁移代码.md",
+    "07-测试ci与企业验收.md"
   ]
 }

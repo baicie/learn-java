@@ -227,8 +227,7 @@ public class WorkRecordTemplateVersionService {
   private WorkRecordTemplate requireTemplate(String tenantId, String templateId) {
     return templateRepository
         .find(tenantId, templateId)
-        .orElseThrow(
-            () -> new ResourceNotFoundException("template not found: " + templateId));
+        .orElseThrow(() -> new ResourceNotFoundException("template not found: " + templateId));
   }
 
   private void validateTemplatePublishable(WorkRecordTemplate template) {

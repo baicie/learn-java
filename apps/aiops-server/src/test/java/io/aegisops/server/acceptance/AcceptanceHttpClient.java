@@ -30,9 +30,7 @@ final class AcceptanceHttpClient {
   String login(String username, String password) {
     ResponseEntity<JsonNode> response =
         rest.postForEntity(
-            "/api/auth/login",
-            Map.of("username", username, "password", password),
-            JsonNode.class);
+            "/api/auth/login", Map.of("username", username, "password", password), JsonNode.class);
 
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
 
@@ -65,17 +63,11 @@ final class AcceptanceHttpClient {
     return data(exchangeJson(path, token, HttpMethod.DELETE, null));
   }
 
-  ResponseEntity<JsonNode> getRaw(
-      String path, String token, MultiValueMap<String, String> query) {
+  ResponseEntity<JsonNode> getRaw(String path, String token, MultiValueMap<String, String> query) {
     String uri =
-        UriComponentsBuilder.fromPath(path)
-            .queryParams(query)
-            .build()
-            .encode()
-            .toUriString();
+        UriComponentsBuilder.fromPath(path).queryParams(query).build().encode().toUriString();
 
-    return rest.exchange(
-        uri, HttpMethod.GET, new HttpEntity<>(headers(token)), JsonNode.class);
+    return rest.exchange(uri, HttpMethod.GET, new HttpEntity<>(headers(token)), JsonNode.class);
   }
 
   ResponseEntity<JsonNode> postRaw(String path, String token, Object body) {
@@ -86,8 +78,7 @@ final class AcceptanceHttpClient {
     HttpHeaders headers = headers(token);
     headers.setAccept(List.of(new MediaType("text", "csv")));
 
-    return rest.exchange(
-        path, HttpMethod.POST, new HttpEntity<>(body, headers), byte[].class);
+    return rest.exchange(path, HttpMethod.POST, new HttpEntity<>(body, headers), byte[].class);
   }
 
   MultiValueMap<String, String> query(String... values) {
@@ -114,8 +105,7 @@ final class AcceptanceHttpClient {
 
   private ResponseEntity<JsonNode> exchangeJson(
       String path, String token, HttpMethod method, Object body) {
-    return rest.exchange(
-        path, method, new HttpEntity<>(body, headers(token)), JsonNode.class);
+    return rest.exchange(path, method, new HttpEntity<>(body, headers(token)), JsonNode.class);
   }
 
   private JsonNode data(ResponseEntity<JsonNode> response) {

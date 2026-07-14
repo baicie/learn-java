@@ -25,12 +25,7 @@ const VALID_TYPES = new Set([
   'research',
 ])
 
-const VALID_STATUS = new Set([
-  'draft',
-  'review',
-  'accepted',
-  'deprecated',
-])
+const VALID_STATUS = new Set(['draft', 'review', 'accepted', 'deprecated'])
 
 const TYPE_DIRS: Record<string, string> = {
   architecture: 'architecture',
@@ -97,14 +92,34 @@ function initDocs(): void {
   const dirs = [
     'architecture',
     'adr',
-    'phases/phase-0', 'phases/phase-1', 'phases/phase-2',
-    'phases/phase-3', 'phases/phase-4', 'phases/phase-5', 'phases/phase-6',
-    'designs/phase-0', 'designs/phase-1', 'designs/phase-2',
-    'designs/phase-3', 'designs/phase-4', 'designs/phase-5', 'designs/phase-6',
-    'reviews/phase-0', 'reviews/phase-1', 'reviews/phase-2',
-    'reviews/phase-3', 'reviews/phase-4', 'reviews/phase-5', 'reviews/phase-6',
-    'fixes/phase-0', 'fixes/phase-1', 'fixes/phase-2',
-    'fixes/phase-3', 'fixes/phase-4', 'fixes/phase-5', 'fixes/phase-6',
+    'phases/phase-0',
+    'phases/phase-1',
+    'phases/phase-2',
+    'phases/phase-3',
+    'phases/phase-4',
+    'phases/phase-5',
+    'phases/phase-6',
+    'designs/phase-0',
+    'designs/phase-1',
+    'designs/phase-2',
+    'designs/phase-3',
+    'designs/phase-4',
+    'designs/phase-5',
+    'designs/phase-6',
+    'reviews/phase-0',
+    'reviews/phase-1',
+    'reviews/phase-2',
+    'reviews/phase-3',
+    'reviews/phase-4',
+    'reviews/phase-5',
+    'reviews/phase-6',
+    'fixes/phase-0',
+    'fixes/phase-1',
+    'fixes/phase-2',
+    'fixes/phase-3',
+    'fixes/phase-4',
+    'fixes/phase-5',
+    'fixes/phase-6',
     'api',
     'database',
     'integrations',
@@ -120,13 +135,28 @@ function initDocs(): void {
   }
 
   writeFileIfAbsent(path.join(docsRoot, 'README.md'), docsReadme())
-  writeFileIfAbsent(path.join(docsRoot, '_templates', 'design.md'), templateDesign())
+  writeFileIfAbsent(
+    path.join(docsRoot, '_templates', 'design.md'),
+    templateDesign()
+  )
   writeFileIfAbsent(path.join(docsRoot, '_templates', 'adr.md'), templateAdr())
-  writeFileIfAbsent(path.join(docsRoot, '_templates', 'phase.md'), templatePhase())
-  writeFileIfAbsent(path.join(docsRoot, '_templates', 'review.md'), templateReview())
+  writeFileIfAbsent(
+    path.join(docsRoot, '_templates', 'phase.md'),
+    templatePhase()
+  )
+  writeFileIfAbsent(
+    path.join(docsRoot, '_templates', 'review.md'),
+    templateReview()
+  )
   writeFileIfAbsent(path.join(docsRoot, '_templates', 'fix.md'), templateFix())
-  writeFileIfAbsent(path.join(docsRoot, '_templates', 'runbook.md'), templateRunbook())
-  writeFileIfAbsent(path.join(docsRoot, '_templates', 'research.md'), templateResearch())
+  writeFileIfAbsent(
+    path.join(docsRoot, '_templates', 'runbook.md'),
+    templateRunbook()
+  )
+  writeFileIfAbsent(
+    path.join(docsRoot, '_templates', 'research.md'),
+    templateResearch()
+  )
 
   writeFileIfAbsent(
     path.join(docsRoot, 'architecture', 'system-overview.md'),
@@ -175,7 +205,7 @@ Postmortem
 - ClickHouse
 - MinIO
 `,
-    }),
+    })
   )
 
   writeFileIfAbsent(
@@ -213,7 +243,7 @@ Build the project foundation.
 - API docs are accessible.
 - Empty dashboard renders.
 `,
-    }),
+    })
   )
 
   generateIndex()
@@ -225,11 +255,15 @@ function newDoc(args: string[]): void {
   const flags = parseFlags(args.slice(2))
 
   if (!type || !slug) {
-    fail('Usage: npx tsx scripts/docs.ts new <type> <slug> --title "Title" [--phase phase-0]')
+    fail(
+      'Usage: npx tsx scripts/docs.ts new <type> <slug> --title "Title" [--phase phase-0]'
+    )
   }
 
   if (!VALID_TYPES.has(type)) {
-    fail(`Invalid type "${type}". Valid types: ${Array.from(VALID_TYPES).join(', ')}`)
+    fail(
+      `Invalid type "${type}". Valid types: ${Array.from(VALID_TYPES).join(', ')}`
+    )
   }
 
   const title = (flags['title'] as string) || toTitle(slug)
@@ -237,7 +271,9 @@ function newDoc(args: string[]): void {
   const status = (flags['status'] as string) || 'draft'
 
   if (!VALID_STATUS.has(status)) {
-    fail(`Invalid status "${status}". Valid status: ${Array.from(VALID_STATUS).join(', ')}`)
+    fail(
+      `Invalid status "${status}". Valid status: ${Array.from(VALID_STATUS).join(', ')}`
+    )
   }
 
   const safeSlug = normalizeSlug(slug)
@@ -246,11 +282,12 @@ function newDoc(args: string[]): void {
 
   ensureDir(baseDir)
 
-  const filename = type === 'adr'
-    ? `${nextAdrNumber()}-${safeSlug}.md`
-    : type === 'phase'
-      ? 'README.md'
-      : `${date}-${safeSlug}.md`
+  const filename =
+    type === 'adr'
+      ? `${nextAdrNumber()}-${safeSlug}.md`
+      : type === 'phase'
+        ? 'README.md'
+        : `${date}-${safeSlug}.md`
 
   const filepath = path.join(baseDir, filename)
 
@@ -258,15 +295,22 @@ function newDoc(args: string[]): void {
     fail(`File already exists: ${relative(filepath)}`)
   }
 
-  const content = renderDocByType({ type, title, status, phase, slug: safeSlug })
+  const content = renderDocByType({
+    type,
+    title,
+    status,
+    phase,
+    slug: safeSlug,
+  })
   fs.writeFileSync(filepath, content, 'utf8')
 
   console.log(`Created ${relative(filepath)}`)
 }
 
 function checkDocs(): void {
-  const files = listMarkdownFiles(docsRoot)
-    .filter((file) => !file.includes(`${path.sep}_templates${path.sep}`))
+  const files = listMarkdownFiles(docsRoot).filter(
+    (file) => !file.includes(`${path.sep}_templates${path.sep}`)
+  )
 
   let errors = 0
   let warnings = 0
@@ -310,7 +354,12 @@ function checkDocs(): void {
       errors++
     }
 
-    const KNOWN_UPPERCASE = new Set(['README.md', 'INDEX.md', 'CHANGELOG.md', 'LICENSE'])
+    const KNOWN_UPPERCASE = new Set([
+      'README.md',
+      'INDEX.md',
+      'CHANGELOG.md',
+      'LICENSE',
+    ])
     if (filename !== filename.toLowerCase() && !KNOWN_UPPERCASE.has(filename)) {
       warn(`${rel}: filename should be lowercase`)
       warnings++
@@ -339,13 +388,16 @@ function generateIndex(): void {
     .filter((file) => !file.includes(`${path.sep}_templates${path.sep}`))
     .sort()
 
-  const groups = new Map<string, Array<{
-    rel: string
-    title: string
-    status: string
-    phase: string
-    updated: string
-  }>>()
+  const groups = new Map<
+    string,
+    Array<{
+      rel: string
+      title: string
+      status: string
+      phase: string
+      updated: string
+    }>
+  >()
 
   for (const file of files) {
     const rel = relative(file)
@@ -366,6 +418,21 @@ function generateIndex(): void {
     })
   }
 
+  const statusOrder = new Map([
+    ['accepted', 0],
+    ['review', 1],
+    ['draft', 2],
+    ['deprecated', 3],
+  ])
+  for (const items of groups.values()) {
+    items.sort(
+      (left, right) =>
+        (statusOrder.get(left.status) ?? 4) -
+          (statusOrder.get(right.status) ?? 4) ||
+        left.rel.localeCompare(right.rel)
+    )
+  }
+
   let out = `---
 title: Documentation Index
 type: operation
@@ -378,6 +445,9 @@ related: []
 ---
 
 # Documentation Index
+
+Start with [docs/README.md](README.md). Accepted documents are listed first;
+deprecated documents are retained only for historical context.
 
 This file is generated by:
 
@@ -401,7 +471,11 @@ Do not edit it manually.
     out += `\n`
   }
 
-  fs.writeFileSync(path.join(docsRoot, 'INDEX.md'), out, 'utf8')
+  fs.writeFileSync(
+    path.join(docsRoot, 'INDEX.md'),
+    `${out.trimEnd()}\n`,
+    'utf8'
+  )
   console.log('Generated docs/INDEX.md')
 }
 
@@ -469,7 +543,12 @@ function renderDocByType(input: DocInput): string {
   }
 }
 
-function renderFrontmatter(opts: { title: string; type: string; status: string; phase: string }): string {
+function renderFrontmatter(opts: {
+  title: string
+  type: string
+  status: string
+  phase: string
+}): string {
   return `---
 title: ${opts.title}
 type: ${opts.type}
@@ -668,7 +747,13 @@ function renderResearch(input: DocInput): string {
 `
 }
 
-function starterDoc(opts: { title: string; type: string; status: string; phase: string; body: string }): string {
+function starterDoc(opts: {
+  title: string
+  type: string
+  status: string
+  phase: string
+  body: string
+}): string {
   return `${renderFrontmatter({ title: opts.title, type: opts.type, status: opts.status, phase: opts.phase })}${opts.body}`
 }
 
@@ -775,31 +860,66 @@ npx tsx scripts/docs.ts index
 }
 
 function templateDesign(): string {
-  return renderDesign({ title: 'Design Template', type: 'design', status: 'draft', phase: 'phase-x' })
+  return renderDesign({
+    title: 'Design Template',
+    type: 'design',
+    status: 'draft',
+    phase: 'phase-x',
+  })
 }
 
 function templateAdr(): string {
-  return renderAdr({ title: 'ADR Template', type: 'adr', status: 'draft', phase: 'global' })
+  return renderAdr({
+    title: 'ADR Template',
+    type: 'adr',
+    status: 'draft',
+    phase: 'global',
+  })
 }
 
 function templatePhase(): string {
-  return renderPhase({ title: 'Phase Template', type: 'phase', status: 'draft', phase: 'phase-x' })
+  return renderPhase({
+    title: 'Phase Template',
+    type: 'phase',
+    status: 'draft',
+    phase: 'phase-x',
+  })
 }
 
 function templateReview(): string {
-  return renderReview({ title: 'Review Template', type: 'review', status: 'draft', phase: 'phase-x' })
+  return renderReview({
+    title: 'Review Template',
+    type: 'review',
+    status: 'draft',
+    phase: 'phase-x',
+  })
 }
 
 function templateFix(): string {
-  return renderFix({ title: 'Fix Template', type: 'fix', status: 'draft', phase: 'phase-x' })
+  return renderFix({
+    title: 'Fix Template',
+    type: 'fix',
+    status: 'draft',
+    phase: 'phase-x',
+  })
 }
 
 function templateRunbook(): string {
-  return renderRunbook({ title: 'Runbook Template', type: 'runbook', status: 'draft', phase: 'global' })
+  return renderRunbook({
+    title: 'Runbook Template',
+    type: 'runbook',
+    status: 'draft',
+    phase: 'global',
+  })
 }
 
 function templateResearch(): string {
-  return renderResearch({ title: 'Research Template', type: 'research', status: 'draft', phase: 'global' })
+  return renderResearch({
+    title: 'Research Template',
+    type: 'research',
+    status: 'draft',
+    phase: 'global',
+  })
 }
 
 function parseFlags(args: string[]): Record<string, string | boolean> {
@@ -849,7 +969,9 @@ function parseFrontmatter(content: string): Frontmatter | null {
 
   for (const line of lines) {
     if (/^\s*-\s+/.test(line) && currentArrayKey) {
-      ;(result[currentArrayKey] as string[]).push(line.replace(/^\s*-\s+/, '').trim())
+      ;(result[currentArrayKey] as string[]).push(
+        line.replace(/^\s*-\s+/, '').trim()
+      )
       continue
     }
 
@@ -881,7 +1003,8 @@ function listMarkdownFiles(dir: string): string[] {
     const full = path.join(dir, entry.name)
 
     if (entry.isDirectory()) {
-      if (['node_modules', '.git', 'dist', 'build'].includes(entry.name)) continue
+      if (['node_modules', '.git', 'dist', 'build'].includes(entry.name))
+        continue
       result.push(...listMarkdownFiles(full))
     } else if (entry.isFile() && entry.name.endsWith('.md')) {
       result.push(full)
@@ -895,7 +1018,8 @@ function nextAdrNumber(): string {
   const adrDir = path.join(docsRoot, 'adr')
   ensureDir(adrDir)
 
-  const nums = fs.readdirSync(adrDir)
+  const nums = fs
+    .readdirSync(adrDir)
     .map((name) => name.match(/^(\d{4})-/)?.[1])
     .filter((n): n is string => Boolean(n))
     .map((v) => Number(v))
@@ -905,7 +1029,19 @@ function nextAdrNumber(): string {
 }
 
 function defaultPhaseForType(type: string): string {
-  if (['architecture', 'adr', 'api', 'database', 'integration', 'ai', 'operation', 'runbook', 'research'].includes(type)) {
+  if (
+    [
+      'architecture',
+      'adr',
+      'api',
+      'database',
+      'integration',
+      'ai',
+      'operation',
+      'runbook',
+      'research',
+    ].includes(type)
+  ) {
     return 'global'
   }
   return 'phase-0'

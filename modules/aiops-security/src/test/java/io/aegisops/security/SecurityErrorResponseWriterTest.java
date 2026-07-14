@@ -1,7 +1,7 @@
 package io.aegisops.security;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.assertThatCode;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -12,9 +12,8 @@ import org.springframework.mock.web.MockHttpServletResponse;
 
 class SecurityErrorResponseWriterTest {
 
-  private final ObjectMapper objectMapper = new ObjectMapper();
-  private final SecurityErrorResponseWriter writer =
-      new SecurityErrorResponseWriter(objectMapper);
+  private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
+  private final SecurityErrorResponseWriter writer = new SecurityErrorResponseWriter(objectMapper);
 
   @AfterEach
   void clearMdc() {
@@ -64,8 +63,7 @@ class SecurityErrorResponseWriterTest {
     MockHttpServletResponse response = new MockHttpServletResponse();
     response.setCommitted(true);
 
-    assertThatThrownBy(
-            () -> writer.write(response, 503, "RATE_LIMIT_BACKEND_UNAVAILABLE", "down"))
+    assertThatCode(() -> writer.write(response, 503, "RATE_LIMIT_BACKEND_UNAVAILABLE", "down"))
         .doesNotThrowAnyException();
   }
 }

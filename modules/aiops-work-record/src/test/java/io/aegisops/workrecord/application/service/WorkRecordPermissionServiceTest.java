@@ -139,7 +139,11 @@ class WorkRecordPermissionServiceTest {
   }
 
   private UserPrincipal principal(String id, Set<String> permissions, DataScope scope) {
-    return new UserPrincipal(id, "t1", id, id, Set.of(), permissions, Map.of("work-record", scope));
+    return new UserPrincipal(
+        new UserPrincipal.Identity(id, "t1", id, id),
+        Set.of(),
+        permissions,
+        Map.of("work-record", scope));
   }
 
   private WorkRecord record(String creatorId, String ownerId) {

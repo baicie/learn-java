@@ -22,8 +22,7 @@ class WorkRecordHealthIndicatorTest {
   @Test
   void requiresIndexesButAllValidReturnsUp() {
     NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
-    when(jdbc.queryForObject(eq("select 1"), any(Map.class), eq(Integer.class)))
-        .thenReturn(1);
+    when(jdbc.queryForObject(eq("select 1"), any(Map.class), eq(Integer.class))).thenReturn(1);
     when(jdbc.queryForObject(any(String.class), any(Map.class), eq(Boolean.class)))
         .thenReturn(true);
 
@@ -39,8 +38,7 @@ class WorkRecordHealthIndicatorTest {
   @Test
   void missingOrInvalidIndexReturnsDownWithDetails() {
     NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
-    when(jdbc.queryForObject(eq("select 1"), any(Map.class), eq(Integer.class)))
-        .thenReturn(1);
+    when(jdbc.queryForObject(eq("select 1"), any(Map.class), eq(Integer.class))).thenReturn(1);
     when(jdbc.queryForObject(any(String.class), any(Map.class), eq(Boolean.class)))
         .thenReturn(false);
 
@@ -51,15 +49,13 @@ class WorkRecordHealthIndicatorTest {
     assertThat(health.getStatus()).isEqualTo(Status.DOWN);
     assertThat(health.getDetails().get("missingOrInvalidIndexes"))
         .isInstanceOf(java.util.List.class);
-    assertThat((java.util.List<?>) health.getDetails().get("missingOrInvalidIndexes"))
-        .isNotEmpty();
+    assertThat((java.util.List<?>) health.getDetails().get("missingOrInvalidIndexes")).isNotEmpty();
   }
 
   @Test
   void requiresConstraintsButNotValidatedReturnsDown() {
     NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
-    when(jdbc.queryForObject(eq("select 1"), any(Map.class), eq(Integer.class)))
-        .thenReturn(1);
+    when(jdbc.queryForObject(eq("select 1"), any(Map.class), eq(Integer.class))).thenReturn(1);
     when(jdbc.queryForObject(any(String.class), any(Map.class), eq(Boolean.class)))
         .thenReturn(false);
 
@@ -75,8 +71,7 @@ class WorkRecordHealthIndicatorTest {
   @Test
   void noRequirementMeansNoIndexOrConstraintCheck() {
     NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
-    when(jdbc.queryForObject(eq("select 1"), any(Map.class), eq(Integer.class)))
-        .thenReturn(1);
+    when(jdbc.queryForObject(eq("select 1"), any(Map.class), eq(Integer.class))).thenReturn(1);
 
     HealthIndicatorFixture fixture = newFixture(jdbc, false, false);
 
@@ -90,8 +85,7 @@ class WorkRecordHealthIndicatorTest {
   @Test
   void missingTableReturnsDown() {
     NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
-    when(jdbc.queryForObject(eq("select 1"), any(Map.class), eq(Integer.class)))
-        .thenReturn(1);
+    when(jdbc.queryForObject(eq("select 1"), any(Map.class), eq(Integer.class))).thenReturn(1);
     when(jdbc.queryForObject(
             org.mockito.ArgumentMatchers.contains("to_regclass"),
             any(Map.class),
@@ -103,10 +97,8 @@ class WorkRecordHealthIndicatorTest {
     Health health = fixture.indicator().health();
 
     assertThat(health.getStatus()).isEqualTo(Status.DOWN);
-    assertThat(health.getDetails().get("missingTables"))
-        .isInstanceOf(java.util.List.class);
-    assertThat((java.util.List<?>) health.getDetails().get("missingTables"))
-        .isNotEmpty();
+    assertThat(health.getDetails().get("missingTables")).isInstanceOf(java.util.List.class);
+    assertThat((java.util.List<?>) health.getDetails().get("missingTables")).isNotEmpty();
   }
 
   @Test
@@ -127,9 +119,7 @@ class WorkRecordHealthIndicatorTest {
     return new HealthIndicatorFixture(jdbc, requireIndexes, requireValidated);
   }
 
-  /**
-   * 简单的 Holder，让调用方少写一次构造。
-   */
+  /** 简单的 Holder，让调用方少写一次构造。 */
   private record HealthIndicatorFixture(
       NamedParameterJdbcTemplate jdbc, boolean requireIndexes, boolean requireValidated) {
 

@@ -40,8 +40,7 @@ public class GlobalExceptionHandler {
             .map(error -> error.getField() + ": " + error.getDefaultMessage())
             .collect(Collectors.joining("; "));
 
-    return response(
-        HttpStatus.BAD_REQUEST.value(), ErrorCode.VALIDATION_ERROR.name(), message);
+    return response(HttpStatus.BAD_REQUEST.value(), ErrorCode.VALIDATION_ERROR.name(), message);
   }
 
   @ExceptionHandler(ConstraintViolationException.class)
@@ -68,15 +67,12 @@ public class GlobalExceptionHandler {
   @ExceptionHandler(RequestBodyTooLargeException.class)
   public ResponseEntity<ApiResponse<Void>> handleTooLarge(RequestBodyTooLargeException ex) {
     return response(
-        HttpStatus.PAYLOAD_TOO_LARGE.value(),
-        ErrorCode.PAYLOAD_TOO_LARGE.name(),
-        ex.getMessage());
+        HttpStatus.PAYLOAD_TOO_LARGE.value(), ErrorCode.PAYLOAD_TOO_LARGE.name(), ex.getMessage());
   }
 
   @ExceptionHandler(IllegalArgumentException.class)
   public ResponseEntity<ApiResponse<Void>> handleBadRequest(IllegalArgumentException ex) {
-    return response(
-        HttpStatus.BAD_REQUEST.value(), ErrorCode.BAD_REQUEST.name(), ex.getMessage());
+    return response(HttpStatus.BAD_REQUEST.value(), ErrorCode.BAD_REQUEST.name(), ex.getMessage());
   }
 
   @ExceptionHandler({SecurityException.class, AccessDeniedException.class})
@@ -127,7 +123,8 @@ public class GlobalExceptionHandler {
   }
 
   @ExceptionHandler(Exception.class)
-  public ResponseEntity<ApiResponse<Void>> handleUnexpected(Exception ex, HttpServletRequest request) {
+  public ResponseEntity<ApiResponse<Void>> handleUnexpected(
+      Exception ex, HttpServletRequest request) {
     log.error(
         "unexpected API error: method={}, path={}, requestId={}",
         request.getMethod(),
@@ -142,8 +139,7 @@ public class GlobalExceptionHandler {
   }
 
   private ResponseEntity<ApiResponse<Void>> response(int status, String code, String message) {
-    return ResponseEntity.status(status)
-        .body(ApiResponse.fail(code, message, requestId()));
+    return ResponseEntity.status(status).body(ApiResponse.fail(code, message, requestId()));
   }
 
   private String requestId() {

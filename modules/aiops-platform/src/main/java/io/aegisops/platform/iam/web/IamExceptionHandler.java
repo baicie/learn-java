@@ -32,9 +32,13 @@ public class IamExceptionHandler {
     return ResponseEntity.status(HttpStatus.BAD_REQUEST)
         .body(
             Map.of(
-                "ok", false,
-                "code", IamErrorCode.VALIDATION_FAILED.code(),
-                "httpStatus", IamErrorCode.VALIDATION_FAILED.httpStatus(),
-                "message", ex.getMessage() == null ? "invalid argument" : ex.getMessage()));
+                "ok",
+                false,
+                "code",
+                IamErrorCode.VALIDATION_FAILED.code(),
+                "httpStatus",
+                IamErrorCode.VALIDATION_FAILED.httpStatus(),
+                "message",
+                ex.getMessage() == null ? "invalid argument" : ex.getMessage()));
   }
 }

@@ -4,7 +4,4 @@ import java.util.Map;
 import java.util.Set;
 
 public record UpdatePlatformUserData(
-    String displayName,
-    String email,
-    Set<String> roleCodes,
-    Map<String, String> patch) {}
+    String displayName, String email, Set<String> roleCodes, Map<String, String> patch) {}

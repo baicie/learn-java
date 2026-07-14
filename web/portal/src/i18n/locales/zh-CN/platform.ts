@@ -23,8 +23,7 @@ export const platform = {
   'platform.users.create': '新建用户',
   'platform.users.empty.title': '暂无用户',
   'platform.users.empty.description': '创建第一个真实平台用户。',
-  'platform.users.error.version_conflict':
-    '用户信息已变更，请刷新后重试。',
+  'platform.users.error.version_conflict': '用户信息已变更，请刷新后重试。',
   'platform.users.error.username_conflict': '用户名已被占用。',
   'platform.users.error.not_found': '用户不存在或已被删除。',
   'platform.users.confirm.disable.title': '禁用用户 {name}',
@@ -41,9 +40,7 @@ export const platform = {
     '以下权限涉及高风险操作，必须输入变更原因并明确确认。',
   'platform.roles.error.protected': '系统角色不可修改或删除。',
   'platform.roles.error.hasActiveUsers': '当前角色仍有活跃用户，无法删除。',
-  'platform.roles.error.permissionRemoved':
-    '无法移除仍被活跃用户持有的权限。',
-  'platform.roles.error.versionConflict':
-    '角色配置已变更，请刷新后重试。',
+  'platform.roles.error.permissionRemoved': '无法移除仍被活跃用户持有的权限。',
+  'platform.roles.error.versionConflict': '角色配置已变更，请刷新后重试。',
   'platform.roles.error.notFound': '角色不存在或已被删除。',
 } as const

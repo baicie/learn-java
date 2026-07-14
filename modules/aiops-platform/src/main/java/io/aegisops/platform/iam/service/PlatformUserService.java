@@ -12,6 +12,7 @@ import io.aegisops.platform.iam.domain.UpdatePlatformUserData;
 import io.aegisops.platform.iam.error.IamDomainException;
 import io.aegisops.platform.iam.error.IamErrorCode;
 import io.aegisops.platform.iam.repository.PlatformRoleRepository;
+import io.aegisops.platform.iam.repository.PlatformUserCreateCommand;
 import io.aegisops.platform.iam.repository.PlatformUserRepository;
 import java.time.OffsetDateTime;
 import java.util.HashSet;
@@ -68,14 +69,15 @@ public class PlatformUserService {
     PlatformUserStatus status = PlatformUserStatus.from(data.status());
     Optional<PlatformUser> created =
         users.insert(
-            id,
-            null,
-            data.username(),
-            data.displayName(),
-            data.email(),
-            passwordEncoder.encode(data.initialPassword()),
-            status,
-            now);
+            new PlatformUserCreateCommand(
+                id,
+                null,
+                data.username(),
+                data.displayName(),
+                data.email(),
+                passwordEncoder.encode(data.initialPassword()),
+                status,
+                now));
     PlatformUser persisted =
         created.orElseThrow(
             () ->
@@ -91,7 +93,7 @@ public class PlatformUserService {
         "platform.user.created",
         "platform.user",
         persisted.id(),
-        Map.of("status", null),
+        Map.of(),
         Map.of("status", persisted.status().value()),
         Map.of("username", persisted.username()));
     return users
@@ -99,8 +101,7 @@ public class PlatformUserService {
         .orElseThrow(
             () ->
                 new IamDomainException(
-                    IamErrorCode.USER_NOT_FOUND,
-                    "user vanished after create: " + persisted.id()));
+                    IamErrorCode.USER_NOT_FOUND, "user vanished after create: " + persisted.id()));
   }
 
   @Transactional
@@ -124,8 +125,7 @@ public class PlatformUserService {
         Map.of(
             "displayName", data.displayName() == null ? existing.displayName() : data.displayName(),
             "email", data.email() == null ? existing.email() : data.email()),
-        Map.of(
-            "roles", data.roleCodes() == null ? "unchanged" : List.copyOf(data.roleCodes())));
+        Map.of("roles", data.roleCodes() == null ? "unchanged" : List.copyOf(data.roleCodes())));
     return findById(id);
   }
 
@@ -136,15 +136,14 @@ public class PlatformUserService {
     if (!List.of(PlatformUserStatus.ACTIVE, PlatformUserStatus.DISABLED, PlatformUserStatus.LOCKED)
         .contains(nextStatus)) {
       throw new IamDomainException(
-          IamErrorCode.VALIDATION_FAILED, "unsupported status transition target: " + command.status());
+          IamErrorCode.VALIDATION_FAILED,
+          "unsupported status transition target: " + command.status());
     }
     int updated =
         users.updateStatus(
             id,
             nextStatus,
-            nextStatus == PlatformUserStatus.LOCKED
-                ? OffsetDateTime.now().plusMinutes(15)
-                : null,
+            nextStatus == PlatformUserStatus.LOCKED ? OffsetDateTime.now().plusMinutes(15) : null,
             OffsetDateTime.now(),
             command.rowVersion());
     if (updated == 0) {

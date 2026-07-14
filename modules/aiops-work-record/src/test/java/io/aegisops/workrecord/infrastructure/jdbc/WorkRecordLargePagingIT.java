@@ -144,8 +144,7 @@ class WorkRecordLargePagingIT {
     for (int i = 1; i < items.size(); i++) {
       WorkRecord previous = items.get(i - 1);
       WorkRecord current = items.get(i);
-      assertThat(current.recordTime())
-          .isAfterOrEqualTo(previous.recordTime());
+      assertThat(current.recordTime()).isAfterOrEqualTo(previous.recordTime());
       if (current.recordTime().isEqual(previous.recordTime())) {
         assertThat(current.id()).isGreaterThan(previous.id());
       }
@@ -197,10 +196,14 @@ class WorkRecordLargePagingIT {
       for (int i = offset; i < end; i++) {
         batch[i - offset] =
             Map.of(
-                "id", "rec_" + String.format("%07d", i),
-                "tenantId", "tenant-1",
-                "title", "record-" + i,
-                "recordTime", baseTime.plusMinutes(i));
+                "id",
+                "rec_" + String.format("%07d", i),
+                "tenantId",
+                "tenant-1",
+                "title",
+                "record-" + i,
+                "recordTime",
+                baseTime.plusMinutes(i));
       }
       SqlParameterSource[] params = SqlParameterSourceUtils.createBatch(batch);
 

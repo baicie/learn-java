@@ -17,15 +17,13 @@ import org.springframework.web.filter.OncePerRequestFilter;
  * 限流 Filter。所有入站请求按以下顺序确定主体：
  *
  * <ol>
- *   <li>{@code /api/auth/**}：认证路径，必须忽略可伪造的 {@code X-Tenant-Id} 头，
- *       按客户端 IP 计入匿名限流，防止暴力破解登录。
+ *   <li>{@code /api/auth/**}：认证路径，必须忽略可伪造的 {@code X-Tenant-Id} 头， 按客户端 IP 计入匿名限流，防止暴力破解登录。
  *   <li>已有 {@link TenantContext}（通常来自内部 Agent 调用）：按租户 + internal/public 桶计数。
  *   <li>其他请求：按请求 IP 计入匿名限流。
  * </ol>
  *
- * <p>限流被拒或后端不可用时，统一通过 {@link SecurityErrorResponseWriter} 以
- * {@link io.aegisops.common.api.ApiResponse} 契约输出，避免绕过 Controller 的
- * {@code GlobalExceptionHandler}。
+ * <p>限流被拒或后端不可用时，统一通过 {@link SecurityErrorResponseWriter} 以 {@link
+ * io.aegisops.common.api.ApiResponse} 契约输出，避免绕过 Controller 的 {@code GlobalExceptionHandler}。
  */
 @Order(Ordered.HIGHEST_PRECEDENCE + 40)
 public class TenantRateLimitFilter extends OncePerRequestFilter {
@@ -67,14 +65,10 @@ public class TenantRateLimitFilter extends OncePerRequestFilter {
 
     RateLimitDecision decision;
     try {
-      decision =
-          rateLimiter.acquire(subject.key(), subject.limit(), Duration.ofMinutes(1));
+      decision = rateLimiter.acquire(subject.key(), subject.limit(), Duration.ofMinutes(1));
     } catch (AppException ex) {
       responseWriter.write(
-          response,
-          ex.httpStatus(),
-          ex.errorCode(),
-          "rate limit service is unavailable");
+          response, ex.httpStatus(), ex.errorCode(), "rate limit service is unavailable");
       return;
     }
 
@@ -85,11 +79,7 @@ public class TenantRateLimitFilter extends OncePerRequestFilter {
     if (!decision.allowed()) {
       if (subject.tenantId() != null) {
         auditService.record(
-            subject.tenantId(),
-            "rate_limited",
-            "high",
-            "Request rate limited",
-            request);
+            subject.tenantId(), "rate_limited", "high", "Request rate limited", request);
       }
 
       String errorCode =
@@ -121,8 +111,7 @@ public class TenantRateLimitFilter extends OncePerRequestFilter {
     }
 
     String tenantId = TenantContext.getTenantId();
-    if ((tenantId == null || tenantId.isBlank())
-        && path.startsWith("/internal/agent/")) {
+    if ((tenantId == null || tenantId.isBlank()) && path.startsWith("/internal/agent/")) {
       tenantId = request.getHeader(SecurityConstants.HEADER_TENANT_ID);
     }
 

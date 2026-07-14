@@ -247,8 +247,7 @@ public class JdbcPlatformRoleRepository implements PlatformRoleRepository {
           String scopeType = rs.getString("scope_type");
           String raw = rs.getString("scope_json");
           result.put(
-              resource,
-              new PlatformRoleDetail.RoleDataScope(resource, scopeType, parseJson(raw)));
+              resource, new PlatformRoleDetail.RoleDataScope(resource, scopeType, parseJson(raw)));
         },
         code);
     return result;

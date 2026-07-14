@@ -12,10 +12,7 @@ class UserPrincipalAuthorityTest {
   void shouldExposeDatabaseRolesAndPermissionsAsAuthorities() {
     UserPrincipal principal =
         new UserPrincipal(
-            "u1",
-            "t1",
-            "alice",
-            "Alice",
+            new UserPrincipal.Identity("u1", "t1", "alice", "Alice"),
             Set.of(BuiltInRoleCodes.NORMAL_USER),
             Set.of(PermissionCodes.WORK_RECORD_READ_SELF, PermissionCodes.WORK_RECORD_WRITE),
             Map.of("work-record", DataScope.SELF));
@@ -30,10 +27,7 @@ class UserPrincipalAuthorityTest {
   void roleMustNotImplicitlyGrantHardcodedPermissions() {
     UserPrincipal principal =
         new UserPrincipal(
-            "u1",
-            "t1",
-            "alice",
-            "Alice",
+            new UserPrincipal.Identity("u1", "t1", "alice", "Alice"),
             Set.of(BuiltInRoleCodes.SYSTEM_ADMIN),
             Set.of(),
             Map.of());

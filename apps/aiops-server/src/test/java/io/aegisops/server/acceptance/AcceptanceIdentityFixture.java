@@ -29,24 +29,16 @@ final class AcceptanceIdentityFixture {
   }
 
   Identities create() {
-    String suffix =
-        UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+    String suffix = UUID.randomUUID().toString().replace("-", "").substring(0, 8);
 
     Tenant tenant =
-        tenantRepository.create(
-            "acceptance-" + suffix, "Phase 18 Acceptance " + suffix);
+        tenantRepository.create("acceptance-" + suffix, "Phase 18 Acceptance " + suffix);
 
-    Account admin =
-        createAccount(
-            tenant.id(), "acc-admin-" + suffix, "验收管理员", "system_admin");
+    Account admin = createAccount(tenant.id(), "acc-admin-" + suffix, "验收管理员", "system_admin");
 
-    Account userA =
-        createAccount(
-            tenant.id(), "acc-user-a-" + suffix, "验收用户 A", "normal_user");
+    Account userA = createAccount(tenant.id(), "acc-user-a-" + suffix, "验收用户 A", "normal_user");
 
-    Account userB =
-        createAccount(
-            tenant.id(), "acc-user-b-" + suffix, "验收用户 B", "normal_user");
+    Account userB = createAccount(tenant.id(), "acc-user-b-" + suffix, "验收用户 B", "normal_user");
 
     return new Identities(suffix, tenant.id(), admin, userA, userB);
   }
@@ -61,14 +53,12 @@ final class AcceptanceIdentityFixture {
             username + "@example.test",
             passwordEncoder.encode(PASSWORD));
 
-    authorizationService.assignRole(
-        tenantId, user.id(), roleCode, "phase18-acceptance");
+    authorizationService.assignRole(tenantId, user.id(), roleCode, "phase18-acceptance");
 
     return new Account(user.id(), user.username(), displayName, PASSWORD);
   }
 
-  record Identities(
-      String suffix, String tenantId, Account admin, Account userA, Account userB) {}
+  record Identities(String suffix, String tenantId, Account admin, Account userA, Account userB) {}
 
   record Account(String id, String username, String displayName, String password) {}
 }

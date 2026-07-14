@@ -13,7 +13,8 @@ class PlatformUserQueryTest {
   @Test
   void should_clamp_page_and_pagesize() {
     PlatformUserQuery query =
-        new PlatformUserQuery("alice", PlatformUserStatus.ACTIVE, Set.of("admin"), -1, 0).normalized();
+        new PlatformUserQuery("alice", PlatformUserStatus.ACTIVE, Set.of("admin"), -1, 0)
+            .normalized();
 
     assertThat(query.page()).isEqualTo(1);
     assertThat(query.pageSize()).isEqualTo(20);
@@ -29,22 +30,19 @@ class PlatformUserQueryTest {
 
   @Test
   void should_cap_huge_pagesize() {
-    PlatformUserQuery query =
-        new PlatformUserQuery(null, null, null, 1, 9999).normalized();
+    PlatformUserQuery query = new PlatformUserQuery(null, null, null, 1, 9999).normalized();
     assertThat(query.pageSize()).isEqualTo(200);
   }
 
   @Test
   void should_default_empty_role_set_for_null() {
-    PlatformUserQuery query =
-        new PlatformUserQuery(null, null, null, 1, 20).normalized();
+    PlatformUserQuery query = new PlatformUserQuery(null, null, null, 1, 20).normalized();
     assertThat(query.roleCodes()).isEmpty();
   }
 
   @Test
   void should_reject_null_status_input_via_normalized() {
-    PlatformUserQuery query =
-        new PlatformUserQuery(null, null, Set.of("a"), 1, 20).normalized();
+    PlatformUserQuery query = new PlatformUserQuery(null, null, Set.of("a"), 1, 20).normalized();
     assertThat(query.status()).isNull();
     // Sanity check on still-string-rejection path: throwaway exception path
     assertThatThrownBy(() -> PlatformUserStatus.from("made-up"))

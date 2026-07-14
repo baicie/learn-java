@@ -1,6 +1,9 @@
-import { render } from 'vitest-browser-react'
 import { describe, expect, it, vi } from 'vitest'
-import { ConfirmProvider, useConfirm } from '@/components/feedback/confirm-provider'
+import { render } from 'vitest-browser-react'
+import {
+  ConfirmProvider,
+  useConfirm,
+} from '@/components/feedback/confirm-provider'
 
 function Consumer({ onResult }: { onResult: (result: boolean) => void }) {
   const confirm = useConfirm()
@@ -35,7 +38,9 @@ describe('useConfirm with confirmationText', () => {
       .element() as HTMLButtonElement
     expect(confirmButton.disabled).toBe(true)
 
-    const input = screen.getByTestId('confirm-input').element() as HTMLInputElement
+    const input = screen
+      .getByTestId('confirm-input')
+      .element() as HTMLInputElement
     const nativeInputValue = Object.getOwnPropertyDescriptor(
       window.HTMLInputElement.prototype,
       'value'

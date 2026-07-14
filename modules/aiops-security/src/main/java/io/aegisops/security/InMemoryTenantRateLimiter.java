@@ -21,9 +21,7 @@ public class InMemoryTenantRateLimiter implements RateLimitService {
     this.clock = clock;
   }
 
-  /**
-   * 保留旧测试兼容入口。
-   */
+  /** 保留旧测试兼容入口。 */
   public boolean tryAcquire(String key, int limitPerMinute) {
     return acquire(key, limitPerMinute, Duration.ofMinutes(1)).allowed();
   }
@@ -41,8 +39,7 @@ public class InMemoryTenantRateLimiter implements RateLimitService {
         windows.compute(
             key,
             (ignored, existing) -> {
-              if (existing == null
-                  || now - existing.windowStartMillis >= windowMillis) {
+              if (existing == null || now - existing.windowStartMillis >= windowMillis) {
                 return new Window(now, 1);
               }
               existing.count++;
@@ -51,10 +48,7 @@ public class InMemoryTenantRateLimiter implements RateLimitService {
 
     cleanupOccasionally(now, windowMillis);
 
-    long retryAfter =
-        Math.max(
-            1,
-            (current.windowStartMillis + windowMillis - now + 999) / 1000);
+    long retryAfter = Math.max(1, (current.windowStartMillis + windowMillis - now + 999) / 1000);
 
     if (current.count > limit) {
       return RateLimitDecision.rejected(retryAfter);

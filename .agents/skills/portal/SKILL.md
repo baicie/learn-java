@@ -1,6 +1,6 @@
 ---
 name: portal
-description: 在 web/portal (shadcn-admin 模板) 二次开发时使用本 Skill。它指导 Agent 在保持模板原始风格的前提下，逐步把 AegisOps / FaultLens 的能力（Incident、AI 诊断、Runbook、审计）以新增 feature 形式接入，遵守 Radix / Tailwind v4 / TanStack Router / TanStack Query / Zustand 的现有约定。适用于新增页面、表格、表单、Provider、Store、测试与依赖增删。
+description: 在 web/portal (shadcn-admin 模板) 二次开发时使用本 Skill。它指导 Agent 按 pages/api/auth/components/hooks/lib 分层接入 AegisOps / FaultLens 能力，遵守 Radix / Tailwind v4 / TanStack Router / TanStack Query / Zustand 的现有约定。适用于新增页面、表格、表单、Provider、Store、测试与依赖增删。
 ---
 
 # web/portal Skill (shadcn-admin 二次开发)
@@ -13,8 +13,8 @@ description: 在 web/portal (shadcn-admin 模板) 二次开发时使用本 Skill
 web/portal = shadcn-admin 模板血统的运营 / 控制台应用
   - 主要技术栈由模板决定, 不与 web/console 共享主题变量与代码
   - 保留 Clerk 作为登录壳, 但 AegisOps 真正的权限是后端 Spring Security
-  - 模板数据用 @faker-js/faker 生成, 真实数据接入 AegisOps 后端时只能新增, 不删除模板示例
-  - 后续 AegisOps 业务能力以 features/<feature>/ 形式增量加入, 不动模板原 features
+  - AegisOps 真实业务代码按 pages/api/auth/components/hooks/lib 职责归位
+  - `src/features` 已由 ADR 0007 删除, CI 禁止重新创建或引用
 ```
 
 冲突优先级（覆盖本 Skill 时）:
@@ -23,7 +23,7 @@ web/portal = shadcn-admin 模板血统的运营 / 控制台应用
 1. .agents/skills/portal/SKILL.md (本文件)
 2. references/portal-frontend-conventions.md
 3. .agents/skills/aegisops/SKILL.md (后端事实)
-4. .agents/skills/vercel-react-best-practices/AGENTS.md
+4. .agents/skills/vercel-react-best-practices/AGENTS.md（可选参考）
 5. web/portal/components.json
 6. web/portal/eslint.config.js
 7. AGENTS.md (只用于入口与执行提醒)
@@ -75,7 +75,7 @@ web/portal = shadcn-admin 模板血统的运营 / 控制台应用
 - 用 SWR 替代 TanStack Query
 - 引入 console 的 @/components/ui 别名引用方式（portal 自己的 components.json 已定义）
 - 用 Tailwind 原色 (bg-blue-500) 替代语义色 token, 除非 portal 已存在的语义变体不够用
-- 在 features/<name>/ 之外的目录写业务页面
+- 新增 `src/features` 或引用 `@/features/*`
 - 引入 langchain-ui / assistant-ui / prompt-kit（portal 是后台壳, 不直接拼 AI Chat）
 ```
 
@@ -101,15 +101,12 @@ web/portal/src/
 │   ├── theme-switch.tsx
 │   ├── sign-out-dialog.tsx
 │   └── skip-to-main.tsx
-├── features/                       # 业务 feature, 每个一个目录
-│   ├── users/                      # 完整示例, 后面新 feature 模仿它
-│   ├── tasks/
-│   ├── chats/
-│   ├── dashboard/
-│   ├── settings/                   # profile / account / appearance / display / notifications
-│   ├── errors/
-│   ├── auth/                       # auth-layout.tsx + forgot-password / otp / sign-in / sign-up
-│   └── apps/                       # 占位, 模板示例
+├── api/                            # 按资源组织的带类型 HTTP 客户端
+├── auth/                           # 登录、授权缓存、PermissionGate、路由守卫
+├── pages/                          # 路由页面, 按业务资源分目录
+├── components/                     # shadcn 原语、布局与可复用业务组件
+├── hooks/                          # 跨组件查询与交互 Hook
+├── lib/                            # schema、纯函数与通用基础设施
 ├── routes/                         # TanStack 文件路由
 │   ├── __root.tsx
 │   ├── (auth)/                     # 未登录分组
@@ -142,25 +139,14 @@ web/portal/src/
 └── tanstack-table.d.ts
 ```
 
-新增 feature 强制结构（仿 `features/users/`）:
+新增业务能力按职责放置:
 
 ```text
-features/<feature>/
-├── index.tsx                       # 默认导出组件, 拼装 Header / Main / Table / Dialogs
-├── components/
-│   ├── <feature>-provider.tsx      # React Context + use<Feature>() hook
-│   ├── <feature>-columns.tsx       # ColumnDef[]
-│   ├── <feature>-primary-buttons.tsx
-│   ├── <feature>-dialogs.tsx       # 汇总所有 Dialog
-│   ├── <feature>-table.tsx         # 用 useReactTable + useTableUrlState
-│   ├── data-table-row-actions.tsx
-│   ├── data-table-bulk-actions.tsx
-│   ├── <feature>-action-dialog.tsx / invite / mutate-drawer
-│   └── <feature>-delete-dialog.tsx / multi-delete-dialog
-└── data/
-    ├── schema.ts                   # zod schema + type
-    ├── data.ts                     # 常量 (callTypes, roles 等)
-    └── <feature>.ts                # mock 数据 (faker), 真实接入后改名为 client.ts
+src/pages/<resource>/               # 页面拼装与路由级状态
+src/api/<resource>/                 # HTTP 请求与响应 zod schema
+src/components/<resource>/          # 可复用业务组件
+src/hooks/<resource>/               # TanStack Query/Mutation Hook
+src/lib/<resource>/                 # 纯类型、schema 与转换
 ```
 
 新增路由（仿 `routes/_authenticated/users/index.tsx`）:
@@ -169,7 +155,7 @@ features/<feature>/
 routes/_authenticated/<feature>/index.tsx
   - zod schema 定义 URL search (page/pageSize/facets/column filters)
   - validateSearch: <feature>SearchSchema
-  - component: 引入 @/features/<feature> 里的 <Feature>
+  - component: 引入 @/pages/<resource> 页面
 ```
 
 ## 3. 路由约定
@@ -321,7 +307,7 @@ pnpm run lint && pnpm run typecheck && pnpm run build
 
 ```text
 - 测试放与被测文件同目录: xxx.test.tsx
-- 不要写 e2e 慢测试在 features/ 里
+- 不要把 e2e 慢测试放进 `src/`; 使用 `web/portal/e2e/`
 - Provider 必须用 renderHook + 包裹 <UsersProvider> 等真实 Provider
 - cookie 必须 clearCookies() + vi.resetModules(), 见 auth-store.test.ts
 - mock axios: 用 MSW 或 respx 都可以, 不要 fetch().catch
@@ -331,16 +317,15 @@ pnpm run lint && pnpm run typecheck && pnpm run build
 
 ## 10. AegisOps 业务接入约束
 
-portal 当前是模板占位（users/tasks/chats/dashboard 全部 faker 数据）。接入真实后端时:
+portal 已接入 AegisOps 登录、IAM、平台能力和工作记录。新增真实后端能力时:
 
 ```text
-- 不允许把 AegisOps 后端字段写进 faker 数据文件 (data.ts / users.ts / tasks.ts)
-- 真实数据走 features/<feature>/data/client.ts (新文件), 模板 data.ts 保留
+- HTTP 客户端放 `src/api/<resource>/`, 响应必须经 zod 校验
 - API 客户端用 axios 实例, baseURL 走 import.meta.env.VITE_API_BASE_URL, 不要硬编码
 - 鉴权 token 走 axios interceptor, 从 useAuthStore.auth.accessToken 取
 - AegisOps 后端的 tenant / JWT 替换 Clerk 后, 移除 @clerk/react 依赖要单独 PR, 默认保留
 - 流式接口用 EventSource, 不要在组件内手写 fetch
-- 真实数据回包用 zod schema 校验, 见 data/schema.ts
+- 真实数据回包用 zod schema 校验, 见 `src/api/iam` 与 `src/api/work-records`
 ```
 
 ## 11. 提交与代码评审规则
@@ -364,4 +349,5 @@ portal 当前是模板占位（users/tasks/chats/dashboard 全部 faker 数据�
 2026-07-07: web/portal 独立 Skill, 不与 web/console 共享主题/约定
 2026-07-07: Radix UI 路线 (与 console 的 base-ui 路线相反), 不要再讨论迁移
 2026-07-07: AegisOps 后端接入后, Clerk 保留但实际鉴权走后端, 通过 ADR 决策是否下线 Clerk
+2026-07-14: ADR 0007 删除 src/features, 改为 pages/api/auth/components/hooks/lib 分层
 ```
