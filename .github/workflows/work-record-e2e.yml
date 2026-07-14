@@ -29,7 +29,7 @@ jobs:
         'e2e'
       )
 
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     timeout-minutes: 35
 
     services:

@@ -30,7 +30,7 @@ defaults:
 jobs:
   shellcheck:
     name: shellcheck + bash -n
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     timeout-minutes: 5
     steps:
       - name: Checkout
@@ -54,7 +54,7 @@ jobs:
 
   postgres-smoke:
     name: Phase 19 SQL smoke
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     timeout-minutes: 15
     services:
       postgres:

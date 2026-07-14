@@ -33,7 +33,7 @@ env:
 jobs:
   docs:
     name: Docs
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     timeout-minutes: 5
 
     steps:
@@ -50,7 +50,7 @@ jobs:
 
   backend:
     name: Backend
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     timeout-minutes: 20
 
     steps:
@@ -80,7 +80,7 @@ jobs:
 
   frontend:
     name: Frontend
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     timeout-minutes: 20
 
     steps:
@@ -112,7 +112,7 @@ jobs:
 
   agent:
     name: AI Agent
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     timeout-minutes: 10
 
     steps:
@@ -131,7 +131,7 @@ jobs:
 
   summary:
     name: CI Summary
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs: [docs, backend, frontend, agent]
     if: always()
 
