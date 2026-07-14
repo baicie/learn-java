@@ -330,7 +330,7 @@ related:
 ### 8.2 本机验证结果
 
 - 后端 `mvn -pl modules/aiops-work-record test`：123 / 123 通过。
-  - 4 个 `WorkRecordArchUnitTest` "过渡期白名单 TODO" 失败是 commit `fd58da5` 引入的已知问题，描述见 `WorkRecordArchUnitTest` 文件头注释，与本次修复无关。
+  - 4 个 `WorkRecordArchUnitTest` “过渡期白名单后续项”失败是 commit `fd58da5` 引入的已知问题，描述见 `WorkRecordArchUnitTest` 文件头注释，与本次修复无关。
 - 后端 `mvn -DskipTests=true package`：`aiops-server-0.1.0-SNAPSHOT.jar` 产出 OK。
 - 后端 Spring Boot 启动：Context 配置、Bean 注入（含 `WorkRecordProperties`）、Flyway 依赖装配均通过；本机无 PG 实例故未做完整连接验证。
 - 前端 `vitest run --browser.headless`：146 / 146 通过。
@@ -338,5 +338,5 @@ related:
 
 ### 8.3 仍遗留的非本轮范围问题
 
-- `WorkRecordArchUnitTest` 中"过渡期包结构"白名单 TODO（4 条规则）—— 需要把模块代码从根包迁到 `api/domain/infrastructure` 子包，列入 Phase WR-S0。
+- `WorkRecordArchUnitTest` 中“过渡期包结构”白名单后续项（4 条规则）—— 需要把模块代码从根包迁到 `api/domain/infrastructure` 子包，列入 Phase WR-S0。
 - 其它业务模块（tasks/users）的 zod v3/v4 类型不兼容 —— 与本工作记录模块无关，由 zod 升级专题处理。

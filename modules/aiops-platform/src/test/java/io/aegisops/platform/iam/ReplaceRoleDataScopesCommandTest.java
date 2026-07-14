@@ -1,10 +1,9 @@
 package io.aegisops.platform.iam;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import io.aegisops.platform.iam.domain.ReplaceRoleDataScopesCommand;
 import io.aegisops.platform.iam.domain.PlatformRole;
+import io.aegisops.platform.iam.domain.ReplaceRoleDataScopesCommand;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;

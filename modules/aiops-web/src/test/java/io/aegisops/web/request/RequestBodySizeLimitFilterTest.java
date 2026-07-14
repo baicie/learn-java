@@ -1,7 +1,6 @@
 package io.aegisops.web.request;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -11,22 +10,19 @@ import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 
 /**
- * 请求体大小限制必须：
- * 1) 拦截超过 Content-Length 上限的请求，立即返回 413 + ApiResponse；
- * 2) 拦截 chunked 请求（无 Content-Length），读到上限后抛 RequestBodyTooLargeException 触发 413；
- * 3) 让小于上限的请求体透传到后续过滤器。
+ * 请求体大小限制必须： 1) 拦截超过 Content-Length 上限的请求，立即返回 413 + ApiResponse； 2) 拦截 chunked 请求（无
+ * Content-Length），读到上限后抛 RequestBodyTooLargeException 触发 413； 3) 让小于上限的请求体透传到后续过滤器。
  */
 class RequestBodySizeLimitFilterTest {
 
-  private final ObjectMapper objectMapper = new ObjectMapper();
+  private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
 
   @Test
   void rejectsRequestWithContentLengthAboveLimit() throws Exception {
     RequestBodyLimitProperties properties = new RequestBodyLimitProperties();
     properties.setMaxBodyBytes(1024);
 
-    RequestBodySizeLimitFilter filter =
-        new RequestBodySizeLimitFilter(properties, objectMapper);
+    RequestBodySizeLimitFilter filter = new RequestBodySizeLimitFilter(properties, objectMapper);
 
     MockHttpServletRequest request = new MockHttpServletRequest();
     request.setMethod("POST");
@@ -55,8 +51,7 @@ class RequestBodySizeLimitFilterTest {
     RequestBodyLimitProperties properties = new RequestBodyLimitProperties();
     properties.setMaxBodyBytes(1024);
 
-    RequestBodySizeLimitFilter filter =
-        new RequestBodySizeLimitFilter(properties, objectMapper);
+    RequestBodySizeLimitFilter filter = new RequestBodySizeLimitFilter(properties, objectMapper);
 
     MockHttpServletRequest request =
         new MockHttpServletRequest() {
@@ -78,20 +73,16 @@ class RequestBodySizeLimitFilterTest {
 
     MockHttpServletResponse response = new MockHttpServletResponse();
 
-    assertThatThrownBy(
-            () ->
-                filter.doFilter(
-                    request,
-                    response,
-                    (req, resp) -> {
-                      try {
-                        req.getInputStream().readAllBytes();
-                      } catch (Exception ex) {
-                        throw new ServletException(ex);
-                      }
-                    }))
-        .isInstanceOf(ServletException.class)
-        .hasMessageContaining("request body");
+    filter.doFilter(
+        request,
+        response,
+        (req, resp) -> {
+          try {
+            req.getInputStream().readAllBytes();
+          } catch (Exception ex) {
+            throw new ServletException(ex);
+          }
+        });
 
     // 即便后续过滤器抛错，Filter 必须把响应重置为 413 + ApiResponse JSON。
     assertThat(response.getStatus()).isEqualTo(413);
@@ -104,8 +95,7 @@ class RequestBodySizeLimitFilterTest {
     RequestBodyLimitProperties properties = new RequestBodyLimitProperties();
     properties.setMaxBodyBytes(1024);
 
-    RequestBodySizeLimitFilter filter =
-        new RequestBodySizeLimitFilter(properties, objectMapper);
+    RequestBodySizeLimitFilter filter = new RequestBodySizeLimitFilter(properties, objectMapper);
 
     MockHttpServletRequest request = new MockHttpServletRequest();
     request.setMethod("POST");
@@ -133,8 +123,7 @@ class RequestBodySizeLimitFilterTest {
     RequestBodyLimitProperties properties = new RequestBodyLimitProperties();
     properties.setMaxBodyBytes(1024);
 
-    RequestBodySizeLimitFilter filter =
-        new RequestBodySizeLimitFilter(properties, objectMapper);
+    RequestBodySizeLimitFilter filter = new RequestBodySizeLimitFilter(properties, objectMapper);
 
     MockHttpServletRequest request = new MockHttpServletRequest();
     request.setMethod("GET");
@@ -144,10 +133,7 @@ class RequestBodySizeLimitFilterTest {
 
     final boolean[] invoked = {false};
 
-    filter.doFilter(
-        request,
-        response,
-        (req, resp) -> invoked[0] = true);
+    filter.doFilter(request, response, (req, resp) -> invoked[0] = true);
 
     assertThat(invoked[0]).isTrue();
     assertThat(response.getStatus()).isEqualTo(200);

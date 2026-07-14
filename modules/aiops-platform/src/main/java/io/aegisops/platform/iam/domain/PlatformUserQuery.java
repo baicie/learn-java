@@ -3,11 +3,7 @@ package io.aegisops.platform.iam.domain;
 import java.util.Set;
 
 public record PlatformUserQuery(
-    String keyword,
-    PlatformUserStatus status,
-    Set<String> roleCodes,
-    int page,
-    int pageSize) {
+    String keyword, PlatformUserStatus status, Set<String> roleCodes, int page, int pageSize) {
 
   public PlatformUserQuery normalized() {
     int safePage = page <= 0 ? 1 : page;

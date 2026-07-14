@@ -97,8 +97,7 @@ public class WorkRecordExportService {
     permissionService.requireExport(user);
 
     try (WorkRecordExportGuard.Permit ignored = exportGuard.acquire(tenantId, user)) {
-      WorkRecordExportResult result =
-          doExport(tenantId, rawQuery, requestedColumnKeys, user);
+      WorkRecordExportResult result = doExport(tenantId, rawQuery, requestedColumnKeys, user);
 
       telemetry.recordExport("success");
 

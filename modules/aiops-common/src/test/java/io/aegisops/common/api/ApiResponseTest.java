@@ -7,8 +7,8 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.MDC;
 
 /**
- * {@link ApiResponse} 必须自动从 MDC 注入当前请求 ID，
- * 这样 Controller 调用 {@code ApiResponse.ok(data)} 即可在 body 中包含 requestId。
+ * {@link ApiResponse} 必须自动从 MDC 注入当前请求 ID， 这样 Controller 调用 {@code ApiResponse.ok(data)} 即可在 body
+ * 中包含 requestId。
  */
 class ApiResponseTest {
 

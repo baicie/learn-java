@@ -1,12 +1,9 @@
+import { useEffect, useState } from 'react'
 import { Link } from '@tanstack/react-router'
-import {
-  BadgeCheck,
-  Bell,
-  ChevronsUpDown,
-  CreditCard,
-  LogOut,
-  Sparkles,
-} from 'lucide-react'
+import { useAuthorization } from '@/auth/use-authorization'
+import { Bell, ChevronsUpDown, LogOut, UserCog, Wrench } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
+import { loadProfileAvatar, PROFILE_AVATAR_CHANGED } from '@/lib/profile-avatar'
 import useDialogState from '@/hooks/use-dialog-state'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
@@ -26,17 +23,20 @@ import {
 } from '@/components/ui/sidebar'
 import { SignOutDialog } from '@/components/sign-out-dialog'
 
-type NavUserProps = {
-  user: {
-    name: string
-    email: string
-    avatar: string
-  }
-}
-
-export function NavUser({ user }: NavUserProps) {
+export function NavUser() {
   const { isMobile } = useSidebar()
   const [open, setOpen] = useDialogState()
+  const [avatar, setAvatar] = useState(loadProfileAvatar)
+  const principal = useAuthorization()
+  const { t } = useTranslation()
+  const displayName =
+    principal?.displayName || principal?.username || 'AegisOps'
+
+  useEffect(() => {
+    const refresh = () => setAvatar(loadProfileAvatar())
+    window.addEventListener(PROFILE_AVATAR_CHANGED, refresh)
+    return () => window.removeEventListener(PROFILE_AVATAR_CHANGED, refresh)
+  }, [])
 
   return (
     <>
@@ -48,13 +48,17 @@ export function NavUser({ user }: NavUserProps) {
                 size='lg'
                 className='data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground'
               >
-                <Avatar className='h-8 w-8 rounded-lg'>
-                  <AvatarImage src={user.avatar} alt={user.name} />
-                  <AvatarFallback className='rounded-lg'>SN</AvatarFallback>
+                <Avatar className='size-8 rounded-lg'>
+                  <AvatarImage src={avatar} alt={displayName} />
+                  <AvatarFallback className='rounded-lg'>
+                    {displayName.slice(0, 2).toUpperCase()}
+                  </AvatarFallback>
                 </Avatar>
                 <div className='grid flex-1 text-start text-sm leading-tight'>
-                  <span className='truncate font-semibold'>{user.name}</span>
-                  <span className='truncate text-xs'>{user.email}</span>
+                  <span className='truncate font-semibold'>{displayName}</span>
+                  <span className='truncate text-xs'>
+                    {principal?.username}
+                  </span>
                 </div>
                 <ChevronsUpDown className='ms-auto size-4' />
               </SidebarMenuButton>
@@ -67,41 +71,40 @@ export function NavUser({ user }: NavUserProps) {
             >
               <DropdownMenuLabel className='p-0 font-normal'>
                 <div className='flex items-center gap-2 px-1 py-1.5 text-start text-sm'>
-                  <Avatar className='h-8 w-8 rounded-lg'>
-                    <AvatarImage src={user.avatar} alt={user.name} />
-                    <AvatarFallback className='rounded-lg'>SN</AvatarFallback>
+                  <Avatar className='size-8 rounded-lg'>
+                    <AvatarImage src={avatar} alt={displayName} />
+                    <AvatarFallback className='rounded-lg'>
+                      {displayName.slice(0, 2).toUpperCase()}
+                    </AvatarFallback>
                   </Avatar>
                   <div className='grid flex-1 text-start text-sm leading-tight'>
-                    <span className='truncate font-semibold'>{user.name}</span>
-                    <span className='truncate text-xs'>{user.email}</span>
+                    <span className='truncate font-semibold'>
+                      {displayName}
+                    </span>
+                    <span className='truncate text-xs'>
+                      {principal?.username}
+                    </span>
                   </div>
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuGroup>
-                <DropdownMenuItem>
-                  <Sparkles />
-                  Upgrade to Pro
-                </DropdownMenuItem>
-              </DropdownMenuGroup>
-              <DropdownMenuSeparator />
-              <DropdownMenuGroup>
                 <DropdownMenuItem asChild>
-                  <Link to='/settings/account'>
-                    <BadgeCheck />
-                    Account
+                  <Link to='/settings'>
+                    <UserCog />
+                    {t('settings.nav.profile')}
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link to='/settings'>
-                    <CreditCard />
-                    Billing
+                  <Link to='/settings/account'>
+                    <Wrench />
+                    {t('settings.nav.account')}
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <Link to='/settings/notifications'>
                     <Bell />
-                    Notifications
+                    {t('settings.nav.notifications')}
                   </Link>
                 </DropdownMenuItem>
               </DropdownMenuGroup>
@@ -111,7 +114,7 @@ export function NavUser({ user }: NavUserProps) {
                 onClick={() => setOpen(true)}
               >
                 <LogOut />
-                Sign out
+                {t('auth.signOut.action')}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

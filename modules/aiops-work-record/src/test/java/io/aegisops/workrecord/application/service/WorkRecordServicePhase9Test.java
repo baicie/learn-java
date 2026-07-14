@@ -201,10 +201,7 @@ class WorkRecordServicePhase9Test {
   void setUpUser() {
     cachedUser =
         new UserPrincipal(
-            "u1",
-            "t1",
-            "alice",
-            "Alice",
+            new UserPrincipal.Identity("u1", "t1", "alice", "Alice"),
             Set.of("admin"),
             Set.of("work-record:write", "work-record:read:self"),
             java.util.Map.of());

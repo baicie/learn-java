@@ -45,8 +45,7 @@ class ProductionProfileReadinessIT {
   @Container
   static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine");
 
-  @Container
-  static final RedisContainer REDIS = new RedisContainer("redis:7-alpine");
+  @Container static final RedisContainer REDIS = new RedisContainer("redis:7-alpine");
 
   @DynamicPropertySource
   static void overrideProperties(DynamicPropertyRegistry registry) {
@@ -68,8 +67,7 @@ class ProductionProfileReadinessIT {
     // Postgres 容器无 ClickHouse / Redis 跨依赖服务，禁用无关健康探针
     registry.add("management.health.defaults.enabled", () -> "false");
     registry.add("management.endpoint.health.probes.enabled", () -> "true");
-    registry.add("management.endpoint.health.group.readiness.include",
-        () -> "readinessState,db");
+    registry.add("management.endpoint.health.group.readiness.include", () -> "readinessState,db");
     registry.add("management.health.db.enabled", () -> "true");
   }
 
@@ -83,7 +81,8 @@ class ProductionProfileReadinessIT {
 
   @Test
   void readinessMustReturnUp() {
-    ResponseEntity<String> response = restTemplate.getForEntity(url("/actuator/health/readiness"), String.class);
+    ResponseEntity<String> response =
+        restTemplate.getForEntity(url("/actuator/health/readiness"), String.class);
 
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
     assertThat(response.getBody()).contains("UP");
@@ -91,7 +90,8 @@ class ProductionProfileReadinessIT {
 
   @Test
   void livenessMustReturnUp() {
-    ResponseEntity<String> response = restTemplate.getForEntity(url("/actuator/health/liveness"), String.class);
+    ResponseEntity<String> response =
+        restTemplate.getForEntity(url("/actuator/health/liveness"), String.class);
 
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
     assertThat(response.getBody()).contains("UP");

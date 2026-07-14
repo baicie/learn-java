@@ -14,9 +14,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * <p>使用 {@link ConcurrentHashMap#compute(Object, java.util.function.BiFunction)} 实现
  * 获取与释放的原子性，避免并发场景下覆盖未过期租约。
  *
- * <p>租约条目会带 {@code expiresAtMillis}，获取时若已过期则视为无主并允许重新抢占，
- * 从而保证 TTL 契约在持有者未调用 {@link DistributedLease#close()}（死锁、异常中断等）
- * 时仍能在到期后释放。
+ * <p>租约条目会带 {@code expiresAtMillis}，获取时若已过期则视为无主并允许重新抢占， 从而保证 TTL 契约在持有者未调用 {@link
+ * DistributedLease#close()}（死锁、异常中断等） 时仍能在到期后释放。
  */
 public class InMemoryDistributedLeaseService implements DistributedLeaseService {
 
@@ -85,8 +84,7 @@ public class InMemoryDistributedLeaseService implements DistributedLeaseService 
       }
 
       leases.computeIfPresent(
-          key,
-          (ignored, current) -> token.equals(current.token) ? null : current);
+          key, (ignored, current) -> token.equals(current.token) ? null : current);
     }
   }
 

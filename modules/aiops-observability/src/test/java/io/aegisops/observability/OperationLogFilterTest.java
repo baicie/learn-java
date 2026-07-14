@@ -26,6 +26,5 @@ class OperationLogFilterTest {
     assertThat(OperationLogFilter.actorId(null)).isNull();
   }
 
-  private record AuthenticationFixture(String id, String tenantId)
-      implements AuthenticatedActor {}
+  private record AuthenticationFixture(String id, String tenantId) implements AuthenticatedActor {}
 }

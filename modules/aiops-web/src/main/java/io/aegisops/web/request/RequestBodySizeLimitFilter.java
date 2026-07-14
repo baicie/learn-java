@@ -22,7 +22,8 @@ public class RequestBodySizeLimitFilter extends OncePerRequestFilter {
   private final RequestBodyLimitProperties properties;
   private final ObjectMapper objectMapper;
 
-  public RequestBodySizeLimitFilter(RequestBodyLimitProperties properties, ObjectMapper objectMapper) {
+  public RequestBodySizeLimitFilter(
+      RequestBodyLimitProperties properties, ObjectMapper objectMapper) {
     this.properties = properties;
     this.objectMapper = objectMapper;
   }

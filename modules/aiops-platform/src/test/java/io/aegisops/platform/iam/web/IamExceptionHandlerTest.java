@@ -17,9 +17,7 @@ class IamExceptionHandlerTest {
   void should_map_iam_domain_exception_to_status() {
     IamDomainException ex =
         new IamDomainException(
-            IamErrorCode.USERNAME_CONFLICT,
-            "username taken",
-            Map.of("username", "alice"));
+            IamErrorCode.USERNAME_CONFLICT, "username taken", Map.of("username", "alice"));
     ResponseEntity<Map<String, Object>> response = handler.handle(ex);
 
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
@@ -31,14 +29,16 @@ class IamExceptionHandlerTest {
 
   @Test
   void should_fall_back_to_400_for_illegal_arguments() {
-    ResponseEntity<Map<String, Object>> response = handler.handleValidation(new IllegalArgumentException("nope"));
+    ResponseEntity<Map<String, Object>> response =
+        handler.handleValidation(new IllegalArgumentException("nope"));
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
     assertThat(response.getBody()).containsEntry("message", "nope");
   }
 
   @Test
   void should_default_message_when_illegal_argument_has_no_message() {
-    ResponseEntity<Map<String, Object>> response = handler.handleValidation(new IllegalArgumentException());
+    ResponseEntity<Map<String, Object>> response =
+        handler.handleValidation(new IllegalArgumentException());
     assertThat(response.getBody()).containsEntry("message", "invalid argument");
   }
 }

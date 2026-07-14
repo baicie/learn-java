@@ -1,7 +1,7 @@
 package io.aegisops.platform.iam.web;
 
-import io.aegisops.platform.iam.domain.CreatePlatformUserData;
 import io.aegisops.platform.iam.domain.ChangeUserStatusCommand;
+import io.aegisops.platform.iam.domain.CreatePlatformUserData;
 import io.aegisops.platform.iam.domain.PlatformUser;
 import io.aegisops.platform.iam.domain.PlatformUserPage;
 import io.aegisops.platform.iam.domain.PlatformUserQuery;

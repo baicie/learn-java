@@ -98,10 +98,7 @@ class WorkRecordExportGuardTest {
 
   private UserPrincipal user() {
     return new UserPrincipal(
-        "user-1",
-        "tenant-1",
-        "alice",
-        "Alice",
+        new UserPrincipal.Identity("user-1", "tenant-1", "alice", "Alice"),
         Set.of("normal_user"),
         Set.of("work-record:export"),
         Map.of("work-record", DataScope.SELF));

@@ -130,8 +130,7 @@ public class WorkRecordQueryService {
     WorkRecord record =
         repository
             .find(tenantId, recordId)
-            .orElseThrow(
-                () -> new ResourceNotFoundException("work record not found: " + recordId));
+            .orElseThrow(() -> new ResourceNotFoundException("work record not found: " + recordId));
 
     permissionService.requireRead(user, record);
 

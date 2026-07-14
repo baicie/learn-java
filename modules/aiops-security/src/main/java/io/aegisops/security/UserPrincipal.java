@@ -4,6 +4,7 @@ import io.aegisops.common.security.AuthenticatedActor;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -19,17 +20,18 @@ public final class UserPrincipal implements UserDetails, AuthenticatedActor {
   private final Map<String, DataScope> dataScopes;
 
   public UserPrincipal(
-      String id,
-      String tenantId,
-      String username,
-      String displayName,
+      Identity identity,
       Set<String> roles,
       Set<String> permissions,
       Map<String, DataScope> dataScopes) {
-    this.id = requireText(id, "id");
-    this.tenantId = requireText(tenantId, "tenantId");
-    this.username = requireText(username, "username");
-    this.displayName = displayName == null || displayName.isBlank() ? username : displayName;
+    Objects.requireNonNull(identity, "identity is required");
+    this.id = requireText(identity.id(), "id");
+    this.tenantId = requireText(identity.tenantId(), "tenantId");
+    this.username = requireText(identity.username(), "username");
+    this.displayName =
+        identity.displayName() == null || identity.displayName().isBlank()
+            ? username
+            : identity.displayName();
 
     this.roles = roles == null ? Set.of() : Set.copyOf(roles);
 
@@ -138,4 +140,6 @@ public final class UserPrincipal implements UserDetails, AuthenticatedActor {
 
     return value;
   }
+
+  public record Identity(String id, String tenantId, String username, String displayName) {}
 }

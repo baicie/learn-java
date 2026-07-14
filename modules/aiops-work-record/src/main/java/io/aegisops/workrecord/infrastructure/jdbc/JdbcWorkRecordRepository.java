@@ -168,8 +168,7 @@ public class JdbcWorkRecordRepository implements WorkRecordRepository {
     try {
       offset = Math.multiplyExact((long) page - 1L, (long) size);
     } catch (ArithmeticException ex) {
-      throw new AppException(
-          ErrorCode.PAGE_WINDOW_EXCEEDED, "page window is too large", ex);
+      throw new AppException(ErrorCode.PAGE_WINDOW_EXCEEDED, "page window is too large", ex);
     }
 
     StringBuilder where = new StringBuilder(" where tenant_id = :tenantId and deleted_at is null ");

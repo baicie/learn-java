@@ -1,5 +1,6 @@
 package io.aegisops.platform.bootstrap;
 
+import java.util.ArrayList;
 import java.util.List;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
@@ -59,6 +60,12 @@ public class PlatformPermissionBootstrap implements ApplicationRunner {
   }
 
   public List<PlatformPermissionCode> permissions() {
+    List<PlatformPermissionCode> permissions = new ArrayList<>(platformPermissions());
+    permissions.addAll(workRecordPermissions());
+    return List.copyOf(permissions);
+  }
+
+  private List<PlatformPermissionCode> platformPermissions() {
     return List.of(
         new PlatformPermissionCode(
             "perm-platform-dict-read",
@@ -94,7 +101,11 @@ public class PlatformPermissionBootstrap implements ApplicationRunner {
             "导入工作日历",
             "platform",
             "导入 CSV 工作日历",
-            140),
+            140));
+  }
+
+  private List<PlatformPermissionCode> workRecordPermissions() {
+    return List.of(
         new PlatformPermissionCode(
             "perm-work-record-template-read",
             "work-record:template:read",

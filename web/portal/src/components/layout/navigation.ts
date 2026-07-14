@@ -36,7 +36,7 @@ export const navigation: NavigationItem[] = [
       },
       {
         titleKey: 'nav.workRecords.designer',
-        to: '/work-records/designer',
+        to: '/work-records/templates',
         icon: Library,
         anyPermissions: ['work-record:template:read'],
       },

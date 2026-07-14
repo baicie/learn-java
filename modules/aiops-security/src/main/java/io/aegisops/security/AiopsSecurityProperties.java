@@ -8,8 +8,7 @@ public class AiopsSecurityProperties {
   private String internalAgentToken = "dev-internal-agent-token";
   private boolean internalAgentTokenRequired = true;
   private boolean tenantRequired = true;
-  private List<String> allowedOrigins =
-      List.of("http://localhost:5173", "http://127.0.0.1:5173");
+  private List<String> allowedOrigins = List.of("http://localhost:5173", "http://127.0.0.1:5173");
 
   public String getInternalAgentToken() {
     return internalAgentToken;

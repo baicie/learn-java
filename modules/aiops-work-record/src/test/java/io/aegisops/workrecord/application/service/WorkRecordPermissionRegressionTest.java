@@ -1,6 +1,5 @@
 package io.aegisops.workrecord.application.service;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.aegisops.security.DataScope;
@@ -88,10 +87,7 @@ class WorkRecordPermissionRegressionTest {
     return Stream.of(
         Arguments.of(
             principal(
-                "system_admin",
-                Set.of(PermissionCodes.WORK_RECORD_EXPORT),
-                DataScope.ALL,
-                "admin"),
+                "system_admin", Set.of(PermissionCodes.WORK_RECORD_EXPORT), DataScope.ALL, "admin"),
             true),
         Arguments.of(
             principal(
@@ -119,10 +115,7 @@ class WorkRecordPermissionRegressionTest {
   private static UserPrincipal principal(
       String role, Set<String> permissions, DataScope scope, String userId) {
     return new UserPrincipal(
-        userId,
-        "tenant-1",
-        userId,
-        userId,
+        new UserPrincipal.Identity(userId, "tenant-1", userId, userId),
         Set.of(role),
         permissions,
         Map.of("work-record", scope));

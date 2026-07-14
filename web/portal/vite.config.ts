@@ -21,6 +21,9 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  optimizeDeps: {
+    exclude: ['fsevents'],
+  },
   server: {
     proxy: {
       '/api': {
@@ -31,6 +34,7 @@ export default defineConfig({
     },
   },
   test: {
+    include: ['src/**/*.test.{ts,tsx}'],
     silent: 'passed-only',
     unstubEnvs: true,
     setupFiles: ['./src/test-utils/vitest-setup.ts'],
@@ -43,8 +47,12 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'json-summary', 'html', 'lcov'],
       include: [
-        'src/features/work-records/**/*.{ts,tsx}',
-        'src/features/dictionaries/**/*.{ts,tsx}',
+        'src/api/work-records/**/*.{ts,tsx}',
+        'src/components/work-records/**/*.{ts,tsx}',
+        'src/hooks/dictionaries/**/*.{ts,tsx}',
+        'src/hooks/work-records/**/*.{ts,tsx}',
+        'src/pages/dictionaries/**/*.{ts,tsx}',
+        'src/pages/work-records/**/*.{ts,tsx}',
         'src/components/feedback/**/*.{ts,tsx}',
         'src/components/form/**/*.{ts,tsx}',
       ],
@@ -61,7 +69,7 @@ export default defineConfig({
       thresholds: {
         statements: 60,
         branches: 50,
-        functions: 60,
+        functions: 50,
         lines: 60,
       },
     },

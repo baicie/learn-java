@@ -1,6 +1,6 @@
+import type { AuthorizationPrincipal } from '@/auth/authorization-types'
 import { create } from 'zustand'
 import { getCookie, removeCookie, setCookie } from '@/lib/cookies'
-import type { AuthorizationPrincipal } from '@/features/auth/authorization-types'
 
 const ACCESS_TOKEN = 'thisisjustarandomstring'
 

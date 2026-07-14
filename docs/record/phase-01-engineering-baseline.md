@@ -5,7 +5,7 @@ status: draft
 phase: work-record
 owner: platform-team
 created: 2026-07-09
-updated: 2026-07-09
+updated: 2026-07-14
 related:
   - docs/record/enterprise-roadmap.md
   - docs/record/api-contract.md
@@ -15,6 +15,8 @@ related:
 ---
 
 # Phase 1 工程基线重建
+
+> 历史说明：本文记录最初的冻结基线。Portal 工作记录模块已在 Phase 21 解冻并迁移到路由导向目录；当前约束以 [ADR 0007](../adr/0007-portal-route-oriented-source-layout.md) 和 Phase 21 设计文档为准。
 
 ## 1. 目标
 

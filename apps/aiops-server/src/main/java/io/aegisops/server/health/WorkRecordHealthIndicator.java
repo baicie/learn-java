@@ -17,9 +17,8 @@ import org.springframework.stereotype.Component;
  * <ol>
  *   <li>数据库连通。
  *   <li>所有关键表存在。
- *   <li>（生产可配置）所有关键索引存在且 {@code indisvalid = true} 且 {@code indisready = true}。
- *       仅仅查 {@code pg_indexes} 无法发现 {@code CREATE INDEX CONCURRENTLY} 失败后留下的
- *       无效索引条目；这些索引必须被清理后再重建。
+ *   <li>（生产可配置）所有关键索引存在且 {@code indisvalid = true} 且 {@code indisready = true}。 仅仅查 {@code
+ *       pg_indexes} 无法发现 {@code CREATE INDEX CONCURRENTLY} 失败后留下的 无效索引条目；这些索引必须被清理后再重建。
  *   <li>关键 CHECK 约束已通过 {@code VALIDATE CONSTRAINT} 校验（{@code convalidated = true}）。
  * </ol>
  *

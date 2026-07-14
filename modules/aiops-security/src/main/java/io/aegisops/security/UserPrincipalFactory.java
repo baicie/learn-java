@@ -24,10 +24,8 @@ public class UserPrincipalFactory {
     AuthorizationSnapshot snapshot = authorizationService.resolve(account.tenantId(), account.id());
 
     return new UserPrincipal(
-        account.id(),
-        account.tenantId(),
-        account.username(),
-        account.displayName(),
+        new UserPrincipal.Identity(
+            account.id(), account.tenantId(), account.username(), account.displayName()),
         snapshot.roles(),
         snapshot.permissions(),
         snapshot.dataScopes());

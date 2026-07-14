@@ -18,6 +18,8 @@ fi
 
 # ---- Formily ADR guard (applies to portal only) ----
 "$SCRIPT_DIR/check-formily-deps.sh"
+node "$SCRIPT_DIR/check-portal-no-features.mjs"
+node "$SCRIPT_DIR/check-portal-ui-primitives.mjs"
 
 run_frontend() {
   local dir="$1"

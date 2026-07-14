@@ -9,8 +9,7 @@ class AiopsQuotaPropertiesTest {
   @Test
   void defaultBackendMustBeMemory() {
     AiopsQuotaProperties properties = new AiopsQuotaProperties();
-    assertThat(properties.getBackend())
-        .isEqualTo(AiopsQuotaProperties.RateLimitBackend.MEMORY);
+    assertThat(properties.getBackend()).isEqualTo(AiopsQuotaProperties.RateLimitBackend.MEMORY);
   }
 
   @Test
@@ -36,7 +35,6 @@ class AiopsQuotaPropertiesTest {
   void redisBackendValueIsAccepted() {
     AiopsQuotaProperties properties = new AiopsQuotaProperties();
     properties.setBackend(AiopsQuotaProperties.RateLimitBackend.REDIS);
-    assertThat(properties.getBackend())
-        .isEqualTo(AiopsQuotaProperties.RateLimitBackend.REDIS);
+    assertThat(properties.getBackend()).isEqualTo(AiopsQuotaProperties.RateLimitBackend.REDIS);
   }
 }

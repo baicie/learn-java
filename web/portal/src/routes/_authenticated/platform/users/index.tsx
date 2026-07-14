@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { createFileRoute } from '@tanstack/react-router'
-import { requireAnyPermission } from '@/features/auth/permission'
-import { PlatformUsersPage } from '@/features/iam/components/platform-users-page'
+import { requireAnyPermission } from '@/auth/permission'
+import { PlatformUsersPage } from '@/components/iam/platform-users-page'
 
 const usersSearchSchema = z.object({
   page: z.coerce.number().int().min(1).catch(1),

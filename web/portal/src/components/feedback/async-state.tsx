@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { AlertCircle, Inbox, LoaderCircle, RefreshCw } from 'lucide-react'
+import { AlertCircle, Inbox, RefreshCw } from 'lucide-react'
 import { apiErrorMessage } from '@/lib/api-error'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -134,15 +134,6 @@ export function ErrorState({
         </Button>
       ) : null}
     </div>
-  )
-}
-
-export function InlineLoading({ label = '正在加载' }: { label?: string }) {
-  return (
-    <span className='inline-flex items-center gap-2 text-sm text-muted-foreground'>
-      <LoaderCircle className='size-4 animate-spin' />
-      {label}
-    </span>
   )
 }
 

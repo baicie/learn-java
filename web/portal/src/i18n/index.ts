@@ -1,6 +1,5 @@
 import i18n from 'i18next'
 import { initReactI18next } from 'react-i18next'
-
 import { enUS, type Translation } from './locales/en-US'
 import { zhCN } from './locales/zh-CN'
 

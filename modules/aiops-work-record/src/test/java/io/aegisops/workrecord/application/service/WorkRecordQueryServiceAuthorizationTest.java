@@ -98,10 +98,8 @@ class WorkRecordQueryServiceAuthorizationTest {
   void userWithoutReadPermissionMustBeRejected() {
     var nobody =
         new io.aegisops.security.UserPrincipal(
-            "user-nobody",
-            TENANT_ID,
-            "nobody",
-            "无权限用户",
+            new io.aegisops.security.UserPrincipal.Identity(
+                "user-nobody", TENANT_ID, "nobody", "无权限用户"),
             java.util.Set.of("nobody"),
             java.util.Set.of(),
             java.util.Map.of());

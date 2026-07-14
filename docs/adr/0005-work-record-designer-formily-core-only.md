@@ -5,7 +5,7 @@ status: accepted
 phase: work-record
 owner: ai
 created: 2026-07-08
-updated: 2026-07-09
+updated: 2026-07-14
 implementation-status: implemented
 related:
   - .agents/skills/aegisops/SKILL.md
@@ -20,6 +20,8 @@ related:
 ---
 
 # ADR 0005: 工作记录模板设计器采用 @formily/core，禁用 Antd/Fusion setters
+
+> 路径说明：本文保留当时的 `src/features` 实施记录；现行 Portal 源码布局已由 [ADR 0007](0007-portal-route-oriented-source-layout.md) 迁移为 `pages/api/auth/components/hooks/lib` 分层。
 
 ## 状态
 

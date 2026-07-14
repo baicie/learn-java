@@ -149,7 +149,10 @@ public final class WorkRecordFixtures {
         Map.of("work-record", DataScope.ALL, "work-record-template", DataScope.ALL);
 
     return new UserPrincipal(
-        ADMIN_USER_ID, TENANT_ID, "admin", "管理员", Set.of("record-admin"), permissions, dataScopes);
+        new UserPrincipal.Identity(ADMIN_USER_ID, TENANT_ID, "admin", "管理员"),
+        Set.of("record-admin"),
+        permissions,
+        dataScopes);
   }
 
   public static UserPrincipal normalUser() {
@@ -160,10 +163,7 @@ public final class WorkRecordFixtures {
         Map.of("work-record", DataScope.SELF, "work-record-template", DataScope.SELF);
 
     return new UserPrincipal(
-        NORMAL_USER_ID,
-        TENANT_ID,
-        "normal",
-        "普通用户",
+        new UserPrincipal.Identity(NORMAL_USER_ID, TENANT_ID, "normal", "普通用户"),
         Set.of("normal-user"),
         permissions,
         dataScopes);
@@ -175,10 +175,7 @@ public final class WorkRecordFixtures {
     Map<String, DataScope> dataScopes = Map.of("work-record", DataScope.SELF);
 
     return new UserPrincipal(
-        READONLY_USER_ID,
-        TENANT_ID,
-        "readonly",
-        "只读用户",
+        new UserPrincipal.Identity(READONLY_USER_ID, TENANT_ID, "readonly", "只读用户"),
         Set.of("readonly-user"),
         permissions,
         dataScopes);

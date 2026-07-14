@@ -1,19 +1,10 @@
-import {
-  AudioWaveform,
-  Command,
-  GalleryVerticalEnd,
-} from 'lucide-react'
-import { t, type MessageKey } from '@/i18n'
+import { AudioWaveform, Command, GalleryVerticalEnd } from 'lucide-react'
+import { useAuthStore } from '@/stores/auth-store'
 import { filterNavigation } from '@/components/layout/filter-navigation'
 import { navigation } from '@/components/layout/navigation'
-import { useAuthStore } from '@/stores/auth-store'
 import type { NavGroup, SidebarData } from '@/components/layout/types'
 
-function translate(key: string): string {
-  return t(key as MessageKey) || key
-}
-
-function buildNavGroups(): NavGroup[] {
+export function getNavGroups(translate: (key: string) => string): NavGroup[] {
   const principal = useAuthStore.getState().auth.principal
 
   const visible = filterNavigation(navigation, principal)
@@ -26,7 +17,7 @@ function buildNavGroups(): NavGroup[] {
         title: translate(item.titleKey),
         items: [
           {
-            title: () => translate(item.titleKey),
+            title: translate(item.titleKey),
             icon: item.icon,
             url: item.to,
           },
@@ -40,7 +31,7 @@ function buildNavGroups(): NavGroup[] {
     groups.push({
       title: translate(item.titleKey),
       items: item.children.map((child) => ({
-        title: () => translate(child.titleKey),
+        title: translate(child.titleKey),
         icon: child.icon,
         url: child.to ?? '',
       })),
@@ -51,11 +42,6 @@ function buildNavGroups(): NavGroup[] {
 }
 
 export const sidebarData: SidebarData = {
-  user: {
-    name: 'aegisops',
-    email: 'aegisops@local',
-    avatar: '/avatars/shadcn.jpg',
-  },
   teams: [
     {
       name: 'AegisOps',
@@ -73,9 +59,5 @@ export const sidebarData: SidebarData = {
       plan: 'Startup',
     },
   ],
-  navGroups: buildNavGroups(),
-}
-
-export function refreshSidebarData(): SidebarData {
-  return { ...sidebarData, navGroups: buildNavGroups() }
+  navGroups: [],
 }
