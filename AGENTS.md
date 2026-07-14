@@ -26,7 +26,7 @@
 .agents/skills/portal    # web/portal 前端约定
 ```
 
-通用 Skill 归档在 `.agents/skill-library/`，不作为项目规则自动加载；需要时由执行环境提供或显式恢复。
+其余通用 Skill 保留在 `.agents/skills/`，仅在任务匹配或被显式点名时使用，不改变上述项目规则优先级。
 
 每次处理本仓库任务时：
 

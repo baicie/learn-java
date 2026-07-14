@@ -9,8 +9,8 @@ updated: 2026-07-07
 related:
   - .agents/skills/aegisops/SKILL.md §4.1
   - .agents/skills/aegisops/references/frontend-conventions.md
-  - .agents/skill-library/vercel-composition-patterns/AGENTS.md
-  - .agents/skill-library/shadcn/SKILL.md
+  - .agents/skills/vercel-composition-patterns/AGENTS.md
+  - .agents/skills/shadcn/SKILL.md
 ---
 
 # 前端 AI 工作台组件栈
@@ -232,9 +232,9 @@ pnpm run build
 
 ```txt
 - 主题 / 颜色 / 间距:  references/frontend-conventions.md (优先级最高)
-- 组件组合 (避免 boolean prop):  .agents/skill-library/vercel-composition-patterns/AGENTS.md
-- React 性能:  .agents/skill-library/vercel-react-best-practices/AGENTS.md
-- shadcn 注册表使用流程:  .agents/skill-library/shadcn/SKILL.md
+- 组件组合 (避免 boolean prop):  .agents/skills/vercel-composition-patterns/AGENTS.md
+- React 性能:  .agents/skills/vercel-react-best-practices/AGENTS.md
+- shadcn 注册表使用流程:  .agents/skills/shadcn/SKILL.md
 - 后端 AI 接口契约:  docs/ai-agent-design.md + SKILL.md §10
 ```
 

@@ -23,7 +23,7 @@ web/portal = shadcn-admin 模板血统的运营 / 控制台应用
 1. .agents/skills/portal/SKILL.md (本文件)
 2. references/portal-frontend-conventions.md
 3. .agents/skills/aegisops/SKILL.md (后端事实)
-4. .agents/skill-library/vercel-react-best-practices/AGENTS.md（可选参考，不自动加载）
+4. .agents/skills/vercel-react-best-practices/AGENTS.md（可选参考）
 5. web/portal/components.json
 6. web/portal/eslint.config.js
 7. AGENTS.md (只用于入口与执行提醒)

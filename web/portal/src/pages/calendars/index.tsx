@@ -475,62 +475,7 @@ ${year}-01-01,HOLIDAY,false,元旦,
               description={t('calendars.emptyDescription')}
             />
           ) : (
-            <div className='grid gap-6'>
-              <div className='grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]'>
-                <Card>
-                  <CardHeader>
-                    <CardTitle className='flex items-center gap-2 text-base'>
-                      <CalendarDays className='size-4' />
-                      当前日历
-                    </CardTitle>
-                    <CardDescription>选择需要维护的年度日历</CardDescription>
-                  </CardHeader>
-                  <CardContent className='flex flex-col gap-3 sm:flex-row sm:items-center'>
-                    <Select
-                      value={selectedCalendar?.id}
-                      onValueChange={setSelectedCalendarId}
-                    >
-                      <SelectTrigger className='flex-1'>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectGroup>
-                          {yearCalendars.map((calendar) => (
-                            <SelectItem key={calendar.id} value={calendar.id}>
-                              {calendar.calendarName}
-                            </SelectItem>
-                          ))}
-                        </SelectGroup>
-                      </SelectContent>
-                    </Select>
-                    {selectedCalendar ? (
-                      <div className='flex gap-3 text-sm text-muted-foreground'>
-                        <span className='flex items-center gap-1'>
-                          <MapPin className='size-4' />
-                          {selectedCalendar.regionCode}
-                        </span>
-                        <span className='flex items-center gap-1'>
-                          <Clock3 className='size-4' />
-                          {selectedCalendar.timezone}
-                        </span>
-                      </div>
-                    ) : null}
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader>
-                    <CardTitle className='text-base'>日期图例</CardTitle>
-                    <CardDescription>
-                      {canWrite
-                        ? '点击日期可切换工作日状态'
-                        : '当前仅可查看日历'}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <DayLegend canWrite={canWrite} />
-                  </CardContent>
-                </Card>
-              </div>
+            <div className='grid gap-6 xl:grid-cols-[minmax(0,4fr)_minmax(15rem,1fr)] xl:items-start'>
               <QueryStateBoundary
                 loading={days.isLoading}
                 error={days.error}
@@ -590,6 +535,61 @@ ${year}-01-01,HOLIDAY,false,元旦,
                   </div>
                 </div>
               </QueryStateBoundary>
+              <aside className='grid gap-4'>
+                <Card>
+                  <CardHeader>
+                    <CardTitle className='flex items-center gap-2 text-base'>
+                      <CalendarDays className='size-4' />
+                      当前日历
+                    </CardTitle>
+                    <CardDescription>选择需要维护的年度日历</CardDescription>
+                  </CardHeader>
+                  <CardContent className='flex flex-col gap-3'>
+                    <Select
+                      value={selectedCalendar?.id}
+                      onValueChange={setSelectedCalendarId}
+                    >
+                      <SelectTrigger className='w-full'>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          {yearCalendars.map((calendar) => (
+                            <SelectItem key={calendar.id} value={calendar.id}>
+                              {calendar.calendarName}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                    {selectedCalendar ? (
+                      <div className='flex flex-wrap gap-3 text-sm text-muted-foreground'>
+                        <span className='flex items-center gap-1'>
+                          <MapPin className='size-4' />
+                          {selectedCalendar.regionCode}
+                        </span>
+                        <span className='flex items-center gap-1'>
+                          <Clock3 className='size-4' />
+                          {selectedCalendar.timezone}
+                        </span>
+                      </div>
+                    ) : null}
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader>
+                    <CardTitle className='text-base'>日期图例</CardTitle>
+                    <CardDescription>
+                      {canWrite
+                        ? '点击日期可切换工作日状态'
+                        : '当前仅可查看日历'}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <DayLegend canWrite={canWrite} />
+                  </CardContent>
+                </Card>
+              </aside>
             </div>
           )}
         </CardContent>

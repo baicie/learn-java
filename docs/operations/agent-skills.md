@@ -19,4 +19,4 @@ related:
 - `aegisops`：全仓规则和单一真相源。
 - `portal`：`web/portal` 专用前端约定。
 
-通用 Skill 保存在 `.agents/skill-library/`，仅作离线参考，不参与项目规则优先级。确需恢复时，将对应目录移回 `.agents/skills/`；优先使用执行环境已提供的同名 Skill，避免再次复制和分叉维护。
+通用 Skill 保存在 `.agents/skills/`，仅在任务匹配或被显式点名时使用，不参与项目规则优先级。

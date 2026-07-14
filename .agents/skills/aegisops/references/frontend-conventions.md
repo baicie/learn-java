@@ -1,6 +1,6 @@
 # Frontend Conventions (AegisOps Console)
 
-本文件是 AegisOps 控制台前端工程的主题、组件、样式与代码组织规范。所有规则与 `.agents/skills/aegisops/SKILL.md` §4.1 共同生效；通用 shadcn 与 React Skill 仅作参考，归档在 `.agents/skill-library/`。
+本文件是 AegisOps 控制台前端工程的主题、组件、样式与代码组织规范。所有规则与 `.agents/skills/aegisops/SKILL.md` §4.1 共同生效；通用 shadcn 与 React Skill 位于 `.agents/skills/`，仅在任务匹配时使用。
 
 适用范围:
 
