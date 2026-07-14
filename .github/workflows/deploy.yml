@@ -27,7 +27,7 @@ env:
 jobs:
   preflight:
     name: Release preflight
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
 
@@ -54,7 +54,7 @@ jobs:
 
   build-images:
     name: Build ${{ matrix.name }}
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     timeout-minutes: 35
     needs: preflight
     environment:
@@ -118,7 +118,7 @@ jobs:
 
   runtime-smoke:
     name: Runtime smoke
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     needs: build-images
     environment:
@@ -150,7 +150,7 @@ jobs:
 
   deploy:
     name: Deploy to Tencent Cloud VM
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     timeout-minutes: 25
     needs: runtime-smoke
     environment:

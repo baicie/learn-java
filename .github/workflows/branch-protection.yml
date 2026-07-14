@@ -18,7 +18,7 @@ permissions:
 jobs:
   configure:
     name: Configure branch protection
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     timeout-minutes: 5
 
     steps:
