@@ -48,3 +48,21 @@ related:
 | DELETE     | `/relations/{relationId}`              | `work-record:relation`            | 删除关联                             |
 
 附件状态为 `pending_scan`、`ready`、`quarantined` 或 `deleted`。只有 `ready` 状态可下载；大小异常或检测到可执行文件头时进入隔离。关联创建时会再次校验目标域读取权限，并保存当时的标题、状态和摘要快照。
+
+## 企业增强 API（Phase 20.4–20.7）
+
+- `GET /api/work-record/analytics/statistics`：统计报表。
+- `GET /api/work-record/analytics/workload`：工作量分析。
+- `GET|POST|PUT /api/work-record/reminder-rules`：日报缺失提醒规则。
+- `GET /api/work-record/notifications/unread`、`POST /api/work-record/notifications/{id}/read`：个人通知。
+- `GET|POST /api/work-record/handovers` 与 `POST /api/work-record/handovers/{id}/submit|accept|complete`：值班交接状态机。
+- `POST /api/work-record/ai-generations/records/{recordId}/summary` 与 `POST /api/work-record/ai-generations/monthly`：异步生成 AI 草稿。
+- `GET /api/work-record/ai-generations`、`POST /api/work-record/ai-generations/{id}/review`：查询及审核 AI 结果。
+- `GET|POST /api/work-record/template-market`、`POST /api/work-record/template-market/{versionId}/install`：模板市场。
+- `GET|PUT /api/work-record/template-versions/{versionId}/field-policies`：查询或原子替换字段级读写与脱敏策略。
+- `POST /api/work-record/workflow/approvals`、`POST /api/work-record/workflow/approval-tasks/{id}/act`：审批流。
+- `GET /api/work-record/workflow/approval-tasks`：查询按用户、角色或记录负责人分配的待审批任务。
+- `POST /api/work-record/workflow/sla-policies`：SLA 策略，支持企业日历工作时段计时。
+- `GET /api/work-record/workflow/records/{recordId}/sla`：查询有权限访问记录的 SLA 实例。
+
+动态统计字段、筛选、写入和 AI 输入均执行字段级策略。模板包安装前校验 SHA-256；AI 输出只保存为待人工审核草稿；审批任务与 SLA 扫描使用数据库锁避免并发重复处理。

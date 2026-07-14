@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -113,3 +113,37 @@ class ContractResponse(BaseModel):
     contractVersion: str
     requestSchema: dict[str, Any]
     responseSchema: dict[str, Any]
+
+
+class WorkRecordItem(BaseModel):
+    id: str
+    title: str
+    status: str
+    recordTime: datetime
+    ownerName: str | None = None
+    fields: dict[str, Any] = Field(default_factory=dict)
+    relations: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class WorkRecordGenerateRequest(BaseModel):
+    contractVersion: str = "work-record-generation.v1"
+    generationType: str
+    tenantId: str
+    resourceId: str
+    periodStart: date | None = None
+    periodEnd: date | None = None
+    locale: str = "zh-CN"
+    promptVersion: str = "work-record-summary-v1"
+    records: list[WorkRecordItem] = Field(default_factory=list, max_length=5000)
+    statistics: dict[str, Any] = Field(default_factory=dict)
+    traceId: str
+
+
+class WorkRecordGenerateResponse(BaseModel):
+    contractVersion: str = "work-record-generation.v1"
+    provider: str
+    model: str
+    promptVersion: str
+    markdown: str = Field(min_length=1, max_length=100000)
+    warnings: list[str] = Field(default_factory=list)
+    raw: dict[str, Any] = Field(default_factory=dict)

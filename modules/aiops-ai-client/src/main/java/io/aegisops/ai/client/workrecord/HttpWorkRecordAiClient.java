@@ -1,0 +1,47 @@
+package io.aegisops.ai.client.workrecord;
+
+import io.aegisops.ai.client.AgentClientProperties;
+import io.aegisops.ai.client.AgentContract;
+import io.aegisops.common.exception.AppException;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestClient;
+
+@Component
+public class HttpWorkRecordAiClient implements WorkRecordAiClient {
+  private final AgentClientProperties properties;
+  private final RestClient restClient;
+
+  public HttpWorkRecordAiClient(AgentClientProperties properties, RestClient.Builder builder) {
+    this.properties = properties;
+    this.restClient =
+        builder
+            .baseUrl(properties.normalizedBaseUrl())
+            .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+            .build();
+  }
+
+  @Override
+  public WorkRecordGenerationResponse generate(WorkRecordGenerationRequest request) {
+    try {
+      WorkRecordGenerationResponse response =
+          restClient
+              .post()
+              .uri("/v1/work-record/generate")
+              .header(AgentContract.INTERNAL_TOKEN_HEADER, properties.normalizedInternalToken())
+              .header(AgentContract.TRACE_ID_HEADER, request.traceId())
+              .body(request)
+              .retrieve()
+              .body(WorkRecordGenerationResponse.class);
+      if (response == null || response.markdown() == null || response.markdown().isBlank()) {
+        throw new AppException("AI_WORK_RECORD_EMPTY", "AI returned an empty work-record result");
+      }
+      return response;
+    } catch (AppException ex) {
+      throw ex;
+    } catch (RuntimeException ex) {
+      throw new AppException("AI_WORK_RECORD_CALL_FAILED", "Failed to call work-record AI agent");
+    }
+  }
+}

@@ -16,4 +16,5 @@ public final class WorkRecordAuditActions {
   public static final String RECORD_UPDATE = "work_record.record.update";
   public static final String RECORD_DELETE = "work_record.record.delete";
   public static final String RECORD_EXPORT = "work_record.record.export";
+  public static final String RECORD_APPROVAL = "work_record.record.approval";
 }

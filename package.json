@@ -76,7 +76,7 @@
       "pnpm -C web/portal exec prettier --parser=typescript --write --cache --cache-location node_modules/.cache/.prettiercache-portal"
     ],
     "web/portal/src/**/*.{ts,tsx,jsx}": [
-      "pnpm -C web/portal exec eslint --max-warnings=0"
+      "pnpm -C web/portal exec eslint --max-warnings=0 --no-warn-ignored"
     ],
     "web/console/**/*.{js,jsx,ts,tsx,json,md,yaml,yml}": [
       "pnpm -C web/console exec prettier --write --cache --cache-location node_modules/.cache/.prettiercache-console"
@@ -85,7 +85,7 @@
       "pnpm -C web/console exec prettier --parser=typescript --write --cache --cache-location node_modules/.cache/.prettiercache-console"
     ],
     "web/console/src/**/*.{ts,tsx,jsx}": [
-      "pnpm -C web/console exec eslint --max-warnings=0"
+      "pnpm -C web/console exec eslint --max-warnings=0 --no-warn-ignored"
     ]
   },
   "engineStrict": true

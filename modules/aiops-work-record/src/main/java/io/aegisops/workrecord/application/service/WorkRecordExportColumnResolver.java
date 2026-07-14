@@ -1,5 +1,6 @@
 package io.aegisops.workrecord.application.service;
 
+import io.aegisops.security.UserPrincipal;
 import io.aegisops.workrecord.application.command.RecordListColumn;
 import io.aegisops.workrecord.application.command.ResolvedExportColumn;
 import io.aegisops.workrecord.application.port.WorkRecordFieldIndexRepository;
@@ -18,13 +19,24 @@ import org.springframework.stereotype.Service;
 @Service
 public class WorkRecordExportColumnResolver {
   private final WorkRecordFieldIndexRepository fieldRepository;
+  private final FieldPolicyService fieldPolicies;
 
-  public WorkRecordExportColumnResolver(WorkRecordFieldIndexRepository fieldRepository) {
+  public WorkRecordExportColumnResolver(
+      WorkRecordFieldIndexRepository fieldRepository, FieldPolicyService fieldPolicies) {
     this.fieldRepository = fieldRepository;
+    this.fieldPolicies = fieldPolicies;
   }
 
   public List<ResolvedExportColumn> resolve(
       String tenantId, List<RecordListColumn> requestedColumns, List<WorkRecord> records) {
+    return resolve(tenantId, requestedColumns, records, null);
+  }
+
+  public List<ResolvedExportColumn> resolve(
+      String tenantId,
+      List<RecordListColumn> requestedColumns,
+      List<WorkRecord> records,
+      UserPrincipal principal) {
     if (requestedColumns == null || requestedColumns.isEmpty()) {
       throw new IllegalArgumentException("at least one export column is required");
     }
@@ -73,6 +85,10 @@ public class WorkRecordExportColumnResolver {
         if (!field.exportable()) {
           throw new IllegalArgumentException(
               "field is not exportable in template version " + versionId + ": " + fieldCode);
+        }
+        if (!fieldPolicies.canReadField(tenantId, versionId, fieldCode, principal)) {
+          throw new org.springframework.security.access.AccessDeniedException(
+              "not allowed to export field: " + fieldCode);
         }
 
         versionFields.put(versionId, field);

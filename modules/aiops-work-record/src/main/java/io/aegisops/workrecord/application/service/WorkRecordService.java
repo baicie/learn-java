@@ -17,6 +17,7 @@ import io.aegisops.workrecord.domain.model.WorkRecordTemplateVersion;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,6 +33,18 @@ public class WorkRecordService {
   private final WorkRecordUserPort userPort;
   private final WorkRecordPayloadPolicy payloadPolicy;
   private final ObjectMapper objectMapper;
+  private FieldPolicyService fieldPolicies;
+  private WorkRecordLifecycleCoordinator lifecycle;
+
+  @Autowired
+  void setFieldPolicies(FieldPolicyService fieldPolicies) {
+    this.fieldPolicies = fieldPolicies;
+  }
+
+  @Autowired
+  void setLifecycle(WorkRecordLifecycleCoordinator lifecycle) {
+    this.lifecycle = lifecycle;
+  }
 
   public WorkRecordService(
       WorkRecordRepository recordRepository,
@@ -83,6 +96,9 @@ public class WorkRecordService {
     List<WorkRecordField> fields = fieldRepository.listByVersion(tenantId, version.id());
     String builtin = normalizeObject(command.builtinDataJson());
     String custom = normalizeObject(command.customDataJson());
+    if (fieldPolicies != null) {
+      fieldPolicies.requireWritablePatch(tenantId, version.id(), "{}", custom, user);
+    }
     valueValidator.validate(
         tenantId, version.id(), fields, custom, targetStatus != RecordStatus.DRAFT);
 
@@ -101,6 +117,9 @@ public class WorkRecordService {
 
     String actorId = actorId(user);
     WorkRecord record = recordRepository.create(tenantId, normalized, actorId);
+    if (lifecycle != null) {
+      lifecycle.afterMutation(tenantId, null, record);
+    }
     auditService.recordChange(
         tenantId,
         record.id(),
@@ -145,6 +164,10 @@ public class WorkRecordService {
     RecordStatus targetStatus =
         command.status() == null ? existing.status() : RecordStatus.from(command.status());
 
+    if (lifecycle != null && targetStatus != existing.status()) {
+      targetStatus = lifecycle.beforeTransition(tenantId, existing, targetStatus, user);
+    }
+
     boolean statusChanged = targetStatus != existing.status();
 
     if (custom != null || statusChanged) {
@@ -152,6 +175,15 @@ public class WorkRecordService {
           fieldRepository.listByVersion(tenantId, existing.templateVersionId());
 
       String effectiveCustom = custom == null ? existing.customDataJson() : custom;
+
+      if (fieldPolicies != null) {
+        fieldPolicies.requireWritablePatch(
+            tenantId,
+            existing.templateVersionId(),
+            existing.customDataJson(),
+            effectiveCustom,
+            user);
+      }
 
       valueValidator.validate(
           tenantId,
@@ -177,6 +209,9 @@ public class WorkRecordService {
             custom);
 
     WorkRecord updated = recordRepository.update(tenantId, recordId, normalized);
+    if (lifecycle != null) {
+      lifecycle.afterMutation(tenantId, existing, updated);
+    }
     auditService.recordChange(
         tenantId,
         updated.id(),

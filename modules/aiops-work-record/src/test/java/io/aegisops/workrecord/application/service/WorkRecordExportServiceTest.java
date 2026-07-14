@@ -60,7 +60,9 @@ class WorkRecordExportServiceTest {
     auditService = mock(WorkRecordAuditService.class);
     exportPolicy = new WorkRecordExportPolicy(5000);
     fieldRepository = mock(WorkRecordFieldIndexRepository.class);
-    columnResolver = new WorkRecordExportColumnResolver(fieldRepository);
+    FieldPolicyService fieldPolicies = mock(FieldPolicyService.class);
+    when(fieldPolicies.canReadField(anyString(), anyString(), anyString(), any())).thenReturn(true);
+    columnResolver = new WorkRecordExportColumnResolver(fieldRepository, fieldPolicies);
     clock = Clock.fixed(Instant.parse("2026-07-10T07:30:00Z"), ZoneId.of("Asia/Shanghai"));
 
     service =

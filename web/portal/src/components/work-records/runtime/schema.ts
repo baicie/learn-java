@@ -76,6 +76,8 @@ export function statusLabel(status: WorkRecordStatus) {
   const labels: Record<WorkRecordStatus, string> = {
     draft: '草稿',
     processing: '处理中',
+    pending_approval: '待审批',
+    rejected: '已驳回',
     done: '已完成',
     archived: '已归档',
   }

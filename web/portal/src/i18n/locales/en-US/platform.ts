@@ -4,6 +4,7 @@ export const platform = {
   'nav.workRecords.records': 'Records',
   'nav.workRecords.designer': 'Form Designer',
   'nav.workRecords.tasks': 'Import / Export Tasks',
+  'nav.workRecords.operations': 'Operations',
   'nav.platform.group': 'Platform',
   'nav.platform.users': 'Users',
   'nav.platform.roles': 'Roles & Permissions',

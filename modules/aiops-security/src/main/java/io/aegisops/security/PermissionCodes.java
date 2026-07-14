@@ -44,6 +44,16 @@ public final class PermissionCodes {
   public static final String WORK_RECORD_ATTACHMENT = "work-record:attachment";
   public static final String WORK_RECORD_ATTACHMENT_MODERATE = "work-record:attachment:moderate";
   public static final String WORK_RECORD_RELATION = "work-record:relation";
+  public static final String WORK_RECORD_ANALYTICS = "work-record:analytics";
+  public static final String WORK_RECORD_REMINDER_MANAGE = "work-record:reminder:manage";
+  public static final String WORK_RECORD_HANDOVER = "work-record:handover";
+  public static final String WORK_RECORD_AI_GENERATE = "work-record:ai:generate";
+  public static final String WORK_RECORD_AI_REVIEW = "work-record:ai:review";
+  public static final String WORK_RECORD_MARKET_PUBLISH = "work-record:market:publish";
+  public static final String WORK_RECORD_MARKET_INSTALL = "work-record:market:install";
+  public static final String WORK_RECORD_APPROVAL_MANAGE = "work-record:approval:manage";
+  public static final String WORK_RECORD_APPROVAL_ACT = "work-record:approval:act";
+  public static final String WORK_RECORD_SLA_MANAGE = "work-record:sla:manage";
 
   public static final String PLATFORM_USER_READ = "platform:user:read";
   public static final String PLATFORM_USER_WRITE = "platform:user:write";
@@ -104,7 +114,17 @@ public final class PermissionCodes {
           WORK_RECORD_COMMENT_MODERATE,
           WORK_RECORD_ATTACHMENT,
           WORK_RECORD_ATTACHMENT_MODERATE,
-          WORK_RECORD_RELATION);
+          WORK_RECORD_RELATION,
+          WORK_RECORD_ANALYTICS,
+          WORK_RECORD_REMINDER_MANAGE,
+          WORK_RECORD_HANDOVER,
+          WORK_RECORD_AI_GENERATE,
+          WORK_RECORD_AI_REVIEW,
+          WORK_RECORD_MARKET_PUBLISH,
+          WORK_RECORD_MARKET_INSTALL,
+          WORK_RECORD_APPROVAL_MANAGE,
+          WORK_RECORD_APPROVAL_ACT,
+          WORK_RECORD_SLA_MANAGE);
 
   public static final Set<String> ALL_PERMISSIONS =
       union(

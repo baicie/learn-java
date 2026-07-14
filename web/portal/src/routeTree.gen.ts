@@ -21,6 +21,7 @@ import { Route as AuthenticatedSettingsRouteRouteImport } from './routes/_authen
 import { Route as AuthenticatedWorkRecordsIndexRouteImport } from './routes/_authenticated/work-records/index'
 import { Route as AuthenticatedSettingsIndexRouteImport } from './routes/_authenticated/settings/index'
 import { Route as AuthenticatedWorkRecordsTemplatesRouteImport } from './routes/_authenticated/work-records/templates'
+import { Route as AuthenticatedWorkRecordsOperationsRouteImport } from './routes/_authenticated/work-records/operations'
 import { Route as AuthenticatedWorkRecordsNewRouteImport } from './routes/_authenticated/work-records/new'
 import { Route as AuthenticatedWorkRecordsRecordIdRouteImport } from './routes/_authenticated/work-records/$recordId'
 import { Route as AuthenticatedSettingsNotificationsRouteImport } from './routes/_authenticated/settings/notifications'
@@ -97,6 +98,12 @@ const AuthenticatedWorkRecordsTemplatesRoute =
   AuthenticatedWorkRecordsTemplatesRouteImport.update({
     id: '/work-records/templates',
     path: '/work-records/templates',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedWorkRecordsOperationsRoute =
+  AuthenticatedWorkRecordsOperationsRouteImport.update({
+    id: '/work-records/operations',
+    path: '/work-records/operations',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedWorkRecordsNewRoute =
@@ -203,6 +210,7 @@ export interface FileRoutesByFullPath {
   '/settings/notifications': typeof AuthenticatedSettingsNotificationsRoute
   '/work-records/$recordId': typeof AuthenticatedWorkRecordsRecordIdRouteWithChildren
   '/work-records/new': typeof AuthenticatedWorkRecordsNewRoute
+  '/work-records/operations': typeof AuthenticatedWorkRecordsOperationsRoute
   '/work-records/templates': typeof AuthenticatedWorkRecordsTemplatesRouteWithChildren
   '/settings/': typeof AuthenticatedSettingsIndexRoute
   '/work-records/': typeof AuthenticatedWorkRecordsIndexRoute
@@ -229,6 +237,7 @@ export interface FileRoutesByTo {
   '/settings/notifications': typeof AuthenticatedSettingsNotificationsRoute
   '/work-records/$recordId': typeof AuthenticatedWorkRecordsRecordIdRouteWithChildren
   '/work-records/new': typeof AuthenticatedWorkRecordsNewRoute
+  '/work-records/operations': typeof AuthenticatedWorkRecordsOperationsRoute
   '/settings': typeof AuthenticatedSettingsIndexRoute
   '/work-records': typeof AuthenticatedWorkRecordsIndexRoute
   '/work-records/$recordId/edit': typeof AuthenticatedWorkRecordsRecordIdEditRoute
@@ -257,6 +266,7 @@ export interface FileRoutesById {
   '/_authenticated/settings/notifications': typeof AuthenticatedSettingsNotificationsRoute
   '/_authenticated/work-records/$recordId': typeof AuthenticatedWorkRecordsRecordIdRouteWithChildren
   '/_authenticated/work-records/new': typeof AuthenticatedWorkRecordsNewRoute
+  '/_authenticated/work-records/operations': typeof AuthenticatedWorkRecordsOperationsRoute
   '/_authenticated/work-records/templates': typeof AuthenticatedWorkRecordsTemplatesRouteWithChildren
   '/_authenticated/settings/': typeof AuthenticatedSettingsIndexRoute
   '/_authenticated/work-records/': typeof AuthenticatedWorkRecordsIndexRoute
@@ -286,6 +296,7 @@ export interface FileRouteTypes {
     | '/settings/notifications'
     | '/work-records/$recordId'
     | '/work-records/new'
+    | '/work-records/operations'
     | '/work-records/templates'
     | '/settings/'
     | '/work-records/'
@@ -312,6 +323,7 @@ export interface FileRouteTypes {
     | '/settings/notifications'
     | '/work-records/$recordId'
     | '/work-records/new'
+    | '/work-records/operations'
     | '/settings'
     | '/work-records'
     | '/work-records/$recordId/edit'
@@ -339,6 +351,7 @@ export interface FileRouteTypes {
     | '/_authenticated/settings/notifications'
     | '/_authenticated/work-records/$recordId'
     | '/_authenticated/work-records/new'
+    | '/_authenticated/work-records/operations'
     | '/_authenticated/work-records/templates'
     | '/_authenticated/settings/'
     | '/_authenticated/work-records/'
@@ -442,6 +455,13 @@ declare module '@tanstack/react-router' {
       path: '/work-records/templates'
       fullPath: '/work-records/templates'
       preLoaderRoute: typeof AuthenticatedWorkRecordsTemplatesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/work-records/operations': {
+      id: '/_authenticated/work-records/operations'
+      path: '/work-records/operations'
+      fullPath: '/work-records/operations'
+      preLoaderRoute: typeof AuthenticatedWorkRecordsOperationsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/work-records/new': {
@@ -610,6 +630,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedPlatformRolesRoute: typeof AuthenticatedPlatformRolesRoute
   AuthenticatedWorkRecordsRecordIdRoute: typeof AuthenticatedWorkRecordsRecordIdRouteWithChildren
   AuthenticatedWorkRecordsNewRoute: typeof AuthenticatedWorkRecordsNewRoute
+  AuthenticatedWorkRecordsOperationsRoute: typeof AuthenticatedWorkRecordsOperationsRoute
   AuthenticatedWorkRecordsTemplatesRoute: typeof AuthenticatedWorkRecordsTemplatesRouteWithChildren
   AuthenticatedWorkRecordsIndexRoute: typeof AuthenticatedWorkRecordsIndexRoute
   AuthenticatedPlatformUsersIndexRoute: typeof AuthenticatedPlatformUsersIndexRoute
@@ -626,6 +647,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedWorkRecordsRecordIdRoute:
     AuthenticatedWorkRecordsRecordIdRouteWithChildren,
   AuthenticatedWorkRecordsNewRoute: AuthenticatedWorkRecordsNewRoute,
+  AuthenticatedWorkRecordsOperationsRoute:
+    AuthenticatedWorkRecordsOperationsRoute,
   AuthenticatedWorkRecordsTemplatesRoute:
     AuthenticatedWorkRecordsTemplatesRouteWithChildren,
   AuthenticatedWorkRecordsIndexRoute: AuthenticatedWorkRecordsIndexRoute,

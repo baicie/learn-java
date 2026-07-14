@@ -15,9 +15,12 @@ from aiops_agent.schemas import (
     DiagnoseRequest,
     DiagnoseResponse,
     HealthResponse,
+    WorkRecordGenerateRequest,
+    WorkRecordGenerateResponse,
 )
 from aiops_agent.service import DiagnosisService
 from aiops_agent.settings import settings
+from aiops_agent.work_record_generation import WorkRecordGenerationService
 from aiops_agent.workflow.contracts import (
     DiagnosisResponse as WorkflowDiagnosisResponse,
 )
@@ -51,6 +54,10 @@ def verify_contract_version(x_aegisops_contract_version: str | None = Header(def
 
 def diagnosis_service() -> DiagnosisService:
     return DiagnosisService(settings)
+
+
+def work_record_generation_service() -> WorkRecordGenerationService:
+    return WorkRecordGenerationService(settings)
 
 
 @app.get("/health", response_model=HealthResponse)
@@ -99,6 +106,23 @@ async def diagnose_resume(
     service: DiagnosisService = Depends(diagnosis_service),
 ) -> WorkflowDiagnosisResponse:
     return await service.resume(request)
+
+
+@app.post(
+    "/v1/work-record/generate",
+    response_model=WorkRecordGenerateResponse,
+    dependencies=[Depends(verify_internal_token)],
+)
+async def generate_work_record(
+    request: WorkRecordGenerateRequest,
+    service: WorkRecordGenerationService = Depends(work_record_generation_service),
+) -> WorkRecordGenerateResponse:
+    if request.contractVersion != "work-record-generation.v1":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="unsupported work-record generation contract",
+        )
+    return await service.generate(request)
 
 
 @app.get("/metrics")

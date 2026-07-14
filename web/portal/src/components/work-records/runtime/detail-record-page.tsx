@@ -14,6 +14,7 @@ import {
   ErrorState,
   PageLoadingState,
 } from '@/components/feedback/async-state'
+import { RecordExtensionPanel } from './record-extension-panel'
 import { RecordReadonlyView } from './record-readonly-view'
 
 export function DetailRecordPage() {
@@ -99,22 +100,25 @@ export function DetailRecordPage() {
   const history = historyQuery.data ?? []
 
   return (
-    <RecordReadonlyView
-      record={recordQuery.data}
-      fields={fields}
-      dictOptions={dictionaries.items}
-      customData={parseCustomData(recordQuery.data)}
-      canEdit={recordQuery.data.status !== 'archived'}
-      history={history}
-      historyLoading={historyQuery.isLoading}
-      historyError={historyQuery.error as Error | null}
-      onBack={() => navigate({ to: '/work-records' } as never)}
-      onEdit={() =>
-        navigate({
-          to: '/work-records/$recordId/edit',
-          params: { recordId: recordQuery.data!.id },
-        })
-      }
-    />
+    <>
+      <RecordReadonlyView
+        record={recordQuery.data}
+        fields={fields}
+        dictOptions={dictionaries.items}
+        customData={parseCustomData(recordQuery.data)}
+        canEdit={recordQuery.data.status !== 'archived'}
+        history={history}
+        historyLoading={historyQuery.isLoading}
+        historyError={historyQuery.error as Error | null}
+        onBack={() => navigate({ to: '/work-records' } as never)}
+        onEdit={() =>
+          navigate({
+            to: '/work-records/$recordId/edit',
+            params: { recordId: recordQuery.data!.id },
+          })
+        }
+      />
+      <RecordExtensionPanel recordId={recordId} />
+    </>
   )
 }

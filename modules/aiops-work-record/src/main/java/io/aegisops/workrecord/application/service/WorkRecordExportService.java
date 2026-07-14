@@ -149,13 +149,15 @@ public class WorkRecordExportService {
     }
 
     List<ResolvedExportColumn> firstColumns =
-        columnResolver.resolve(tenantId, requestedColumns, result.items());
+        columnResolver.resolve(tenantId, requestedColumns, result.items(), user);
     csvWriter.writeHeader(output, firstColumns.stream().map(ResolvedExportColumn::title).toList());
 
     while (true) {
       List<WorkRecord> records = result.items();
       List<ResolvedExportColumn> columns =
-          page == 1 ? firstColumns : columnResolver.resolve(tenantId, requestedColumns, records);
+          page == 1
+              ? firstColumns
+              : columnResolver.resolve(tenantId, requestedColumns, records, user);
       List<ParsedRecord> parsedRecords = parseRecords(records);
       LookupContext context = buildLookupContext(tenantId, meta, columns, parsedRecords);
 
@@ -220,7 +222,7 @@ public class WorkRecordExportService {
     }
 
     List<ResolvedExportColumn> columns =
-        columnResolver.resolve(tenantId, requestedColumns, records);
+        columnResolver.resolve(tenantId, requestedColumns, records, user);
 
     List<ParsedRecord> parsedRecords = parseRecords(records);
 

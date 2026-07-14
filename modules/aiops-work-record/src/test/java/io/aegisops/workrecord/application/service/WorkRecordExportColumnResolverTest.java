@@ -19,12 +19,15 @@ import org.mockito.ArgumentCaptor;
 
 class WorkRecordExportColumnResolverTest {
   private WorkRecordFieldIndexRepository fieldRepository;
+  private FieldPolicyService fieldPolicies;
   private WorkRecordExportColumnResolver resolver;
 
   @BeforeEach
   void setUp() {
     fieldRepository = mock(WorkRecordFieldIndexRepository.class);
-    resolver = new WorkRecordExportColumnResolver(fieldRepository);
+    fieldPolicies = mock(FieldPolicyService.class);
+    when(fieldPolicies.canReadField(anyString(), anyString(), anyString(), any())).thenReturn(true);
+    resolver = new WorkRecordExportColumnResolver(fieldRepository, fieldPolicies);
   }
 
   @Test

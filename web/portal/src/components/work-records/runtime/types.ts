@@ -1,6 +1,8 @@
 export const WORK_RECORD_STATUSES = [
   'draft',
   'processing',
+  'pending_approval',
+  'rejected',
   'done',
   'archived',
 ] as const

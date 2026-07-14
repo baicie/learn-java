@@ -4,6 +4,7 @@ export const platform = {
   'nav.workRecords.records': '记录列表',
   'nav.workRecords.designer': '表单设计',
   'nav.workRecords.tasks': '导入导出任务',
+  'nav.workRecords.operations': '运营中心',
   'nav.platform.group': '平台管理',
   'nav.platform.users': '用户管理',
   'nav.platform.roles': '角色权限',
