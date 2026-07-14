@@ -24,11 +24,12 @@ Do not edit it manually.
 
 ## operation
 
-| Title                   | Status   | Phase  | Updated    | Path                                                          |
-| ----------------------- | -------- | ------ | ---------- | ------------------------------------------------------------- |
-| Automation Safety Rules | accepted | global | 2026-06-30 | [docs/automation-safety.md](automation-safety.md)             |
-| Agent Skill 管理        | accepted | global | 2026-07-14 | [docs/operations/agent-skills.md](operations/agent-skills.md) |
-| 项目文档导航            | accepted | global | 2026-07-14 | [docs/README.md](README.md)                                   |
+| Title                   | Status   | Phase   | Updated    | Path                                                          |
+| ----------------------- | -------- | ------- | ---------- | ------------------------------------------------------------- |
+| Automation Safety Rules | accepted | global  | 2026-06-30 | [docs/automation-safety.md](automation-safety.md)             |
+| Agent Skill 管理        | accepted | global  | 2026-07-14 | [docs/operations/agent-skills.md](operations/agent-skills.md) |
+| Git 工作流              | accepted | phase-8 | 2026-07-14 | [docs/operations/git-workflow.md](operations/git-workflow.md) |
+| 项目文档导航            | accepted | global  | 2026-07-14 | [docs/README.md](README.md)                                   |
 
 ## adr
 

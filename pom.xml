@@ -103,6 +103,7 @@
           <artifactId>maven-failsafe-plugin</artifactId>
           <version>${maven-failsafe-plugin.version}</version>
           <configuration>
+            <classesDirectory>${project.build.outputDirectory}</classesDirectory>
             <includes>
               <include>**/*IT.java</include>
             </includes>
@@ -191,6 +192,7 @@
           <failsOnError>true</failsOnError>
           <includeTestSourceDirectory>true</includeTestSourceDirectory>
           <inputEncoding>${project.build.sourceEncoding}</inputEncoding>
+          <suppressionsLocation>${maven.multiModuleProjectDirectory}/infra/checkstyle/suppressions.xml</suppressionsLocation>
           <sourceDirectories>
             <sourceDirectory>${project.basedir}/src/main/java</sourceDirectory>
           </sourceDirectories>

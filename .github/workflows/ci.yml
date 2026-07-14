@@ -4,34 +4,12 @@ on:
   pull_request:
     branches:
       - main
-      - develop
-    paths:
-      - "apps/**"
-      - "modules/**"
-      - "web/**"
-      - "docs/**"
-      - ".agents/**"
-      - "scripts/**"
-      - "pom.xml"
-      - "pnpm-lock.yaml"
-      - ".github/workflows/ci.yml"
-      - "package.json"
+      - mvp
 
   push:
     branches:
       - main
-      - develop
-    paths:
-      - "apps/**"
-      - "modules/**"
-      - "web/**"
-      - "docs/**"
-      - ".agents/**"
-      - "scripts/**"
-      - "pom.xml"
-      - "pnpm-lock.yaml"
-      - ".github/workflows/ci.yml"
-      - "package.json"
+      - mvp
 
   workflow_dispatch:
 
@@ -113,10 +91,12 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: pnpm
-          cache-dependency-path: |
-            pnpm-lock.yaml
-            web/console/pnpm-lock.yaml
+
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.33.4 --activate
+          pnpm --version
 
       - name: Verify frontend
         run: bash scripts/ci/frontend.sh

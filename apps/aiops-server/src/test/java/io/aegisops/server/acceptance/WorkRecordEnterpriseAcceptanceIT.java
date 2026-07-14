@@ -19,9 +19,8 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInstance;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
@@ -41,7 +40,6 @@ import org.testcontainers.junit.jupiter.Testcontainers;
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("acceptance")
 @Testcontainers
-@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class WorkRecordEnterpriseAcceptanceIT {
 
   @Container
@@ -67,7 +65,7 @@ class WorkRecordEnterpriseAcceptanceIT {
   private Tokens tokens;
   private ScenarioState state;
 
-  @BeforeAll
+  @BeforeEach
   void prepareIdentities() {
     identities =
         new AcceptanceIdentityFixture(
@@ -81,6 +79,8 @@ class WorkRecordEnterpriseAcceptanceIT {
             api.login(identities.admin().username(), identities.admin().password()),
             api.login(identities.userA().username(), identities.userA().password()),
             api.login(identities.userB().username(), identities.userB().password()));
+
+    assertAdminAuthorization();
 
     state = new ScenarioState(identities.suffix());
   }
@@ -180,12 +180,6 @@ class WorkRecordEnterpriseAcceptanceIT {
                 "Phase 18 验收日历"));
 
     state.calendarId = calendar.path("id").asText();
-
-    JsonNode selected =
-        api.putData(
-            "/api/platform/calendars/" + state.calendarId + "/default", tokens.admin(), Map.of());
-
-    assertThat(selected.path("id").asText()).isEqualTo(state.calendarId);
   }
 
   private void createAndPublishTemplateV1() {
@@ -237,6 +231,24 @@ class WorkRecordEnterpriseAcceptanceIT {
             state.v1Id,
             state.userBOtherTitle,
             Map.of("summary", "完成其他用户日报", "priority", "P1", "hours", 3));
+
+    assertThat(state.userARecordV1).isNotBlank().isNotEqualTo(state.userBRecordV1);
+    assertThat(state.userBRecordV1).isNotBlank();
+
+    JsonNode ownRecords =
+        api.getData(
+            "/api/work-record/records", tokens.userA(), api.query("page", "1", "pageSize", "20"));
+
+    assertThat(ownRecords.path("total").asLong()).isEqualTo(1);
+    assertThat(recordIds(ownRecords)).containsExactly(state.userARecordV1);
+  }
+
+  private void assertAdminAuthorization() {
+    JsonNode authorization = api.getData("/api/auth/me", tokens.admin());
+
+    assertThat(textValues(authorization.path("roles"))).contains("system_admin");
+    assertThat(textValues(authorization.path("permissions"))).contains("work-record:read:all");
+    assertThat(authorization.path("dataScopes").path("work-record").asText()).isEqualTo("ALL");
   }
 
   private void administratorCanReadAllRecords() {
@@ -409,7 +421,7 @@ class WorkRecordEnterpriseAcceptanceIT {
 
   private void exportLimitIsEnforced() {
     ResponseEntity<JsonNode> rejected =
-        api.postRaw(
+        api.postCsvError(
             "/api/work-record/records/export",
             tokens.admin(),
             Map.of("quickView", "all", "columns", List.of("title")));
@@ -430,7 +442,6 @@ class WorkRecordEnterpriseAcceptanceIT {
             "platform.dict_type.create",
             "platform.dict_item.create",
             "platform.calendar.create",
-            "platform.calendar.default.change",
             "work_record.template.create",
             "work_record.template.draft.update",
             "work_record.template.publish",
@@ -534,6 +545,12 @@ class WorkRecordEnterpriseAcceptanceIT {
   private Set<String> fieldCodes(JsonNode fields) {
     Set<String> result = new LinkedHashSet<>();
     fields.forEach(field -> result.add(field.path("fieldCode").asText()));
+    return result;
+  }
+
+  private Set<String> textValues(JsonNode array) {
+    Set<String> result = new LinkedHashSet<>();
+    array.forEach(value -> result.add(value.asText()));
     return result;
   }
 

@@ -36,12 +36,10 @@ public class AuthorizationRepository {
         """,
         params,
         (ResultSet rs) -> {
-          while (rs.next()) {
-            roles.add(rs.getString("role_code"));
-            String perm = rs.getString("permission_code");
-            if (perm != null && !perm.isBlank()) {
-              permissions.add(perm);
-            }
+          roles.add(rs.getString("role_code"));
+          String perm = rs.getString("permission_code");
+          if (perm != null && !perm.isBlank()) {
+            permissions.add(perm);
           }
         });
 
@@ -55,7 +53,7 @@ public class AuthorizationRepository {
          where ur.tenant_id = :tenantId and ur.user_id = :userId
         """,
         params,
-        (ResultSet rs) -> collectScopes(rs, dataScopes));
+        (ResultSet rs) -> collectScope(rs, dataScopes));
 
     return new AuthorizationSnapshot(roles, permissions, dataScopes);
   }
@@ -143,12 +141,10 @@ public class AuthorizationRepository {
         Map.of("tenantId", tenantId, "userId", userId, "roleCode", roleCode));
   }
 
-  private void collectScopes(ResultSet rs, Map<String, DataScope> target) throws SQLException {
-    while (rs.next()) {
-      String code = rs.getString("resource_code");
-      DataScope scope = DataScope.from(rs.getString("scope_type"));
-      target.merge(code, scope, DataScope::max);
-    }
+  private void collectScope(ResultSet rs, Map<String, DataScope> target) throws SQLException {
+    String code = rs.getString("resource_code");
+    DataScope scope = DataScope.from(rs.getString("scope_type"));
+    target.merge(code, scope, DataScope::max);
   }
 
   private void requireText(String value, String name) {

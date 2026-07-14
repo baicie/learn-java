@@ -4,7 +4,7 @@ on:
   pull_request:
     branches:
       - main
-      - develop
+      - mvp
     paths:
       - "ops/**"
       - "infra/**"
@@ -12,7 +12,7 @@ on:
   push:
     branches:
       - main
-      - develop
+      - mvp
     paths:
       - "ops/**"
       - "infra/**"
@@ -96,12 +96,16 @@ jobs:
             psql -v ON_ERROR_STOP=on -c "select 1" > /dev/null
           done
 
-      - name: Apply schemas against clean db
+      - name: Apply migrations against clean db
         run: |
           set -e
-          psql -v ON_ERROR_STOP=on -c "create schema work_record"
-          # 实际 dry-run：通过 \set 表达式和 DO 块语法预解析
-          psql -v ON_ERROR_STOP=on -c 'select 1'
+          docker run --rm --network host \
+            -v "$PWD/apps/aiops-server/src/main/resources/db/migration:/flyway/sql:ro" \
+            flyway/flyway:11.7.2 \
+            -url="jdbc:postgresql://${PGHOST}:${PGPORT}/${PGDATABASE}" \
+            -user="${PGUSER}" \
+            -password="${PGPASSWORD}" \
+            migrate
 
       - name: Backup & restore loop
         run: |

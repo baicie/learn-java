@@ -40,7 +40,19 @@ class FlywayMigrationVersionUniquenessTest {
           "V0008__platform_navigation_workspace.sql",
           "V0009__alert_ingest_rules.sql",
           "V0010__evidence_collection_task.sql",
-          "V0013__migrate_work_record_schema.sql");
+          "V0013__migrate_work_record_schema.sql",
+          "V0016__add_work_record_field_exportable.sql",
+          "V0017__platform_calendar_and_permission_seed.sql",
+          "V0018__seed_platform_default_dict_items.sql",
+          "V0019__work_record_enterprise_schema.sql",
+          "V0020__harden_work_record_enterprise_constraints.sql",
+          "V0021__work_record_safe_dynamic_query_casts.sql",
+          "V0023__fix_enterprise_authorization.sql",
+          "V0024__audit_change_tracking.sql",
+          "V0025__secure_audit_append_only.sql",
+          "V0026__work_record_calendar_integration.sql",
+          "V0027__phase19_production_constraints.sql",
+          "V0028__portal_iam_management.sql");
 
   /** 允许但已废弃的宽松正则,仅用于版本号唯一性兜底. */
   private static final Pattern ANY_VERSIONED_MIGRATION = Pattern.compile("^V([^_]+)__.+\\.sql$");
