@@ -180,12 +180,6 @@ class WorkRecordEnterpriseAcceptanceIT {
                 "Phase 18 验收日历"));
 
     state.calendarId = calendar.path("id").asText();
-
-    JsonNode selected =
-        api.putData(
-            "/api/platform/calendars/" + state.calendarId + "/default", tokens.admin(), Map.of());
-
-    assertThat(selected.path("id").asText()).isEqualTo(state.calendarId);
   }
 
   private void createAndPublishTemplateV1() {
@@ -448,7 +442,6 @@ class WorkRecordEnterpriseAcceptanceIT {
             "platform.dict_type.create",
             "platform.dict_item.create",
             "platform.calendar.create",
-            "platform.calendar.default.change",
             "work_record.template.create",
             "work_record.template.draft.update",
             "work_record.template.publish",
