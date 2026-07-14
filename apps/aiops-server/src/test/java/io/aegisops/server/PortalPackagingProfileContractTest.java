@@ -16,8 +16,8 @@ class PortalPackagingProfileContractTest {
     assertThat(pom).contains("<id>with-console</id>");
     assertThat(pom).contains("web/portal/dist");
     assertThat(pom).contains("web/console/dist");
-    assertThat(pom).contains("<id>portal-build</id>");
-    assertThat(pom).contains("<id>console-build</id>");
+    assertThat(pom).contains("<id>run-portal-pom</id>");
+    assertThat(pom).contains("<id>run-console-pom</id>");
   }
 
   @Test

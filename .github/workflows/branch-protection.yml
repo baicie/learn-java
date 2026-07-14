@@ -6,11 +6,11 @@ on:
       branches:
         description: "Comma-separated branches to protect"
         required: true
-        default: "main,develop"
+        default: "main,mvp"
       checks:
         description: "Comma-separated required check names"
         required: true
-        default: "Docs,Backend,Frontend,CI Summary"
+        default: "CI Summary,Block .env and key literals"
 
 permissions:
   contents: read
@@ -25,19 +25,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          run_install: false
-
       - name: Setup Node
         uses: actions/setup-node@v6
         with:
           node-version: "22"
-          cache: pnpm
-
-      - name: Install root tooling
-        run: pnpm install --frozen-lockfile
 
       - name: Configure branch protection
         env:
@@ -45,4 +36,4 @@ jobs:
           GITHUB_REPOSITORY: ${{ github.repository }}
           BRANCH_PROTECTION_BRANCHES: ${{ inputs.branches }}
           BRANCH_PROTECTION_CHECKS: ${{ inputs.checks }}
-        run: pnpm branch-protection
+        run: node scripts/ci/branch-protection.ts

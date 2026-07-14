@@ -4,34 +4,12 @@ on:
   pull_request:
     branches:
       - main
-      - develop
-    paths:
-      - "apps/**"
-      - "modules/**"
-      - "web/**"
-      - "docs/**"
-      - ".agents/**"
-      - "scripts/**"
-      - "pom.xml"
-      - "pnpm-lock.yaml"
-      - ".github/workflows/ci.yml"
-      - "package.json"
+      - mvp
 
   push:
     branches:
       - main
-      - develop
-    paths:
-      - "apps/**"
-      - "modules/**"
-      - "web/**"
-      - "docs/**"
-      - ".agents/**"
-      - "scripts/**"
-      - "pom.xml"
-      - "pnpm-lock.yaml"
-      - ".github/workflows/ci.yml"
-      - "package.json"
+      - mvp
 
   workflow_dispatch:
 

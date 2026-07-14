@@ -1,6 +1,5 @@
 # AegisOps Code Owners
 # 每个变更必须由指定 owner 团队审阅通过才能合并。
-# 参考 AGENTS.md §16.14。
 
 # 默认：所有变更都需 Owner 团队审阅
 *                              @aegisops/owners

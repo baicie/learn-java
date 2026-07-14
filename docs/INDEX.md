@@ -4,8 +4,8 @@ type: operation
 status: accepted
 phase: global
 owner: script
-created: 2026-07-07
-updated: 2026-07-07
+created: 2026-07-14
+updated: 2026-07-14
 related: []
 ---
 
@@ -21,9 +21,12 @@ Do not edit it manually.
 
 ## adr
 
-| Title                                                | Status   | Phase  | Updated    | Path                                                                      |
-| ---------------------------------------------------- | -------- | ------ | ---------- | ------------------------------------------------------------------------- |
-| aiops-agent（Python LangGraph 运行时）的边界与可见性 | accepted | global | 2026-06-30 | [docs/adr/0003-aiops-agent-boundary.md](adr/0003-aiops-agent-boundary.md) |
+| Title                                                          | Status   | Phase       | Updated    | Path                                                                                                              |
+| -------------------------------------------------------------- | -------- | ----------- | ---------- | ----------------------------------------------------------------------------------------------------------------- |
+| aiops-agent（Python LangGraph 运行时）的边界与可见性           | accepted | global      | 2026-06-30 | [docs/adr/0003-aiops-agent-boundary.md](adr/0003-aiops-agent-boundary.md)                                         |
+| 工作记录表 schema 命名（public vs work_record）阶段性决议      | accepted | work-record | 2026-07-08 | [docs/adr/0004-work-record-schema-public-vs-work-record.md](adr/0004-work-record-schema-public-vs-work-record.md) |
+| 工作记录模板设计器采用 @formily/core，禁用 Antd/Fusion setters | accepted | work-record | 2026-07-09 | [docs/adr/0005-work-record-designer-formily-core-only.md](adr/0005-work-record-designer-formily-core-only.md)     |
+| portal 测试栈选型（vitest browser + Playwright e2e）           | accepted | work-record | 2026-07-08 | [docs/adr/0006-portal-vitest-browser-and-playwright-e2e.md](adr/0006-portal-vitest-browser-and-playwright-e2e.md) |
 
 ## ai
 
@@ -41,15 +44,17 @@ Do not edit it manually.
 
 ## operation
 
-| Title                   | Status   | Phase  | Updated    | Path                                              |
-| ----------------------- | -------- | ------ | ---------- | ------------------------------------------------- |
-| Automation Safety Rules | accepted | global | 2026-06-30 | [docs/automation-safety.md](automation-safety.md) |
+| Title                   | Status   | Phase   | Updated    | Path                                                          |
+| ----------------------- | -------- | ------- | ---------- | ------------------------------------------------------------- |
+| Automation Safety Rules | accepted | global  | 2026-06-30 | [docs/automation-safety.md](automation-safety.md)             |
+| Git 工作流              | accepted | phase-8 | 2026-07-14 | [docs/operations/git-workflow.md](operations/git-workflow.md) |
 
 ## database
 
-| Title              | Status   | Phase  | Updated    | Path                                |
-| ------------------ | -------- | ------ | ---------- | ----------------------------------- |
-| Core Domain Models | accepted | global | 2026-06-30 | [docs/data-model.md](data-model.md) |
+| Title                | Status   | Phase       | Updated    | Path                                                        |
+| -------------------- | -------- | ----------- | ---------- | ----------------------------------------------------------- |
+| Core Domain Models   | accepted | global      | 2026-06-30 | [docs/data-model.md](data-model.md)                         |
+| 工作记录 Schema 契约 | draft    | work-record | 2026-07-09 | [docs/record/schema-contract.md](record/schema-contract.md) |
 
 ## design
 
@@ -102,8 +107,18 @@ Do not edit it manually.
 | AegisOps Production Runbook                                      | accepted   | global      | 2026-06-30 | [docs/operations/runbook.md](operations/runbook.md)                                                                 |
 | Phase8.0：SaaS Multi-tenant Hardening                            | accepted   | global      | 2026-06-30 | [docs/phase8.md](phase8.md)                                                                                         |
 | 可配置工作记录模块（终版设计 · pre-portal · 已废弃）             | deprecated | work-record | 2026-07-07 | [docs/record/2026-07-06-record-index-pre-portal.md](record/2026-07-06-record-index-pre-portal.md)                   |
-| 可配置工作记录模块（终版设计 · portal-first）                    | review     | work-record | 2026-07-07 | [docs/record/index.md](record/index.md)                                                                             |
-| 工作记录模块 Phase 设计与代码包                                  | draft      | work-record | 2026-07-06 | [docs/record/work-record-phases-design-code.md](record/work-record-phases-design-code.md)                           |
+| 工作记录表单设计器详细设计（@formily/core only）                 | review     | work-record | 2026-07-08 | [docs/record/designer-design.md](record/designer-design.md)                                                         |
+| 可配置工作记录模块（终版设计 · portal-first）                    | review     | work-record | 2026-07-08 | [docs/record/index.md](record/index.md)                                                                             |
+| 工作记录 Phase 00 产品边界与总体契约                             | review     | work-record | 2026-07-08 | [docs/record/phase-00-baseline-and-contract.md](record/phase-00-baseline-and-contract.md)                           |
+| 工作记录 Phase 01 Portal 壳、导航与国际化                        | review     | work-record | 2026-07-08 | [docs/record/phase-01-portal-i18n-and-shell.md](record/phase-01-portal-i18n-and-shell.md)                           |
+| 工作记录 Phase 02 平台字典完整设计                               | review     | work-record | 2026-07-08 | [docs/record/phase-02-platform-dictionary.md](record/phase-02-platform-dictionary.md)                               |
+| 工作记录 Phase 02A 平台工作日历                                  | review     | work-record | 2026-07-08 | [docs/record/phase-02a-platform-calendar.md](record/phase-02a-platform-calendar.md)                                 |
+| 工作记录 Phase 03 模板与字段契约                                 | review     | work-record | 2026-07-08 | [docs/record/phase-03-work-record-template.md](record/phase-03-work-record-template.md)                             |
+| 工作记录 Phase 04 Portal 原生模板设计器                          | review     | work-record | 2026-07-08 | [docs/record/phase-04-formily-designer.md](record/phase-04-formily-designer.md)                                     |
+| 工作记录 Phase 05 动态表单运行态                                 | review     | work-record | 2026-07-08 | [docs/record/phase-05-record-runtime.md](record/phase-05-record-runtime.md)                                         |
+| 工作记录 Phase 06 列表筛选与导出                                 | review     | work-record | 2026-07-08 | [docs/record/phase-06-record-list-export.md](record/phase-06-record-list-export.md)                                 |
+| 工作记录 Phase 07 权限审计与交付收口                             | review     | work-record | 2026-07-08 | [docs/record/phase-07-role-permission-hardening.md](record/phase-07-role-permission-hardening.md)                   |
+| 工作记录模块 Phase 设计与代码包（已废弃）                        | deprecated | work-record | 2026-07-07 | [docs/record/work-record-phases-design-code.md](record/work-record-phases-design-code.md)                           |
 | Phase Z3: Zabbix Alert Aggregation Strategy                      | accepted   | global      | 2026-06-30 | [docs/scenarios/phase-z3-zabbix-incident-aggregation.md](scenarios/phase-z3-zabbix-incident-aggregation.md)         |
 | Phase Z4: Zabbix Evidence Collector                              | accepted   | global      | 2026-06-30 | [docs/scenarios/phase-z4-zabbix-evidence-collector.md](scenarios/phase-z4-zabbix-evidence-collector.md)             |
 | Phase Z5: Evidence-aware RCA Rules                               | accepted   | global      | 2026-06-30 | [docs/scenarios/phase-z5-rca-evidence-rules.md](scenarios/phase-z5-rca-evidence-rules.md)                           |
@@ -121,18 +136,37 @@ Do not edit it manually.
 
 ## phase
 
-| Title                            | Status     | Phase  | Updated    | Path                                    |
-| -------------------------------- | ---------- | ------ | ---------- | --------------------------------------- |
-| MVP Roadmap                      | accepted   | global | 2026-06-30 | [docs/mvp-roadmap.md](mvp-roadmap.md)   |
-| MVP Roadmap (Historical Draft)   | deprecated | global | 2026-06-30 | [docs/mvp/roadmap.md](mvp/roadmap.md)   |
-| MVP Roadmap 2 (Historical Draft) | deprecated | global | 2026-06-30 | [docs/mvp/roadmap2.md](mvp/roadmap2.md) |
-| MVP Roadmap 3 (Historical Draft) | deprecated | global | 2026-06-30 | [docs/mvp/roadmap3.md](mvp/roadmap3.md) |
+| Title                            | Status     | Phase       | Updated    | Path                                                                                    |
+| -------------------------------- | ---------- | ----------- | ---------- | --------------------------------------------------------------------------------------- |
+| MVP Roadmap                      | accepted   | global      | 2026-06-30 | [docs/mvp-roadmap.md](mvp-roadmap.md)                                                   |
+| MVP Roadmap (Historical Draft)   | deprecated | global      | 2026-06-30 | [docs/mvp/roadmap.md](mvp/roadmap.md)                                                   |
+| MVP Roadmap 2 (Historical Draft) | deprecated | global      | 2026-06-30 | [docs/mvp/roadmap2.md](mvp/roadmap2.md)                                                 |
+| MVP Roadmap 3 (Historical Draft) | deprecated | global      | 2026-06-30 | [docs/mvp/roadmap3.md](mvp/roadmap3.md)                                                 |
+| Phase 1 工程基线重建             | draft      | work-record | 2026-07-09 | [docs/record/phase-01-engineering-baseline.md](record/phase-01-engineering-baseline.md) |
+| Phase 3 数据库模型重做           | draft      | work-record | 2026-07-09 | [docs/record/phase-03-database-model.md](record/phase-03-database-model.md)             |
+
+## research
+
+| Title                                 | Status | Phase       | Updated    | Path                                                                  |
+| ------------------------------------- | ------ | ----------- | ---------- | --------------------------------------------------------------------- |
+| 工作记录企业级验收清单                | draft  | work-record | 2026-07-09 | [docs/record/acceptance-checklist.md](record/acceptance-checklist.md) |
+| 工作记录企业级重做路线图              | draft  | work-record | 2026-07-09 | [docs/record/enterprise-roadmap.md](record/enterprise-roadmap.md)     |
+| 工作记录 Phase 0 详细设计（对话记录） | draft  | work-record | 2026-07-09 | [docs/record/phase/00.md](record/phase/00.md)                         |
+| 工作记录阶段对话记录                  | draft  |             | 2026-07-09 | [docs/record/phase/step.md](record/phase/step.md)                     |
+
+## api
+
+| Title             | Status | Phase       | Updated    | Path                                                                |
+| ----------------- | ------ | ----------- | ---------- | ------------------------------------------------------------------- |
+| 工作记录 API 契约 | draft  | work-record | 2026-07-09 | [docs/record/api-contract.md](record/api-contract.md)               |
+| 工作记录权限契约  | draft  | work-record | 2026-07-09 | [docs/record/permission-contract.md](record/permission-contract.md) |
 
 ## review
 
-| Title                          | Status | Phase       | Updated    | Path                                                                                                                                            |
-| ------------------------------ | ------ | ----------- | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| 当前项目质量与架构审查         | draft  | phase-8     | 2026-07-01 | [docs/reviews/phase-8/2026-07-01-current-project-quality-architecture.md](reviews/phase-8/2026-07-01-current-project-quality-architecture.md)   |
-| 工作记录模块当前实现审查       | draft  | work-record | 2026-07-06 | [docs/reviews/work-record/2026-07-06-work-record-implementation-review.md](reviews/work-record/2026-07-06-work-record-implementation-review.md) |
-| 工作记录模块最终实现审查       | draft  | work-record | 2026-07-07 | [docs/reviews/work-record/2026-07-07-work-record-final-review.md](reviews/work-record/2026-07-07-work-record-final-review.md)                   |
-| 工作记录模块规则沉淀后实现审查 | draft  | work-record | 2026-07-07 | [docs/reviews/work-record/2026-07-07-work-record-rule-based-review.md](reviews/work-record/2026-07-07-work-record-rule-based-review.md)         |
+| Title                                   | Status   | Phase       | Updated    | Path                                                                                                                                                                  |
+| --------------------------------------- | -------- | ----------- | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 当前项目质量与架构审查                  | draft    | phase-8     | 2026-07-01 | [docs/reviews/phase-8/2026-07-01-current-project-quality-architecture.md](reviews/phase-8/2026-07-01-current-project-quality-architecture.md)                         |
+| 工作记录模块当前实现审查                | draft    | work-record | 2026-07-06 | [docs/reviews/work-record/2026-07-06-work-record-implementation-review.md](reviews/work-record/2026-07-06-work-record-implementation-review.md)                       |
+| 工作记录模块最终实现审查                | draft    | work-record | 2026-07-07 | [docs/reviews/work-record/2026-07-07-work-record-final-review.md](reviews/work-record/2026-07-07-work-record-final-review.md)                                         |
+| 工作记录模块规则沉淀后实现审查          | draft    | work-record | 2026-07-07 | [docs/reviews/work-record/2026-07-07-work-record-rule-based-review.md](reviews/work-record/2026-07-07-work-record-rule-based-review.md)                               |
+| 工作记录模块（Phase 01–07）实现审查报告 | accepted | work-record | 2026-07-09 | [docs/reviews/work-record/2026-07-08-work-record-phase01-07-implementation-review.md](reviews/work-record/2026-07-08-work-record-phase01-07-implementation-review.md) |

@@ -1,41 +1,42 @@
 #!/usr/bin/env node
 
-const token = process.env.GITHUB_TOKEN ?? process.env.GH_TOKEN;
-const repository = process.env.GITHUB_REPOSITORY;
-const branches = (process.env.BRANCH_PROTECTION_BRANCHES ?? "main,develop")
-  .split(",")
+const token = process.env.GITHUB_TOKEN ?? process.env.GH_TOKEN
+const repository = process.env.GITHUB_REPOSITORY
+const branches = (process.env.BRANCH_PROTECTION_BRANCHES ?? 'main,mvp')
+  .split(',')
   .map((branch) => branch.trim())
-  .filter(Boolean);
+  .filter(Boolean)
 
 const requiredChecks = (
-  process.env.BRANCH_PROTECTION_CHECKS ?? "Docs,Backend,Frontend,CI Summary"
+  process.env.BRANCH_PROTECTION_CHECKS ??
+  'CI Summary,Block .env and key literals'
 )
-  .split(",")
+  .split(',')
   .map((check) => check.trim())
-  .filter(Boolean);
+  .filter(Boolean)
 
 if (!token) {
   throw new Error(
-    "GITHUB_TOKEN or GH_TOKEN is required and must have repository administration permission.",
-  );
+    'GITHUB_TOKEN or GH_TOKEN is required and must have repository administration permission.'
+  )
 }
 
-if (!repository || !repository.includes("/")) {
-  throw new Error("GITHUB_REPOSITORY must be set as owner/repo.");
+if (!repository || !repository.includes('/')) {
+  throw new Error('GITHUB_REPOSITORY must be set as owner/repo.')
 }
 
 for (const branch of branches) {
   const url = `https://api.github.com/repos/${repository}/branches/${encodeURIComponent(
-    branch,
-  )}/protection`;
+    branch
+  )}/protection`
 
   const response = await fetch(url, {
-    method: "PUT",
+    method: 'PUT',
     headers: {
-      Accept: "application/vnd.github+json",
+      Accept: 'application/vnd.github+json',
       Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-      "X-GitHub-Api-Version": "2022-11-28",
+      'Content-Type': 'application/json',
+      'X-GitHub-Api-Version': '2022-11-28',
     },
     body: JSON.stringify({
       required_status_checks: {
@@ -58,14 +59,14 @@ for (const branch of branches) {
       lock_branch: false,
       allow_fork_syncing: true,
     }),
-  });
+  })
 
   if (!response.ok) {
-    const body = await response.text();
+    const body = await response.text()
     throw new Error(
-      `Failed to configure ${repository}:${branch}: ${response.status} ${body}`,
-    );
+      `Failed to configure ${repository}:${branch}: ${response.status} ${body}`
+    )
   }
 
-  console.log(`Configured branch protection for ${repository}:${branch}`);
+  console.log(`Configured branch protection for ${repository}:${branch}`)
 }

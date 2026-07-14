@@ -4,7 +4,7 @@ on:
   pull_request:
     branches:
       - main
-      - develop
+      - mvp
     paths:
       - "ops/**"
       - "infra/**"
@@ -12,7 +12,7 @@ on:
   push:
     branches:
       - main
-      - develop
+      - mvp
     paths:
       - "ops/**"
       - "infra/**"
