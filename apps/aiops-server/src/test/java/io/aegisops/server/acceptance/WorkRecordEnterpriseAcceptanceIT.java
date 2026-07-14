@@ -19,9 +19,8 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInstance;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
@@ -41,7 +40,6 @@ import org.testcontainers.junit.jupiter.Testcontainers;
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("acceptance")
 @Testcontainers
-@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class WorkRecordEnterpriseAcceptanceIT {
 
   @Container
@@ -67,7 +65,7 @@ class WorkRecordEnterpriseAcceptanceIT {
   private Tokens tokens;
   private ScenarioState state;
 
-  @BeforeAll
+  @BeforeEach
   void prepareIdentities() {
     identities =
         new AcceptanceIdentityFixture(
