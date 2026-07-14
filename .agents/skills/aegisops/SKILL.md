@@ -1123,7 +1123,6 @@ Excel 导入
 巡检联动
 AI 总结
 字段级权限
-模板版本管理
 流程引擎
 ```
 
@@ -1154,11 +1153,13 @@ aiops-platform 根目录
 
 ### 6.15.2 前端边界
 
-第一版直接放在现有 console 应用:
+工作记录前端只放在 Portal:
 
 ```txt
-web/console/src/pages/work-record
-web/console/src/features/work-record
+web/portal/src/pages/work-records
+web/portal/src/api/work-records
+web/portal/src/components/work-records
+web/portal/src/hooks/work-records
 ```
 
 不要引入:
@@ -1170,9 +1171,9 @@ iframe
 独立子应用
 ```
 
-工作记录 API 与类型放在 feature 内, 底层复用公共 `apiRequest`; 不要继续把所有工作记录 API 堆进 `web/console/src/api/client.ts`。
+工作记录 API 放在 `src/api/work-records`, 底层复用公共 `apiClient`; 页面和组件不得直接调用 axios。
 
-平台字典若被多个 feature 复用, 前端应拆为平台字典 feature, 不要让平台页依赖 work-record 私有 API 文件。
+平台字典放在 `src/api/dictionaries.ts` 与 `src/hooks/dictionaries`, 不要让平台页依赖 work-record 私有 API 文件。
 
 ### 6.15.3 数据库边界
 
@@ -2549,7 +2550,7 @@ pgvector 不够之前先上 Milvus
 所有项目文档必须遵循:
 
 ```txt
-.skills/aegisops/references/doc-governance.md
+.agents/skills/aegisops/references/doc-governance.md
 ```
 
 关键规则:
@@ -2576,11 +2577,11 @@ npx tsx scripts/docs.ts index     # 重新生成 docs/INDEX.md
 Agent 参考文档:
 
 ```txt
-.skills/aegisops/references/doc-governance.md           # 文档规则
-.skills/aegisops/references/phase-checklist.md          # Phase 启动/收尾清单
-.skills/aegisops/references/architecture-boundaries.md  # 模块与应用边界, 端口表
-.skills/aegisops/references/module-package-conventions.md # 业务模块的 domain/application/infrastructure/api 包结构
-.skills/aegisops/references/automation-safety.md        # 风险等级与安全规则
-.skills/aegisops/references/frontend-conventions.md     # web/console 主题、组件、样式与代码组织规范
-.skills/aegisops/references/ai-agent-frontend-stack.md  # shadcn/ui + AI Elements + prompt-kit 选型与 AI 页面骨架
+.agents/skills/aegisops/references/doc-governance.md           # 文档规则
+.agents/skills/aegisops/references/phase-checklist.md          # Phase 启动/收尾清单
+.agents/skills/aegisops/references/architecture-boundaries.md  # 模块与应用边界, 端口表
+.agents/skills/aegisops/references/module-package-conventions.md # 业务模块的 domain/application/infrastructure/api 包结构
+.agents/skills/aegisops/references/automation-safety.md        # 风险等级与安全规则
+.agents/skills/aegisops/references/frontend-conventions.md     # web/console 主题、组件、样式与代码组织规范
+.agents/skills/aegisops/references/ai-agent-frontend-stack.md  # shadcn/ui + AI Elements + prompt-kit 选型与 AI 页面骨架
 ```

@@ -122,6 +122,30 @@ public class UserRepository {
     return findById(id).orElseThrow();
   }
 
+  public UserAccount updateProfile(String id, String displayName, String email) {
+    jdbc.update(
+        """
+            update sys_user
+               set display_name = ?, email = ?, updated_at = now()
+             where id = ?
+            """,
+        displayName,
+        email,
+        id);
+    return findById(id).orElseThrow();
+  }
+
+  public void updatePassword(String id, String passwordHash) {
+    jdbc.update(
+        """
+            update sys_user
+               set password_hash = ?, password_changed_at = now(), updated_at = now()
+             where id = ?
+            """,
+        passwordHash,
+        id);
+  }
+
   public void ensureLegacyRole(String code, String name) {
     Integer count =
         jdbc.queryForObject("select count(*) from sys_role where code = ?", Integer.class, code);

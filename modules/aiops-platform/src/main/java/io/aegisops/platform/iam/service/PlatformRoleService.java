@@ -46,8 +46,7 @@ public class PlatformRoleService {
         .findByCode(code)
         .orElseThrow(
             () ->
-                new IamDomainException(
-                    IamErrorCode.ROLE_NOT_FOUND, "role " + code + " not found"));
+                new IamDomainException(IamErrorCode.ROLE_NOT_FOUND, "role " + code + " not found"));
   }
 
   @Transactional
@@ -67,11 +66,14 @@ public class PlatformRoleService {
             .orElseThrow(
                 () ->
                     new IamDomainException(
-                        IamErrorCode.ROLE_NOT_FOUND,
-                        "role did not persist: " + data.code()));
+                        IamErrorCode.ROLE_NOT_FOUND, "role did not persist: " + data.code()));
     roles.replacePermissions(data.code(), normalized.permissions());
     audit.recordChange(
-        currentTenant(), actor, "platform.role.created", "platform.role", data.code(),
+        currentTenant(),
+        actor,
+        "platform.role.created",
+        "platform.role",
+        data.code(),
         Map.of("permissions", List.of()),
         Map.of("permissions", normalized.permissions()),
         Map.of("name", data.name(), "system", data.system()));
@@ -102,7 +104,11 @@ public class PlatformRoleService {
       }
       roles.replacePermissions(code, normalized.permissions());
       audit.recordChange(
-          currentTenant(), actor, "platform.role.permissionsReplaced", "platform.role", code,
+          currentTenant(),
+          actor,
+          "platform.role.permissionsReplaced",
+          "platform.role",
+          code,
           Map.of("permissions", existing.permissions()),
           Map.of("permissions", normalized.permissions()),
           Map.of());
@@ -111,8 +117,7 @@ public class PlatformRoleService {
   }
 
   @Transactional
-  public void replacePermissions(
-      String code, ReplaceRolePermissionsCommand command, String actor) {
+  public void replacePermissions(String code, ReplaceRolePermissionsCommand command, String actor) {
     PlatformRoleDetail existing = detail(code);
     PermissionNormalizer.NormalizedPermissionSet normalized =
         normalizer.normalize(command.permissionCodes());
@@ -127,20 +132,27 @@ public class PlatformRoleService {
     }
     roles.replacePermissions(code, normalized.permissions());
     audit.recordChange(
-        currentTenant(), actor, "platform.role.permissionsReplaced", "platform.role", code,
+        currentTenant(),
+        actor,
+        "platform.role.permissionsReplaced",
+        "platform.role",
+        code,
         Map.of("permissions", existing.permissions()),
         Map.of("permissions", normalized.permissions()),
         Map.of("reason", command.confirmation().reason()));
   }
 
   @Transactional
-  public void replaceDataScopes(
-      String code, ReplaceRoleDataScopesCommand command, String actor) {
+  public void replaceDataScopes(String code, ReplaceRoleDataScopesCommand command, String actor) {
     PlatformRoleDetail existing = detail(code);
     List<PlatformRole.RoleDataScope> scopes = command.normalized();
     roles.replaceDataScopes(code, scopes);
     audit.recordChange(
-        currentTenant(), actor, "platform.role.dataScopesReplaced", "platform.role", code,
+        currentTenant(),
+        actor,
+        "platform.role.dataScopesReplaced",
+        "platform.role",
+        code,
         Map.of("dataScopes", existing.dataScopes()),
         Map.of("dataScopes", scopes),
         Map.of());
@@ -161,7 +173,11 @@ public class PlatformRoleService {
     // support deletion flag, so we rely on row-level guard above and let the SQL
     // enforcement reject unattached roles via cascade.
     audit.recordChange(
-        currentTenant(), actor, "platform.role.deleted", "platform.role", code,
+        currentTenant(),
+        actor,
+        "platform.role.deleted",
+        "platform.role",
+        code,
         Map.of("code", code),
         null,
         Map.of());

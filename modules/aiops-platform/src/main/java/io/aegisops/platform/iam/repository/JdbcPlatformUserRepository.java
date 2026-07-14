@@ -41,8 +41,7 @@ public class JdbcPlatformUserRepository implements PlatformUserRepository {
       params.add(q.status().value());
     }
     if (q.roleCodes() != null && !q.roleCodes().isEmpty()) {
-      String placeholders =
-          q.roleCodes().stream().map(c -> "?").collect(Collectors.joining(","));
+      String placeholders = q.roleCodes().stream().map(c -> "?").collect(Collectors.joining(","));
       where.append(
           " and exists (select 1 from iam.user_role ur where ur.user_id = u.id and ur.role_code in ("
               + placeholders
@@ -102,15 +101,7 @@ public class JdbcPlatformUserRepository implements PlatformUserRepository {
   }
 
   @Override
-  public Optional<PlatformUser> insert(
-      String id,
-      String tenantId,
-      String username,
-      String displayName,
-      String email,
-      String passwordHash,
-      PlatformUserStatus status,
-      OffsetDateTime now) {
+  public Optional<PlatformUser> insert(PlatformUserCreateCommand command) {
     int updated =
         jdbc.update(
             """
@@ -120,19 +111,19 @@ public class JdbcPlatformUserRepository implements PlatformUserRepository {
                 ) values (?, ?, ?, ?, ?, ?, ?, 0, 1, ?, ?)
                 on conflict (id) do nothing
                 """,
-            id,
-            tenantId == null ? currentTenant() : tenantId,
-            username,
-            displayName,
-            email,
-            passwordHash,
-            status.value(),
-            now,
-            now);
+            command.id(),
+            command.tenantId() == null ? currentTenant() : command.tenantId(),
+            command.username(),
+            command.displayName(),
+            command.email(),
+            command.passwordHash(),
+            command.status().value(),
+            command.now(),
+            command.now());
     if (updated == 0) {
       return Optional.empty();
     }
-    return findById(id);
+    return findById(command.id());
   }
 
   @Override
@@ -205,7 +196,8 @@ public class JdbcPlatformUserRepository implements PlatformUserRepository {
   }
 
   @Override
-  public void recordLogin(String userId, OffsetDateTime lastLoginAt, int success, OffsetDateTime now) {
+  public void recordLogin(
+      String userId, OffsetDateTime lastLoginAt, int success, OffsetDateTime now) {
     if (success == 1) {
       jdbc.update(
           """

@@ -57,7 +57,10 @@ class WorkRecordHistoryControllerTest {
   void historyMustCheckRecordPermissionBeforeReadingAudit() {
     UserPrincipal principal =
         new UserPrincipal(
-            "u1", TENANT, "u1", "alice", Set.of("admin"), Set.of("work-record:read:all"), Map.of());
+            new UserPrincipal.Identity("u1", TENANT, "u1", "alice"),
+            Set.of("admin"),
+            Set.of("work-record:read:all"),
+            Map.of());
     WorkRecord record = stubRecord("r1");
 
     when(queryService.get(TENANT, "r1", principal)).thenReturn(record);
@@ -73,7 +76,11 @@ class WorkRecordHistoryControllerTest {
   @Test
   void unauthorizedRecordMustNotExposeHistory() {
     UserPrincipal principal =
-        new UserPrincipal("u1", TENANT, "u1", "alice", Set.of("viewer"), Set.of(), Map.of());
+        new UserPrincipal(
+            new UserPrincipal.Identity("u1", TENANT, "u1", "alice"),
+            Set.of("viewer"),
+            Set.of(),
+            Map.of());
 
     when(queryService.get(eq(TENANT), eq("r1"), any()))
         .thenThrow(new AccessDeniedException("forbidden"));
@@ -88,7 +95,10 @@ class WorkRecordHistoryControllerTest {
   void historyReturnsAuditEventsWhenAuthorized() {
     UserPrincipal principal =
         new UserPrincipal(
-            "u1", TENANT, "u1", "alice", Set.of("admin"), Set.of("work-record:read:all"), Map.of());
+            new UserPrincipal.Identity("u1", TENANT, "u1", "alice"),
+            Set.of("admin"),
+            Set.of("work-record:read:all"),
+            Map.of());
     WorkRecord record = stubRecord("r1");
     AuditEvent event =
         new AuditEvent(

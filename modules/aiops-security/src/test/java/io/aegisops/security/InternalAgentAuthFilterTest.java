@@ -22,7 +22,9 @@ class InternalAgentAuthFilterTest {
     var audit = new FakeAuditService();
     var filter =
         new InternalAgentAuthFilter(
-            props, new SecurityErrorResponseWriter(new ObjectMapper()), audit);
+            props,
+            new SecurityErrorResponseWriter(new ObjectMapper().findAndRegisterModules()),
+            audit);
 
     MockHttpServletRequest request =
         new MockHttpServletRequest("POST", "/internal/agent/memories/search");
@@ -43,7 +45,9 @@ class InternalAgentAuthFilterTest {
 
     var filter =
         new InternalAgentAuthFilter(
-            props, new SecurityErrorResponseWriter(new ObjectMapper()), new FakeAuditService());
+            props,
+            new SecurityErrorResponseWriter(new ObjectMapper().findAndRegisterModules()),
+            new FakeAuditService());
 
     MockHttpServletRequest request =
         new MockHttpServletRequest("POST", "/internal/agent/memories/search");

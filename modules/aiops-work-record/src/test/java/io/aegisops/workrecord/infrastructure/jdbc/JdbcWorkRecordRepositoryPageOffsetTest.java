@@ -18,9 +18,7 @@ import org.mockito.ArgumentCaptor;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
-/**
- * Repository 必须使用 long offset 避免 int 溢出；钳制 page/size 为至少 1。
- */
+/** Repository 必须使用 long offset 避免 int 溢出；钳制 page/size 为至少 1。 */
 class JdbcWorkRecordRepositoryPageOffsetTest {
 
   @Test
@@ -50,8 +48,7 @@ class JdbcWorkRecordRepositoryPageOffsetTest {
   @Test
   void pageSize_negativeOrZeroIsClampedToOne() {
     NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
-    when(jdbc.queryForObject(any(String.class), any(Map.class), eq(Long.class)))
-        .thenReturn(0L);
+    when(jdbc.queryForObject(any(String.class), any(Map.class), eq(Long.class))).thenReturn(0L);
     when(jdbc.query(any(String.class), any(Map.class), any(RowMapper.class)))
         .thenReturn(Collections.emptyList());
 
@@ -73,8 +70,7 @@ class JdbcWorkRecordRepositoryPageOffsetTest {
   @Test
   void page_negativeIsClampedToOne() {
     NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
-    when(jdbc.queryForObject(any(String.class), any(Map.class), eq(Long.class)))
-        .thenReturn(0L);
+    when(jdbc.queryForObject(any(String.class), any(Map.class), eq(Long.class))).thenReturn(0L);
     when(jdbc.query(any(String.class), any(Map.class), any(RowMapper.class)))
         .thenReturn(Collections.emptyList());
 
@@ -92,8 +88,7 @@ class JdbcWorkRecordRepositoryPageOffsetTest {
   @Test
   void pageSizeAtIntegerMaxStillProducesLongOffset() {
     NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
-    when(jdbc.queryForObject(any(String.class), any(Map.class), eq(Long.class)))
-        .thenReturn(0L);
+    when(jdbc.queryForObject(any(String.class), any(Map.class), eq(Long.class))).thenReturn(0L);
     when(jdbc.query(any(String.class), any(Map.class), any(RowMapper.class)))
         .thenReturn(Collections.emptyList());
 

@@ -12,8 +12,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class WorkRecordPermissionService {
   private static final String RESOURCE_CODE = "work-record";
-  private static final String SELF_DATA_SCOPE_PERMISSION =
-      "work-record:data-scope:self";
+  private static final String SELF_DATA_SCOPE_PERMISSION = "work-record:data-scope:self";
 
   private final WorkRecordTelemetry telemetry;
 
@@ -55,9 +54,7 @@ public class WorkRecordPermissionService {
     }
 
     if (!canReadSelf(principal)) {
-      deny(
-          PermissionCodes.WORK_RECORD_READ_SELF,
-          "not allowed to read work records");
+      deny(PermissionCodes.WORK_RECORD_READ_SELF, "not allowed to read work records");
     }
   }
 

@@ -1,5 +1,6 @@
 package io.aegisops.user;
 
+import io.aegisops.common.exception.AppException;
 import io.aegisops.common.exception.NotFoundException;
 import java.util.Collection;
 import java.util.List;
@@ -44,6 +45,21 @@ public class UserService {
 
   public boolean passwordMatches(String raw, UserAccount user) {
     return passwordEncoder.matches(raw, user.passwordHash());
+  }
+
+  public UserAccount updateProfile(String id, String displayName, String email) {
+    return repository.updateProfile(id, displayName, email);
+  }
+
+  public void changePassword(String id, String currentPassword, String newPassword) {
+    UserAccount user = getById(id);
+    if (!passwordMatches(currentPassword, user)) {
+      throw new AppException("INVALID_CURRENT_PASSWORD", "Current password is incorrect");
+    }
+    if (newPassword == null || newPassword.length() < 8) {
+      throw new AppException("PASSWORD_TOO_SHORT", "Password must be at least 8 characters");
+    }
+    repository.updatePassword(id, passwordEncoder.encode(newPassword));
   }
 
   public UserAccount createAdminIfAbsent(String tenantId, String username, String rawPassword) {

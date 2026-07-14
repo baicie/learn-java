@@ -1,3 +1,14 @@
+---
+title: Phase 20.3 评论时间线、附件与关联对象
+type: phase
+status: draft
+phase: work-record-20
+owner: ai
+created: 2026-07-14
+updated: 2026-07-14
+related: []
+---
+
 # Phase 20.3：评论时间线、附件与关联对象
 
 > 基线：`baicie/ai-ops`，分支 `feat/record-doc-portal`，提交 `43d16315cc4b68cc705177d2c8faba1d8e42644e`。

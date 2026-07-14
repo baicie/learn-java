@@ -15,8 +15,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class MicrometerWorkRecordTelemetry implements WorkRecordTelemetry {
 
-  private static final Logger log =
-      LoggerFactory.getLogger(MicrometerWorkRecordTelemetry.class);
+  private static final Logger log = LoggerFactory.getLogger(MicrometerWorkRecordTelemetry.class);
 
   private final MeterRegistry registry;
   private final WorkRecordProductionProperties properties;
@@ -73,7 +72,6 @@ public class MicrometerWorkRecordTelemetry implements WorkRecordTelemetry {
     String key = name + "|" + tagKey + "|" + tagValue;
 
     return counters.computeIfAbsent(
-        key,
-        ignored -> Counter.builder(name).tag(tagKey, tagValue).register(registry));
+        key, ignored -> Counter.builder(name).tag(tagKey, tagValue).register(registry));
   }
 }

@@ -37,8 +37,7 @@ class RedisDistributedLeaseServiceIT {
   private static StringRedisTemplate template;
   private static RedisDistributedLeaseService service;
 
-  @Container
-  static final RedisContainer REDIS = new RedisContainer("redis:7-alpine");
+  @Container static final RedisContainer REDIS = new RedisContainer("redis:7-alpine");
 
   @BeforeAll
   static void start() {
@@ -117,8 +116,7 @@ class RedisDistributedLeaseServiceIT {
 
   @Test
   void unreachableRedisShouldFailFast() {
-    RedisStandaloneConfiguration config =
-        new RedisStandaloneConfiguration("127.0.0.1", 1);
+    RedisStandaloneConfiguration config = new RedisStandaloneConfiguration("127.0.0.1", 1);
     LettuceConnectionFactory factory = new LettuceConnectionFactory(config);
     factory.afterPropertiesSet();
     factory.getConnection();

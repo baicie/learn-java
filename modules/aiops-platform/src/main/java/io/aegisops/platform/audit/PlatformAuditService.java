@@ -27,9 +27,14 @@ public class PlatformAuditService {
       String action,
       String resourceType,
       String resourceId,
-      Object before,
-      Object after,
-      Map<String, Object> attributes) {
+      Object... change) {
+    if (change.length != 3 || !(change[2] instanceof Map<?, ?>)) {
+      throw new IllegalArgumentException("audit change requires before, after and attributes");
+    }
+    Object before = change[0];
+    Object after = change[1];
+    @SuppressWarnings("unchecked")
+    Map<String, Object> attributes = (Map<String, Object>) change[2];
     auditService.record(
         new AuditRecordCommand(
             tenantId,

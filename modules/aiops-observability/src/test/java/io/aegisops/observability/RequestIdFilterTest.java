@@ -61,9 +61,7 @@ class RequestIdFilterTest {
     final String[] seen = {null};
 
     filter.doFilter(
-        request,
-        response,
-        (req, res) -> seen[0] = MDC.get(ObservabilityConstants.MDC_REQUEST_ID));
+        request, response, (req, res) -> seen[0] = MDC.get(ObservabilityConstants.MDC_REQUEST_ID));
 
     assertThat(seen[0]).startsWith("req_");
     assertThat(response.getHeader("X-Request-Id")).startsWith("req_");

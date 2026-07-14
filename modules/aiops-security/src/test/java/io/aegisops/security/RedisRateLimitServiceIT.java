@@ -38,8 +38,7 @@ class RedisRateLimitServiceIT {
   private static StringRedisTemplate template;
   private static RedisRateLimitService service;
 
-  @Container
-  static final RedisContainer REDIS = new RedisContainer("redis:7-alpine");
+  @Container static final RedisContainer REDIS = new RedisContainer("redis:7-alpine");
 
   @BeforeAll
   static void start() {

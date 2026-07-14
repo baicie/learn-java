@@ -17,7 +17,6 @@ import java.time.OffsetDateTime;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import org.mockito.Mockito;
 
 class CalendarServiceTest {
 
@@ -177,16 +176,7 @@ class CalendarServiceTest {
 
     when(repository.findDay("tenant-1", "cal-1", date)).thenReturn(Optional.of(before));
     when(repository.upsertDay(
-            eq("tenant-1"),
-            eq("cal-1"),
-            eq(date),
-            anyString(),
-            any(Boolean.class),
-            any(),
-            any(),
-            any(),
-            any(),
-            anyString()))
+            eq("tenant-1"), eq("cal-1"), any(CalendarDayMutation.class), anyString()))
         .thenReturn(after);
 
     service.updateDay(
@@ -264,16 +254,7 @@ class CalendarServiceTest {
     when(repository.findCalendar("tenant-1", "cal-1")).thenReturn(Optional.of(calendar));
     when(repository.findDay("tenant-1", "cal-1", date)).thenReturn(Optional.of(before));
     when(repository.upsertDay(
-            eq("tenant-1"),
-            eq("cal-1"),
-            eq(date),
-            eq("HOLIDAY"),
-            eq(false),
-            Mockito.isNull(),
-            eq("国庆节"),
-            eq("csv"),
-            Mockito.isNull(),
-            eq("u1")))
+            eq("tenant-1"), eq("cal-1"), any(CalendarDayMutation.class), eq("u1")))
         .thenReturn(after);
 
     service.importCsv(

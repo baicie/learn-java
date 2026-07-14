@@ -7,5 +7,3 @@ export const zhCN = {
   ...platform,
   ...workRecords,
 } as const
-
-export type MessageKey = keyof typeof zhCN

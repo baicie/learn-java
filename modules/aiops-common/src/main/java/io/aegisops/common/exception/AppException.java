@@ -13,9 +13,7 @@ public class AppException extends RuntimeException {
     this(errorCode.name(), errorCode.httpStatus(), message, cause);
   }
 
-  /**
-   * 保留旧调用兼容性。旧字符串错误码默认按 400 处理；新代码必须优先使用 ErrorCode 枚举。
-   */
+  /** 保留旧调用兼容性。旧字符串错误码默认按 400 处理；新代码必须优先使用 ErrorCode 枚举。 */
   public AppException(String errorCode, String message) {
     this(errorCode, 400, message, null);
   }

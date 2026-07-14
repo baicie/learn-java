@@ -19,6 +19,15 @@
 
 ## 2. Agent 启动流程
 
+仓库仅启用两个项目 Skill：
+
+```text
+.agents/skills/aegisops  # 全仓架构、后端、安全、Phase 与文档治理
+.agents/skills/portal    # web/portal 前端约定
+```
+
+通用 Skill 归档在 `.agents/skill-library/`，不作为项目规则自动加载；需要时由执行环境提供或显式恢复。
+
 每次处理本仓库任务时：
 
 ```text

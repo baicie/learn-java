@@ -16,23 +16,11 @@ public interface PlatformUserRepository {
 
   boolean existsByUsername(String tenantId, String username);
 
-  Optional<PlatformUser> insert(
-      String id,
-      String tenantId,
-      String username,
-      String displayName,
-      String email,
-      String passwordHash,
-      PlatformUserStatus status,
-      OffsetDateTime now);
+  Optional<PlatformUser> insert(PlatformUserCreateCommand command);
 
   void replaceRoles(String tenantId, String userId, List<String> roleCodes, OffsetDateTime now);
 
-  void update(
-      String userId,
-      String displayName,
-      String email,
-      OffsetDateTime now);
+  void update(String userId, String displayName, String email, OffsetDateTime now);
 
   int updateStatus(
       String userId,
@@ -41,8 +29,7 @@ public interface PlatformUserRepository {
       OffsetDateTime now,
       int expectedVersion);
 
-  void recordLogin(
-      String userId, OffsetDateTime lastLoginAt, int success, OffsetDateTime now);
+  void recordLogin(String userId, OffsetDateTime lastLoginAt, int success, OffsetDateTime now);
 
   int deleteRolesForRole(String tenantId, String roleCode);
 }

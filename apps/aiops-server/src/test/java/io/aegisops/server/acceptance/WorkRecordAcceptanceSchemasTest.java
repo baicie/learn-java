@@ -15,11 +15,9 @@ class WorkRecordAcceptanceSchemasTest {
 
   @Test
   void v1MustContainThreeEnterpriseFields() throws Exception {
-    JsonNode root =
-        objectMapper.readTree(WorkRecordAcceptanceSchemas.v1("acceptance_priority"));
+    JsonNode root = objectMapper.readTree(WorkRecordAcceptanceSchemas.v1("acceptance_priority"));
 
-    assertThat(fieldCodes(root))
-        .containsExactlyInAnyOrder("summary", "priority", "hours");
+    assertThat(fieldCodes(root)).containsExactlyInAnyOrder("summary", "priority", "hours");
 
     assertThat(
             root.path("properties")
@@ -36,9 +34,7 @@ class WorkRecordAcceptanceSchemasTest {
 
     JsonNode v2 = objectMapper.readTree(WorkRecordAcceptanceSchemas.v2("acceptance_priority"));
 
-    assertThat(fieldCodes(v2))
-        .containsAll(fieldCodes(v1))
-        .contains("nextPlan");
+    assertThat(fieldCodes(v2)).containsAll(fieldCodes(v1)).contains("nextPlan");
 
     assertThat(
             StreamSupport.stream(v2.path("required").spliterator(), false)
@@ -49,9 +45,7 @@ class WorkRecordAcceptanceSchemasTest {
 
   private Set<String> fieldCodes(JsonNode root) {
     return StreamSupport.stream(root.path("properties").spliterator(), false)
-        .map(
-            field ->
-                field.path("x-work-record").path("fieldCode").asText())
+        .map(field -> field.path("x-work-record").path("fieldCode").asText())
         .collect(Collectors.toSet());
   }
 }

@@ -15,11 +15,7 @@ public interface PlatformRoleRepository {
   int userCount(String code);
 
   Optional<PlatformRole> insert(
-      String code,
-      String name,
-      String description,
-      boolean system,
-      boolean enabled);
+      String code, String name, String description, boolean system, boolean enabled);
 
   boolean exists(String code);
 

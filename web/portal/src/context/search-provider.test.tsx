@@ -1,9 +1,10 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { setLanguage } from '@/i18n'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, type RenderResult } from 'vitest-browser-react'
 import { userEvent } from 'vitest/browser'
 import { SearchProvider } from '@/context/search-provider'
 
-const COMMAND_MENU_PLACEHOLDER = 'Type a command or search...'
+const COMMAND_MENU_PLACEHOLDER = 'Type a command or search…'
 
 const mocks = vi.hoisted(() => ({
   navigate: vi.fn(),
@@ -20,6 +21,26 @@ vi.mock('@tanstack/react-router', async (importOriginal) => {
 
 vi.mock('@/context/theme-provider', () => ({
   useTheme: () => ({ setTheme: mocks.setTheme }),
+}))
+
+vi.mock('@/stores/auth-store', () => ({
+  useAuthStore: {
+    getState: () => ({
+      auth: {
+        principal: {
+          permissions: [
+            'work-record:read:self',
+            'work-record:template:read',
+            'platform:user:read',
+            'platform:role:read',
+            'platform:dict:read',
+            'platform:calendar:read',
+            'platform:audit:read',
+          ],
+        },
+      },
+    }),
+  },
 }))
 
 type ShortcutModifier = 'Control' | 'Meta'
@@ -58,11 +79,14 @@ async function openCommandPalette(
 describe('SearchProvider and CommandMenu', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    setLanguage('en-US')
   })
+
+  afterEach(() => setLanguage('zh-CN'))
 
   it('renders the command palette when the palette is open', async () => {
     const screen = await renderWithSearchProvider()
-    const { getByPlaceholder, getByText } = screen
+    const { getByPlaceholder, getByRole, getByText } = screen
 
     await openCommandPalette(screen)
 
@@ -73,7 +97,9 @@ describe('SearchProvider and CommandMenu', () => {
     await expect.element(getByText('Light')).toBeInTheDocument()
     await expect.element(getByText('Dark')).toBeInTheDocument()
     await expect.element(getByText('System')).toBeInTheDocument()
-    await expect.element(getByText('Dashboard')).toBeInTheDocument()
+    await expect
+      .element(getByRole('option', { name: 'Dashboard' }))
+      .toBeInTheDocument()
   })
 
   it('does not show the dialog content when search is closed', async () => {
@@ -109,23 +135,25 @@ describe('SearchProvider and CommandMenu', () => {
 
     await openCommandPalette(screen)
 
-    await userEvent.click(screen.getByText('Tasks'))
+    await userEvent.click(screen.getByRole('option', { name: 'Dashboard' }))
 
-    expect(mocks.navigate).toHaveBeenCalledWith({ to: '/tasks' })
+    expect(mocks.navigate).toHaveBeenCalledWith({ to: '/' })
     await expect
       .element(screen.getByPlaceholder(COMMAND_MENU_PLACEHOLDER))
       .not.toBeInTheDocument()
   })
 
-  it('navigates for nested sidebar items (group with sub-items)', async () => {
+  it('navigates to the template-scoped work-record entry', async () => {
     const screen = await renderWithSearchProvider()
     const { getByPlaceholder, getByRole } = screen
 
     await openCommandPalette(screen)
 
-    await userEvent.click(getByRole('option', { name: 'Settings Account' }))
+    await userEvent.click(getByRole('option', { name: 'Form designer' }))
 
-    expect(mocks.navigate).toHaveBeenCalledWith({ to: '/settings/account' })
+    expect(mocks.navigate).toHaveBeenCalledWith({
+      to: '/work-records/templates',
+    })
     await expect
       .element(getByPlaceholder(COMMAND_MENU_PLACEHOLDER))
       .not.toBeInTheDocument()

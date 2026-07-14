@@ -104,13 +104,11 @@ public class SecurityConfig {
   public CorsConfigurationSource corsConfigurationSource(AiopsSecurityProperties properties) {
     CorsConfiguration config = new CorsConfiguration();
     config.setAllowedOrigins(properties.getAllowedOrigins());
-    config.setAllowedMethods(
-        List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
+    config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
     config.setAllowedHeaders(
         List.of("Authorization", "Content-Type", "X-Request-Id", "X-Trace-Id"));
     config.setExposedHeaders(
-        List.of(
-            "X-Request-Id", "X-Trace-Id", "X-Export-Row-Count", "Content-Disposition"));
+        List.of("X-Request-Id", "X-Trace-Id", "X-Export-Row-Count", "Content-Disposition"));
     config.setAllowCredentials(true);
 
     UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

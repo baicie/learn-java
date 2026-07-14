@@ -21,13 +21,17 @@ class PermissionNormalizerTest {
         .thenReturn(
             List.of(
                 def("platform:user:read", "platform-user", PermissionRisk.SENSITIVE, Set.of()),
-                def("platform:user:write", "platform-user", PermissionRisk.HIGH,
+                def(
+                    "platform:user:write",
+                    "platform-user",
+                    PermissionRisk.HIGH,
                     Set.of("platform:user:read"))));
     PermissionNormalizer normalizer = new PermissionNormalizer(repo);
 
     var result = normalizer.normalize(Set.of("platform:user:write"));
 
-    assertThat(result.permissions()).containsExactlyInAnyOrder("platform:user:read", "platform:user:write");
+    assertThat(result.permissions())
+        .containsExactlyInAnyOrder("platform:user:read", "platform:user:write");
     assertThat(result.criticalCodes()).isEmpty();
   }
 
@@ -38,7 +42,10 @@ class PermissionNormalizerTest {
         .thenReturn(
             List.of(
                 def("platform:user:read", "platform-user", PermissionRisk.SENSITIVE, Set.of()),
-                def("platform:user:status", "platform-user", PermissionRisk.CRITICAL,
+                def(
+                    "platform:user:status",
+                    "platform-user",
+                    PermissionRisk.CRITICAL,
                     Set.of("platform:user:read"))));
     PermissionNormalizer normalizer = new PermissionNormalizer(repo);
 
@@ -52,7 +59,9 @@ class PermissionNormalizerTest {
   void should_reject_unknown_permissions() {
     PermissionDefinitionRepository repo = Mockito.mock(PermissionDefinitionRepository.class);
     Mockito.when(repo.listAll())
-        .thenReturn(List.of(def("platform:user:read", "platform-user", PermissionRisk.SENSITIVE, Set.of())));
+        .thenReturn(
+            List.of(
+                def("platform:user:read", "platform-user", PermissionRisk.SENSITIVE, Set.of())));
     PermissionNormalizer normalizer = new PermissionNormalizer(repo);
 
     assertThatThrownBy(() -> normalizer.normalize(Set.of("platform:user:nonexistent")))

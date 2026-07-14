@@ -26,32 +26,3 @@ export const notify = {
     toast.error(apiErrorMessage(error, fallback))
   },
 }
-
-export async function withToast<T>(
-  promise: Promise<T>,
-  options: {
-    loading: string
-    success: string | ((result: T) => string)
-    error?: string
-  }
-): Promise<T> {
-  const toastId = toast.loading(options.loading)
-
-  try {
-    const result = await promise
-    const successMessage =
-      typeof options.success === 'function'
-        ? options.success(result)
-        : options.success
-
-    toast.success(successMessage, { id: toastId })
-
-    return result
-  } catch (error) {
-    toast.error(
-      apiErrorMessage(error, options.error ?? '操作失败，请稍后重试'),
-      { id: toastId }
-    )
-    throw error
-  }
-}

@@ -51,7 +51,7 @@
     "simple-git-hooks": "^2.13.1",
     "tailwindcss": "^4.3.2",
     "tsx": "^4.23.0",
-    "typescript": "^7.0.2"
+    "typescript": "^6.0.3"
   },
   "packageManager": "pnpm@10.33.4",
   "engines": {
@@ -64,10 +64,10 @@
   "_docs_lint_staged": "前端子项目（web/portal、web/console）各自带自己的 prettier + 插件和 eslint，根 lint-staged 只对根级文件（scripts/、*.json、*.yaml、*.md）做格式化；每个 web 子项目自己的 .prettierrc / eslint.config.js 通过子目录前缀独立调度。新增 web 子项目时，只需复制 web/portal 的两个 glob 条目并替换前缀即可。",
   "lint-staged": {
     "scripts/**/*.{js,ts,tsx}": [
-      "prettier --write --cache --cache-location node_modules/.cache/.prettiercache-root"
+      "prettier --config .prettierrc --write --cache --cache-location node_modules/.cache/.prettiercache-root"
     ],
     "*.{json,md,yaml,yml}": [
-      "prettier --write --cache --cache-location node_modules/.cache/.prettiercache-root"
+      "prettier --config .prettierrc --write --cache --cache-location node_modules/.cache/.prettiercache-root"
     ],
     "web/portal/**/*.{js,jsx,ts,tsx,json,md,yaml,yml}": [
       "pnpm -C web/portal exec prettier --write --cache --cache-location node_modules/.cache/.prettiercache-portal"

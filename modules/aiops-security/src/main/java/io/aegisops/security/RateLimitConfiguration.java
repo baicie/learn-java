@@ -16,10 +16,8 @@ import org.springframework.data.redis.core.StringRedisTemplate;
  *
  * <ul>
  *   <li>{@code aiops.quota.backend=memory}（默认）：装配内存限流与内存租约。
- *   <li>{@code aiops.quota.backend=redis}：装配 Redis 限流与 Redis 租约；
- *       如果 Redis 自动配置不可用或缺少 {@link StringRedisTemplate} Bean，
- *       Spring 上下文会以 NoSuchBeanDefinitionException 失败，
- *       阻止应用以错误的限流配置启动。
+ *   <li>{@code aiops.quota.backend=redis}：装配 Redis 限流与 Redis 租约； 如果 Redis 自动配置不可用或缺少 {@link
+ *       StringRedisTemplate} Bean， Spring 上下文会以 NoSuchBeanDefinitionException 失败， 阻止应用以错误的限流配置启动。
  * </ul>
  */
 @Configuration
@@ -27,19 +25,13 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 public class RateLimitConfiguration {
 
   @Bean
-  @ConditionalOnProperty(
-      prefix = "aiops.quota",
-      name = "backend",
-      havingValue = "redis")
+  @ConditionalOnProperty(prefix = "aiops.quota", name = "backend", havingValue = "redis")
   public RateLimitService redisRateLimitService(StringRedisTemplate redis) {
     return new RedisRateLimitService(redis);
   }
 
   @Bean
-  @ConditionalOnProperty(
-      prefix = "aiops.quota",
-      name = "backend",
-      havingValue = "redis")
+  @ConditionalOnProperty(prefix = "aiops.quota", name = "backend", havingValue = "redis")
   public DistributedLeaseService redisDistributedLeaseService(StringRedisTemplate redis) {
     return new RedisDistributedLeaseService(redis);
   }

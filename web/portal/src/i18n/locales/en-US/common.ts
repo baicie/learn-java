@@ -23,6 +23,100 @@ export const common = {
   'common.yes': 'Yes',
   'common.no': 'No',
   'common.unknownField': 'Unknown field',
+  'command.searchPlaceholder': 'Type a command or search…',
+  'command.empty': 'No results found.',
+
+  'settings.title': 'Settings',
+  'settings.description':
+    'Manage your profile, account security, language and interface preferences.',
+  'settings.nav.profile': 'Profile',
+  'settings.nav.account': 'Account & Language',
+  'settings.nav.appearance': 'Appearance',
+  'settings.nav.notifications': 'Notifications',
+  'settings.nav.display': 'Display',
+  'settings.profile.title': 'Profile',
+  'settings.profile.description':
+    'Update your avatar and basic information visible to other users.',
+  'settings.profile.avatar': 'Avatar',
+  'settings.profile.avatarHint': 'PNG, JPG or WebP, up to 384 KB.',
+  'settings.profile.avatarTooLarge': 'Avatar must be smaller than 384 KB',
+  'settings.profile.avatarSaved': 'Avatar updated',
+  'settings.profile.avatarFailed': 'Failed to update avatar',
+  'settings.profile.username': 'Username',
+  'settings.profile.displayName': 'Display name',
+  'settings.profile.email': 'Email',
+  'settings.profile.saved': 'Profile saved',
+  'settings.profile.saveFailed': 'Failed to save profile',
+  'settings.account.title': 'Account & Language',
+  'settings.account.description':
+    'Change the interface language and maintain your password.',
+  'settings.language.title': 'Interface language',
+  'settings.language.description':
+    'Changes apply immediately and are saved in this browser.',
+  'settings.password.title': 'Change password',
+  'settings.password.description':
+    'Use the new password the next time you sign in.',
+  'settings.password.current': 'Current password',
+  'settings.password.new': 'New password',
+  'settings.password.confirm': 'Confirm new password',
+  'settings.password.action': 'Update password',
+  'settings.password.saved': 'Password updated',
+  'settings.password.failed': 'Failed to update password',
+  'settings.password.mismatch': 'The new passwords do not match',
+  'settings.appearance.title': 'Appearance',
+  'settings.appearance.description':
+    'Customize the app appearance and color theme.',
+  'settings.appearance.font': 'Font',
+  'settings.appearance.fontDescription':
+    'Set the interface font used in the dashboard.',
+  'settings.appearance.theme': 'Theme',
+  'settings.appearance.themeDescription': 'Select the dashboard color theme.',
+  'settings.appearance.light': 'Light',
+  'settings.appearance.dark': 'Dark',
+  'settings.appearance.system': 'System',
+  'settings.appearance.action': 'Update appearance',
+  'settings.notifications.title': 'Notifications',
+  'settings.notifications.description':
+    'Configure how you receive notifications.',
+  'settings.notifications.notifyAbout': 'Notify me about',
+  'settings.notifications.all': 'All new messages',
+  'settings.notifications.mentions': 'Direct messages and mentions',
+  'settings.notifications.none': 'Nothing',
+  'settings.notifications.emailTitle': 'Email notifications',
+  'settings.notifications.communication': 'Account activity emails',
+  'settings.notifications.communicationDescription':
+    'Receive emails about your account activity.',
+  'settings.notifications.marketing': 'Product updates',
+  'settings.notifications.marketingDescription':
+    'Receive emails about new products, features, and more.',
+  'settings.notifications.social': 'Collaboration emails',
+  'settings.notifications.socialDescription':
+    'Receive emails about invitations, follows, and more.',
+  'settings.notifications.security': 'Security emails',
+  'settings.notifications.securityDescription':
+    'Receive emails about account activity and security.',
+  'settings.notifications.mobile': 'Use separate settings for mobile devices',
+  'settings.notifications.mobileDescription':
+    'Manage mobile notifications on the <link>mobile settings</link> page.',
+  'settings.notifications.action': 'Update notifications',
+  'settings.display.title': 'Display',
+  'settings.display.description':
+    'Choose which items are displayed in the app.',
+  'settings.display.sidebar': 'Sidebar',
+  'settings.display.sidebarDescription':
+    'Select the items to display in the sidebar.',
+  'settings.display.recents': 'Recents',
+  'settings.display.home': 'Home',
+  'settings.display.applications': 'Applications',
+  'settings.display.desktop': 'Desktop',
+  'settings.display.downloads': 'Downloads',
+  'settings.display.documents': 'Documents',
+  'settings.display.action': 'Update display',
+  'settings.display.required': 'Select at least one item.',
+  'auth.signOut.title': 'Sign out',
+  'auth.signOut.description':
+    'Are you sure you want to sign out? You will need to sign in again to access your account.',
+  'auth.signOut.action': 'Sign out',
 
   'navigation.unsaved.title': 'Unsaved changes',
   'navigation.unsaved.description':

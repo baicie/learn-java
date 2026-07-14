@@ -45,8 +45,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 class WorkRecordEnterpriseAcceptanceIT {
 
   @Container
-  static final PostgreSQLContainer<?> POSTGRES =
-      new PostgreSQLContainer<>("postgres:16-alpine");
+  static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine");
 
   @DynamicPropertySource
   static void registerProperties(DynamicPropertyRegistry registry) {
@@ -119,11 +118,16 @@ class WorkRecordEnterpriseAcceptanceIT {
         "/api/platform/dictionaries",
         tokens.admin(),
         Map.of(
-            "dictCode", state.dictCode,
-            "dictName", "验收优先级",
-            "description", "Phase 18 企业验收字典",
-            "sortOrder", 10,
-            "enabled", true));
+            "dictCode",
+            state.dictCode,
+            "dictName",
+            "验收优先级",
+            "description",
+            "Phase 18 企业验收字典",
+            "sortOrder",
+            10,
+            "enabled",
+            true));
 
     api.postData(
         "/api/platform/dictionaries/" + state.dictCode + "/items",
@@ -158,22 +162,28 @@ class WorkRecordEnterpriseAcceptanceIT {
             "/api/platform/calendars",
             tokens.admin(),
             Map.of(
-                "calendarCode", "acc_cn_" + year + "_" + state.suffix,
-                "calendarName", "验收工作日历 " + year,
-                "regionCode", "CN",
-                "timezone", "Asia/Shanghai",
-                "year", year,
-                "enabled", true,
-                "sourceType", "acceptance",
-                "description", "Phase 18 验收日历"));
+                "calendarCode",
+                "acc_cn_" + year + "_" + state.suffix,
+                "calendarName",
+                "验收工作日历 " + year,
+                "regionCode",
+                "CN",
+                "timezone",
+                "Asia/Shanghai",
+                "year",
+                year,
+                "enabled",
+                true,
+                "sourceType",
+                "acceptance",
+                "description",
+                "Phase 18 验收日历"));
 
     state.calendarId = calendar.path("id").asText();
 
     JsonNode selected =
         api.putData(
-            "/api/platform/calendars/" + state.calendarId + "/default",
-            tokens.admin(),
-            Map.of());
+            "/api/platform/calendars/" + state.calendarId + "/default", tokens.admin(), Map.of());
 
     assertThat(selected.path("id").asText()).isEqualTo(state.calendarId);
   }
@@ -184,11 +194,16 @@ class WorkRecordEnterpriseAcceptanceIT {
             "/api/work-record/templates",
             tokens.admin(),
             Map.of(
-                "code", "acceptance_daily_" + state.suffix,
-                "name", "企业验收日报",
-                "description", "Phase 18 企业验收模板",
-                "schemaJson", WorkRecordAcceptanceSchemas.v1(state.dictCode),
-                "designerJson", WorkRecordAcceptanceSchemas.designerV1()));
+                "code",
+                "acceptance_daily_" + state.suffix,
+                "name",
+                "企业验收日报",
+                "description",
+                "Phase 18 企业验收模板",
+                "schemaJson",
+                WorkRecordAcceptanceSchemas.v1(state.dictCode),
+                "designerJson",
+                WorkRecordAcceptanceSchemas.designerV1()));
 
     state.templateId = template.path("id").asText();
 
@@ -227,32 +242,22 @@ class WorkRecordEnterpriseAcceptanceIT {
   private void administratorCanReadAllRecords() {
     JsonNode page =
         api.getData(
-            "/api/work-record/records",
-            tokens.admin(),
-            api.query("page", "1", "pageSize", "20"));
+            "/api/work-record/records", tokens.admin(), api.query("page", "1", "pageSize", "20"));
 
     assertThat(page.path("total").asLong()).isEqualTo(2);
 
-    assertThat(recordIds(page))
-        .containsExactlyInAnyOrder(state.userARecordV1, state.userBRecordV1);
+    assertThat(recordIds(page)).containsExactlyInAnyOrder(state.userARecordV1, state.userBRecordV1);
   }
 
   private void normalUserCanOnlyReadSelfRecords() {
     JsonNode page =
         api.getData(
-            "/api/work-record/records",
-            tokens.userA(),
-            api.query("page", "1", "pageSize", "20"));
+            "/api/work-record/records", tokens.userA(), api.query("page", "1", "pageSize", "20"));
 
-    assertThat(recordIds(page))
-        .contains(state.userARecordV1)
-        .doesNotContain(state.userBRecordV1);
+    assertThat(recordIds(page)).contains(state.userARecordV1).doesNotContain(state.userBRecordV1);
 
     ResponseEntity<JsonNode> forbidden =
-        api.getRaw(
-            "/api/work-record/records/" + state.userBRecordV1,
-            tokens.userA(),
-            api.query());
+        api.getRaw("/api/work-record/records/" + state.userBRecordV1, tokens.userA(), api.query());
 
     assertThat(forbidden.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
     assertThat(forbidden.getBody().path("errorCode").asText()).isEqualTo("FORBIDDEN");
@@ -263,10 +268,14 @@ class WorkRecordEnterpriseAcceptanceIT {
         "/api/work-record/templates/" + state.templateId + "/draft",
         tokens.admin(),
         Map.of(
-            "name", "企业验收日报 v2",
-            "description", "增加明日计划字段",
-            "schemaJson", WorkRecordAcceptanceSchemas.v2(state.dictCode),
-            "designerJson", WorkRecordAcceptanceSchemas.designerV2()));
+            "name",
+            "企业验收日报 v2",
+            "description",
+            "增加明日计划字段",
+            "schemaJson",
+            WorkRecordAcceptanceSchemas.v2(state.dictCode),
+            "designerJson",
+            WorkRecordAcceptanceSchemas.designerV2()));
 
     JsonNode version =
         api.postData(
@@ -287,7 +296,10 @@ class WorkRecordEnterpriseAcceptanceIT {
 
     JsonNode v1Fields =
         api.getData(
-            "/api/work-record/templates/" + state.templateId + "/versions/" + state.v1Id
+            "/api/work-record/templates/"
+                + state.templateId
+                + "/versions/"
+                + state.v1Id
                 + "/fields",
             tokens.admin());
 
@@ -353,16 +365,20 @@ class WorkRecordEnterpriseAcceptanceIT {
 
   private void dynamicFieldFilterWorks() {
     String filters =
-        api.toJson(
-            List.of(Map.of("fieldCode", "hours", "operator", "gte", "value", 7)));
+        api.toJson(List.of(Map.of("fieldCode", "hours", "operator", "gte", "value", 7)));
 
     MultiValueMap<String, String> query =
         api.query(
-            "page", "1",
-            "pageSize", "20",
-            "templateId", state.templateId,
-            "templateVersionId", state.v1Id,
-            "dynamicFilters", filters);
+            "page",
+            "1",
+            "pageSize",
+            "20",
+            "templateId",
+            state.templateId,
+            "templateVersionId",
+            state.v1Id,
+            "dynamicFilters",
+            filters);
 
     JsonNode page = api.getData("/api/work-record/records", tokens.admin(), query);
 
@@ -407,10 +423,7 @@ class WorkRecordEnterpriseAcceptanceIT {
   }
 
   private void auditTrailIsComplete() {
-    JsonNode events =
-        api.getData(
-            "/api/audit-logs",
-            tokens.admin());
+    JsonNode events = api.getData("/api/audit-logs", tokens.admin());
 
     assertThat(actionNames(events))
         .contains(
@@ -426,130 +439,64 @@ class WorkRecordEnterpriseAcceptanceIT {
             "work_record.record.export",
             "work_record.record.export_rejected");
 
-    List<JsonNode> publishes =
-        eventsForAction(
-            events,
-            "work_record.template.publish");
+    List<JsonNode> publishes = eventsForAction(events, "work_record.template.publish");
 
     assertThat(publishes).hasSize(2);
 
-    assertThat(
-            publishes.stream()
-                .map(
-                    event ->
-                        event.path("resourceId")
-                            .asText())
-                .toList())
+    assertThat(publishes.stream().map(event -> event.path("resourceId").asText()).toList())
         .containsOnly(state.templateId);
 
-    List<JsonNode> creates =
-        eventsForAction(
-            events,
-            "work_record.record.create");
+    List<JsonNode> creates = eventsForAction(events, "work_record.record.create");
 
     assertThat(creates).hasSize(3);
 
-    assertThat(
-            creates.stream()
-                .map(
-                    event ->
-                        event.path("resourceId")
-                            .asText())
-                .toList())
-        .containsExactlyInAnyOrder(
-            state.userARecordV1,
-            state.userBRecordV1,
-            state.userARecordV2);
+    assertThat(creates.stream().map(event -> event.path("resourceId").asText()).toList())
+        .containsExactlyInAnyOrder(state.userARecordV1, state.userBRecordV1, state.userARecordV2);
 
     assertThat(
             creates.stream()
-                .map(
-                    event ->
-                        event.path("actorId")
-                            .asText())
-                .collect(
-                    java.util.stream.Collectors.toSet()))
-        .contains(
-            identities.userA().id(),
-            identities.userB().id());
+                .map(event -> event.path("actorId").asText())
+                .collect(java.util.stream.Collectors.toSet()))
+        .contains(identities.userA().id(), identities.userB().id());
 
-    List<JsonNode> successfulExports =
-        eventsForAction(
-            events,
-            "work_record.record.export");
+    List<JsonNode> successfulExports = eventsForAction(events, "work_record.record.export");
 
     assertThat(successfulExports).hasSize(2);
 
     for (JsonNode export : successfulExports) {
-      JsonNode detail =
-          parseAuditObject(
-              export,
-              "detailJson");
+      JsonNode detail = parseAuditObject(export, "detailJson");
 
-      assertThat(detail.path("result").asText())
-          .isEqualTo("success");
+      assertThat(detail.path("result").asText()).isEqualTo("success");
 
-      assertThat(detail.path("rowCount").asInt())
-          .isEqualTo(1);
+      assertThat(detail.path("rowCount").asInt()).isEqualTo(1);
 
-      assertThat(detail.path("columns").isArray())
-          .isTrue();
+      assertThat(detail.path("columns").isArray()).isTrue();
 
-      assertThat(detail.path("query").isObject())
-          .isTrue();
+      assertThat(detail.path("query").isObject()).isTrue();
     }
 
-    List<JsonNode> rejectedExports =
-        eventsForAction(
-            events,
-            "work_record.record.export_rejected");
+    List<JsonNode> rejectedExports = eventsForAction(events, "work_record.record.export_rejected");
 
     assertThat(rejectedExports).hasSize(1);
 
-    JsonNode rejectedDetail =
-        parseAuditObject(
-            rejectedExports.getFirst(),
-            "detailJson");
+    JsonNode rejectedDetail = parseAuditObject(rejectedExports.getFirst(), "detailJson");
 
-    assertThat(
-            rejectedDetail.path("result")
-                .asText())
-        .isEqualTo("limit_exceeded");
+    assertThat(rejectedDetail.path("result").asText()).isEqualTo("limit_exceeded");
 
-    assertThat(
-            rejectedDetail.path("rowCount")
-                .asInt())
-        .isEqualTo(3);
+    assertThat(rejectedDetail.path("rowCount").asInt()).isEqualTo(3);
 
-    assertThat(
-            rejectedDetail.path("maxRows")
-                .asInt())
-        .isEqualTo(2);
+    assertThat(rejectedDetail.path("maxRows").asInt()).isEqualTo(2);
 
-    assertThat(
-            rejectedDetail.path("columns")
-                .isArray())
-        .isTrue();
+    assertThat(rejectedDetail.path("columns").isArray()).isTrue();
 
-    assertThat(
-            rejectedDetail.path("query")
-                .isObject())
-        .isTrue();
+    assertThat(rejectedDetail.path("query").isObject()).isTrue();
 
-    List<JsonNode> disabledItems =
-        eventsForAction(
-            events,
-            "platform.dict_item.disable");
+    List<JsonNode> disabledItems = eventsForAction(events, "platform.dict_item.disable");
 
     assertThat(disabledItems)
         .singleElement()
         .satisfies(
-            event ->
-                assertThat(
-                        event.path("resourceId")
-                            .asText())
-                    .isEqualTo(
-                        state.p2ItemId));
+            event -> assertThat(event.path("resourceId").asText()).isEqualTo(state.p2ItemId));
 
     assertAuditPayloads(events);
   }
@@ -566,9 +513,7 @@ class WorkRecordEnterpriseAcceptanceIT {
     body.put("title", title);
     body.put("status", "done");
     body.put("ownerId", account.id());
-    body.put(
-        "recordTime",
-        OffsetDateTime.now(ZoneOffset.UTC).withNano(0).toString());
+    body.put("recordTime", OffsetDateTime.now(ZoneOffset.UTC).withNano(0).toString());
     body.put("builtinDataJson", "{}");
     body.put("customDataJson", api.toJson(customData));
 
@@ -626,97 +571,50 @@ class WorkRecordEnterpriseAcceptanceIT {
     return result;
   }
 
-  private void assertAuditPayloads(
-      JsonNode events) {
+  private void assertAuditPayloads(JsonNode events) {
     for (JsonNode event : events) {
-      assertThat(
-              event.path("id").asText())
-          .isNotBlank();
+      assertThat(event.path("id").asText()).isNotBlank();
 
-      assertThat(
-              event.path("tenantId").asText())
-          .isEqualTo(
-              identities.tenantId());
+      assertThat(event.path("tenantId").asText()).isEqualTo(identities.tenantId());
 
-      assertThat(
-              event.path("actorId").asText())
-          .isNotBlank();
+      assertThat(event.path("actorId").asText()).isNotBlank();
 
-      assertThat(
-              event.path("action").asText())
-          .isNotBlank();
+      assertThat(event.path("action").asText()).isNotBlank();
 
-      assertThat(
-              event.path("resourceType").asText())
-          .isNotBlank();
+      assertThat(event.path("resourceType").asText()).isNotBlank();
 
-      assertThat(
-              event.path("resourceId").asText())
-          .isNotBlank();
+      assertThat(event.path("resourceId").asText()).isNotBlank();
 
-      assertThat(
-              event.path("createdAt").asText())
-          .isNotBlank();
+      assertThat(event.path("createdAt").asText()).isNotBlank();
 
-      assertThat(
-              parseAuditObject(
-                  event,
-                  "beforeJson")
-                  .isObject())
-          .isTrue();
+      assertThat(parseAuditObject(event, "beforeJson").isObject()).isTrue();
 
-      assertThat(
-              parseAuditObject(
-                  event,
-                  "afterJson")
-                  .isObject())
-          .isTrue();
+      assertThat(parseAuditObject(event, "afterJson").isObject()).isTrue();
 
-      assertThat(
-              parseAuditObject(
-                  event,
-                  "detailJson")
-                  .isObject())
-          .isTrue();
+      assertThat(parseAuditObject(event, "detailJson").isObject()).isTrue();
     }
   }
 
-  private JsonNode parseAuditObject(
-      JsonNode event,
-      String fieldName) {
-    String raw =
-        event.path(fieldName)
-            .asText();
+  private JsonNode parseAuditObject(JsonNode event, String fieldName) {
+    String raw = event.path(fieldName).asText();
 
     assertThat(raw)
-        .as(
-            "%s must exist for action %s",
-            fieldName,
-            event.path("action").asText())
+        .as("%s must exist for action %s", fieldName, event.path("action").asText())
         .isNotBlank();
 
     try {
-      JsonNode parsed =
-          objectMapper.readTree(raw);
+      JsonNode parsed = objectMapper.readTree(raw);
 
       assertThat(parsed)
-          .as(
-              "%s must be a JSON object for action %s",
-              fieldName,
-              event.path("action").asText())
+          .as("%s must be a JSON object for action %s", fieldName, event.path("action").asText())
           .isNotNull();
 
-      assertThat(parsed.isObject())
-          .isTrue();
+      assertThat(parsed.isObject()).isTrue();
 
       return parsed;
     } catch (Exception ex) {
       throw new AssertionError(
-          "invalid "
-              + fieldName
-              + " for action "
-              + event.path("action").asText(),
-          ex);
+          "invalid " + fieldName + " for action " + event.path("action").asText(), ex);
     }
   }
 

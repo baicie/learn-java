@@ -37,8 +37,8 @@ related:
 
 ```text
 - 任何 className 颜色必须用语义 token, 禁 bg-blue-500 / text-red-600 / border-zinc-300
-- 状态徽标 (active / inactive / invited / suspended) 见 features/users/data/data.ts 的 callTypes Map
-  这是项目允许的"色板扩展"集中点, 新增状态在 features/<feature>/data/data.ts 加, 不在组件里硬编码
+- 状态徽标 (active / inactive / invited / suspended) 使用业务 `lib/<resource>` 中的集中映射
+  新增状态在资源 schema/映射中维护, 不在组件里散落硬编码
 - 暗色模式: 永远不要写 dark:bg-xxx, 语义色会自动切换
 - 焦点: 全局 :focus-visible 已统一, 不要在组件里覆盖 focus ring, 除非必须自定义
 ```
@@ -84,15 +84,11 @@ related:
 ## 4. Button + Icon 规范
 
 ```tsx
-import { MailPlus, UserPlus } from "lucide-react";
+import { MailPlus, UserPlus } from 'lucide-react'
 
-<Button
-  variant="outline"
-  className="space-x-1"
-  onClick={() => setOpen("invite")}
->
+;<Button variant="outline" className="space-x-1" onClick={() => setOpen('invite')}>
   <span>Invite User</span> <MailPlus size={18} />
-</Button>;
+</Button>
 ```
 
 要点:
@@ -106,23 +102,18 @@ import { MailPlus, UserPlus } from "lucide-react";
 ## 5. 数据表头 / 分页 / 筛选
 
 ```tsx
-const {
-  columnFilters,
-  onColumnFiltersChange,
-  pagination,
-  onPaginationChange,
-  ensurePageInRange,
-} = useTableUrlState({
-  search,
-  navigate,
-  pagination: { defaultPage: 1, defaultPageSize: 10 },
-  globalFilter: { enabled: false },
-  columnFilters: [
-    { columnId: "username", searchKey: "username", type: "string" },
-    { columnId: "status", searchKey: "status", type: "array" },
-    { columnId: "role", searchKey: "role", type: "array" },
-  ],
-});
+const { columnFilters, onColumnFiltersChange, pagination, onPaginationChange, ensurePageInRange } =
+  useTableUrlState({
+    search,
+    navigate,
+    pagination: { defaultPage: 1, defaultPageSize: 10 },
+    globalFilter: { enabled: false },
+    columnFilters: [
+      { columnId: 'username', searchKey: 'username', type: 'string' },
+      { columnId: 'status', searchKey: 'status', type: 'array' },
+      { columnId: 'role', searchKey: 'role', type: 'array' },
+    ],
+  })
 ```
 
 URL search 必须配套 zod schema（路由文件）:
@@ -150,40 +141,38 @@ URL search 命名必须与 useTableUrlState.columnFilters 中的 searchKey 完�
 每个 feature 的 `<feature>-provider.tsx` 写法统一:
 
 ```tsx
-import React, { useState } from "react";
-import useDialogState from "@/hooks/use-dialog-state";
-import { type User } from "../data/schema";
+import React, { useState } from 'react'
+import useDialogState from '@/hooks/use-dialog-state'
+import { type User } from '../data/schema'
 
-type UsersDialogType = "invite" | "add" | "edit" | "delete";
+type UsersDialogType = 'invite' | 'add' | 'edit' | 'delete'
 
 type UsersContextType = {
-  open: UsersDialogType | null;
-  setOpen: (str: UsersDialogType | null) => void;
-  currentRow: User | null;
-  setCurrentRow: React.Dispatch<React.SetStateAction<User | null>>;
-};
+  open: UsersDialogType | null
+  setOpen: (str: UsersDialogType | null) => void
+  currentRow: User | null
+  setCurrentRow: React.Dispatch<React.SetStateAction<User | null>>
+}
 
-const UsersContext = React.createContext<UsersContextType | null>(null);
+const UsersContext = React.createContext<UsersContextType | null>(null)
 
 export function UsersProvider({ children }: { children: React.ReactNode }) {
-  const [open, setOpen] = useDialogState<UsersDialogType>(null);
-  const [currentRow, setCurrentRow] = useState<User | null>(null);
+  const [open, setOpen] = useDialogState<UsersDialogType>(null)
+  const [currentRow, setCurrentRow] = useState<User | null>(null)
 
   return (
-    <UsersContext value={{ open, setOpen, currentRow, setCurrentRow }}>
-      {children}
-    </UsersContext>
-  );
+    <UsersContext value={{ open, setOpen, currentRow, setCurrentRow }}>{children}</UsersContext>
+  )
 }
 
 // eslint-disable-next-line react-refresh/only-export-components
 export const useUsers = () => {
-  const usersContext = React.useContext(UsersContext);
+  const usersContext = React.useContext(UsersContext)
   if (!usersContext) {
-    throw new Error("useUsers has to be used within <UsersContext>");
+    throw new Error('useUsers has to be used within <UsersContext>')
   }
-  return usersContext;
-};
+  return usersContext
+}
 ```
 
 要点:
@@ -239,10 +228,10 @@ toast.error('Session expired!')
 
 ## 9. 与 AegisOps 后端的约定（占位）
 
-接入 AegisOps 后端时, 必须新增 `features/<feature>/data/client.ts`, 模板的 `data.ts` 与 `users.ts` 保留:
+接入 AegisOps 后端时, HTTP 客户端放在 `src/api/<resource>/`:
 
 ```text
-// features/users/data/client.ts
+// src/api/users.ts
 import axios from 'axios'
 import { z } from 'zod'
 import { type User, userSchema } from './schema'
@@ -268,5 +257,7 @@ export async function listUsers(params: ListParams): Promise<User[]> {
 - web/portal/styles/index.css + theme.css
 - web/portal/eslint.config.js
 - web/portal/src/components/data-table/*  (表格原语模板)
-- web/portal/src/features/users/*        (最完整的 feature 范例)
+- web/portal/src/api/iam/*               (带类型 API 范例)
+- web/portal/src/components/iam/*        (业务组件范例)
+- web/portal/src/pages/work-records/*    (页面范例)
 ```

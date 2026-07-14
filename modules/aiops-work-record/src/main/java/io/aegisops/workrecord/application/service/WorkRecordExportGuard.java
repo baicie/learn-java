@@ -37,8 +37,7 @@ public class WorkRecordExportGuard {
     }
 
     if (user == null || user.id() == null || user.id().isBlank()) {
-      throw new AppException(
-          ErrorCode.UNAUTHORIZED, "authenticated user is required");
+      throw new AppException(ErrorCode.UNAUTHORIZED, "authenticated user is required");
     }
 
     String identity = tenantId + ":" + user.id();
@@ -54,9 +53,7 @@ public class WorkRecordExportGuard {
 
       throw new AppException(
           ErrorCode.EXPORT_RATE_LIMITED,
-          "too many export requests; retry after "
-              + decision.retryAfterSeconds()
-              + " seconds");
+          "too many export requests; retry after " + decision.retryAfterSeconds() + " seconds");
     }
 
     Optional<DistributedLease> lease =
@@ -67,8 +64,7 @@ public class WorkRecordExportGuard {
     if (lease.isEmpty()) {
       telemetry.recordExport("in_progress");
 
-      throw new AppException(
-          ErrorCode.EXPORT_IN_PROGRESS, "another export is already running");
+      throw new AppException(ErrorCode.EXPORT_IN_PROGRESS, "another export is already running");
     }
 
     return new Permit(lease.get());

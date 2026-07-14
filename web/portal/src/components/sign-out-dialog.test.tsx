@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { setLanguage } from '@/i18n'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { render } from 'vitest-browser-react'
 import { userEvent } from 'vitest/browser'
 import { SignOutDialog } from './sign-out-dialog'
@@ -26,7 +27,10 @@ vi.mock('@tanstack/react-router', async (importOriginal) => {
 describe('SignOutDialog', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    setLanguage('en-US')
   })
+
+  afterEach(() => setLanguage('zh-CN'))
 
   it('calls auth.reset and navigates to sign-in with current location as redirect', async () => {
     const { getByRole } = await render(

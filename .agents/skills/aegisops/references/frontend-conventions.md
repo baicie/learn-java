@@ -1,6 +1,6 @@
 # Frontend Conventions (AegisOps Console)
 
-本文件是 AegisOps 控制台前端工程的主题、组件、样式与代码组织规范。 所有规则与 `.agents/skills/aegisops/SKILL.md` §4.1、`.agents/skills/shadcn/SKILL.md`、`vercel-composition-patterns` 共同生效; 冲突时以本文件 + Skill 为准。
+本文件是 AegisOps 控制台前端工程的主题、组件、样式与代码组织规范。所有规则与 `.agents/skills/aegisops/SKILL.md` §4.1 共同生效；通用 shadcn 与 React Skill 仅作参考，归档在 `.agents/skill-library/`。
 
 适用范围:
 
@@ -466,13 +466,10 @@ Mutation: invalidate 相关 keys, 不要手动 refetch
 
 ```tsx
 // 错误
-const isLoading = useMemo(
-  () => user.loading || notif.loading,
-  [user.loading, notif.loading],
-);
+const isLoading = useMemo(() => user.loading || notif.loading, [user.loading, notif.loading])
 
 // 正确
-const isLoading = user.loading || notif.loading;
+const isLoading = user.loading || notif.loading
 ```
 
 只对复杂计算或对象引用稳定化使用 useMemo。
@@ -548,7 +545,7 @@ web/console/src/pages/
 MVP 阶段可全部同步导入。 Phase 后期按需引入 `React.lazy`:
 
 ```tsx
-const AiDiagnosisPage = React.lazy(() => import("@/pages/AiDiagnosisPage"));
+const AiDiagnosisPage = React.lazy(() => import('@/pages/AiDiagnosisPage'))
 ```
 
 ---

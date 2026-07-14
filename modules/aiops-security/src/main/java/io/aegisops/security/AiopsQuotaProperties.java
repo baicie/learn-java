@@ -8,8 +8,8 @@ import org.springframework.validation.annotation.Validated;
 /**
  * 限流与配额相关配置。
  *
- * <p>生产 Profile 必须显式将 {@code backend} 设为 {@link RateLimitBackend#REDIS}，
- * 否则会因为缺少 {@code StringRedisTemplate} Bean 导致启动失败（fail-fast）。
+ * <p>生产 Profile 必须显式将 {@code backend} 设为 {@link RateLimitBackend#REDIS}， 否则会因为缺少 {@code
+ * StringRedisTemplate} Bean 导致启动失败（fail-fast）。
  *
  * <p>本地或测试场景默认使用 {@link RateLimitBackend#MEMORY}，无需任何额外依赖即可启动。
  */
@@ -28,8 +28,7 @@ public class AiopsQuotaProperties {
 
   private boolean rateLimitEnabled = true;
 
-  @NotNull
-  private RateLimitBackend backend = RateLimitBackend.MEMORY;
+  @NotNull private RateLimitBackend backend = RateLimitBackend.MEMORY;
 
   public int getPublicApiRequestsPerMinute() {
     return publicApiRequestsPerMinute;

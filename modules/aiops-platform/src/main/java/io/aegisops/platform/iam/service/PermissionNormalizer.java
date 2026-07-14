@@ -7,14 +7,13 @@ import io.aegisops.platform.iam.error.IamErrorCode;
 import io.aegisops.platform.iam.repository.PermissionDefinitionRepository;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Component;
 
 /**
- * Validates and normalizes the permission set requested by an operator against the immutable
- * {@code iam.permission_definition} directory.
+ * Validates and normalizes the permission set requested by an operator against the immutable {@code
+ * iam.permission_definition} directory.
  *
  * <p>Two responsibilities:
  *

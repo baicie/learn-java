@@ -111,16 +111,8 @@ public class CalendarRepository {
   }
 
   public CalendarDayRecord upsertDay(
-      String tenantId,
-      String calendarId,
-      LocalDate date,
-      String dayType,
-      boolean workday,
-      String holidayCode,
-      String holidayName,
-      String sourceType,
-      String remark,
-      String actor) {
+      String tenantId, String calendarId, CalendarDayMutation mutation, String actor) {
+    LocalDate date = mutation.date();
     String id = findDay(tenantId, calendarId, date).map(day -> day.id()).orElseGet(Ids::newId);
 
     jdbc.update(
@@ -144,12 +136,12 @@ public class CalendarRepository {
         calendarId,
         date,
         date.getDayOfWeek().getValue(),
-        dayType,
-        workday,
-        holidayCode,
-        holidayName,
-        defaultText(sourceType, "manual"),
-        remark,
+        mutation.dayType(),
+        mutation.workday(),
+        mutation.holidayCode(),
+        mutation.holidayName(),
+        defaultText(mutation.sourceType(), "manual"),
+        mutation.remark(),
         actor);
 
     return findDay(tenantId, calendarId, date).orElseThrow();

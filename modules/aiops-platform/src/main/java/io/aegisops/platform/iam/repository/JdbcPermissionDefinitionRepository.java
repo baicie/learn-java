@@ -66,7 +66,8 @@ public class JdbcPermissionDefinitionRepository implements PermissionDefinitionR
 
   @Override
   public Set<String> codesForRole(String tenantId, String roleCode) {
-    return jdbc.query(
+    return jdbc
+        .query(
             """
                 select distinct pd.permission_code
                   from iam.permission_definition pd
