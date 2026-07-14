@@ -65,7 +65,7 @@ class WorkRecordTemplateServiceTest {
     when(usageRepository.countRecordsByTemplate("t1", "tpl1")).thenReturn(1L);
 
     assertThatThrownBy(() -> service.archive("t1", "tpl1", "u1"))
-        .isInstanceOf(IllegalStateException.class)
+        .isInstanceOf(ConflictException.class)
         .hasMessageContaining("referenced by records");
   }
 

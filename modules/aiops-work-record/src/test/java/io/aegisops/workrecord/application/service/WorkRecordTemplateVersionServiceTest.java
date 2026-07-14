@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.*;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.aegisops.common.exception.ConflictException;
 import io.aegisops.workrecord.application.command.PublishTemplateCommand;
 import io.aegisops.workrecord.application.command.TemplatePublishValidationResult;
 import io.aegisops.workrecord.application.port.WorkRecordFieldIndexRepository;
@@ -151,7 +152,7 @@ class WorkRecordTemplateVersionServiceTest {
     when(usageRepository.countRecordsByTemplateVersion("t1", "v0")).thenReturn(10L);
 
     assertThatThrownBy(() -> service.publish("t1", new PublishTemplateCommand("tpl1", "v2"), "u1"))
-        .isInstanceOf(IllegalStateException.class)
+        .isInstanceOf(ConflictException.class)
         .hasMessageContaining("fieldType is locked");
   }
 

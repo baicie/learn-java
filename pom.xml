@@ -191,6 +191,7 @@
           <failsOnError>true</failsOnError>
           <includeTestSourceDirectory>true</includeTestSourceDirectory>
           <inputEncoding>${project.build.sourceEncoding}</inputEncoding>
+          <suppressionsLocation>${maven.multiModuleProjectDirectory}/infra/checkstyle/suppressions.xml</suppressionsLocation>
           <sourceDirectories>
             <sourceDirectory>${project.basedir}/src/main/java</sourceDirectory>
           </sourceDirectories>

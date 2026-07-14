@@ -40,7 +40,7 @@ class WorkRecordHealthIndicatorTest {
     NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
     when(jdbc.queryForObject(eq("select 1"), any(Map.class), eq(Integer.class))).thenReturn(1);
     when(jdbc.queryForObject(any(String.class), any(Map.class), eq(Boolean.class)))
-        .thenReturn(false);
+        .thenAnswer(invocation -> invocation.<String>getArgument(0).contains("to_regclass"));
 
     HealthIndicatorFixture fixture = newFixture(jdbc, true, false);
 
@@ -57,7 +57,7 @@ class WorkRecordHealthIndicatorTest {
     NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
     when(jdbc.queryForObject(eq("select 1"), any(Map.class), eq(Integer.class))).thenReturn(1);
     when(jdbc.queryForObject(any(String.class), any(Map.class), eq(Boolean.class)))
-        .thenReturn(false);
+        .thenAnswer(invocation -> invocation.<String>getArgument(0).contains("to_regclass"));
 
     HealthIndicatorFixture fixture = newFixture(jdbc, false, true);
 
@@ -72,6 +72,8 @@ class WorkRecordHealthIndicatorTest {
   void noRequirementMeansNoIndexOrConstraintCheck() {
     NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
     when(jdbc.queryForObject(eq("select 1"), any(Map.class), eq(Integer.class))).thenReturn(1);
+    when(jdbc.queryForObject(any(String.class), any(Map.class), eq(Boolean.class)))
+        .thenReturn(true);
 
     HealthIndicatorFixture fixture = newFixture(jdbc, false, false);
 
