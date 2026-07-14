@@ -41,7 +41,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @SpringBootTest(
     classes = AiOpsServerApplication.class,
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@BootstrapWith(SpringBootTestContextBootstrapper.class)
+@BootstrapWith(WorkRecordEnterpriseAcceptanceIT.DirectSpringBootTestContextBootstrapper.class)
 @ActiveProfiles("acceptance")
 @Testcontainers
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -622,6 +622,15 @@ class WorkRecordEnterpriseAcceptanceIT {
   }
 
   private record Tokens(String admin, String userA, String userB) {}
+
+  public static final class DirectSpringBootTestContextBootstrapper
+      extends SpringBootTestContextBootstrapper {
+
+    @Override
+    protected SpringBootTest getAnnotation(Class<?> testClass) {
+      return testClass.getDeclaredAnnotation(SpringBootTest.class);
+    }
+  }
 
   private static final class ScenarioState {
     private final String suffix;
