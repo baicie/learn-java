@@ -109,7 +109,9 @@ final class AcceptanceHttpClient {
   }
 
   private JsonNode data(ResponseEntity<JsonNode> response) {
-    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+    assertThat(response.getStatusCode())
+        .as("response body: %s", response.getBody())
+        .isEqualTo(HttpStatus.OK);
 
     JsonNode body = requireBody(response);
 
