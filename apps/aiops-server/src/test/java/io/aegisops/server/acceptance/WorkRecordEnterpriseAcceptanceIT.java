@@ -92,6 +92,7 @@ class WorkRecordEnterpriseAcceptanceIT {
     step("03 创建并发布模板 v1", this::createAndPublishTemplateV1);
     step("04 用户填写 v1 记录", this::usersCreateV1Records);
     step("05 管理员查看全部记录", this::administratorCanReadAllRecords);
+    step("05.1 无模板条件统计", this::analyticsWithoutTemplateFilterWorks);
     step("06 普通用户只能查看自己的记录", this::normalUserCanOnlyReadSelfRecords);
     step("07 管理员发布模板 v2", this::administratorPublishesTemplateV2);
     step("08 历史记录仍绑定 v1", this::historicalRecordStillUsesV1);
@@ -259,6 +260,27 @@ class WorkRecordEnterpriseAcceptanceIT {
     assertThat(page.path("total").asLong()).isEqualTo(2);
 
     assertThat(recordIds(page)).containsExactlyInAnyOrder(state.userARecordV1, state.userBRecordV1);
+  }
+
+  private void analyticsWithoutTemplateFilterWorks() {
+    ZoneId zone = ZoneId.of("Asia/Shanghai");
+    int year = Year.now(zone).getValue();
+    MultiValueMap<String, String> query =
+        api.query(
+            "from", Year.of(year).atDay(1).atStartOfDay(zone).toInstant().toString(),
+            "to", Year.of(year + 1).atDay(1).atStartOfDay(zone).toInstant().toString(),
+            "groupBy", "day");
+
+    assertThat(
+            api.getData("/api/work-record/analytics/statistics", tokens.admin(), query)
+                .path("totalRecords")
+                .asLong())
+        .isEqualTo(2);
+    assertThat(
+            api.getData("/api/work-record/analytics/workload", tokens.admin(), query)
+                .path("users")
+                .size())
+        .isEqualTo(2);
   }
 
   private void normalUserCanOnlyReadSelfRecords() {

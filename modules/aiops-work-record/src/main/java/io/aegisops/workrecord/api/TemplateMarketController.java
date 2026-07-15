@@ -26,6 +26,7 @@ public class TemplateMarketController {
   }
 
   @GetMapping
+  @PreAuthorize("isAuthenticated()")
   public ApiResponse<List<TemplateMarketRepository.MarketVersion>> list() {
     return ApiResponse.ok(service.list(TenantContext.requireTenantId()));
   }

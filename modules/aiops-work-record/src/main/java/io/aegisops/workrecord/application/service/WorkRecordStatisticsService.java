@@ -90,7 +90,8 @@ public class WorkRecordStatisticsService {
   private static void requirePermission(String tenantId, UserPrincipal principal) {
     if (principal == null
         || !tenantId.equals(principal.tenantId())
-        || !principal.hasPermission(PermissionCodes.WORK_RECORD_ANALYTICS)) {
+        || !principal.hasPermission(PermissionCodes.WORK_RECORD_ANALYTICS)
+        || !principal.hasPermission(PermissionCodes.WORK_RECORD_READ_ALL)) {
       throw new AccessDeniedException("not allowed to read work-record analytics");
     }
   }

@@ -30,7 +30,9 @@ class AiGenerationServiceTest {
     AiGenerationRepository repository = mock(AiGenerationRepository.class);
     AiInputBuilder inputs = mock(AiInputBuilder.class);
     OutboxWriter outbox = mock(OutboxWriter.class);
-    var service = new AiGenerationService(repository, inputs, outbox, new ObjectMapper());
+    var service =
+        new AiGenerationService(
+            repository, inputs, mock(WorkRecordQueryService.class), outbox, new ObjectMapper());
     when(inputs.monthlyReport(any(), any(), any(), any()))
         .thenReturn(generationRequest("monthly_report"));
     when(repository.findReusable(any(), any(), any(), any(), any())).thenReturn(Optional.empty());
@@ -40,7 +42,8 @@ class AiGenerationServiceTest {
         service.requestMonthlyReport(
             "tenant-1",
             LocalDate.of(2026, 7, 14),
-            principal(PermissionCodes.WORK_RECORD_AI_GENERATE));
+            principal(
+                PermissionCodes.WORK_RECORD_AI_GENERATE, PermissionCodes.WORK_RECORD_READ_ALL));
 
     assertThat(result.status()).isEqualTo("queued");
     verify(outbox).enqueue(any(OutboxMessage.class));
@@ -51,7 +54,9 @@ class AiGenerationServiceTest {
     AiGenerationRepository repository = mock(AiGenerationRepository.class);
     AiInputBuilder inputs = mock(AiInputBuilder.class);
     OutboxWriter outbox = mock(OutboxWriter.class);
-    var service = new AiGenerationService(repository, inputs, outbox, new ObjectMapper());
+    var service =
+        new AiGenerationService(
+            repository, inputs, mock(WorkRecordQueryService.class), outbox, new ObjectMapper());
     when(inputs.recordSummary(any(), any(), any(), any()))
         .thenReturn(generationRequest("record_summary"));
     when(repository.findReusable(any(), any(), any(), any(), any()))
@@ -71,18 +76,41 @@ class AiGenerationServiceTest {
     AiGenerationRepository repository = mock(AiGenerationRepository.class);
     var service =
         new AiGenerationService(
-            repository, mock(AiInputBuilder.class), mock(OutboxWriter.class), new ObjectMapper());
+            repository,
+            mock(AiInputBuilder.class),
+            mock(WorkRecordQueryService.class),
+            mock(OutboxWriter.class),
+            new ObjectMapper());
 
     assertThatThrownBy(
             () -> service.review("tenant-1", "ai-1", true, principal("work-record:read:all")))
         .isInstanceOf(AccessDeniedException.class);
   }
 
-  private static UserPrincipal principal(String permission) {
+  @Test
+  void monthlyGenerationRequiresTenantWideReadPermission() {
+    var service =
+        new AiGenerationService(
+            mock(AiGenerationRepository.class),
+            mock(AiInputBuilder.class),
+            mock(WorkRecordQueryService.class),
+            mock(OutboxWriter.class),
+            new ObjectMapper());
+
+    assertThatThrownBy(
+            () ->
+                service.requestMonthlyReport(
+                    "tenant-1",
+                    LocalDate.of(2026, 7, 1),
+                    principal(PermissionCodes.WORK_RECORD_AI_GENERATE)))
+        .isInstanceOf(AccessDeniedException.class);
+  }
+
+  private static UserPrincipal principal(String... permissions) {
     return new UserPrincipal(
         new UserPrincipal.Identity("user-1", "tenant-1", "alice", "Alice"),
         Set.of(),
-        Set.of(permission),
+        Set.of(permissions),
         Map.of());
   }
 

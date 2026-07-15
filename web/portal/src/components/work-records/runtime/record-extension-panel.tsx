@@ -157,39 +157,37 @@ export function RecordExtensionPanel({ recordId }: { recordId: string }) {
           </TabsList>
           <TabsContent value='comments' className='mt-4 space-y-4'>
             {comments.error && <ErrorState error={comments.error} />}
+            <div className='space-y-2'>
+              {comments.data?.map((item) => (
+                <div key={item.id} className='rounded-md border p-3'>
+                  <p className='text-sm whitespace-pre-wrap'>{item.content}</p>
+                  <p className='mt-2 text-xs text-muted-foreground'>
+                    {item.createdBy} ·{' '}
+                    {new Date(item.createdAt).toLocaleString()}
+                  </p>
+                </div>
+              ))}
+              {comments.data?.length === 0 && (
+                <p className='text-sm text-muted-foreground'>暂无评论</p>
+              )}
+            </div>
             <PermissionGate any={['work-record:comment']}>
               <div className='space-y-2'>
-                {comments.data?.map((item) => (
-                  <div key={item.id} className='rounded-md border p-3'>
-                    <p className='text-sm whitespace-pre-wrap'>
-                      {item.content}
-                    </p>
-                    <p className='mt-2 text-xs text-muted-foreground'>
-                      {item.createdBy} ·{' '}
-                      {new Date(item.createdAt).toLocaleString()}
-                    </p>
-                  </div>
-                ))}
-                {comments.data?.length === 0 && (
-                  <p className='text-sm text-muted-foreground'>暂无评论</p>
-                )}
+                <Label htmlFor='record-comment'>新增评论</Label>
+                <Textarea
+                  id='record-comment'
+                  value={comment}
+                  maxLength={4000}
+                  onChange={(event) => setComment(event.target.value)}
+                />
+                <Button
+                  disabled={!comment.trim() || addComment.isPending}
+                  onClick={() => addComment.mutate()}
+                >
+                  {addComment.isPending ? '提交中…' : '提交评论'}
+                </Button>
               </div>
             </PermissionGate>
-            <div className='space-y-2'>
-              <Label htmlFor='record-comment'>新增评论</Label>
-              <Textarea
-                id='record-comment'
-                value={comment}
-                maxLength={4000}
-                onChange={(event) => setComment(event.target.value)}
-              />
-              <Button
-                disabled={!comment.trim() || addComment.isPending}
-                onClick={() => addComment.mutate()}
-              >
-                {addComment.isPending ? '提交中…' : '提交评论'}
-              </Button>
-            </div>
           </TabsContent>
           <TabsContent value='attachments' className='mt-4 space-y-4'>
             {attachments.error && <ErrorState error={attachments.error} />}

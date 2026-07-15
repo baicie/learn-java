@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import { Activity, Boxes, ClipboardCheck, UsersRound } from 'lucide-react'
@@ -39,7 +40,7 @@ export function WorkRecordOperationsPage() {
   const queryClient = useQueryClient()
   const navigate = useNavigate()
   const search = useSearch({ strict: false }) as { from?: string; to?: string }
-  const defaults = defaultDates()
+  const defaults = useMemo(() => defaultDates(), [])
   const from = search.from || defaults.from
   const to = search.to || defaults.to
   const queries = useWorkRecordOperations(from, to)

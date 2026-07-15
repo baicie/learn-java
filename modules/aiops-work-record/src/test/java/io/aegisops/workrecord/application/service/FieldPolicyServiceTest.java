@@ -49,5 +49,13 @@ class FieldPolicyServiceTest {
                 service.requireWritablePatch(
                     "tenant-1", "version-1", "{\"salary\":10000}", "{\"salary\":20000}", user))
         .isInstanceOf(AccessDeniedException.class);
+    assertThat(
+            service.filterAuditSnapshot(
+                "tenant-1",
+                "version-1",
+                "{\"title\":\"日报\",\"customData\":{\"salary\":10000,\"summary\":\"done\"}}",
+                user))
+        .doesNotContain("salary")
+        .contains("summary");
   }
 }

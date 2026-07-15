@@ -23,16 +23,19 @@ import org.springframework.transaction.annotation.Transactional;
 public class AiGenerationService {
   private final AiGenerationRepository generations;
   private final AiInputBuilder inputs;
+  private final WorkRecordQueryService records;
   private final OutboxWriter outbox;
   private final ObjectMapper objectMapper;
 
   public AiGenerationService(
       AiGenerationRepository generations,
       AiInputBuilder inputs,
+      WorkRecordQueryService records,
       OutboxWriter outbox,
       ObjectMapper objectMapper) {
     this.generations = generations;
     this.inputs = inputs;
+    this.records = records;
     this.outbox = outbox;
     this.objectMapper = objectMapper;
   }
@@ -58,6 +61,7 @@ public class AiGenerationService {
   public AiGeneration requestMonthlyReport(
       String tenantId, LocalDate month, UserPrincipal principal) {
     requireGenerate(tenantId, principal);
+    requireTenantWideRead(principal);
     if (month == null) {
       throw new IllegalArgumentException("month is required");
     }
@@ -77,6 +81,13 @@ public class AiGenerationService {
   public List<AiGeneration> list(
       String tenantId, String resourceType, String resourceId, UserPrincipal principal) {
     requireGenerate(tenantId, principal);
+    if ("record".equals(resourceType)) {
+      records.get(tenantId, resourceId, principal);
+    } else if ("tenant_month".equals(resourceType)) {
+      requireTenantWideRead(principal);
+    } else {
+      throw new IllegalArgumentException("unsupported AI generation resource type");
+    }
     return generations.listByResource(tenantId, resourceType, resourceId);
   }
 
@@ -161,6 +172,12 @@ public class AiGenerationService {
         || !tenantId.equals(principal.tenantId())
         || !principal.hasPermission(PermissionCodes.WORK_RECORD_AI_GENERATE)) {
       throw new AccessDeniedException("not allowed to generate AI work-record content");
+    }
+  }
+
+  private static void requireTenantWideRead(UserPrincipal principal) {
+    if (!principal.hasPermission(PermissionCodes.WORK_RECORD_READ_ALL)) {
+      throw new AccessDeniedException("tenant-wide AI generation requires read-all permission");
     }
   }
 

@@ -31,8 +31,8 @@ public class JdbcStatisticsRepository implements StatisticsRepository {
                count(distinct coalesce(owner_id, creator_id)) as owner_count
           from work_record.wr_record
          where tenant_id = :tenantId and deleted_at is null
-           and (:templateId is null or template_id = :templateId)
-           and (:versionId is null or template_version_id = :versionId)
+           and (cast(:templateId as text) is null or template_id = :templateId)
+           and (cast(:versionId as text) is null or template_version_id = :versionId)
            and record_time >= :fromTime and record_time < :toTime
         """,
             params);
@@ -74,7 +74,7 @@ public class JdbcStatisticsRepository implements StatisticsRepository {
                 + "from work_record.wr_record r left join public.sys_user u "
                 + "on u.tenant_id = r.tenant_id and u.id = coalesce(r.owner_id, r.creator_id) "
                 + "where r.tenant_id = :tenantId and r.deleted_at is null "
-                + "and (:templateId is null or r.template_id = :templateId) "
+                + "and (cast(:templateId as text) is null or r.template_id = :templateId) "
                 + "and r.record_time >= :fromTime and r.record_time < :toTime "
                 + "group by coalesce(r.owner_id, r.creator_id), u.display_name "
                 + "order by workload desc, record_count desc, user_id",
@@ -95,8 +95,8 @@ public class JdbcStatisticsRepository implements StatisticsRepository {
             + expression
             + " as group_key, count(*) as item_count "
             + "from work_record.wr_record where tenant_id = :tenantId and deleted_at is null "
-            + "and (:templateId is null or template_id = :templateId) "
-            + "and (:versionId is null or template_version_id = :versionId) "
+            + "and (cast(:templateId as text) is null or template_id = :templateId) "
+            + "and (cast(:versionId as text) is null or template_version_id = :versionId) "
             + "and record_time >= :fromTime and record_time < :toTime "
             + "group by "
             + expression
@@ -132,8 +132,8 @@ public class JdbcStatisticsRepository implements StatisticsRepository {
                 + numeric
                 + ") as value_count "
                 + "from work_record.wr_record where tenant_id = :tenantId and deleted_at is null "
-                + "and (:templateId is null or template_id = :templateId) "
-                + "and (:versionId is null or template_version_id = :versionId) "
+                + "and (cast(:templateId as text) is null or template_id = :templateId) "
+                + "and (cast(:versionId as text) is null or template_version_id = :versionId) "
                 + "and record_time >= :fromTime and record_time < :toTime",
             params);
     return new StatisticsResult.FieldAggregate(

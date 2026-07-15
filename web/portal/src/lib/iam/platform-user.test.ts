@@ -28,6 +28,12 @@ describe('platformUserSchema', () => {
     expect(parsed.roles).toHaveLength(1)
   })
 
+  it('normalizes the uppercase status returned by the IAM API', () => {
+    expect(
+      platformUserSchema.parse({ ...userBase, status: 'ACTIVE' }).status
+    ).toBe('active')
+  })
+
   it('rejects unknown status values', () => {
     expect(() =>
       platformUserSchema.parse({ ...userBase, status: 'ghost' })

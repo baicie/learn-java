@@ -29,6 +29,27 @@ class WorkRecordStatisticsServiceTest {
     verifyNoInteractions(statistics, fields, calendar, fieldPolicies);
   }
 
+  @Test
+  void rejectsTenantWideAnalyticsForSelfOnlyReader() {
+    StatisticsRepository statistics = mock(StatisticsRepository.class);
+    WorkRecordFieldIndexRepository fields = mock(WorkRecordFieldIndexRepository.class);
+    WorkRecordCalendarPort calendar = mock(WorkRecordCalendarPort.class);
+    FieldPolicyService fieldPolicies = mock(FieldPolicyService.class);
+    var service = new WorkRecordStatisticsService(statistics, fields, calendar, fieldPolicies);
+
+    assertThatThrownBy(
+            () ->
+                service.statistics(
+                    "tenant-1",
+                    query(),
+                    principal(
+                        Set.of(
+                            "work-record:analytics",
+                            io.aegisops.security.PermissionCodes.WORK_RECORD_READ_SELF))))
+        .isInstanceOf(AccessDeniedException.class);
+    verifyNoInteractions(statistics, fields, calendar, fieldPolicies);
+  }
+
   private static StatisticsQuery query() {
     return new StatisticsQuery(
         null,

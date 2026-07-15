@@ -16,7 +16,10 @@ export const platformUserSchema = z.object({
   username: z.string(),
   displayName: z.string(),
   email: z.string().nullable(),
-  status: platformUserStatusSchema,
+  status: z.preprocess(
+    (value) => (typeof value === 'string' ? value.toLowerCase() : value),
+    platformUserStatusSchema
+  ),
   roles: z.array(roleRefSchema),
   dataScopes: z.record(z.string(), z.string()),
   lastLoginAt: z.string().nullable(),

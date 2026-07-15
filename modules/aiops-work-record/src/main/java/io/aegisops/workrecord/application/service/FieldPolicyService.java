@@ -74,6 +74,18 @@ public class FieldPolicyService {
     return write(result);
   }
 
+  public String filterAuditSnapshot(
+      String tenantId, String versionId, String json, UserPrincipal principal) {
+    ObjectNode snapshot = object(json);
+    JsonNode customData = snapshot.get("customData");
+    if (customData != null && customData.isObject()) {
+      snapshot.set(
+          "customData",
+          object(filterReadableJson(tenantId, versionId, customData.toString(), principal)));
+    }
+    return write(snapshot);
+  }
+
   public void requireWritablePatch(
       String tenantId,
       String versionId,
