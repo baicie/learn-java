@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import yaml
+
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -54,6 +56,16 @@ def test_build_images_passes_app_ports():
     assert "apps/aiops-server/Dockerfile" in text
     assert "apps/aiops-runner/Dockerfile" in text
     assert "--build-arg APP_PORT=8081" in text  # worker 走通用模板，必须显式传 port
+
+
+def test_worker_uses_compose_redis_service():
+    compose_file = ROOT / "deploy/docker-compose.app.yml"
+    compose = yaml.safe_load(compose_file.read_text(encoding="utf-8"))
+    worker = compose["services"]["aiops-worker"]
+
+    assert worker["environment"]["SPRING_DATA_REDIS_HOST"] == "redis"
+    assert worker["environment"]["SPRING_DATA_REDIS_PORT"] == 6379
+    assert worker["depends_on"]["redis"]["condition"] == "service_healthy"
 
 
 def test_package_offline_uses_split_for_volume_packaging():
