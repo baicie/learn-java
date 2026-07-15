@@ -7,6 +7,7 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 import org.jooq.DSLContext;
+import org.jooq.impl.DSL;
 import org.springframework.stereotype.Repository;
 
 /**
@@ -55,14 +56,14 @@ public class JooqOutboxRepository implements OutboxRepository {
 
   @Override
   public int recoverExpiredLeases(String targetApp, OffsetDateTime now) {
-    return dsl.execute(
-        """
-            update automation_outbox
-               set status = 'pending', lease_until = null, updated_at = now()
-             where target_app = ? and status = 'processing' and lease_until < ?
-            """,
-        targetApp,
-        now);
+    return dsl.update(AUTOMATION_OUTBOX)
+        .set(AUTOMATION_OUTBOX.STATUS, "pending")
+        .setNull(AUTOMATION_OUTBOX.LEASE_UNTIL)
+        .set(AUTOMATION_OUTBOX.UPDATED_AT, DSL.currentOffsetDateTime())
+        .where(AUTOMATION_OUTBOX.TARGET_APP.eq(targetApp))
+        .and(AUTOMATION_OUTBOX.STATUS.eq("processing"))
+        .and(AUTOMATION_OUTBOX.LEASE_UNTIL.lt(now))
+        .execute();
   }
 
   @Override
