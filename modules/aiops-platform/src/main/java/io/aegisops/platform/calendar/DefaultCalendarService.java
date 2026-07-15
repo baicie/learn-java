@@ -4,9 +4,11 @@ import io.aegisops.platform.audit.PlatformAuditService;
 import java.time.DateTimeException;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.YearMonth;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -173,6 +175,53 @@ public class DefaultCalendarService {
     validateContinuousCoverage(date, date, rows);
 
     return rows.getFirst().workday();
+  }
+
+  public int countWorkdays(String tenantId, Instant fromInclusive, Instant toExclusive) {
+    requireTenantId(tenantId);
+    if (fromInclusive == null || toExclusive == null || !toExclusive.isAfter(fromInclusive)) {
+      throw new IllegalArgumentException("valid workday time range is required");
+    }
+    int count = 0;
+    Instant cursor = fromInclusive;
+    while (cursor.isBefore(toExclusive)) {
+      CalendarRecord calendar = resolveCurrentCalendar(tenantId, cursor);
+      ZoneId zone = parseZone(calendar.timezone());
+      LocalDate start = cursor.atZone(zone).toLocalDate();
+      LocalDate end = toExclusive.minusNanos(1).atZone(zone).toLocalDate();
+      LocalDate yearEnd = LocalDate.of(start.getYear(), 12, 31);
+      LocalDate segmentEnd = end.isBefore(yearEnd) ? end : yearEnd;
+      List<CalendarDayRecord> days = repository.listDefaultDays(tenantId, start, segmentEnd);
+      validateContinuousCoverage(start, segmentEnd, days);
+      count += (int) days.stream().filter(CalendarDayRecord::workday).count();
+      cursor = segmentEnd.plusDays(1).atStartOfDay(zone).toInstant();
+    }
+    return count;
+  }
+
+  public Instant addWorkingMinutes(String tenantId, Instant start, int minutes) {
+    requireTenantId(tenantId);
+    if (start == null) throw new IllegalArgumentException("start is required");
+    if (minutes <= 0) throw new IllegalArgumentException("minutes must be positive");
+    CalendarRecord calendar = resolveCurrentCalendar(tenantId, start);
+    ZoneId zone = parseZone(calendar.timezone());
+    ZonedDateTime cursor = start.atZone(zone);
+    int remaining = minutes;
+    LocalTime workStart = LocalTime.of(9, 0);
+    LocalTime workEnd = LocalTime.of(18, 0);
+    while (true) {
+      if (!isWorkday(tenantId, cursor.toLocalDate()) || !cursor.toLocalTime().isBefore(workEnd)) {
+        cursor = cursor.toLocalDate().plusDays(1).atTime(workStart).atZone(zone);
+        continue;
+      }
+      if (cursor.toLocalTime().isBefore(workStart)) {
+        cursor = cursor.toLocalDate().atTime(workStart).atZone(zone);
+      }
+      long available = ChronoUnit.MINUTES.between(cursor.toLocalTime(), workEnd);
+      if (remaining <= available) return cursor.plusMinutes(remaining).toInstant();
+      remaining -= (int) available;
+      cursor = cursor.toLocalDate().plusDays(1).atTime(workStart).atZone(zone);
+    }
   }
 
   private CalendarWorkMonth workMonthInternal(

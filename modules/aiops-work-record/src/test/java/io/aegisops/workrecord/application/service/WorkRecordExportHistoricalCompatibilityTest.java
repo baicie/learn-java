@@ -9,7 +9,9 @@ import static io.aegisops.workrecord.support.WorkRecordFixtures.field;
 import static io.aegisops.workrecord.support.WorkRecordFixtures.query;
 import static io.aegisops.workrecord.support.WorkRecordFixtures.record;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -57,6 +59,8 @@ class WorkRecordExportHistoricalCompatibilityTest {
     userPort = mock(WorkRecordUserPort.class);
     auditService = mock(WorkRecordAuditService.class);
     fieldRepository = mock(WorkRecordFieldIndexRepository.class);
+    FieldPolicyService fieldPolicies = mock(FieldPolicyService.class);
+    when(fieldPolicies.canReadField(anyString(), anyString(), anyString(), any())).thenReturn(true);
 
     service =
         new WorkRecordExportService(
@@ -65,7 +69,7 @@ class WorkRecordExportHistoricalCompatibilityTest {
             metaService,
             new WorkRecordPermissionService(),
             new WorkRecordExportPolicy(5000),
-            new WorkRecordExportColumnResolver(fieldRepository),
+            new WorkRecordExportColumnResolver(fieldRepository, fieldPolicies),
             dictionaryPort,
             userPort,
             auditService,

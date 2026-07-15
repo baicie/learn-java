@@ -45,7 +45,7 @@ public class JdbcPlatformUserRepository implements PlatformUserRepository {
       where.append(
           " and exists (select 1 from iam.user_role ur where ur.user_id = u.id and ur.role_code in ("
               + placeholders
-              + ")) ");
+              + ") and ur.tenant_id = u.tenant_id) ");
       params.addAll(q.roleCodes());
     }
     String baseSql =
@@ -62,7 +62,7 @@ public class JdbcPlatformUserRepository implements PlatformUserRepository {
     List<UserRow> rows = jdbc.query(baseSql, USER_MAPPER, pageParams.toArray());
     List<PlatformUser> items = new ArrayList<>(rows.size());
     for (UserRow row : rows) {
-      items.add(toDomain(row, listRoleRefs(row.id())));
+      items.add(toDomain(row, listRoleRefs(row.tenantId(), row.id())));
     }
     String countSql = " select count(*) from sys_user u " + where;
     Long total = jdbc.queryForObject(countSql, Long.class, params.toArray());
@@ -86,7 +86,7 @@ public class JdbcPlatformUserRepository implements PlatformUserRepository {
       return Optional.empty();
     }
     UserRow row = rows.get(0);
-    return Optional.of(toDomain(row, listRoleRefs(row.id())));
+    return Optional.of(toDomain(row, listRoleRefs(row.tenantId(), row.id())));
   }
 
   @Override
@@ -129,18 +129,20 @@ public class JdbcPlatformUserRepository implements PlatformUserRepository {
   @Override
   public void replaceRoles(
       String tenantId, String userId, List<String> roleCodes, OffsetDateTime now) {
-    jdbc.update(" delete from iam.user_role where user_id = ? ", userId);
+    String safeTenant = tenantId == null ? currentTenant() : tenantId;
+    jdbc.update(
+        " delete from iam.user_role where tenant_id = ? and user_id = ? ", safeTenant, userId);
     if (roleCodes == null || roleCodes.isEmpty()) {
       return;
     }
     for (String role : roleCodes) {
       jdbc.update(
           """
-              insert into iam.user_role(tenant_id, user_id, role_code, granted_at, granted_by)
+              insert into iam.user_role(tenant_id, user_id, role_code, created_at, created_by)
               values (?, ?, ?, ?, ?)
-              on conflict (user_id, role_code) do nothing
+              on conflict (tenant_id, user_id, role_code) do nothing
               """,
-          tenantId == null ? currentTenant() : tenantId,
+          safeTenant,
           userId,
           role,
           now,
@@ -163,6 +165,28 @@ public class JdbcPlatformUserRepository implements PlatformUserRepository {
             """,
         displayName,
         email,
+        now,
+        userId,
+        currentTenant());
+  }
+
+  @Override
+  public void updatePassword(String userId, String passwordHash, OffsetDateTime now) {
+    jdbc.update(
+        """
+            update sys_user
+               set password_hash = ?,
+                   password_changed_at = ?,
+                   failed_login_count = 0,
+                   locked_until = null,
+                   updated_at = ?,
+                   row_version = row_version + 1
+             where id = ?
+               and tenant_id = ?
+               and deleted_at is null
+            """,
+        passwordHash,
+        now,
         now,
         userId,
         currentTenant());
@@ -206,11 +230,12 @@ public class JdbcPlatformUserRepository implements PlatformUserRepository {
                      failed_login_count = 0,
                      locked_until = null,
                      updated_at = ?
-               where id = ?
+               where id = ? and tenant_id = ?
               """,
           lastLoginAt,
           now,
-          userId);
+          userId,
+          currentTenant());
     } else {
       jdbc.update(
           """
@@ -221,11 +246,12 @@ public class JdbcPlatformUserRepository implements PlatformUserRepository {
                          else locked_until
                      end,
                      updated_at = ?
-               where id = ?
+               where id = ? and tenant_id = ?
               """,
           now,
           now,
-          userId);
+          userId,
+          currentTenant());
     }
   }
 
@@ -237,15 +263,52 @@ public class JdbcPlatformUserRepository implements PlatformUserRepository {
         roleCode);
   }
 
-  private List<PlatformUser.RoleRef> listRoleRefs(String userId) {
+  @Override
+  public void lockRoleForUpdate(String roleCode) {
+    jdbc.queryForObject(
+        """
+            select role_code
+              from iam.role_definition
+             where tenant_id = ? and role_code = ? and deleted_at is null
+             for update
+            """,
+        String.class,
+        currentTenant(),
+        roleCode);
+  }
+
+  @Override
+  public int countActiveUsersWithRole(String roleCode) {
+    Integer count =
+        jdbc.queryForObject(
+            """
+                select count(*)
+                  from iam.user_role ur
+                  join sys_user u
+                    on u.tenant_id = ur.tenant_id and u.id = ur.user_id
+                 where ur.tenant_id = ?
+                   and ur.role_code = ?
+                   and u.status = 'active'
+                   and u.deleted_at is null
+                """,
+            Integer.class,
+            currentTenant(),
+            roleCode);
+    return count == null ? 0 : count;
+  }
+
+  private List<PlatformUser.RoleRef> listRoleRefs(String tenantId, String userId) {
     return jdbc.query(
         """
-            select r.code, r.name, ur.role_code
+            select r.role_code, r.role_name
               from iam.user_role ur
-              join iam.role_definition r on r.code = ur.role_code and r.tenant_id = ur.tenant_id
-             where ur.user_id = ?
+              join iam.role_definition r
+                on r.tenant_id = ur.tenant_id and r.role_code = ur.role_code
+             where ur.tenant_id = ? and ur.user_id = ? and r.deleted_at is null
             """,
-        (rs, rowNum) -> new PlatformUser.RoleRef(rs.getString("code"), rs.getString("name")),
+        (rs, rowNum) ->
+            new PlatformUser.RoleRef(rs.getString("role_code"), rs.getString("role_name")),
+        tenantId,
         userId);
   }
 

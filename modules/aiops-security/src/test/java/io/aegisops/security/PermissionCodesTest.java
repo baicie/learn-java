@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 class PermissionCodesTest {
 
   @Test
-  void phase13PermissionCodesMustBeUniqueAndComplete() {
+  void permissionCodesMustBeUniqueAndComplete() {
     Set<String> reflected =
         Arrays.stream(PermissionCodes.class.getDeclaredFields())
             .filter(field -> Modifier.isStatic(field.getModifiers()))
@@ -28,7 +28,19 @@ class PermissionCodesTest {
 
     assertThat(reflected).containsExactlyInAnyOrderElementsOf(PermissionCodes.ALL_PERMISSIONS);
 
-    assertThat(reflected).hasSize(27);
+    assertThat(reflected)
+        .contains(
+            "work-record:import",
+            "work-record:export:async",
+            "work-record:comment",
+            "work-record:attachment",
+            "work-record:relation",
+            "work-record:analytics",
+            "work-record:ai:generate",
+            "work-record:market:install",
+            "work-record:approval:act",
+            "work-record:sla:manage")
+        .hasSize(51);
   }
 
   @Test
@@ -53,6 +65,8 @@ class PermissionCodesTest {
   @Test
   void phase13PermissionsAreComplete() {
     assertThat(PermissionCodes.PHASE_13_PERMISSIONS).hasSize(12);
+    assertThat(PermissionCodes.PORTAL_IAM_PERMISSIONS).hasSize(7);
+    assertThat(PermissionCodes.PHASE_20_PERMISSIONS).hasSize(17);
   }
 
   @Test

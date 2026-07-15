@@ -24,7 +24,14 @@ public interface OutboxRepository {
    * <p>Implementation MUST set {@code status='processing'} in the same transaction so concurrent
    * pollers do not double-pick.
    */
-  List<AutomationOutboxRecord> claimNextPending(String targetApp, int batchSize);
+  List<AutomationOutboxRecord> claimNextPending(
+      String targetApp, int batchSize, OffsetDateTime leaseUntil);
+
+  /** Return expired processing rows to the pending queue before claiming new work. */
+  int recoverExpiredLeases(String targetApp, OffsetDateTime now);
+
+  /** Extend a currently processing row lease while a long-running job is active. */
+  boolean extendLease(String id, String targetApp, OffsetDateTime leaseUntil);
 
   /** Read a row by id. */
   Optional<AutomationOutboxRecord> findById(String id);

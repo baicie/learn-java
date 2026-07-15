@@ -16,7 +16,16 @@
   <description>可配置工作记录模块：动态表单模板、字段设计与工作记录填写</description>
 
   <dependencies>
-
+    <dependency>
+      <groupId>io.aegisops</groupId>
+      <artifactId>aiops-ai-client</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.aegisops</groupId>
+      <artifactId>aiops-alert</artifactId>
+      <version>${project.version}</version>
+    </dependency>
     <dependency>
       <groupId>io.aegisops</groupId>
       <artifactId>aiops-audit</artifactId>
@@ -25,6 +34,16 @@
     <dependency>
       <groupId>io.aegisops</groupId>
       <artifactId>aiops-common</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.aegisops</groupId>
+      <artifactId>aiops-incident</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.aegisops</groupId>
+      <artifactId>aiops-inspection</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
@@ -46,6 +65,15 @@
     <dependency>
       <groupId>io.micrometer</groupId>
       <artifactId>micrometer-core</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>io.minio</groupId>
+      <artifactId>minio</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.poi</groupId>
+      <artifactId>poi-ooxml</artifactId>
     </dependency>
 
     <dependency>
@@ -106,6 +134,12 @@
       <plugin>
         <groupId>org.jacoco</groupId>
         <artifactId>jacoco-maven-plugin</artifactId>
+        <configuration>
+          <!-- JDBC adapters are covered by PostgreSQL integration tests; bundle coverage tracks application behavior. -->
+          <excludes>
+            <exclude>**/infrastructure/jdbc/Jdbc*Repository.class</exclude>
+          </excludes>
+        </configuration>
         <executions>
           <execution>
             <id>coverage-check</id>

@@ -104,9 +104,10 @@ public class WorkRecordController {
     String tenantId = TenantContext.requireTenantId();
 
     // 必须先做记录级数据范围判断：被授权用户必须能读到该记录才能看到它的历史。
-    queryService.get(tenantId, recordId, user);
+    WorkRecord record = queryService.get(tenantId, recordId, user);
 
-    return ApiResponse.ok(historyService.list(tenantId, recordId));
+    return ApiResponse.ok(
+        historyService.list(tenantId, recordId, record.templateVersionId(), user));
   }
 
   @PostMapping

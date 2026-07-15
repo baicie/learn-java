@@ -4,8 +4,8 @@ import java.util.Map;
 import java.util.Set;
 
 public record PlatformRoleDetail(
-    String code,
-    String name,
+    String roleCode,
+    String roleName,
     String description,
     boolean system,
     boolean enabled,

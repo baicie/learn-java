@@ -64,6 +64,7 @@ external:
     accessKey: ""
     secretKey: ""
     bucket: "aegisops"
+    region: "us-east-1"
   victoriaMetrics:
     baseUrl: "http://victoria-metrics.default.svc.cluster.local:8428"
 

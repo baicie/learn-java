@@ -106,6 +106,51 @@ class OutboxPollerTest {
             List.of(new CountingJob("zabbix-sync")));
 
     assertEquals(0, poller.tick());
+    assertEquals(0, repository.recoverExpiredLeasesCalls);
+  }
+
+  @Test
+  void recoversExpiredLeasesBeforeClaimingWork() {
+    NoopOutboxRepository repository = new NoopOutboxRepository();
+    OutboxPoller poller =
+        new OutboxPoller(
+            repository,
+            new OutboxProperties(true, 1000L, 10, "worker"),
+            List.of(new CountingJob("zabbix-sync")));
+
+    poller.tick();
+
+    assertEquals(1, repository.recoverExpiredLeasesCalls);
+  }
+
+  @Test
+  void extendsLeaseWhileLongRunningJobIsActive() {
+    NoopOutboxRepository repository = new NoopOutboxRepository();
+    repository.pending.add(row("row-1", "slow"));
+    OutboxPoller poller =
+        new OutboxPoller(
+            repository,
+            new OutboxProperties(true, 1000L, 10, "worker", 1000L),
+            List.of(
+                new OutboxJob() {
+                  @Override
+                  public String jobName() {
+                    return "slow";
+                  }
+
+                  @Override
+                  public JobResult handle(AutomationOutboxRecord row) {
+                    try {
+                      Thread.sleep(450L);
+                    } catch (InterruptedException ex) {
+                      Thread.currentThread().interrupt();
+                    }
+                    return JobResult.success();
+                  }
+                }));
+
+    assertEquals(1, poller.tick());
+    assertTrue(repository.extendLeaseCalls > 0);
   }
 
   @Test

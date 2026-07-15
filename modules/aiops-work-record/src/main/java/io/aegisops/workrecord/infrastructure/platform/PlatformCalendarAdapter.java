@@ -48,6 +48,16 @@ public class PlatformCalendarAdapter implements WorkRecordCalendarPort {
     return service.isWorkday(tenantId, date);
   }
 
+  @Override
+  public int countWorkdays(String tenantId, Instant fromInclusive, Instant toExclusive) {
+    return service.countWorkdays(tenantId, fromInclusive, toExclusive);
+  }
+
+  @Override
+  public Instant addWorkingMinutes(String tenantId, Instant start, int minutes) {
+    return service.addWorkingMinutes(tenantId, start, minutes);
+  }
+
   private WorkRecordWorkMonth map(CalendarWorkMonth value) {
     return new WorkRecordWorkMonth(
         value.calendar().id(),

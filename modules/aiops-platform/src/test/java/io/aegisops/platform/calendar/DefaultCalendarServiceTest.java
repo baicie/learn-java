@@ -155,6 +155,23 @@ class DefaultCalendarServiceTest {
   }
 
   @Test
+  void addWorkingMinutesShouldSkipNonWorkdays() {
+    when(repository.findDefaultCalendar("t1", 2026)).thenReturn(Optional.of(calendar(2026)));
+    when(repository.listDefaultDays("t1", LocalDate.of(2026, 7, 10), LocalDate.of(2026, 7, 10)))
+        .thenReturn(List.of(day(LocalDate.of(2026, 7, 10), "WORKDAY", true)));
+    when(repository.listDefaultDays("t1", LocalDate.of(2026, 7, 11), LocalDate.of(2026, 7, 11)))
+        .thenReturn(List.of(day(LocalDate.of(2026, 7, 11), "WEEKEND", false)));
+    when(repository.listDefaultDays("t1", LocalDate.of(2026, 7, 12), LocalDate.of(2026, 7, 12)))
+        .thenReturn(List.of(day(LocalDate.of(2026, 7, 12), "WEEKEND", false)));
+    when(repository.listDefaultDays("t1", LocalDate.of(2026, 7, 13), LocalDate.of(2026, 7, 13)))
+        .thenReturn(List.of(day(LocalDate.of(2026, 7, 13), "WORKDAY", true)));
+
+    Instant result = service.addWorkingMinutes("t1", Instant.parse("2026-07-10T09:00:00Z"), 120);
+
+    assertThat(result).isEqualTo(Instant.parse("2026-07-13T02:00:00Z"));
+  }
+
+  @Test
   void shouldRejectMissingDefaultCalendar() {
     when(repository.findDefaultCalendar("t1", 2026)).thenReturn(Optional.empty());
 

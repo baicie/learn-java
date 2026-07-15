@@ -30,6 +30,8 @@ describe('PlatformUserToolbar', () => {
         onChange={onChange}
       />
     )
-    await expect.element(screen.getByTestId('user-status-select')).toBeVisible()
+    const select = screen.getByTestId('user-status-select')
+    await expect.element(select).toBeVisible()
+    await expect.element(select).toHaveTextContent('正常')
   })
 })

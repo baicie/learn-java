@@ -7,9 +7,11 @@ import io.aegisops.platform.iam.domain.ReplaceRoleDataScopesCommand;
 import io.aegisops.platform.iam.domain.ReplaceRolePermissionsCommand;
 import io.aegisops.platform.iam.domain.UpdateRoleData;
 import io.aegisops.platform.iam.service.PlatformRoleService;
+import io.aegisops.security.UserPrincipal;
 import jakarta.validation.Valid;
 import java.util.List;
-import java.util.Map;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -31,59 +33,61 @@ public class PlatformRoleController {
   }
 
   @GetMapping
+  @PreAuthorize("hasAuthority('platform:role:read')")
   public List<PlatformRole> list(
       @RequestParam(value = "includeSystem", defaultValue = "true") boolean includeSystem) {
     return service.list(includeSystem);
   }
 
   @GetMapping("/{code}")
+  @PreAuthorize("hasAuthority('platform:role:read')")
   public PlatformRoleDetail detail(@PathVariable String code) {
     return service.detail(code);
   }
 
   @PostMapping
-  public PlatformRole create(@Valid @RequestBody CreateRoleData body) {
-    return service.create(body, currentActor());
+  @PreAuthorize("hasAuthority('platform:role:write')")
+  public PlatformRole create(
+      @Valid @RequestBody CreateRoleData body, @AuthenticationPrincipal UserPrincipal actor) {
+    return service.create(body, actor.id());
   }
 
   @PutMapping("/{code}")
+  @PreAuthorize("hasAuthority('platform:role:write')")
   public PlatformRoleDetail update(
-      @PathVariable String code, @Valid @RequestBody UpdateRoleData body) {
-    return service.update(code, body, currentActor());
+      @PathVariable String code,
+      @Valid @RequestBody UpdateRoleData body,
+      @AuthenticationPrincipal UserPrincipal actor) {
+    return service.update(code, body, actor.id());
   }
 
   @PostMapping("/{code}/permissions")
-  public Map<String, Object> replacePermissions(
-      @PathVariable String code, @Valid @RequestBody ReplaceRolePermissionsCommand body) {
-    service.replacePermissions(code, body, currentActor());
-    return Map.of("status", "ok", "code", code);
+  @PreAuthorize("hasAuthority('platform:role:write')")
+  public PlatformRoleDetail replacePermissions(
+      @PathVariable String code,
+      @Valid @RequestBody ReplaceRolePermissionsCommand body,
+      @AuthenticationPrincipal UserPrincipal actor) {
+    service.replacePermissions(code, body, actor.id());
+    return service.detail(code);
   }
 
   @PostMapping("/{code}/data-scopes")
-  public Map<String, Object> replaceDataScopes(
-      @PathVariable String code, @Valid @RequestBody ReplaceRoleDataScopesCommand body) {
-    service.replaceDataScopes(code, body, currentActor());
-    return Map.of("status", "ok", "code", code);
+  @PreAuthorize("hasAuthority('platform:role:write')")
+  public PlatformRoleDetail replaceDataScopes(
+      @PathVariable String code,
+      @Valid @RequestBody ReplaceRoleDataScopesCommand body,
+      @AuthenticationPrincipal UserPrincipal actor) {
+    service.replaceDataScopes(code, body, actor.id());
+    return service.detail(code);
   }
 
   @DeleteMapping("/{code}")
-  public Map<String, Object> delete(@PathVariable String code) {
-    service.delete(code, currentActor());
-    return Map.of("status", "ok", "code", code);
+  @PreAuthorize("hasAuthority('platform:role:write')")
+  public RoleDeletionResponse delete(
+      @PathVariable String code, @AuthenticationPrincipal UserPrincipal actor) {
+    service.delete(code, actor.id());
+    return new RoleDeletionResponse("ok", code);
   }
 
-  private static String currentActor() {
-    try {
-      Object principal =
-          org.springframework.security.core.context.SecurityContextHolder.getContext()
-              .getAuthentication()
-              .getPrincipal();
-      if (principal instanceof io.aegisops.security.UserPrincipal up) {
-        return up.id();
-      }
-    } catch (Throwable ignored) {
-      // ignore - principal may not be wired for tests
-    }
-    return "system";
-  }
+  public record RoleDeletionResponse(String status, String code) {}
 }

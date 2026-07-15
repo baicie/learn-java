@@ -17,10 +17,10 @@ related: []
 
 ## 数据库迁移
 
-### 4.3 V0030：提醒、通知、值班交接
+### 4.3 V0032：提醒、通知、值班交接
 
 ```sql
--- V0030__phase20_reminder_handover.sql
+-- V0032__phase20_reminder_handover.sql
 
 create table if not exists work_record.wr_reminder_rule (
     id varchar(64) primary key,

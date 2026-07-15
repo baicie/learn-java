@@ -29,8 +29,11 @@ public class AuthorizationRepository {
         """
         select distinct r.role_code, p.permission_code
           from iam.user_role ur
-          join iam.role_definition r on r.role_code = ur.role_code and r.enabled = true
-          left join iam.role_permission rp on rp.role_code = r.role_code
+          join iam.role_definition r
+            on r.tenant_id = ur.tenant_id and r.role_code = ur.role_code
+           and r.enabled = true and r.deleted_at is null
+          left join iam.role_permission rp
+            on rp.tenant_id = r.tenant_id and rp.role_code = r.role_code
           left join iam.permission p on p.permission_code = rp.permission_code and p.enabled = true
          where ur.tenant_id = :tenantId and ur.user_id = :userId
         """,
@@ -46,10 +49,14 @@ public class AuthorizationRepository {
     Map<String, DataScope> dataScopes = new LinkedHashMap<>();
     jdbc.query(
         """
-        select ds.resource_code, ds.scope_type
+        select ds.resource_code,
+               case when ds.scope_type = 'ALL' then 'ALL' else 'SELF' end as scope_type
           from iam.user_role ur
-          join iam.role_definition r on r.role_code = ur.role_code and r.enabled = true
-          join iam.role_data_scope ds on ds.role_code = r.role_code
+          join iam.role_definition r
+            on r.tenant_id = ur.tenant_id and r.role_code = ur.role_code
+           and r.enabled = true and r.deleted_at is null
+          join iam.role_data_scope_v2 ds
+            on ds.tenant_id = r.tenant_id and ds.role_code = r.role_code
          where ur.tenant_id = :tenantId and ur.user_id = :userId
         """,
         params,
@@ -75,8 +82,12 @@ public class AuthorizationRepository {
 
     Integer roleCount =
         jdbc.queryForObject(
-            "select count(*) from iam.role_definition where role_code = :roleCode and enabled = true",
-            Map.of("roleCode", roleCode),
+            """
+            select count(*) from iam.role_definition
+             where tenant_id = :tenantId and role_code = :roleCode
+               and enabled = true and deleted_at is null
+            """,
+            Map.of("tenantId", tenantId, "roleCode", roleCode),
             Integer.class);
 
     if (roleCount == null || roleCount != 1) {

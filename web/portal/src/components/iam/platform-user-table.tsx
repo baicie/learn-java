@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useCallback, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { PermissionGate } from '@/auth/permission-gate'
 import { useTranslation } from 'react-i18next'
@@ -17,6 +17,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { useConfirm } from '@/components/feedback/confirm-provider'
+import { PlatformUserManageDialog } from './platform-user-manage-dialog'
 
 const STATUS_LABEL: Record<PlatformUser['status'], string> = {
   active: '正常',
@@ -81,8 +82,9 @@ function Row({
 }) {
   const confirm = useConfirm()
   const queryClient = useQueryClient()
-  const { t } = useTranslation('platform')
+  const { t } = useTranslation()
   const changeStatus = useChangeUserStatus(user.id)
+  const [manageOpen, setManageOpen] = useState(false)
 
   const onDisable = useCallback(async () => {
     if (user.status === 'disabled') return
@@ -115,57 +117,81 @@ function Row({
     }
   }, [user, confirm, changeStatus, queryClient, onQueryChange, t])
 
+  const onEnable = useCallback(async () => {
+    await changeStatus.mutateAsync({
+      status: 'active',
+      reason: '管理员恢复账号',
+      rowVersion: user.rowVersion,
+    })
+    await queryClient.invalidateQueries({ queryKey: platformUserKeys.lists() })
+  }, [changeStatus, queryClient, user.rowVersion])
+
   return (
-    <TableRow
-      className='border-t hover:bg-muted/30'
-      data-testid={`user-row-${user.username}`}
-    >
-      <TableCell className='font-medium'>{user.username}</TableCell>
-      <TableCell>{user.displayName}</TableCell>
-      <TableCell className='text-muted-foreground'>
-        {user.email ?? '—'}
-      </TableCell>
-      <TableCell>
-        <Badge variant={STATUS_VARIANT[user.status]}>
-          {STATUS_LABEL[user.status]}
-        </Badge>
-      </TableCell>
-      <TableCell>
-        <div className='flex flex-wrap gap-1'>
-          {user.roles.map((role) => (
-            <Badge key={role.code} variant='outline'>
-              {role.name}
-            </Badge>
-          ))}
-        </div>
-      </TableCell>
-      <TableCell className='text-xs text-muted-foreground'>
-        {user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleString() : '—'}
-      </TableCell>
-      <TableCell className='text-right'>
-        <PermissionGate anyOf={['platform:user:status']}>
-          {user.status === 'active' ? (
-            <Button
-              variant='outline'
-              size='sm'
-              onClick={onDisable}
-              data-testid={`user-disable-${user.username}`}
+    <>
+      <TableRow
+        className='border-t hover:bg-muted/30'
+        data-testid={`user-row-${user.username}`}
+      >
+        <TableCell className='font-medium'>{user.username}</TableCell>
+        <TableCell>{user.displayName}</TableCell>
+        <TableCell className='text-muted-foreground'>
+          {user.email ?? '—'}
+        </TableCell>
+        <TableCell>
+          <Badge variant={STATUS_VARIANT[user.status]}>
+            {STATUS_LABEL[user.status]}
+          </Badge>
+        </TableCell>
+        <TableCell>
+          <div className='flex flex-wrap gap-1'>
+            {user.roles.map((role) => (
+              <Badge key={role.code} variant='outline'>
+                {role.name}
+              </Badge>
+            ))}
+          </div>
+        </TableCell>
+        <TableCell className='text-xs text-muted-foreground'>
+          {user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleString() : '—'}
+        </TableCell>
+        <TableCell className='text-right'>
+          <div className='flex justify-end gap-2'>
+            <PermissionGate
+              anyOf={[
+                'platform:user:write',
+                'platform:user:assign-role',
+                'platform:user:reset-password',
+              ]}
             >
-              禁用
-            </Button>
-          ) : (
-            <Button
-              variant='outline'
-              size='sm'
-              disabled
-              data-testid={`user-disabled-${user.username}`}
-            >
-              已{STATUS_LABEL[user.status]}
-            </Button>
-          )}
-        </PermissionGate>
-      </TableCell>
-    </TableRow>
+              <Button
+                variant='outline'
+                size='sm'
+                onClick={() => setManageOpen(true)}
+              >
+                管理
+              </Button>
+            </PermissionGate>
+            <PermissionGate anyOf={['platform:user:status']}>
+              <Button
+                variant='outline'
+                size='sm'
+                onClick={user.status === 'active' ? onDisable : onEnable}
+                data-testid={`user-status-${user.username}`}
+              >
+                {user.status === 'active' ? '禁用' : '启用'}
+              </Button>
+            </PermissionGate>
+          </div>
+        </TableCell>
+      </TableRow>
+      {manageOpen ? (
+        <PlatformUserManageDialog
+          user={user}
+          open
+          onOpenChange={setManageOpen}
+        />
+      ) : null}
+    </>
   )
 }
 

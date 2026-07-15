@@ -6,6 +6,8 @@ import com.fasterxml.jackson.annotation.JsonValue;
 public enum RecordStatus {
   DRAFT,
   PROCESSING,
+  PENDING_APPROVAL,
+  REJECTED,
   DONE,
   ARCHIVED;
 

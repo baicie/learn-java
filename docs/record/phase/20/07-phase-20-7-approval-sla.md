@@ -17,10 +17,10 @@ related: []
 
 ## 数据库迁移
 
-### 4.6 V0033：审批流
+### 4.6 V0035：审批流
 
 ```sql
--- V0033__phase20_approval.sql
+-- V0035__phase20_approval.sql
 
 create table if not exists work_record.wr_approval_definition (
     id varchar(64) primary key,
@@ -111,10 +111,10 @@ idx_wr_approval_task_pending
 on work_record.wr_approval_task(tenant_id, status, due_at, created_at);
 ```
 
-### 4.7 V0034：SLA
+### 4.7 V0036：SLA
 
 ```sql
--- V0034__phase20_sla.sql
+-- V0036__phase20_sla.sql
 
 create table if not exists work_record.wr_sla_policy (
     id varchar(64) primary key,
@@ -211,7 +211,7 @@ public enum RecordStatus {
 }
 ```
 
-`V0033` 需要同时修正记录状态约束；若当前表没有状态 CHECK，则只更新前后端枚举：
+`V0035` 需要同时修正记录状态约束；若当前表没有状态 CHECK，则只更新前后端枚举：
 
 ```sql
 alter table work_record.wr_record

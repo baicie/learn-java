@@ -17,10 +17,10 @@ related: []
 
 ## 数据库迁移
 
-### 4.4 V0031：AI 生成结果
+### 4.4 V0033：AI 生成结果
 
 ```sql
--- V0031__phase20_ai_generation.sql
+-- V0033__phase20_ai_generation.sql
 
 create table if not exists work_record.wr_ai_generation (
     id varchar(64) primary key,

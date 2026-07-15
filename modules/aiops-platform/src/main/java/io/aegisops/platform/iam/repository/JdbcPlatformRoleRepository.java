@@ -1,21 +1,23 @@
 package io.aegisops.platform.iam.repository;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.aegisops.platform.iam.domain.PlatformRole;
 import io.aegisops.platform.iam.domain.PlatformRoleDetail;
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
 
 @Repository
 public class JdbcPlatformRoleRepository implements PlatformRoleRepository {
+
+  private static final ObjectMapper JSON = new ObjectMapper();
 
   private final JdbcTemplate jdbc;
 
@@ -25,82 +27,78 @@ public class JdbcPlatformRoleRepository implements PlatformRoleRepository {
 
   @Override
   public List<PlatformRole> list(boolean includeSystem) {
+    String tenantId = currentTenant();
     String sql =
         """
-            select code, name, description, is_system, enabled
+            select role_code, role_name, description, system_builtin, enabled, row_version
               from iam.role_definition
+             where tenant_id = ? and deleted_at is null
             """
-            + (includeSystem ? "" : " where is_system = false ")
-            + " order by is_system desc, code asc ";
-    List<PlatformRole> roles = jdbc.query(sql, ROLE_MAPPER);
-    Map<String, Set<String>> perms = rolePermissionsAsMap();
-    Map<String, Map<String, PlatformRole.RoleDataScope>> scopes = roleDataScopesByResource();
-    return roles.stream()
-        .map(
-            role ->
-                new PlatformRole(
-                    role.code(),
-                    role.name(),
-                    role.description(),
-                    role.system(),
-                    role.enabled(),
-                    perms.getOrDefault(role.code(), Collections.emptySet()),
-                    scopes.getOrDefault(role.code(), Collections.emptyMap()),
-                    0))
-        .toList();
+            + (includeSystem ? "" : " and system_builtin = false ")
+            + " order by system_builtin desc, role_code asc ";
+    return jdbc.query(
+        sql,
+        (rs, rowNum) -> {
+          String code = rs.getString("role_code");
+          return new PlatformRole(
+              code,
+              rs.getString("role_name"),
+              rs.getString("description"),
+              rs.getBoolean("system_builtin"),
+              rs.getBoolean("enabled"),
+              listRolePermissions(tenantId, code),
+              listRoleDataScopes(tenantId, code),
+              userCount(tenantId, code),
+              rs.getInt("row_version"));
+        },
+        tenantId);
   }
 
   @Override
   public Optional<PlatformRoleDetail> findByCode(String code) {
-    List<PlatformRole> rows =
-        jdbc.query(
+    String tenantId = currentTenant();
+    return jdbc
+        .query(
             """
-                select code, name, description, is_system, enabled
+                select role_code, role_name, description, system_builtin, enabled, row_version
                   from iam.role_definition
-                 where code = ?
+                 where tenant_id = ? and role_code = ? and deleted_at is null
                 """,
-            ROLE_MAPPER,
-            code);
-    if (rows.isEmpty()) {
-      return Optional.empty();
-    }
-    PlatformRole role = rows.get(0);
-    Set<String> permissions = listRolePermissions(code);
-    Map<String, PlatformRoleDetail.RoleDataScope> dataScopes = listRoleDataScopesAsMap(code);
-    Integer count =
-        jdbc.queryForObject(
-            " select count(*) from iam.user_role where role_code = ? ", Integer.class, code);
-    return Optional.of(
-        new PlatformRoleDetail(
-            role.code(),
-            role.name(),
-            role.description(),
-            role.system(),
-            role.enabled(),
-            permissions,
-            dataScopes,
-            count == null ? 0 : count,
-            1));
+            (rs, rowNum) ->
+                new PlatformRoleDetail(
+                    rs.getString("role_code"),
+                    rs.getString("role_name"),
+                    rs.getString("description"),
+                    rs.getBoolean("system_builtin"),
+                    rs.getBoolean("enabled"),
+                    listRolePermissions(tenantId, code),
+                    listRoleDataScopesAsDetail(tenantId, code),
+                    userCount(tenantId, code),
+                    rs.getInt("row_version")),
+            tenantId,
+            code)
+        .stream()
+        .findFirst();
   }
 
   @Override
   public int userCount(String code) {
-    Integer count =
-        jdbc.queryForObject(
-            " select count(*) from iam.user_role where role_code = ? ", Integer.class, code);
-    return count == null ? 0 : count;
+    return userCount(currentTenant(), code);
   }
 
   @Override
   public Optional<PlatformRole> insert(
       String code, String name, String description, boolean system, boolean enabled) {
+    String tenantId = currentTenant();
     int rows =
         jdbc.update(
             """
-                insert into iam.role_definition(code, name, description, is_system, enabled, created_at, updated_at)
-                values (?, ?, ?, ?, ?, now(), now())
-                on conflict (code) do nothing
+                insert into iam.role_definition(
+                    tenant_id, role_code, role_name, description, system_builtin, enabled)
+                values (?, ?, ?, ?, ?, ?)
+                on conflict (tenant_id, role_code) do nothing
                 """,
+            tenantId,
             code,
             name,
             description,
@@ -111,21 +109,20 @@ public class JdbcPlatformRoleRepository implements PlatformRoleRepository {
     }
     return Optional.of(
         new PlatformRole(
-            code,
-            name,
-            description,
-            system,
-            enabled,
-            Collections.emptySet(),
-            Collections.emptyMap(),
-            0));
+            code, name, description, system, enabled, Set.of(), Collections.emptyMap(), 0, 1));
   }
 
   @Override
   public boolean exists(String code) {
     Integer count =
         jdbc.queryForObject(
-            " select count(*) from iam.role_definition where code = ? ", Integer.class, code);
+            """
+                select count(*) from iam.role_definition
+                 where tenant_id = ? and role_code = ? and deleted_at is null
+                """,
+            Integer.class,
+            currentTenant(),
+            code);
     return count != null && count > 0;
   }
 
@@ -135,21 +132,24 @@ public class JdbcPlatformRoleRepository implements PlatformRoleRepository {
     return jdbc.update(
         """
             update iam.role_definition
-               set name = coalesce(?, name),
+               set role_name = coalesce(?, role_name),
                    description = coalesce(?, description),
-                   enabled = ?,
-                   updated_at = now()
-             where code = ?
+                   enabled = ?, updated_at = now(), row_version = row_version + 1
+             where tenant_id = ? and role_code = ? and row_version = ? and deleted_at is null
             """,
         name,
         description,
         enabled,
-        code);
+        currentTenant(),
+        code,
+        expectedVersion);
   }
 
   @Override
   public int replacePermissions(String code, Set<String> permissionCodes) {
-    jdbc.update(" delete from iam.role_permission where role_code = ? ", code);
+    String tenantId = currentTenant();
+    jdbc.update(
+        "delete from iam.role_permission where tenant_id = ? and role_code = ?", tenantId, code);
     if (permissionCodes == null || permissionCodes.isEmpty()) {
       return 0;
     }
@@ -158,10 +158,11 @@ public class JdbcPlatformRoleRepository implements PlatformRoleRepository {
       total +=
           jdbc.update(
               """
-                  insert into iam.role_permission(tenant_id, role_code, permission_code, granted_at)
-                  values ('default', ?, ?, now())
-                  on conflict (role_code, permission_code) do nothing
+                  insert into iam.role_permission(tenant_id, role_code, permission_code)
+                  values (?, ?, ?)
+                  on conflict (tenant_id, role_code, permission_code) do nothing
                   """,
+              tenantId,
               code,
               permission);
     }
@@ -170,7 +171,9 @@ public class JdbcPlatformRoleRepository implements PlatformRoleRepository {
 
   @Override
   public int replaceDataScopes(String code, List<PlatformRole.RoleDataScope> scopes) {
-    jdbc.update(" delete from iam.role_data_scope_v2 where role_code = ? ", code);
+    String tenantId = currentTenant();
+    jdbc.update(
+        "delete from iam.role_data_scope_v2 where tenant_id = ? and role_code = ?", tenantId, code);
     if (scopes == null || scopes.isEmpty()) {
       return 0;
     }
@@ -179,114 +182,116 @@ public class JdbcPlatformRoleRepository implements PlatformRoleRepository {
       total +=
           jdbc.update(
               """
-                  insert into iam.role_data_scope_v2(tenant_id, role_code, resource_code, scope_type, scope_json)
-                  values ('default', ?, ?, ?, ?::jsonb)
-                  on conflict (role_code, resource_code) do nothing
+                  insert into iam.role_data_scope_v2(
+                      tenant_id, role_code, resource_code, scope_type, scope_json)
+                  values (?, ?, ?, ?, ?::jsonb)
+                  on conflict (tenant_id, role_code, resource_code) do update
+                  set scope_type = excluded.scope_type,
+                      scope_json = excluded.scope_json,
+                      updated_at = now()
                   """,
+              tenantId,
               code,
               scope.resourceCode(),
               scope.scopeType(),
-              scopeJson(scope.detail()));
+              toJson(scope.detail()));
     }
     return total;
   }
 
   @Override
-  public void seedDefaultRolePermissions() {
-    // No-op: seeding happens through Flyway migration. Kept for future bootstrap.
-  }
-
-  private Map<String, Set<String>> rolePermissionsAsMap() {
-    Map<String, Set<String>> map = new HashMap<>();
-    jdbc.query(
-        " select role_code, permission_code from iam.role_permission ",
-        rs -> {
-          map.computeIfAbsent(rs.getString("role_code"), k -> new HashSet<>())
-              .add(rs.getString("permission_code"));
-        });
-    return map;
-  }
-
-  private Map<String, Map<String, PlatformRole.RoleDataScope>> roleDataScopesByResource() {
-    Map<String, Map<String, PlatformRole.RoleDataScope>> result = new HashMap<>();
-    jdbc.query(
+  public int softDelete(String code, int expectedVersion) {
+    return jdbc.update(
         """
-            select role_code, resource_code, scope_type, scope_json
-              from iam.role_data_scope_v2
+            update iam.role_definition
+               set enabled = false, deleted_at = now(), updated_at = now(),
+                   row_version = row_version + 1
+             where tenant_id = ? and role_code = ? and row_version = ? and deleted_at is null
             """,
-        rs -> {
-          String role = rs.getString("role_code");
-          String resource = rs.getString("resource_code");
-          String type = rs.getString("scope_type");
-          Map<String, Object> detail = parseJson(rs.getString("scope_json"));
-          result
-              .computeIfAbsent(role, k -> new HashMap<>())
-              .put(resource, new PlatformRole.RoleDataScope(resource, type, detail));
-        });
-    return result;
+        currentTenant(),
+        code,
+        expectedVersion);
   }
 
-  private Set<String> listRolePermissions(String code) {
-    return new HashSet<>(
+  @Override
+  public void seedDefaultRolePermissions() {
+    // Flyway owns permission seeding.
+  }
+
+  private int userCount(String tenantId, String code) {
+    Integer count =
+        jdbc.queryForObject(
+            "select count(*) from iam.user_role where tenant_id = ? and role_code = ?",
+            Integer.class,
+            tenantId,
+            code);
+    return count == null ? 0 : count;
+  }
+
+  private Set<String> listRolePermissions(String tenantId, String code) {
+    return new LinkedHashSet<>(
         jdbc.query(
-            " select permission_code from iam.role_permission where role_code = ? ",
+            """
+                select permission_code from iam.role_permission
+                 where tenant_id = ? and role_code = ? order by permission_code
+                """,
             (rs, rowNum) -> rs.getString(1),
+            tenantId,
             code));
   }
 
-  private Map<String, PlatformRoleDetail.RoleDataScope> listRoleDataScopesAsMap(String code) {
-    Map<String, PlatformRoleDetail.RoleDataScope> result = new LinkedHashMap<>();
+  private Map<String, PlatformRole.RoleDataScope> listRoleDataScopes(String tenantId, String code) {
+    Map<String, PlatformRole.RoleDataScope> result = new LinkedHashMap<>();
     jdbc.query(
         """
             select resource_code, scope_type, scope_json
               from iam.role_data_scope_v2
-             where role_code = ?
+             where tenant_id = ? and role_code = ? order by resource_code
             """,
         rs -> {
           String resource = rs.getString("resource_code");
-          String scopeType = rs.getString("scope_type");
-          String raw = rs.getString("scope_json");
           result.put(
-              resource, new PlatformRoleDetail.RoleDataScope(resource, scopeType, parseJson(raw)));
+              resource,
+              new PlatformRole.RoleDataScope(
+                  resource, rs.getString("scope_type"), parseJson(rs.getString("scope_json"))));
         },
+        tenantId,
         code);
     return result;
   }
 
-  @SuppressWarnings("unchecked")
-  private static Map<String, Object> parseJson(String raw) {
-    if (raw == null || raw.isBlank()) {
-      return Collections.emptyMap();
-    }
+  private Map<String, PlatformRoleDetail.RoleDataScope> listRoleDataScopesAsDetail(
+      String tenantId, String code) {
+    Map<String, PlatformRoleDetail.RoleDataScope> result = new LinkedHashMap<>();
+    listRoleDataScopes(tenantId, code)
+        .forEach(
+            (resource, scope) ->
+                result.put(
+                    resource,
+                    new PlatformRoleDetail.RoleDataScope(
+                        resource, scope.scopeType(), scope.detail())));
+    return result;
+  }
+
+  private static Map<String, Object> parseJson(String value) {
     try {
-      com.fasterxml.jackson.databind.ObjectMapper m =
-          new com.fasterxml.jackson.databind.ObjectMapper();
-      return (Map<String, Object>) m.readValue(raw, Map.class);
-    } catch (Exception ex) {
-      return Collections.emptyMap();
+      return value == null
+          ? Map.of()
+          : JSON.readValue(value, new TypeReference<Map<String, Object>>() {});
+    } catch (Exception exception) {
+      throw new IllegalStateException("invalid role data scope JSON", exception);
     }
   }
 
-  private static String scopeJson(Map<String, Object> detail) {
-    if (detail == null || detail.isEmpty()) {
-      return "{}";
-    }
+  private static String toJson(Map<String, Object> value) {
     try {
-      return new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(detail);
-    } catch (Exception ex) {
-      return "{}";
+      return JSON.writeValueAsString(value == null ? Map.of() : value);
+    } catch (Exception exception) {
+      throw new IllegalArgumentException("invalid role data scope", exception);
     }
   }
 
-  private static final RowMapper<PlatformRole> ROLE_MAPPER =
-      (rs, rowNum) ->
-          new PlatformRole(
-              rs.getString("code"),
-              rs.getString("name"),
-              rs.getString("description"),
-              rs.getBoolean("is_system"),
-              rs.getBoolean("enabled"),
-              Collections.emptySet(),
-              Collections.emptyMap(),
-              0);
+  private String currentTenant() {
+    return SecurityContextSupport.currentTenant();
+  }
 }

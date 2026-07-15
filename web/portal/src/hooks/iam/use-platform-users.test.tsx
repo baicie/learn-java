@@ -4,6 +4,8 @@ import {
   createPlatformUser,
   changeUserStatus,
   replacePlatformUserRoles,
+  resetPlatformUserPassword,
+  updatePlatformUser,
 } from '@/api/iam/platform-users-api'
 
 vi.mock('@/lib/api-client', () => ({
@@ -106,5 +108,18 @@ describe('platform user API smoke', () => {
     })
     expect(user.roles).toHaveLength(1)
     expect(user.rowVersion).toBe(2)
+  })
+
+  it('updates user profile and resets password through typed contracts', async () => {
+    const updated = await updatePlatformUser('u1', {
+      displayName: 'Alice 2',
+      email: 'alice@example.com',
+    })
+    const reset = await resetPlatformUserPassword('u1', {
+      newPassword: 'changeMe-10!',
+    })
+
+    expect(updated.username).toBe('alice')
+    expect(reset.username).toBe('bob')
   })
 })

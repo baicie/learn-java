@@ -15,13 +15,28 @@ final class NoopOutboxRepository implements OutboxRepository {
   final Map<String, String> statuses = new HashMap<>();
   final Map<String, String> errorMessages = new HashMap<>();
   final List<String> markDoneCalls = new ArrayList<>();
+  int recoverExpiredLeasesCalls;
+  int extendLeaseCalls;
 
   @Override
-  public List<AutomationOutboxRecord> claimNextPending(String targetApp, int batchSize) {
+  public List<AutomationOutboxRecord> claimNextPending(
+      String targetApp, int batchSize, OffsetDateTime leaseUntil) {
     List<AutomationOutboxRecord> snapshot = new ArrayList<>(pending);
     pending.clear();
     snapshot.forEach(r -> statuses.put(r.getId(), "processing"));
     return snapshot;
+  }
+
+  @Override
+  public int recoverExpiredLeases(String targetApp, OffsetDateTime now) {
+    recoverExpiredLeasesCalls++;
+    return 0;
+  }
+
+  @Override
+  public boolean extendLease(String id, String targetApp, OffsetDateTime leaseUntil) {
+    extendLeaseCalls++;
+    return "processing".equals(statuses.get(id));
   }
 
   @Override

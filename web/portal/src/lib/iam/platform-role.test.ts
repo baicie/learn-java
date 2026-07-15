@@ -54,6 +54,24 @@ describe('permissionModuleSchema', () => {
     })
     expect(parsed.children).toHaveLength(1)
   })
+
+  it('accepts an omitted permission description from the IAM API', () => {
+    const parsed = permissionModuleSchema.parse({
+      moduleCode: 'platform-user',
+      moduleName: 'User',
+      children: [
+        {
+          code: 'platform:user:read',
+          moduleCode: 'platform-user',
+          moduleName: 'User',
+          name: '查看用户',
+          riskLevel: 'sensitive',
+          dependencies: [],
+        },
+      ],
+    })
+    expect(parsed.children[0].description).toBeUndefined()
+  })
 })
 
 describe('replaceRolePermissionsInputSchema', () => {

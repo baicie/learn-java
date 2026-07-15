@@ -31,6 +31,7 @@ external:
     endpoint: "http://minio.aegisops-infra.svc.cluster.local:9000"
     accessKey: "CHANGE_ME_MINIO_ACCESS_KEY"
     secretKey: "CHANGE_ME_MINIO_SECRET_KEY"
+    region: "us-east-1"
     bucket: "aegisops"
   victoriaMetrics:
     baseUrl: "http://victoria-metrics.aegisops-infra.svc.cluster.local:8428"

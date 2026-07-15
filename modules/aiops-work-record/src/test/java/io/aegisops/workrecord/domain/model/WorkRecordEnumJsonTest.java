@@ -29,4 +29,10 @@ class WorkRecordEnumJsonTest {
   void shouldSerializeOptionSourceAsContractValue() throws Exception {
     assertThat(objectMapper.writeValueAsString(OptionSource.DICT)).isEqualTo("\"dict\"");
   }
+
+  @Test
+  void shouldSerializeHandoverStatusAsLowercaseContractValue() throws Exception {
+    assertThat(objectMapper.writeValueAsString(HandoverStatus.SUBMITTED))
+        .isEqualTo("\"submitted\"");
+  }
 }

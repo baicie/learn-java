@@ -22,6 +22,8 @@ public interface PlatformUserRepository {
 
   void update(String userId, String displayName, String email, OffsetDateTime now);
 
+  void updatePassword(String userId, String passwordHash, OffsetDateTime now);
+
   int updateStatus(
       String userId,
       PlatformUserStatus status,
@@ -32,4 +34,8 @@ public interface PlatformUserRepository {
   void recordLogin(String userId, OffsetDateTime lastLoginAt, int success, OffsetDateTime now);
 
   int deleteRolesForRole(String tenantId, String roleCode);
+
+  void lockRoleForUpdate(String roleCode);
+
+  int countActiveUsersWithRole(String roleCode);
 }

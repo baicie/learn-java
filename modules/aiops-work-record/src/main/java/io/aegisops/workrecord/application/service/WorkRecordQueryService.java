@@ -33,6 +33,12 @@ public class WorkRecordQueryService {
   private final WorkRecordCalendarPort calendarPort;
   private final WorkRecordQueryPolicy queryPolicy;
   private final Clock clock;
+  private FieldPolicyService fieldPolicies;
+
+  @Autowired
+  void setFieldPolicies(FieldPolicyService fieldPolicies) {
+    this.fieldPolicies = fieldPolicies;
+  }
 
   @Autowired
   public WorkRecordQueryService(
@@ -76,7 +82,16 @@ public class WorkRecordQueryService {
   }
 
   public PageResult<WorkRecord> page(String tenantId, RecordQuery query, UserPrincipal user) {
-    return repository.page(tenantId, prepareEffectiveQuery(tenantId, query, user));
+    PageResult<WorkRecord> result =
+        repository.page(tenantId, prepareEffectiveQuery(tenantId, query, user));
+    if (fieldPolicies == null) {
+      return result;
+    }
+    return new PageResult<>(
+        result.total(),
+        result.page(),
+        result.size(),
+        result.items().stream().map(value -> visible(tenantId, value, user)).toList());
   }
 
   public RecordQuery prepareEffectiveQuery(String tenantId, RecordQuery query, UserPrincipal user) {
@@ -102,6 +117,15 @@ public class WorkRecordQueryService {
             quickQuery.templateId(),
             quickQuery.templateVersionId(),
             quickQuery.dynamicFilters());
+    if (fieldPolicies != null && quickQuery.templateVersionId() != null) {
+      for (RecordDynamicFilter filter : normalizedFilters) {
+        if (!fieldPolicies.canReadField(
+            tenantId, quickQuery.templateVersionId(), filter.fieldCode(), user)) {
+          throw new org.springframework.security.access.AccessDeniedException(
+              "not allowed to filter field: " + filter.fieldCode());
+        }
+      }
+    }
 
     WorkRecordQueryPolicy.PageWindow window =
         queryPolicy.normalize(quickQuery.page(), quickQuery.pageSize());
@@ -134,7 +158,29 @@ public class WorkRecordQueryService {
 
     permissionService.requireRead(user, record);
 
-    return record;
+    return fieldPolicies == null ? record : visible(tenantId, record, user);
+  }
+
+  private WorkRecord visible(String tenantId, WorkRecord source, UserPrincipal user) {
+    String json =
+        fieldPolicies.filterReadableJson(
+            tenantId, source.templateVersionId(), source.customDataJson(), user);
+    return new WorkRecord(
+        source.id(),
+        source.tenantId(),
+        source.templateId(),
+        source.templateVersionId(),
+        source.title(),
+        source.status(),
+        source.ownerId(),
+        source.creatorId(),
+        source.recordTime(),
+        source.builtinDataJson(),
+        json,
+        source.rowVersion(),
+        source.createdAt(),
+        source.updatedAt(),
+        source.deletedAt());
   }
 
   private RecordQuery applyQuickView(String tenantId, RecordQuery query, RecordQuickView view) {
