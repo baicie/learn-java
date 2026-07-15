@@ -30,19 +30,6 @@ vi.mock('@/hooks/iam/use-platform-roles', () => ({
 vi.mock('@/auth/permission-gate', () => ({
   PermissionGate: ({ children }: { children: React.ReactNode }) => children,
 }))
-vi.mock('@/components/layout/header', () => ({
-  Header: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-}))
-vi.mock('@/components/layout/main', () => ({
-  Main: ({ children }: { children: React.ReactNode }) => (
-    <main>{children}</main>
-  ),
-}))
-vi.mock('@/components/search', () => ({ Search: () => null }))
-vi.mock('@/components/theme-switch', () => ({ ThemeSwitch: () => null }))
-vi.mock('@/components/profile-dropdown', () => ({
-  ProfileDropdown: () => null,
-}))
 vi.mock('./platform-role-create-dialog', () => ({
   PlatformRoleCreateDialog: () => null,
 }))
@@ -58,6 +45,9 @@ describe('PlatformRolesPage', () => {
       </QueryClientProvider>
     )
 
+    await expect
+      .element(screen.getByRole('heading', { name: '角色权限' }))
+      .toBeVisible()
     await expect
       .element(screen.getByRole('heading', { name: 'Ops Viewer' }))
       .toBeVisible()

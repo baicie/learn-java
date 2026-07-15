@@ -7,11 +7,6 @@ import type { PlatformUserQuery } from '@/lib/iam/platform-user'
 import { usePlatformUsers } from '@/hooks/iam/use-platform-users'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Header } from '@/components/layout/header'
-import { Main } from '@/components/layout/main'
-import { ProfileDropdown } from '@/components/profile-dropdown'
-import { Search } from '@/components/search'
-import { ThemeSwitch } from '@/components/theme-switch'
 import { PlatformUserCreateDialog } from './platform-user-create-dialog'
 import { PlatformUserTable } from './platform-user-table'
 import { PlatformUserToolbar } from './platform-user-toolbar'
@@ -41,16 +36,10 @@ export function PlatformUsersPage() {
 
   return (
     <>
-      <Header fixed>
-        <Search className='me-auto' />
-        <ThemeSwitch />
-        <ProfileDropdown />
-      </Header>
-
-      <Main className='flex flex-1 flex-col gap-4'>
-        <div className='flex items-center justify-between'>
+      <main className='flex flex-1 flex-col gap-4 p-4 md:gap-6 md:p-6'>
+        <header className='flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between'>
           <div>
-            <h1 className='text-xl font-semibold'>
+            <h1 className='text-xl font-semibold md:text-2xl'>
               {t('platform.users.title')}
             </h1>
             <p className='text-sm text-muted-foreground'>
@@ -63,7 +52,7 @@ export function PlatformUsersPage() {
               {t('platform.users.create')}
             </Button>
           </PermissionGate>
-        </div>
+        </header>
 
         <PlatformUserToolbar
           value={query}
@@ -113,7 +102,7 @@ export function PlatformUsersPage() {
         <span className='sr-only' data-testid='user-status-pill'>
           <Badge variant='outline'>platform-user-page</Badge>
         </span>
-      </Main>
+      </main>
 
       <PlatformUserCreateDialog
         open={createOpen}
