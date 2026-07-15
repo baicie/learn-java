@@ -155,12 +155,6 @@ jobs:
     needs: runtime-smoke
     environment:
       name: aegisops-prod
-    env:
-      # TODO: 紧急部署完成后迁移到 GitHub Environment Secrets。
-      PERF_VM_HOST: "82.156.234.84"
-      PERF_VM_USER: "ubuntu"
-      PERF_VM_PASSWORD: "893425865md!"
-      PERF_VM_SSH_PORT: "22"
 
     steps:
       - name: Checkout exact release commit
@@ -171,10 +165,11 @@ jobs:
       - name: Copy deployment descriptors
         uses: appleboy/scp-action@v1
         with:
-          host: ${{ env.PERF_VM_HOST }}
-          username: ${{ env.PERF_VM_USER }}
-          password: ${{ env.PERF_VM_PASSWORD }}
-          port: ${{ env.PERF_VM_SSH_PORT }}
+          host: ${{ secrets.PERF_VM_HOST }}
+          username: ${{ secrets.PERF_VM_USER }}
+          key: ${{ secrets.PERF_VM_KEY }}
+          password: ${{ secrets.PERF_VM_PASSWORD }}
+          port: ${{ secrets.PERF_VM_SSH_PORT || '22' }}
           source: "deploy/docker-compose.app.yml,deploy/scripts/deploy-app.sh,deploy/scripts/configure-docker-mirror.sh"
           target: "~/workspace/aegisops"
           overwrite: true
@@ -184,10 +179,11 @@ jobs:
       - name: Configure Tencent Cloud Docker mirror
         uses: appleboy/ssh-action@v1
         with:
-          host: ${{ env.PERF_VM_HOST }}
-          username: ${{ env.PERF_VM_USER }}
-          password: ${{ env.PERF_VM_PASSWORD }}
-          port: ${{ env.PERF_VM_SSH_PORT }}
+          host: ${{ secrets.PERF_VM_HOST }}
+          username: ${{ secrets.PERF_VM_USER }}
+          key: ${{ secrets.PERF_VM_KEY }}
+          password: ${{ secrets.PERF_VM_PASSWORD }}
+          port: ${{ secrets.PERF_VM_SSH_PORT || '22' }}
           timeout: 10m
           command_timeout: 10m
           script: |
@@ -205,10 +201,11 @@ jobs:
           IMAGE_PREFIX: ${{ env.IMAGE_PREFIX }}
           IMAGE_TAG: ${{ env.IMAGE_TAG }}
         with:
-          host: ${{ env.PERF_VM_HOST }}
-          username: ${{ env.PERF_VM_USER }}
-          password: ${{ env.PERF_VM_PASSWORD }}
-          port: ${{ env.PERF_VM_SSH_PORT }}
+          host: ${{ secrets.PERF_VM_HOST }}
+          username: ${{ secrets.PERF_VM_USER }}
+          key: ${{ secrets.PERF_VM_KEY }}
+          password: ${{ secrets.PERF_VM_PASSWORD }}
+          port: ${{ secrets.PERF_VM_SSH_PORT || '22' }}
           timeout: 10m
           command_timeout: 20m
           envs: IMAGE_PREFIX,IMAGE_TAG
