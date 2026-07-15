@@ -2,6 +2,7 @@ package io.aegisops.worker.outbox;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -14,11 +15,17 @@ import java.util.Set;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+import org.springframework.context.annotation.Configuration;
 
 class OutboxPropertiesTest {
 
   private static ValidatorFactory factory;
   private static Validator validator;
+
+  private final ApplicationContextRunner contextRunner =
+      new ApplicationContextRunner().withUserConfiguration(TestConfiguration.class);
 
   @BeforeAll
   static void setupValidator() {
@@ -41,6 +48,22 @@ class OutboxPropertiesTest {
   void keepsExplicitTargetApp() {
     OutboxProperties properties = new OutboxProperties(true, 5000L, 10, "server");
     assertEquals("server", properties.targetApp());
+  }
+
+  @Test
+  void bindsFromSpringConfiguration() {
+    contextRunner
+        .withPropertyValues(
+            "aiops.outbox.enabled=true",
+            "aiops.outbox.poll-delay-ms=1000",
+            "aiops.outbox.batch-size=10",
+            "aiops.outbox.target-app=worker",
+            "aiops.outbox.lease-duration-ms=60000")
+        .run(
+            context -> {
+              assertNull(context.getStartupFailure());
+              assertEquals(60000L, context.getBean(OutboxProperties.class).leaseDurationMs());
+            });
   }
 
   @Test
@@ -112,4 +135,8 @@ class OutboxPropertiesTest {
                       }
                     })));
   }
+
+  @Configuration(proxyBeanMethods = false)
+  @EnableConfigurationProperties(OutboxProperties.class)
+  static class TestConfiguration {}
 }

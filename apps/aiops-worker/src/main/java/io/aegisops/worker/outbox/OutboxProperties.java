@@ -2,6 +2,7 @@ package io.aegisops.worker.outbox;
 
 import jakarta.validation.constraints.Min;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.bind.ConstructorBinding;
 
 /**
  * Configuration for the worker-side {@code OutboxPoller}.
@@ -24,6 +25,7 @@ public record OutboxProperties(
     this(enabled, pollDelayMs, batchSize, targetApp, 300_000L);
   }
 
+  @ConstructorBinding
   public OutboxProperties {
     if (targetApp == null || targetApp.isBlank()) {
       targetApp = "worker";
