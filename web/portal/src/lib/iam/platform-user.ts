@@ -15,7 +15,11 @@ export const platformUserSchema = z.object({
   tenantId: z.string(),
   username: z.string(),
   displayName: z.string(),
-  email: z.string().nullable(),
+  email: z
+    .string()
+    .nullable()
+    .optional()
+    .transform((value) => value ?? null),
   status: z.preprocess(
     (value) => (typeof value === 'string' ? value.toLowerCase() : value),
     platformUserStatusSchema

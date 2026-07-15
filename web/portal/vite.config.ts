@@ -33,6 +33,28 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    rolldownOptions: {
+      output: {
+        // Entry-aware chunks can share circular dependencies; preserve module
+        // evaluation order so production startup matches the source graph.
+        strictExecutionOrder: true,
+        // Preserve route-level lazy loading while merging tiny shared vendor
+        // chunks that otherwise create dozens of requests on a single page.
+        codeSplitting: {
+          groups: [
+            {
+              name: 'vendor',
+              test: /node_modules[\\/]/,
+              minSize: 20_000,
+              entriesAware: true,
+              entriesAwareMergeThreshold: 50_000,
+            },
+          ],
+        },
+      },
+    },
+  },
   test: {
     include: ['src/**/*.test.{ts,tsx}'],
     silent: 'passed-only',

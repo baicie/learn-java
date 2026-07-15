@@ -63,6 +63,19 @@ describe('platformUserPageSchema', () => {
     expect(parsed.items[0].username).toBe('alice')
     expect(parsed.total).toBe(1)
   })
+
+  it('normalizes an omitted nullable email from the IAM list response', () => {
+    const { email: _email, ...userWithoutEmail } = userBase
+
+    const parsed = platformUserPageSchema.parse({
+      items: [userBase, { ...userWithoutEmail, id: 'u2', username: 'bob' }],
+      page: 1,
+      pageSize: 20,
+      total: 2,
+    })
+
+    expect(parsed.items[1].email).toBeNull()
+  })
 })
 
 describe('createPlatformUserSchema', () => {

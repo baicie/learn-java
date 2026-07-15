@@ -22,7 +22,6 @@ vi.mock('@/lib/api-client', () => ({
                   tenantId: 't1',
                   username: 'alice',
                   displayName: 'Alice',
-                  email: null,
                   status: 'active',
                   roles: [],
                   dataScopes: {},
@@ -83,6 +82,7 @@ describe('platform user API smoke', () => {
   it('fetchPlatformUsers validates the response shape', async () => {
     const page = await fetchPlatformUsers({ page: 1, pageSize: 20 })
     expect(page.items[0].username).toBe('alice')
+    expect(page.items[0].email).toBeNull()
     expect(page.total).toBe(1)
   })
 
