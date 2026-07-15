@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.Arrays;
 import org.junit.jupiter.api.Test;
+import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.stereotype.Controller;
@@ -20,5 +21,15 @@ class WorkerComponentScanTest {
     assertThat(
             Arrays.stream(scan.excludeFilters()).flatMap(filter -> Arrays.stream(filter.classes())))
         .contains(RestController.class, Controller.class);
+  }
+
+  @Test
+  void workerScansSharedConfigurationProperties() {
+    ConfigurationPropertiesScan scan =
+        AnnotatedElementUtils.findMergedAnnotation(
+            AiOpsWorkerApplication.class, ConfigurationPropertiesScan.class);
+
+    assertThat(scan).isNotNull();
+    assertThat(scan.basePackages()).contains("io.aegisops");
   }
 }

@@ -123,6 +123,8 @@ services:
       AIOPS_DB_URL: jdbc:postgresql://postgres:5432/aegisops
       AIOPS_DB_USER: aegisops
       AIOPS_DB_PASSWORD: aegisops
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
       AIOPS_WORKER_PORT: 8081
       AIOPS_OUTBOX_ENABLED: "true"
       AIOPS_OUTBOX_POLL_MS: 5000
@@ -133,6 +135,8 @@ services:
       - "8081:8081"
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     healthcheck:
       test:
