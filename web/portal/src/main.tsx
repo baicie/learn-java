@@ -12,6 +12,7 @@ import { I18nextProvider } from 'react-i18next'
 import { toast } from 'sonner'
 import { useAuthStore } from '@/stores/auth-store'
 import { handleServerError } from '@/lib/handle-server-error'
+import { shouldRetryQuery } from '@/lib/query-retry'
 import { AppProviders } from './app/app-providers'
 import { DirectionProvider } from './context/direction-provider'
 import { FontProvider } from './context/font-provider'
@@ -28,13 +29,8 @@ const queryClient = new QueryClient({
         // eslint-disable-next-line no-console
         if (import.meta.env.DEV) console.log({ failureCount, error })
 
-        if (failureCount >= 0 && import.meta.env.DEV) return false
-        if (failureCount > 3 && import.meta.env.PROD) return false
-
-        return !(
-          error instanceof AxiosError &&
-          [401, 403].includes(error.response?.status ?? 0)
-        )
+        if (import.meta.env.DEV) return false
+        return shouldRetryQuery(failureCount, error)
       },
       refetchOnWindowFocus: import.meta.env.PROD,
       staleTime: 10 * 1000, // 10s

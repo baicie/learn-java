@@ -1,4 +1,5 @@
 import { apiClient } from '@/lib/api-client'
+import { parseApiResponseData } from '@/lib/api-response'
 import {
   createPlatformUserSchema,
   changeUserStatusInputSchema,
@@ -41,7 +42,7 @@ export async function fetchPlatformUsers(
   const { data } = await apiClient.get('/api/platform/users', {
     params: buildQueryString(query),
   })
-  return platformUserPageSchema.parse(data)
+  return parseApiResponseData(platformUserPageSchema, data)
 }
 
 export async function createPlatformUser(
@@ -49,7 +50,7 @@ export async function createPlatformUser(
 ): Promise<PlatformUser> {
   const payload = createPlatformUserSchema.parse(input)
   const { data } = await apiClient.post('/api/platform/users', payload)
-  return platformUserSchema.parse(data)
+  return parseApiResponseData(platformUserSchema, data)
 }
 
 export async function changeUserStatus(
@@ -61,7 +62,7 @@ export async function changeUserStatus(
     `/api/platform/users/${id}/status`,
     payload
   )
-  return platformUserSchema.parse(data)
+  return parseApiResponseData(platformUserSchema, data)
 }
 
 export async function replacePlatformUserRoles(
@@ -73,7 +74,7 @@ export async function replacePlatformUserRoles(
     `/api/platform/users/${id}/roles`,
     payload
   )
-  return platformUserSchema.parse(data)
+  return parseApiResponseData(platformUserSchema, data)
 }
 
 export async function updatePlatformUser(
@@ -82,7 +83,7 @@ export async function updatePlatformUser(
 ): Promise<PlatformUser> {
   const payload = updatePlatformUserSchema.parse(input)
   const { data } = await apiClient.put(`/api/platform/users/${id}`, payload)
-  return platformUserSchema.parse(data)
+  return parseApiResponseData(platformUserSchema, data)
 }
 
 export async function resetPlatformUserPassword(
@@ -94,5 +95,5 @@ export async function resetPlatformUserPassword(
     `/api/platform/users/${id}/reset-password`,
     payload
   )
-  return platformUserSchema.parse(data)
+  return parseApiResponseData(platformUserSchema, data)
 }

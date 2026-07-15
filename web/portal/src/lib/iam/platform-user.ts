@@ -38,9 +38,9 @@ export const platformUserPageSchema = z.object({
 export type PlatformUserPage = z.infer<typeof platformUserPageSchema>
 
 export const createPlatformUserSchema = z.object({
-  username: z.string().min(3).max(64),
-  displayName: z.string().min(1).max(128),
-  email: z.string().email().nullable().optional(),
+  username: z.string().trim().min(3).max(64),
+  displayName: z.string().trim().min(1).max(128),
+  email: z.string().trim().email().max(128).nullable().optional(),
   initialPassword: z.string().min(8).max(128),
   status: platformUserStatusSchema.default('active'),
   roleCodes: z.array(z.string()).default([]),

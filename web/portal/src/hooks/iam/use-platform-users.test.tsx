@@ -14,25 +14,28 @@ vi.mock('@/lib/api-client', () => ({
       if (url === '/api/platform/users') {
         return {
           data: {
-            items: [
-              {
-                id: 'u1',
-                tenantId: 't1',
-                username: 'alice',
-                displayName: 'Alice',
-                email: null,
-                status: 'active',
-                roles: [],
-                dataScopes: {},
-                lastLoginAt: null,
-                createdAt: '2026-07-12T00:00:00Z',
-                updatedAt: '2026-07-12T00:00:00Z',
-                rowVersion: 1,
-              },
-            ],
-            page: 1,
-            pageSize: 20,
-            total: 1,
+            success: true,
+            data: {
+              items: [
+                {
+                  id: 'u1',
+                  tenantId: 't1',
+                  username: 'alice',
+                  displayName: 'Alice',
+                  email: null,
+                  status: 'active',
+                  roles: [],
+                  dataScopes: {},
+                  lastLoginAt: null,
+                  createdAt: '2026-07-12T00:00:00Z',
+                  updatedAt: '2026-07-12T00:00:00Z',
+                  rowVersion: 1,
+                },
+              ],
+              page: 1,
+              pageSize: 20,
+              total: 1,
+            },
           },
         }
       }
@@ -40,18 +43,21 @@ vi.mock('@/lib/api-client', () => ({
     }),
     post: vi.fn(async () => ({
       data: {
-        id: 'u2',
-        tenantId: 't1',
-        username: 'bob',
-        displayName: 'Bob',
-        email: null,
-        status: 'disabled',
-        roles: [],
-        dataScopes: {},
-        lastLoginAt: null,
-        createdAt: '2026-07-12T00:00:00Z',
-        updatedAt: '2026-07-12T00:00:00Z',
-        rowVersion: 2,
+        success: true,
+        data: {
+          id: 'u2',
+          tenantId: 't1',
+          username: 'bob',
+          displayName: 'Bob',
+          email: null,
+          status: 'disabled',
+          roles: [],
+          dataScopes: {},
+          lastLoginAt: null,
+          createdAt: '2026-07-12T00:00:00Z',
+          updatedAt: '2026-07-12T00:00:00Z',
+          rowVersion: 2,
+        },
       },
     })),
     put: vi.fn(async () => ({

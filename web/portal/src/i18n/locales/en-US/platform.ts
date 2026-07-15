@@ -36,7 +36,23 @@ export const platform = {
     'After disabling, the user will no longer be able to sign in.',
   'platform.users.confirm.disable.confirmLabel': 'Confirm disable',
   'platform.users.createDialog.title': 'Create user',
+  'platform.users.createDialog.description':
+    'New users are active by default. Email is optional and the initial password must be at least 8 characters.',
+  'platform.users.createDialog.username': 'Username',
+  'platform.users.createDialog.roles': 'Initial roles',
+  'platform.users.createDialog.displayName': 'Display name',
+  'platform.users.createDialog.email': 'Email',
+  'platform.users.createDialog.emailHint':
+    'Optional; enter a valid email address when provided.',
+  'platform.users.createDialog.password': 'Initial password',
+  'platform.users.createDialog.cancel': 'Cancel',
   'platform.users.createDialog.submit': 'Create',
+  'platform.users.createDialog.validation.username':
+    'Enter a username (3-64 characters)',
+  'platform.users.createDialog.validation.displayName': 'Enter a display name',
+  'platform.users.createDialog.validation.email': 'Enter a valid email address',
+  'platform.users.createDialog.validation.password':
+    'Enter an initial password (8-128 characters)',
   'platform.user.status.active': 'Active',
   'platform.user.status.disabled': 'Disabled',
   'platform.user.status.locked': 'Locked',

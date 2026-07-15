@@ -31,7 +31,22 @@ export const platform = {
   'platform.users.confirm.disable.description': '禁用后该用户将无法登录。',
   'platform.users.confirm.disable.confirmLabel': '确认禁用',
   'platform.users.createDialog.title': '新建用户',
+  'platform.users.createDialog.description':
+    '新用户默认为正常状态，邮箱可选，初始密码至少 8 个字符。',
+  'platform.users.createDialog.username': '用户名',
+  'platform.users.createDialog.roles': '初始角色',
+  'platform.users.createDialog.displayName': '显示名',
+  'platform.users.createDialog.email': '邮箱',
+  'platform.users.createDialog.emailHint': '可选；填写时必须是有效邮箱地址。',
+  'platform.users.createDialog.password': '初始密码',
+  'platform.users.createDialog.cancel': '取消',
   'platform.users.createDialog.submit': '创建',
+  'platform.users.createDialog.validation.username':
+    '请输入用户名（3-64 个字符）',
+  'platform.users.createDialog.validation.displayName': '请输入显示名',
+  'platform.users.createDialog.validation.email': '请输入有效的邮箱地址',
+  'platform.users.createDialog.validation.password':
+    '请输入初始密码（8-128 个字符）',
   'platform.user.status.active': '正常',
   'platform.user.status.disabled': '已禁用',
   'platform.user.status.locked': '已锁定',

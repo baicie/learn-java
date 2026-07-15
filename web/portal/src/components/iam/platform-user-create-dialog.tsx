@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toIamRequestError } from '@/lib/iam/errors/iam-api-error'
+import { createPlatformUserSchema } from '@/lib/iam/platform-user'
 import { usePlatformRoles } from '@/hooks/iam/use-platform-roles'
 import { useCreatePlatformUser } from '@/hooks/iam/use-platform-users'
 import { Button } from '@/components/ui/button'
@@ -14,6 +15,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { FormFieldShell } from '@/components/form/form-field-shell'
 
 export type PlatformUserCreateDialogProps = {
   open: boolean
@@ -28,6 +30,9 @@ const EMPTY = {
   roleCodes: [] as string[],
 }
 
+type TextFormField = Exclude<keyof typeof EMPTY, 'roleCodes'>
+type FormErrors = Partial<Record<TextFormField, string>>
+
 export function PlatformUserCreateDialog({
   open,
   onOpenChange,
@@ -37,30 +42,64 @@ export function PlatformUserCreateDialog({
   const roles = usePlatformRoles()
   const [form, setForm] = useState(EMPTY)
   const [error, setError] = useState<string | null>(null)
+  const [fieldErrors, setFieldErrors] = useState<FormErrors>({})
 
   const onOpenChangeWrapped = (next: boolean) => {
     if (!next) {
       setForm(EMPTY)
       setError(null)
+      setFieldErrors({})
     }
     onOpenChange(next)
   }
 
-  const onSubmit = async () => {
+  const updateField = (field: TextFormField, value: string) => {
+    setForm((previous) => ({ ...previous, [field]: value }))
+    setFieldErrors((previous) => ({ ...previous, [field]: undefined }))
+  }
+
+  const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
     setError(null)
-    try {
-      await mutation.mutateAsync({
-        username: form.username,
-        displayName: form.displayName,
-        email: form.email || null,
-        initialPassword: form.initialPassword,
-        status: 'active',
-        roleCodes: form.roleCodes,
+    const input = {
+      username: form.username,
+      displayName: form.displayName,
+      email: form.email || null,
+      initialPassword: form.initialPassword,
+      status: 'active' as const,
+      roleCodes: form.roleCodes,
+    }
+    const parsed = createPlatformUserSchema.safeParse(input)
+    if (!parsed.success) {
+      const invalid = new Set(parsed.error.issues.map((issue) => issue.path[0]))
+      setFieldErrors({
+        username: invalid.has('username')
+          ? t('platform.users.createDialog.validation.username')
+          : undefined,
+        displayName: invalid.has('displayName')
+          ? t('platform.users.createDialog.validation.displayName')
+          : undefined,
+        email: invalid.has('email')
+          ? t('platform.users.createDialog.validation.email')
+          : undefined,
+        initialPassword: invalid.has('initialPassword')
+          ? t('platform.users.createDialog.validation.password')
+          : undefined,
       })
-      onOpenChange(false)
+      return
+    }
+
+    setFieldErrors({})
+    try {
+      await mutation.mutateAsync(parsed.data)
+      onOpenChangeWrapped(false)
     } catch (raw) {
       const err = toIamRequestError(raw)
-      setError(err.message)
+      setError(
+        err.code === 'platform.user.username_conflict'
+          ? t('platform.users.error.username_conflict')
+          : err.message
+      )
     }
   }
 
@@ -70,23 +109,33 @@ export function PlatformUserCreateDialog({
         <DialogHeader>
           <DialogTitle>{t('platform.users.createDialog.title')}</DialogTitle>
           <DialogDescription>
-            新用户默认为 active 状态；初始密码至少 8 个字符。
+            {t('platform.users.createDialog.description')}
           </DialogDescription>
         </DialogHeader>
 
-        <div className='grid gap-3'>
-          <label className='flex flex-col gap-1 text-sm'>
-            <span>用户名</span>
-            <Input
-              value={form.username}
-              onChange={(event) =>
-                setForm((prev) => ({ ...prev, username: event.target.value }))
-              }
-              autoFocus
-            />
-          </label>
+        <form className='grid gap-4' onSubmit={onSubmit} noValidate>
+          <FormFieldShell
+            id='platform-user-username'
+            label={t('platform.users.createDialog.username')}
+            required
+            error={fieldErrors.username}
+          >
+            {(props) => (
+              <Input
+                {...props}
+                value={form.username}
+                onChange={(event) =>
+                  updateField('username', event.target.value)
+                }
+                autoComplete='username'
+                autoFocus
+              />
+            )}
+          </FormFieldShell>
           <fieldset className='grid gap-2 rounded-md border p-3'>
-            <legend className='px-1 text-sm font-medium'>初始角色</legend>
+            <legend className='px-1 text-sm font-medium'>
+              {t('platform.users.createDialog.roles')}
+            </legend>
             {roles.data?.map((role) => (
               <label
                 key={role.roleCode}
@@ -109,52 +158,71 @@ export function PlatformUserCreateDialog({
               </label>
             ))}
           </fieldset>
-          <label className='flex flex-col gap-1 text-sm'>
-            <span>显示名</span>
-            <Input
-              value={form.displayName}
-              onChange={(event) =>
-                setForm((prev) => ({
-                  ...prev,
-                  displayName: event.target.value,
-                }))
-              }
-            />
-          </label>
-          <label className='flex flex-col gap-1 text-sm'>
-            <span>邮箱</span>
-            <Input
-              type='email'
-              value={form.email}
-              onChange={(event) =>
-                setForm((prev) => ({ ...prev, email: event.target.value }))
-              }
-            />
-          </label>
-          <label className='flex flex-col gap-1 text-sm'>
-            <span>初始密码</span>
-            <Input
-              type='password'
-              value={form.initialPassword}
-              onChange={(event) =>
-                setForm((prev) => ({
-                  ...prev,
-                  initialPassword: event.target.value,
-                }))
-              }
-            />
-          </label>
+          <FormFieldShell
+            id='platform-user-display-name'
+            label={t('platform.users.createDialog.displayName')}
+            required
+            error={fieldErrors.displayName}
+          >
+            {(props) => (
+              <Input
+                {...props}
+                value={form.displayName}
+                onChange={(event) =>
+                  updateField('displayName', event.target.value)
+                }
+                autoComplete='name'
+              />
+            )}
+          </FormFieldShell>
+          <FormFieldShell
+            id='platform-user-email'
+            label={t('platform.users.createDialog.email')}
+            hint={t('platform.users.createDialog.emailHint')}
+            error={fieldErrors.email}
+          >
+            {(props) => (
+              <Input
+                {...props}
+                type='email'
+                value={form.email}
+                onChange={(event) => updateField('email', event.target.value)}
+                autoComplete='email'
+              />
+            )}
+          </FormFieldShell>
+          <FormFieldShell
+            id='platform-user-initial-password'
+            label={t('platform.users.createDialog.password')}
+            required
+            error={fieldErrors.initialPassword}
+          >
+            {(props) => (
+              <Input
+                {...props}
+                type='password'
+                value={form.initialPassword}
+                onChange={(event) =>
+                  updateField('initialPassword', event.target.value)
+                }
+                autoComplete='new-password'
+              />
+            )}
+          </FormFieldShell>
           {error ? <p className='text-sm text-destructive'>{error}</p> : null}
-        </div>
-
-        <DialogFooter>
-          <Button variant='outline' onClick={() => onOpenChange(false)}>
-            取消
-          </Button>
-          <Button onClick={onSubmit} disabled={mutation.isPending}>
-            {t('platform.users.createDialog.submit')}
-          </Button>
-        </DialogFooter>
+          <DialogFooter>
+            <Button
+              type='button'
+              variant='outline'
+              onClick={() => onOpenChangeWrapped(false)}
+            >
+              {t('platform.users.createDialog.cancel')}
+            </Button>
+            <Button type='submit' disabled={mutation.isPending}>
+              {t('platform.users.createDialog.submit')}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   )
