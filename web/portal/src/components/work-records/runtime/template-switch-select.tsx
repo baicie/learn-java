@@ -19,14 +19,14 @@ export function TemplateSwitchSelect({
   id = 'templateId',
   value,
   templates,
-  dirty,
+  hasDynamicValues,
   disabled = false,
   onChange,
 }: {
   id?: string
   value: string
   templates: TemplateOption[]
-  dirty: boolean
+  hasDynamicValues: boolean
   disabled?: boolean
   onChange: (templateId: string) => void
 }) {
@@ -38,7 +38,7 @@ export function TemplateSwitchSelect({
       return
     }
 
-    if (!dirty) {
+    if (!hasDynamicValues) {
       onChange(nextTemplateId)
       return
     }

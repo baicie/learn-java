@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '@/stores/auth-store'
+import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -16,7 +17,7 @@ import {
   FormFieldShell,
 } from '@/components/form/form-field-shell'
 import { DynamicFieldControl } from './dynamic-field-control'
-import { setCustomValue, statusLabel } from './schema'
+import { hasMeaningfulCustomData, setCustomValue, statusLabel } from './schema'
 import {
   TemplateSwitchSelect,
   type TemplateOption,
@@ -44,6 +45,11 @@ type RecordRuntimeFormProps = {
   onSubmitDone: () => void
   onCancel: () => void
 }
+
+const FIELD_SPAN_CLASS = {
+  1: 'md:col-span-1',
+  2: 'md:col-span-2',
+} as const
 
 export function RecordRuntimeForm({
   mode,
@@ -122,7 +128,7 @@ export function RecordRuntimeForm({
                   id={controlProps.id}
                   value={value.templateId}
                   templates={templateOptions}
-                  dirty={dirty}
+                  hasDynamicValues={hasMeaningfulCustomData(value.customData)}
                   disabled={mode === 'edit'}
                   onChange={(templateId) => onTemplateChange?.(templateId)}
                 />
@@ -196,9 +202,9 @@ export function RecordRuntimeForm({
           <CardHeader>
             <CardTitle>{t('workRecords.form.recordContent')}</CardTitle>
           </CardHeader>
-          <CardContent className='grid gap-4'>
+          <CardContent className='grid gap-4 md:grid-cols-2'>
             {enabledFields.length === 0 ? (
-              <div className='rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground'>
+              <div className='rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground md:col-span-2'>
                 {t('workRecords.designer.emptyHint')}
               </div>
             ) : null}
@@ -213,6 +219,9 @@ export function RecordRuntimeForm({
                   label={field.fieldName}
                   required={field.required}
                   error={errors[errorKey]}
+                  className={cn(
+                    FIELD_SPAN_CLASS[field.columnSpan === 1 ? 1 : 2]
+                  )}
                 >
                   {(controlProps) => (
                     <DynamicFieldControl

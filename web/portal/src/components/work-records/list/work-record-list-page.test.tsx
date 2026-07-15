@@ -128,6 +128,10 @@ vi.mock('@/api/work-records/list', () => {
       lastWorkday: '2026-07-31',
     })),
     fetchRecordUserNames: vi.fn(async () => ({ u1: '张三' })),
+    fetchRecordUserOptions: vi.fn(async () => [
+      { id: 'u1', label: '张三' },
+      { id: 'u2', label: '李四' },
+    ]),
   }
 })
 
@@ -184,6 +188,11 @@ describe('WorkRecordListPage', () => {
       .toBeVisible()
     await expect
       .element(screen.getByRole('combobox', { name: '每页条数' }))
+      .toBeVisible()
+    const owner = screen.getByRole('combobox', { name: '负责人' })
+    await owner.click()
+    await expect
+      .element(screen.getByRole('option', { name: '张三' }))
       .toBeVisible()
     await expect
       .element(screen.getByText('按模板配置的动态字段精确筛选记录。'))

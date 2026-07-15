@@ -127,6 +127,37 @@ class WorkRecordSchemaParserTest {
   }
 
   @Test
+  void shouldParseLayoutAndValidationSnapshot() throws Exception {
+    var fields =
+        parser.parse(
+            """
+            {
+              "type": "object",
+              "properties": {
+                "ticketCode": {
+                  "type": "string",
+                  "minLength": 3,
+                  "maxLength": 20,
+                  "pattern": "^[A-Z]+-[0-9]+$",
+                  "x-work-record": {
+                    "fieldCode": "ticketCode",
+                    "fieldType": "text",
+                    "columnSpan": 1
+                  }
+                }
+              }
+            }
+            """);
+
+    Object field = fields.get(0);
+    assertThat(field.getClass().getMethod("columnSpan").invoke(field)).isEqualTo(1);
+    assertThat(String.valueOf(field.getClass().getMethod("validationJson").invoke(field)))
+        .contains("\"minLength\":3")
+        .contains("\"maxLength\":20")
+        .contains("\"pattern\":\"^[A-Z]+-[0-9]+$\"");
+  }
+
+  @Test
   void shouldRejectDuplicatedFieldCode() {
     assertThatThrownBy(
             () ->
@@ -152,5 +183,76 @@ class WorkRecordSchemaParserTest {
                     """))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("duplicated fieldCode");
+  }
+
+  @Test
+  void shouldRejectStaticSelectWithoutOptions() {
+    assertThatThrownBy(
+            () ->
+                parser.parse(
+                    """
+                    {
+                      "type": "object",
+                      "properties": {
+                        "priority": {
+                          "x-work-record": {
+                            "fieldCode": "priority",
+                            "fieldType": "select",
+                            "optionSource": "static"
+                          }
+                        }
+                      }
+                    }
+                    """))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("static options are required");
+  }
+
+  @Test
+  void shouldRejectInvalidValidationRules() {
+    assertThatThrownBy(
+            () ->
+                parser.parse(
+                    """
+                    {
+                      "type": "object",
+                      "properties": {
+                        "summary": {
+                          "minLength": 10,
+                          "maxLength": 3,
+                          "pattern": "[",
+                          "x-work-record": {
+                            "fieldCode": "summary",
+                            "fieldType": "text"
+                          }
+                        }
+                      }
+                    }
+                    """))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("invalid field validation rules");
+  }
+
+  @Test
+  void shouldRejectValidationRulesThatDoNotMatchFieldType() {
+    assertThatThrownBy(
+            () ->
+                parser.parse(
+                    """
+                    {
+                      "type": "object",
+                      "properties": {
+                        "count": {
+                          "minLength": 2,
+                          "x-work-record": {
+                            "fieldCode": "count",
+                            "fieldType": "number"
+                          }
+                        }
+                      }
+                    }
+                    """))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("invalid field validation rules");
   }
 }

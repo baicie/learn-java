@@ -63,6 +63,28 @@ describe('work record designer schema', () => {
     )
   })
 
+  it('rejects dictionary option sources on non-option fields', () => {
+    const textWithDictionary: DesignerField = {
+      ...newDesignerField('text', 0),
+      fieldCode: 'summary',
+      optionSource: 'dict',
+      dictCode: 'record_priority',
+    }
+
+    expect(validateDesignerFields([textWithDictionary]).join('\n')).toContain(
+      '只有单选和多选字段可以配置选项来源'
+    )
+  })
+
+  it('rejects validation rules that do not match the field type', () => {
+    const numberWithTextRule: DesignerField = {
+      ...newDesignerField('number', 0),
+      validation: { minLength: 2 },
+    }
+
+    expect(validateDesignerFields([numberWithTextRule])).toHaveLength(1)
+  })
+
   it('parses draft schema into designer fields', () => {
     const fields = parseDraftSchema(
       JSON.stringify({
@@ -96,6 +118,77 @@ describe('work record designer schema', () => {
       optionSource: 'dict',
       dictCode: 'record_priority',
     })
+  })
+
+  it('round-trips field layout and validation rules', () => {
+    const field: DesignerField = {
+      ...newDesignerField('text', 0),
+      fieldCode: 'ticketCode',
+      fieldName: '工单号',
+      columnSpan: 1,
+      validation: {
+        minLength: 3,
+        maxLength: 20,
+        pattern: '^[A-Z]+-[0-9]+$',
+      },
+    }
+
+    const schema = buildWorkRecordSchema([field]) as {
+      properties: Record<string, Record<string, unknown>>
+    }
+    const property = schema.properties.ticketCode
+
+    expect(property).toMatchObject({
+      minLength: 3,
+      maxLength: 20,
+      pattern: '^[A-Z]+-[0-9]+$',
+      'x-work-record': expect.objectContaining({ columnSpan: 1 }),
+    })
+
+    expect(parseDraftSchema(JSON.stringify(schema))[0]).toMatchObject({
+      columnSpan: 1,
+      validation: {
+        minLength: 3,
+        maxLength: 20,
+        pattern: '^[A-Z]+-[0-9]+$',
+      },
+    })
+  })
+
+  it('round-trips number range validation', () => {
+    const field: DesignerField = {
+      ...newDesignerField('number', 0),
+      fieldCode: 'hours',
+      validation: { minimum: 0, maximum: 24 },
+    }
+
+    const schema = buildWorkRecordSchema([field]) as {
+      properties: Record<string, Record<string, unknown>>
+    }
+
+    expect(schema.properties.hours).toMatchObject({ minimum: 0, maximum: 24 })
+    expect(parseDraftSchema(JSON.stringify(schema))[0].validation).toEqual({
+      minimum: 0,
+      maximum: 24,
+    })
+  })
+
+  it('round-trips static options for option fields', () => {
+    const field: DesignerField = {
+      ...newDesignerField('select', 0),
+      fieldCode: 'priority',
+      staticOptions: ['P0', 'P1'],
+    }
+
+    const schema = buildWorkRecordSchema([field]) as {
+      properties: Record<string, Record<string, unknown>>
+    }
+
+    expect(schema.properties.priority.enum).toEqual(['P0', 'P1'])
+    expect(parseDraftSchema(JSON.stringify(schema))[0].staticOptions).toEqual([
+      'P0',
+      'P1',
+    ])
   })
 
   it('locks published fields and appends missing published fields as disabled', () => {

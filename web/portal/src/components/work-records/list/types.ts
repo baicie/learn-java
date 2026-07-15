@@ -80,6 +80,11 @@ type DictListOption = {
 
 export type DictOptionMap = Record<string, DictListOption[]>
 
+export type WorkRecordUserOption = {
+  id: string
+  label: string
+}
+
 export type PageResult<T> = {
   total: number
   page: number

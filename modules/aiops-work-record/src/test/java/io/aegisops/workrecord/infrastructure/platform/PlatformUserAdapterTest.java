@@ -1,5 +1,6 @@
 package io.aegisops.workrecord.infrastructure.platform;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 
@@ -7,6 +8,7 @@ import io.aegisops.common.exception.NotFoundException;
 import io.aegisops.user.UserAccount;
 import io.aegisops.user.UserService;
 import java.time.OffsetDateTime;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
@@ -54,6 +56,24 @@ class PlatformUserAdapterTest {
     assertThatThrownBy(() -> adapter.requireActiveUser("t1", "  "))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("userId is required");
+  }
+
+  @Test
+  void shouldListOnlyActiveUsersFromRequestedTenant() {
+    when(userService.listByTenant("t1"))
+        .thenReturn(
+            List.of(
+                user("u1", "t1", "active"),
+                user("u2", "t1", "disabled"),
+                user("u3", "t2", "active")));
+
+    assertThat(adapter.activeOptions("t1"))
+        .singleElement()
+        .satisfies(
+            option -> {
+              assertThat(option.id()).isEqualTo("u1");
+              assertThat(option.label()).isEqualTo("Alice");
+            });
   }
 
   private UserAccount user(String id, String tenantId, String status) {

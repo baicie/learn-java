@@ -71,6 +71,13 @@ public class WorkRecordSchemaValidator {
           "unsupported optionSource at " + schemaPath + ": " + optionSource);
     }
 
+    if ("dict".equals(optionSource)
+        && !"select".equals(fieldType)
+        && !"multi_select".equals(fieldType)) {
+      throw new IllegalArgumentException(
+          "optionSource is only allowed for select/multi_select at " + schemaPath);
+    }
+
     String dictCode = optionalText(ext, "dictCode", null);
     if ("dict".equals(optionSource) && (dictCode == null || dictCode.isBlank())) {
       throw new IllegalArgumentException("dictCode is required for dict field at " + schemaPath);
@@ -79,6 +86,11 @@ public class WorkRecordSchemaValidator {
     if (!"dict".equals(optionSource) && dictCode != null && !dictCode.isBlank()) {
       throw new IllegalArgumentException(
           "dictCode is only allowed when optionSource=dict at " + schemaPath);
+    }
+
+    int columnSpan = ext.path("columnSpan").asInt(2);
+    if (columnSpan != 1 && columnSpan != 2) {
+      throw new IllegalArgumentException("columnSpan must be 1 or 2 at " + schemaPath);
     }
   }
 

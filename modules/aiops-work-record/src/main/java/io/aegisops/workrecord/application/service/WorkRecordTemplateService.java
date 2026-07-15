@@ -220,6 +220,30 @@ public class WorkRecordTemplateService {
   }
 
   @Transactional
+  public WorkRecordTemplate setDefault(String tenantId, String templateId, String actor) {
+    WorkRecordTemplate template = get(tenantId, templateId);
+    if (!template.enabled()
+        || template.status() != TemplateStatus.PUBLISHED
+        || template.currentVersionId() == null) {
+      throw new ConflictException("only an enabled published template can be default");
+    }
+    repository.setDefault(tenantId, templateId);
+    WorkRecordTemplate updated = get(tenantId, templateId);
+    auditService.recordChange(
+        tenantId,
+        null,
+        templateId,
+        "work_record_template",
+        templateId,
+        "work_record.template.set_default",
+        actor,
+        auditSnapshots.template(template),
+        auditSnapshots.template(updated),
+        Map.of());
+    return updated;
+  }
+
+  @Transactional
   public WorkRecordTemplate archive(String tenantId, String templateId, String actor) {
     WorkRecordTemplate template = get(tenantId, templateId);
     long references = usageRepository.countRecordsByTemplate(tenantId, templateId);

@@ -8,6 +8,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import io.aegisops.workrecord.application.port.WorkRecordUserPort;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
@@ -31,5 +32,13 @@ class WorkRecordUserLookupServiceTest {
 
     assertThatThrownBy(() -> service.displayNames("tenant-1", ids))
         .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void exposesActiveUserOptionsForCurrentTenant() {
+    assertThat(
+            Arrays.stream(WorkRecordUserLookupService.class.getMethods())
+                .map(java.lang.reflect.Method::getName))
+        .contains("activeOptions");
   }
 }

@@ -10,7 +10,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
 import { LockedFieldCodeInput } from './locked-field-code-input'
+import { fieldCodeValidationError, supportsOptions } from './schema'
 import {
   type DictTypeOption,
   type DesignerField,
@@ -43,6 +45,8 @@ export function PropertyPanel({
     )
   }
 
+  const optionField = supportsOptions(field.fieldType)
+
   return (
     <Card className='h-full'>
       <CardHeader>
@@ -59,7 +63,12 @@ export function PropertyPanel({
           value={field.fieldCode}
           locked={field.locked}
           error={
-            field.locked ? undefined : `规则：^[a-zA-Z][a-zA-Z0-9_]{0,63}$`
+            field.locked ? undefined : fieldCodeValidationError(field.fieldCode)
+          }
+          hint={
+            field.locked
+              ? undefined
+              : '规则：字母开头，仅支持字母、数字和下划线，最长 64 位'
           }
           onChange={(value) => onChange(field.id, { fieldCode: value })}
         />
@@ -107,14 +116,12 @@ export function PropertyPanel({
 
         <label className='grid gap-1'>
           <span className='text-xs text-muted-foreground'>
-            {t('workRecords.designer.property.optionSource')}
+            {t('workRecords.designer.property.columnSpan')}
           </span>
           <Select
-            value={field.optionSource}
+            value={String(field.columnSpan ?? 2)}
             onValueChange={(value) =>
-              onChange(field.id, {
-                optionSource: value === 'dict' ? 'dict' : 'static',
-              })
+              onChange(field.id, { columnSpan: value === '1' ? 1 : 2 })
             }
           >
             <SelectTrigger className='w-full'>
@@ -122,18 +129,114 @@ export function PropertyPanel({
             </SelectTrigger>
             <SelectContent>
               <SelectGroup>
-                <SelectItem value='static'>
-                  {t('workRecords.designer.property.optionSourceStatic')}
+                <SelectItem value='1'>
+                  {t('workRecords.designer.property.columnSpanHalf')}
                 </SelectItem>
-                <SelectItem value='dict'>
-                  {t('workRecords.designer.property.optionSourceDict')}
+                <SelectItem value='2'>
+                  {t('workRecords.designer.property.columnSpanFull')}
                 </SelectItem>
               </SelectGroup>
             </SelectContent>
           </Select>
         </label>
 
-        {field.optionSource === 'dict' ? (
+        {field.fieldType === 'text' || field.fieldType === 'textarea' ? (
+          <div className='grid gap-3 rounded-md border p-3'>
+            <span className='text-xs font-medium text-muted-foreground'>
+              {t('workRecords.designer.property.validation')}
+            </span>
+            <ValidationNumberInput
+              label={t('workRecords.designer.property.minLength')}
+              value={field.validation?.minLength}
+              min={0}
+              onChange={(minLength) =>
+                onChange(field.id, {
+                  validation: { ...field.validation, minLength },
+                })
+              }
+            />
+            <ValidationNumberInput
+              label={t('workRecords.designer.property.maxLength')}
+              value={field.validation?.maxLength}
+              min={0}
+              onChange={(maxLength) =>
+                onChange(field.id, {
+                  validation: { ...field.validation, maxLength },
+                })
+              }
+            />
+            <FieldInput
+              label={t('workRecords.designer.property.pattern')}
+              value={field.validation?.pattern ?? ''}
+              onChange={(pattern) =>
+                onChange(field.id, {
+                  validation: {
+                    ...field.validation,
+                    pattern: pattern || undefined,
+                  },
+                })
+              }
+            />
+          </div>
+        ) : null}
+
+        {field.fieldType === 'number' ? (
+          <div className='grid gap-3 rounded-md border p-3'>
+            <span className='text-xs font-medium text-muted-foreground'>
+              {t('workRecords.designer.property.validation')}
+            </span>
+            <ValidationNumberInput
+              label={t('workRecords.designer.property.minimum')}
+              value={field.validation?.minimum}
+              onChange={(minimum) =>
+                onChange(field.id, {
+                  validation: { ...field.validation, minimum },
+                })
+              }
+            />
+            <ValidationNumberInput
+              label={t('workRecords.designer.property.maximum')}
+              value={field.validation?.maximum}
+              onChange={(maximum) =>
+                onChange(field.id, {
+                  validation: { ...field.validation, maximum },
+                })
+              }
+            />
+          </div>
+        ) : null}
+
+        {optionField ? (
+          <label className='grid gap-1'>
+            <span className='text-xs text-muted-foreground'>
+              {t('workRecords.designer.property.optionSource')}
+            </span>
+            <Select
+              value={field.optionSource}
+              onValueChange={(value) =>
+                onChange(field.id, {
+                  optionSource: value === 'dict' ? 'dict' : 'static',
+                })
+              }
+            >
+              <SelectTrigger className='w-full'>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectItem value='static'>
+                    {t('workRecords.designer.property.optionSourceStatic')}
+                  </SelectItem>
+                  <SelectItem value='dict'>
+                    {t('workRecords.designer.property.optionSourceDict')}
+                  </SelectItem>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </label>
+        ) : null}
+
+        {optionField && field.optionSource === 'dict' ? (
           <label className='grid gap-1'>
             <span className='text-xs text-muted-foreground'>
               {t('workRecords.designer.property.dictCode')}
@@ -162,6 +265,32 @@ export function PropertyPanel({
                 </SelectGroup>
               </SelectContent>
             </Select>
+          </label>
+        ) : null}
+
+        {optionField && field.optionSource === 'static' ? (
+          <label className='grid gap-1'>
+            <span className='text-xs text-muted-foreground'>
+              {t('workRecords.designer.property.staticOptions')}
+            </span>
+            <Textarea
+              value={(field.staticOptions ?? []).join('\n')}
+              placeholder={t(
+                'workRecords.designer.property.staticOptionsPlaceholder'
+              )}
+              onChange={(event) =>
+                onChange(field.id, {
+                  staticOptions: Array.from(
+                    new Set(
+                      event.target.value
+                        .split(/\r?\n/)
+                        .map((item) => item.trim())
+                        .filter(Boolean)
+                    )
+                  ),
+                })
+              }
+            />
           </label>
         ) : null}
 
@@ -239,6 +368,34 @@ function Flag({
         onCheckedChange={(value) => onChange(value === true)}
       />
       {label}
+    </label>
+  )
+}
+
+function ValidationNumberInput({
+  label,
+  value,
+  min,
+  onChange,
+}: {
+  label: string
+  value?: number
+  min?: number
+  onChange: (value: number | undefined) => void
+}) {
+  return (
+    <label className='grid gap-1'>
+      <span className='text-xs text-muted-foreground'>{label}</span>
+      <Input
+        type='number'
+        min={min}
+        value={value ?? ''}
+        onChange={(event) =>
+          onChange(
+            event.target.value === '' ? undefined : Number(event.target.value)
+          )
+        }
+      />
     </label>
   )
 }

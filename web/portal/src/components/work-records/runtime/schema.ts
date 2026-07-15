@@ -11,7 +11,11 @@ import {
 } from './types'
 
 export function buildInitialFormValue(input: {
-  templates?: { id: string; currentVersionId?: string | null }[]
+  templates?: {
+    id: string
+    currentVersionId?: string | null
+    isDefault?: boolean
+  }[]
   record?: WorkRecord
 }): WorkRecordRuntimeFormValue {
   if (input.record) {
@@ -26,15 +30,24 @@ export function buildInitialFormValue(input: {
     }
   }
 
+  const template =
+    input.templates?.find((item) => item.isDefault) ?? input.templates?.[0]
+
   return {
     title: '',
-    templateId: '',
-    templateVersionId: '',
+    templateId: template?.id ?? '',
+    templateVersionId: template?.currentVersionId ?? '',
     status: 'draft',
     ownerId: '',
     recordTime: toLocalDateTimeInput(new Date().toISOString()),
     customData: {},
   }
+}
+
+export function hasMeaningfulCustomData(
+  customData: Record<string, unknown>
+): boolean {
+  return Object.values(customData).some((value) => !isEmptyValue(value))
 }
 
 export function setCustomValue(

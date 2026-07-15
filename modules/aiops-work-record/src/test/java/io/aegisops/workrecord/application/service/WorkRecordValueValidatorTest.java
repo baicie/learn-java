@@ -486,6 +486,39 @@ class WorkRecordValueValidatorTest {
   }
 
   @Test
+  void shouldRejectTextThatViolatesVersionedLengthRule() {
+    var original = textField("summary", false);
+    var field = withValidation(original, "{\"minLength\":3,\"maxLength\":10}");
+
+    assertThatThrownBy(
+            () -> validator.validate(TENANT_ID, VERSION_ID, List.of(field), "{\"summary\":\"ab\"}"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("field is shorter than minLength: summary");
+  }
+
+  @Test
+  void shouldRejectNumberThatViolatesVersionedRangeRule() {
+    var original =
+        WorkRecordFixtures.field(
+            VERSION_ID,
+            "hours",
+            FieldType.NUMBER,
+            OptionSource.STATIC,
+            null,
+            "[]",
+            false,
+            true,
+            false,
+            true);
+    var field = withValidation(original, "{\"minimum\":0,\"maximum\":24}");
+
+    assertThatThrownBy(
+            () -> validator.validate(TENANT_ID, VERSION_ID, List.of(field), "{\"hours\":25}"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("field is greater than maximum: hours");
+  }
+
+  @Test
   void shouldAllowEmptyArrayForOptionalMultiSelect() {
     var tags = staticMultiSelectField("tags", "[\"a\",\"b\"]");
     validator.validate(TENANT_ID, VERSION_ID, List.of(tags), "{\"tags\":[]}");
@@ -541,6 +574,33 @@ class WorkRecordValueValidatorTest {
     assertThatThrownBy(() -> validator.validate(TENANT_ID, VERSION_ID, List.of(), "not-a-json"))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("invalid customDataJson");
+  }
+
+  private WorkRecordField withValidation(WorkRecordField field, String validationJson) {
+    return new WorkRecordField(
+        field.id(),
+        field.tenantId(),
+        field.templateId(),
+        field.templateVersionId(),
+        field.fieldName(),
+        field.fieldCode(),
+        field.fieldType(),
+        field.required(),
+        field.defaultValue(),
+        field.optionSource(),
+        field.dictCode(),
+        field.optionsJson(),
+        field.schemaPath(),
+        field.columnSpan(),
+        validationJson,
+        field.listVisible(),
+        field.filterable(),
+        field.exportable(),
+        field.statistical(),
+        field.sortOrder(),
+        field.enabled(),
+        field.createdAt(),
+        field.updatedAt());
   }
 
   @Test

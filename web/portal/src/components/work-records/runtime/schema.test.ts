@@ -3,13 +3,14 @@ import { validateRecordForm } from './record-form-validation'
 import {
   buildInitialFormValue,
   fieldDisplayValue,
+  hasMeaningfulCustomData,
   sanitizeCustomDataForSubmit,
   setCustomValue,
 } from './schema'
 import type { RuntimeDictOptions, WorkRecordField } from './types'
 
 describe('work record runtime schema', () => {
-  it('does not silently choose the first template for a new record', () => {
+  it('chooses the first available template for a new record', () => {
     const value = buildInitialFormValue({
       templates: [
         { id: 'tpl-first', currentVersionId: 'v1' },
@@ -17,8 +18,27 @@ describe('work record runtime schema', () => {
       ],
     })
 
-    expect(value.templateId).toBe('')
-    expect(value.templateVersionId).toBe('')
+    expect(value.templateId).toBe('tpl-first')
+    expect(value.templateVersionId).toBe('v1')
+  })
+
+  it('prefers the tenant default template for a new record', () => {
+    const value = buildInitialFormValue({
+      templates: [
+        { id: 'tpl-first', currentVersionId: 'v1', isDefault: false },
+        { id: 'tpl-default', currentVersionId: 'v2', isDefault: true },
+      ],
+    })
+
+    expect(value.templateId).toBe('tpl-default')
+    expect(value.templateVersionId).toBe('v2')
+  })
+
+  it('only treats non-empty dynamic values as meaningful', () => {
+    expect(hasMeaningfulCustomData({ content: '', tags: [], note: null })).toBe(
+      false
+    )
+    expect(hasMeaningfulCustomData({ content: '已填写' })).toBe(true)
   })
 
   it('builds initial value from record', () => {

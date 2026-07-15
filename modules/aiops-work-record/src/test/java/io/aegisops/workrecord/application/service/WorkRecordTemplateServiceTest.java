@@ -14,6 +14,7 @@ import io.aegisops.workrecord.application.port.WorkRecordTemplateUsageRepository
 import io.aegisops.workrecord.domain.model.TemplateStatus;
 import io.aegisops.workrecord.domain.model.WorkRecordTemplate;
 import java.time.OffsetDateTime;
+import java.util.Arrays;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
@@ -98,6 +99,27 @@ class WorkRecordTemplateServiceTest {
     assertThat(result.status()).isEqualTo(TemplateStatus.ARCHIVED);
     assertThat(result.enabled()).isFalse();
     verify(repository).archive("t1", "tpl1");
+  }
+
+  @Test
+  void shouldSetPublishedTemplateAsTenantDefault() throws Exception {
+    WorkRecordTemplate published = template("tpl1", TemplateStatus.PUBLISHED, true);
+    when(repository.find("t1", "tpl1")).thenReturn(Optional.of(published));
+
+    var method =
+        Arrays.stream(WorkRecordTemplateService.class.getMethods())
+            .filter(candidate -> candidate.getName().equals("setDefault"))
+            .findFirst();
+
+    assertThat(method).as("setDefault service method").isPresent();
+    method.orElseThrow().invoke(service, "t1", "tpl1", "u1");
+
+    assertThat(
+            mockingDetails(repository).getInvocations().stream()
+                .anyMatch(invocation -> invocation.getMethod().getName().equals("setDefault")))
+        .isTrue();
+    verify(auditService)
+        .recordChange(eq("t1"), any(), eq("tpl1"), any(), any(), any(), any(), any(), any(), any());
   }
 
   private WorkRecordTemplate template(String id, TemplateStatus status, boolean enabled) {

@@ -19,6 +19,7 @@ const templateSchema = z.object({
   description: z.string().nullable().optional(),
   status: z.enum(['draft', 'published', 'disabled', 'archived']),
   enabled: z.boolean(),
+  isDefault: z.boolean().optional().default(false),
   currentVersionId: z.string().nullable().optional(),
   draftSchemaJson: z.string(),
   draftDesignerJson: z.string(),
@@ -56,6 +57,11 @@ const versionFieldSchema = z.object({
   dictCode: z.string().nullable().optional(),
   optionsJson: z.string(),
   schemaPath: z.string().nullable().optional(),
+  columnSpan: z
+    .union([z.literal(1), z.literal(2)])
+    .optional()
+    .default(2),
+  validationJson: z.string().optional().default('{}'),
   listVisible: z.boolean(),
   filterable: z.boolean(),
   exportable: z.boolean(),
@@ -124,12 +130,15 @@ export const enableTemplate = (templateId: string) =>
 export const disableTemplate = (templateId: string) =>
   changeTemplateStatus(templateId, 'disable')
 
+export const setDefaultTemplate = (templateId: string) =>
+  changeTemplateStatus(templateId, 'default')
+
 export const archiveTemplate = (templateId: string) =>
   changeTemplateStatus(templateId, 'archive')
 
 async function changeTemplateStatus(
   templateId: string,
-  action: 'enable' | 'disable' | 'archive'
+  action: 'enable' | 'disable' | 'archive' | 'default'
 ): Promise<WorkRecordTemplate> {
   const { data } = await apiClient.post(
     `/api/work-record/templates/${templateId}/${action}`

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import { PermissionGate } from '@/auth/permission-gate'
-import { Copy, Edit3, FileClock, Plus, Settings2 } from 'lucide-react'
+import { Copy, Edit3, FileClock, Plus, Settings2, Star } from 'lucide-react'
 import {
   archiveTemplate,
   copyTemplate,
@@ -12,6 +12,7 @@ import {
   listTemplates,
   listTemplateVersionFields,
   listTemplateVersions,
+  setDefaultTemplate,
   updateTemplate,
 } from '@/api/work-records/templates'
 import { Badge } from '@/components/ui/badge'
@@ -111,13 +112,15 @@ export function WorkRecordTemplatesPage() {
       action,
     }: {
       id: string
-      action: 'enable' | 'disable' | 'archive'
+      action: 'enable' | 'disable' | 'archive' | 'default'
     }) =>
-      action === 'enable'
-        ? enableTemplate(id)
-        : action === 'disable'
-          ? disableTemplate(id)
-          : archiveTemplate(id),
+      action === 'default'
+        ? setDefaultTemplate(id)
+        : action === 'enable'
+          ? enableTemplate(id)
+          : action === 'disable'
+            ? disableTemplate(id)
+            : archiveTemplate(id),
     onSuccess: refresh,
   })
 
@@ -187,7 +190,14 @@ export function WorkRecordTemplatesPage() {
           <TableBody>
             {(templates.data ?? []).map((template) => (
               <TableRow key={template.id}>
-                <TableCell className='font-medium'>{template.name}</TableCell>
+                <TableCell className='font-medium'>
+                  <div className='flex items-center gap-2'>
+                    <span>{template.name}</span>
+                    {template.isDefault ? (
+                      <Badge variant='secondary'>默认</Badge>
+                    ) : null}
+                  </div>
+                </TableCell>
                 <TableCell>{template.code}</TableCell>
                 <TableCell>
                   <Badge variant='outline'>{template.status}</Badge>
@@ -216,6 +226,24 @@ export function WorkRecordTemplatesPage() {
                       </Link>
                     </Button>
                     <PermissionGate anyOf={['work-record:template:write']}>
+                      {!template.isDefault &&
+                      template.enabled &&
+                      template.status === 'published' &&
+                      template.currentVersionId ? (
+                        <Button
+                          variant='outline'
+                          size='sm'
+                          onClick={() =>
+                            lifecycle.mutate({
+                              id: template.id,
+                              action: 'default',
+                            })
+                          }
+                        >
+                          <Star className='mr-1 size-4' />
+                          设为默认
+                        </Button>
+                      ) : null}
                       <Button
                         variant='outline'
                         size='sm'

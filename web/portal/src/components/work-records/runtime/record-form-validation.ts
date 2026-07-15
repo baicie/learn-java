@@ -91,9 +91,62 @@ export function validateRecordForm(
         }
         break
     }
+
+    if (!errors[key]) {
+      const ruleError = validateRules(field, value)
+      if (ruleError) errors[key] = ruleError
+    }
   }
 
   return errors
+}
+
+function validateRules(field: WorkRecordField, value: unknown) {
+  const rules = parseRules(field.validationJson)
+  if (typeof value === 'string') {
+    if (rules.minLength !== undefined && value.length < rules.minLength) {
+      return `${field.fieldName}不能少于 ${rules.minLength} 个字符`
+    }
+    if (rules.maxLength !== undefined && value.length > rules.maxLength) {
+      return `${field.fieldName}不能超过 ${rules.maxLength} 个字符`
+    }
+    if (rules.pattern) {
+      try {
+        if (!new RegExp(rules.pattern).test(value)) {
+          return `${field.fieldName}格式不符合要求`
+        }
+      } catch {
+        return `${field.fieldName}校验规则无效`
+      }
+    }
+  }
+  if (typeof value === 'number') {
+    if (rules.minimum !== undefined && value < rules.minimum) {
+      return `${field.fieldName}不能小于 ${rules.minimum}`
+    }
+    if (rules.maximum !== undefined && value > rules.maximum) {
+      return `${field.fieldName}不能大于 ${rules.maximum}`
+    }
+  }
+  return undefined
+}
+
+function parseRules(value?: string): {
+  minLength?: number
+  maxLength?: number
+  pattern?: string
+  minimum?: number
+  maximum?: number
+} {
+  if (!value) return {}
+  try {
+    const parsed: unknown = JSON.parse(value)
+    return parsed && typeof parsed === 'object'
+      ? (parsed as ReturnType<typeof parseRules>)
+      : {}
+  } catch {
+    return {}
+  }
 }
 
 function isEmptyValue(value: unknown) {

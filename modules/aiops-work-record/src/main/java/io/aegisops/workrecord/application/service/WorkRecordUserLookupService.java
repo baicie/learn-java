@@ -1,8 +1,10 @@
 package io.aegisops.workrecord.application.service;
 
+import io.aegisops.workrecord.application.command.WorkRecordUserOption;
 import io.aegisops.workrecord.application.port.WorkRecordUserPort;
 import java.util.Collection;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import org.springframework.stereotype.Service;
 
@@ -27,5 +29,12 @@ public class WorkRecordUserLookupService {
       throw new IllegalArgumentException("at most 100 user ids are allowed");
     }
     return normalized.isEmpty() ? Map.of() : users.displayNames(tenantId, normalized);
+  }
+
+  public List<WorkRecordUserOption> activeOptions(String tenantId) {
+    if (tenantId == null || tenantId.isBlank()) {
+      throw new IllegalArgumentException("tenantId is required");
+    }
+    return users.activeOptions(tenantId);
   }
 }

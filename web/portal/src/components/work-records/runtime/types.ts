@@ -33,6 +33,7 @@ export type WorkRecordTemplate = {
   description?: string | null
   status: 'draft' | 'published' | 'disabled' | 'archived'
   enabled: boolean
+  isDefault?: boolean
   currentVersionId?: string | null
   draftSchemaJson: string
   draftDesignerJson: string
@@ -56,6 +57,8 @@ export type WorkRecordField = {
   dictCode?: string | null
   optionsJson: string
   schemaPath?: string | null
+  columnSpan?: 1 | 2
+  validationJson?: string
   listVisible: boolean
   filterable: boolean
   exportable: boolean

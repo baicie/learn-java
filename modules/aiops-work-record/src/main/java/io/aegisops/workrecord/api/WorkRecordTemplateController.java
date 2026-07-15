@@ -113,6 +113,14 @@ public class WorkRecordTemplateController {
         templateService.disable(TenantContext.requireTenantId(), templateId, actorId(user)));
   }
 
+  @PostMapping("/{templateId}/default")
+  @PreAuthorize("hasAuthority('work-record:template:write')")
+  public ApiResponse<WorkRecordTemplate> setDefault(
+      @PathVariable String templateId, @AuthenticationPrincipal UserPrincipal user) {
+    return ApiResponse.ok(
+        templateService.setDefault(TenantContext.requireTenantId(), templateId, actorId(user)));
+  }
+
   @PostMapping("/{templateId}/archive")
   @PreAuthorize("hasAuthority('work-record:template:write')")
   public ApiResponse<WorkRecordTemplate> archive(
