@@ -37,6 +37,31 @@ public final class PermissionCodes {
   public static final String WORK_RECORD_WRITE = "work-record:write";
   public static final String WORK_RECORD_DELETE = "work-record:delete";
   public static final String WORK_RECORD_EXPORT = "work-record:export";
+  public static final String WORK_RECORD_IMPORT = "work-record:import";
+  public static final String WORK_RECORD_EXPORT_ASYNC = "work-record:export:async";
+  public static final String WORK_RECORD_COMMENT = "work-record:comment";
+  public static final String WORK_RECORD_COMMENT_MODERATE = "work-record:comment:moderate";
+  public static final String WORK_RECORD_ATTACHMENT = "work-record:attachment";
+  public static final String WORK_RECORD_ATTACHMENT_MODERATE = "work-record:attachment:moderate";
+  public static final String WORK_RECORD_RELATION = "work-record:relation";
+  public static final String WORK_RECORD_ANALYTICS = "work-record:analytics";
+  public static final String WORK_RECORD_REMINDER_MANAGE = "work-record:reminder:manage";
+  public static final String WORK_RECORD_HANDOVER = "work-record:handover";
+  public static final String WORK_RECORD_AI_GENERATE = "work-record:ai:generate";
+  public static final String WORK_RECORD_AI_REVIEW = "work-record:ai:review";
+  public static final String WORK_RECORD_MARKET_PUBLISH = "work-record:market:publish";
+  public static final String WORK_RECORD_MARKET_INSTALL = "work-record:market:install";
+  public static final String WORK_RECORD_APPROVAL_MANAGE = "work-record:approval:manage";
+  public static final String WORK_RECORD_APPROVAL_ACT = "work-record:approval:act";
+  public static final String WORK_RECORD_SLA_MANAGE = "work-record:sla:manage";
+
+  public static final String PLATFORM_USER_READ = "platform:user:read";
+  public static final String PLATFORM_USER_WRITE = "platform:user:write";
+  public static final String PLATFORM_USER_STATUS = "platform:user:status";
+  public static final String PLATFORM_USER_ASSIGN_ROLE = "platform:user:assign-role";
+  public static final String PLATFORM_USER_RESET_PASSWORD = "platform:user:reset-password";
+  public static final String PLATFORM_ROLE_READ = "platform:role:read";
+  public static final String PLATFORM_ROLE_WRITE = "platform:role:write";
 
   public static final Set<String> LEGACY_AIOPS_PERMISSIONS =
       Set.of(
@@ -71,8 +96,40 @@ public final class PermissionCodes {
           WORK_RECORD_DELETE,
           WORK_RECORD_EXPORT);
 
+  public static final Set<String> PORTAL_IAM_PERMISSIONS =
+      Set.of(
+          PLATFORM_USER_READ,
+          PLATFORM_USER_WRITE,
+          PLATFORM_USER_STATUS,
+          PLATFORM_USER_ASSIGN_ROLE,
+          PLATFORM_USER_RESET_PASSWORD,
+          PLATFORM_ROLE_READ,
+          PLATFORM_ROLE_WRITE);
+
+  public static final Set<String> PHASE_20_PERMISSIONS =
+      Set.of(
+          WORK_RECORD_IMPORT,
+          WORK_RECORD_EXPORT_ASYNC,
+          WORK_RECORD_COMMENT,
+          WORK_RECORD_COMMENT_MODERATE,
+          WORK_RECORD_ATTACHMENT,
+          WORK_RECORD_ATTACHMENT_MODERATE,
+          WORK_RECORD_RELATION,
+          WORK_RECORD_ANALYTICS,
+          WORK_RECORD_REMINDER_MANAGE,
+          WORK_RECORD_HANDOVER,
+          WORK_RECORD_AI_GENERATE,
+          WORK_RECORD_AI_REVIEW,
+          WORK_RECORD_MARKET_PUBLISH,
+          WORK_RECORD_MARKET_INSTALL,
+          WORK_RECORD_APPROVAL_MANAGE,
+          WORK_RECORD_APPROVAL_ACT,
+          WORK_RECORD_SLA_MANAGE);
+
   public static final Set<String> ALL_PERMISSIONS =
-      union(LEGACY_AIOPS_PERMISSIONS, PHASE_13_PERMISSIONS);
+      union(
+          union(union(LEGACY_AIOPS_PERMISSIONS, PHASE_13_PERMISSIONS), PORTAL_IAM_PERMISSIONS),
+          PHASE_20_PERMISSIONS);
 
   public static void requireKnown(String permissionCode) {
     if (!ALL_PERMISSIONS.contains(permissionCode)) {

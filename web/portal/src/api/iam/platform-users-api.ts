@@ -5,12 +5,16 @@ import {
   replaceUserRolesInputSchema,
   platformUserPageSchema,
   platformUserSchema,
+  resetPlatformUserPasswordSchema,
+  updatePlatformUserSchema,
   type ChangeUserStatusInput,
   type CreatePlatformUserInput,
   type PlatformUserPage,
   type PlatformUserQuery,
   type PlatformUser,
   type ReplaceUserRolesInput,
+  type ResetPlatformUserPasswordInput,
+  type UpdatePlatformUserInput,
 } from '@/lib/iam/platform-user'
 
 function buildQueryString(query: PlatformUserQuery): Record<string, unknown> {
@@ -67,6 +71,27 @@ export async function replacePlatformUserRoles(
   const payload = replaceUserRolesInputSchema.parse(input)
   const { data } = await apiClient.put(
     `/api/platform/users/${id}/roles`,
+    payload
+  )
+  return platformUserSchema.parse(data)
+}
+
+export async function updatePlatformUser(
+  id: string,
+  input: UpdatePlatformUserInput
+): Promise<PlatformUser> {
+  const payload = updatePlatformUserSchema.parse(input)
+  const { data } = await apiClient.put(`/api/platform/users/${id}`, payload)
+  return platformUserSchema.parse(data)
+}
+
+export async function resetPlatformUserPassword(
+  id: string,
+  input: ResetPlatformUserPasswordInput
+): Promise<PlatformUser> {
+  const payload = resetPlatformUserPasswordSchema.parse(input)
+  const { data } = await apiClient.post(
+    `/api/platform/users/${id}/reset-password`,
     payload
   )
   return platformUserSchema.parse(data)

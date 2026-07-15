@@ -34,26 +34,53 @@ public class OutboxWriter {
   @Transactional(propagation = Propagation.REQUIRED)
   public String enqueue(String targetApp, String jobName, Map<String, Object> payload) {
     String tenantId = resolveTenantId(payload);
-    return enqueue(targetApp, jobName, tenantId, payload);
+    return enqueue(new OutboxMessage(tenantId, targetApp, jobName, payload, null, 3, null));
   }
 
   @Transactional(propagation = Propagation.REQUIRED)
   public String enqueue(
       String targetApp, String jobName, String tenantId, Map<String, Object> payload) {
+    return enqueue(new OutboxMessage(tenantId, targetApp, jobName, payload, null, 3, null));
+  }
+
+  @Transactional(propagation = Propagation.REQUIRED)
+  public String enqueue(OutboxMessage message) {
     String id = "outbox_" + UUID.randomUUID().toString().replace("-", "");
-    String payloadJson = serialize(payload);
-    jdbc.update(
-        """
+    String payloadJson = serialize(message.payload());
+    int inserted =
+        jdbc.update(
+            """
         insert into automation_outbox(id, tenant_id, target_app, job_name, payload, status,
-                                      retry_count, max_retries, created_at, updated_at)
-        values (?, ?, ?, ?, ?::jsonb, 'pending', 0, 3, now(), now())
+                                      retry_count, max_retries, available_at, idempotency_key,
+                                      created_at, updated_at)
+        values (?, ?, ?, ?, ?::jsonb, 'pending', 0, ?, ?, ?, now(), now())
+        on conflict (target_app, job_name, idempotency_key)
+        where idempotency_key is not null
+        do nothing
         """,
-        id,
-        tenantId,
-        targetApp,
-        jobName,
-        payloadJson);
-    return id;
+            id,
+            message.tenantId(),
+            message.targetApp(),
+            message.jobName(),
+            payloadJson,
+            message.maxRetries(),
+            message.availableAt(),
+            message.idempotencyKey());
+    if (inserted == 1) {
+      return id;
+    }
+    if (message.idempotencyKey() == null) {
+      throw new IllegalStateException("outbox insert did not create a row");
+    }
+    return jdbc.queryForObject(
+        """
+        select id from automation_outbox
+         where target_app = ? and job_name = ? and idempotency_key = ?
+        """,
+        String.class,
+        message.targetApp(),
+        message.jobName(),
+        message.idempotencyKey());
   }
 
   private String resolveTenantId(Map<String, Object> payload) {

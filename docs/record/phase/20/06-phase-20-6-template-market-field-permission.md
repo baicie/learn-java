@@ -17,10 +17,10 @@ related: []
 
 ## 数据库迁移
 
-### 4.5 V0032：模板市场与字段级权限
+### 4.5 V0034：模板市场与字段级权限
 
 ```sql
--- V0032__phase20_market_field_policy.sql
+-- V0034__phase20_market_field_policy.sql
 
 create table if not exists work_record.wr_market_package (
     id varchar(64) primary key,

@@ -64,13 +64,13 @@ class WorkRecordHistoryControllerTest {
     WorkRecord record = stubRecord("r1");
 
     when(queryService.get(TENANT, "r1", principal)).thenReturn(record);
-    when(historyService.list(TENANT, "r1")).thenReturn(List.of());
+    when(historyService.list(TENANT, "r1", "v1", principal)).thenReturn(List.of());
 
     controller.history("r1", principal);
 
     InOrder order = inOrder(queryService, historyService);
     order.verify(queryService).get(TENANT, "r1", principal);
-    order.verify(historyService).list(TENANT, "r1");
+    order.verify(historyService).list(TENANT, "r1", "v1", principal);
   }
 
   @Test
@@ -114,7 +114,7 @@ class WorkRecordHistoryControllerTest {
             OffsetDateTime.now());
 
     when(queryService.get(TENANT, "r1", principal)).thenReturn(record);
-    when(historyService.list(TENANT, "r1")).thenReturn(List.of(event));
+    when(historyService.list(TENANT, "r1", "v1", principal)).thenReturn(List.of(event));
 
     var response = controller.history("r1", principal);
 

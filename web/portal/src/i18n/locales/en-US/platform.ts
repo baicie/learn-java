@@ -4,6 +4,7 @@ export const platform = {
   'nav.workRecords.records': 'Records',
   'nav.workRecords.designer': 'Form Designer',
   'nav.workRecords.tasks': 'Import / Export Tasks',
+  'nav.workRecords.operations': 'Operations',
   'nav.platform.group': 'Platform',
   'nav.platform.users': 'Users',
   'nav.platform.roles': 'Roles & Permissions',
@@ -36,6 +37,10 @@ export const platform = {
   'platform.users.confirm.disable.confirmLabel': 'Confirm disable',
   'platform.users.createDialog.title': 'Create user',
   'platform.users.createDialog.submit': 'Create',
+  'platform.user.status.active': 'Active',
+  'platform.user.status.disabled': 'Disabled',
+  'platform.user.status.locked': 'Locked',
+  'platform.user.status.pending': 'Pending',
   'platform.roles.create': 'New role',
   'platform.roles.delete.system': 'System roles cannot be deleted',
   'platform.roles.dirty.confirmLeave':

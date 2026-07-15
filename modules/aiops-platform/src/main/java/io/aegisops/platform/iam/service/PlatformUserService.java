@@ -139,6 +139,19 @@ public class PlatformUserService {
           IamErrorCode.VALIDATION_FAILED,
           "unsupported status transition target: " + command.status());
     }
+    if (id.equals(actor) && nextStatus != PlatformUserStatus.ACTIVE) {
+      throw new IamDomainException(
+          IamErrorCode.SELF_STATUS_CHANGE_FORBIDDEN,
+          "administrators cannot disable or lock their own account");
+    }
+    if (hasRole(existing, "system_admin") && nextStatus != PlatformUserStatus.ACTIVE) {
+      users.lockRoleForUpdate("system_admin");
+      if (users.countActiveUsersWithRole("system_admin") <= 1) {
+        throw new IamDomainException(
+            IamErrorCode.LAST_SYSTEM_ADMIN_REQUIRED,
+            "the tenant must keep at least one active system administrator");
+      }
+    }
     int updated =
         users.updateStatus(
             id,
@@ -169,6 +182,7 @@ public class PlatformUserService {
       throw new IamDomainException(
           IamErrorCode.VALIDATION_FAILED, "password must be at least 8 characters");
     }
+    users.updatePassword(id, passwordEncoder.encode(newPassword), OffsetDateTime.now());
     audit.recordChange(
         currentTenant(),
         actor,
@@ -184,6 +198,13 @@ public class PlatformUserService {
   public PlatformUser replaceRoles(String id, ReplaceUserRolesCommand command, String actor) {
     PlatformUser existing = findById(id);
     Set<String> safeRoles = new HashSet<>(command.roleCodes());
+    if (id.equals(actor)
+        && hasRole(existing, "system_admin")
+        && !safeRoles.contains("system_admin")) {
+      throw new IamDomainException(
+          IamErrorCode.SELF_ROLE_REMOVAL_FORBIDDEN,
+          "administrators cannot remove their own system administrator role");
+    }
     validateRoles(safeRoles);
     users.replaceRoles(existing.tenantId(), id, List.copyOf(safeRoles), OffsetDateTime.now());
     audit.recordChange(
@@ -208,6 +229,10 @@ public class PlatformUserService {
             IamErrorCode.ROLE_NOT_FOUND, "role " + code + " does not exist");
       }
     }
+  }
+
+  private static boolean hasRole(PlatformUser user, String code) {
+    return user.roles().stream().anyMatch(role -> role.code().equals(code));
   }
 
   private static String currentTenant() {

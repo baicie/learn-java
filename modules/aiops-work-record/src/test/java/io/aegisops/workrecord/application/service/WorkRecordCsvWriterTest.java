@@ -3,6 +3,7 @@ package io.aegisops.workrecord.application.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -49,5 +50,18 @@ class WorkRecordCsvWriterTest {
     assertThatThrownBy(() -> writer.write(List.of("a", "b"), List.of(List.of("only-one"))))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("row size does not match");
+  }
+
+  @Test
+  void streamsHeaderAndRowsWithoutBufferingWholeFile() throws Exception {
+    StringWriter output = new StringWriter();
+
+    writer.writeHeader(output, List.of("标题", "值"));
+    writer.writeRow(output, List.of("日报", "=1+1"), 2);
+
+    assertThat(output.toString())
+        .startsWith("\uFEFF")
+        .contains("\"标题\",\"值\"\r\n")
+        .contains("\"日报\",\"'=1+1\"\r\n");
   }
 }

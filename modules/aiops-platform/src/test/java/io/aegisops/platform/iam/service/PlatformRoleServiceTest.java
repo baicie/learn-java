@@ -43,14 +43,37 @@ class PlatformRoleServiceTest {
   void createAndUpdatePersistNormalizedPermissions() {
     normalized(Set.of("read"), Set.of());
     PlatformRole created =
-        new PlatformRole("ops", "Ops", null, false, true, Set.of("read"), Map.of(), 1);
+        new PlatformRole("ops", "Ops", null, false, true, Set.of("read"), Map.of(), 0, 1);
     when(roles.insert("ops", "Ops", null, false, true)).thenReturn(Optional.of(created));
     service.create(new CreateRoleData("ops", "Ops", null, false, true, Set.of("read")), "a");
     verify(roles).replacePermissions("ops", Set.of("read"));
 
     PlatformRoleDetail detail = detail(false, 0, Set.of("read"));
     when(roles.findByCode("ops")).thenReturn(Optional.of(detail));
+    when(roles.update("ops", "Ops 2", null, true, 1)).thenReturn(1);
     service.update("ops", new UpdateRoleData("Ops 2", null, true, Set.of("read")), "a");
+    verify(roles).update("ops", "Ops 2", null, true, 1);
+  }
+
+  @Test
+  void callerCannotCreateProtectedSystemRole() {
+    normalized(Set.of(), Set.of());
+    PlatformRole created =
+        new PlatformRole("ops", "Ops", null, false, true, Set.of(), Map.of(), 0, 1);
+    when(roles.insert("ops", "Ops", null, false, true)).thenReturn(Optional.of(created));
+
+    service.create(new CreateRoleData("ops", "Ops", null, true, true, Set.of()), "a");
+
+    verify(roles).insert("ops", "Ops", null, false, true);
+  }
+
+  @Test
+  void partialRoleUpdatePreservesEnabledState() {
+    when(roles.findByCode("ops")).thenReturn(Optional.of(detail(false, 0, Set.of())));
+    when(roles.update("ops", "Ops 2", null, true, 1)).thenReturn(1);
+
+    service.update("ops", new UpdateRoleData("Ops 2", null, null, null), "a");
+
     verify(roles).update("ops", "Ops 2", null, true, 1);
   }
 
@@ -83,6 +106,7 @@ class PlatformRoleServiceTest {
   @Test
   void dataScopesAndDeleteUseRoleGuards() {
     when(roles.findByCode("ops")).thenReturn(Optional.of(detail(false, 0, Set.of())));
+    when(roles.softDelete("ops", 1)).thenReturn(1);
     service.replaceDataScopes(
         "ops",
         new ReplaceRoleDataScopesCommand(
@@ -92,6 +116,7 @@ class PlatformRoleServiceTest {
         .replaceDataScopes(
             "ops", List.of(new PlatformRole.RoleDataScope("record", "SELF", Map.of())));
     service.delete("ops", "a");
+    verify(roles).softDelete("ops", 1);
 
     when(roles.findByCode("system")).thenReturn(Optional.of(detail(true, 0, Set.of())));
     assertThatThrownBy(() -> service.delete("system", "a")).isInstanceOf(IamDomainException.class);

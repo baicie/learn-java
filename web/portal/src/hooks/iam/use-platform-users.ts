@@ -3,12 +3,18 @@ import {
   changeUserStatus,
   createPlatformUser,
   fetchPlatformUsers,
+  replacePlatformUserRoles,
+  resetPlatformUserPassword,
+  updatePlatformUser,
 } from '@/api/iam/platform-users-api'
 import { platformUserKeys } from '@/api/iam/query-keys'
 import type {
   ChangeUserStatusInput,
   CreatePlatformUserInput,
   PlatformUserQuery,
+  ReplaceUserRolesInput,
+  ResetPlatformUserPasswordInput,
+  UpdatePlatformUserInput,
 } from '@/lib/iam/platform-user'
 
 export function usePlatformUsers(query: PlatformUserQuery) {
@@ -38,4 +44,36 @@ export function useChangeUserStatus(id: string) {
       await client.invalidateQueries({ queryKey: platformUserKeys.lists() })
     },
   })
+}
+
+function useUserMutation<T>(
+  id: string,
+  mutationFn: (input: T) => Promise<unknown>
+) {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn,
+    onSuccess: async () => {
+      await client.invalidateQueries({ queryKey: platformUserKeys.lists() })
+      await client.invalidateQueries({ queryKey: platformUserKeys.detail(id) })
+    },
+  })
+}
+
+export function useUpdatePlatformUser(id: string) {
+  return useUserMutation<UpdatePlatformUserInput>(id, (input) =>
+    updatePlatformUser(id, input)
+  )
+}
+
+export function useReplacePlatformUserRoles(id: string) {
+  return useUserMutation<ReplaceUserRolesInput>(id, (input) =>
+    replacePlatformUserRoles(id, input)
+  )
+}
+
+export function useResetPlatformUserPassword(id: string) {
+  return useUserMutation<ResetPlatformUserPasswordInput>(id, (input) =>
+    resetPlatformUserPassword(id, input)
+  )
 }

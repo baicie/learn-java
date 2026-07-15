@@ -1,7 +1,7 @@
 ---
 title: AegisOps Phase 20 后续增强详细设计与完整代码方案
 type: phase
-status: draft
+status: deprecated
 phase: work-record-20
 owner: ai
 created: 2026-07-14
@@ -10,6 +10,10 @@ related: []
 ---
 
 # AegisOps Phase 20：后续增强详细设计与完整代码方案
+
+> 本文仅保留为历史设计材料，不可直接执行。当前单一真相源为
+> [`docs/record/phase/20/`](./20/00-phase-20-execution-baseline.md) 下的拆分计划；迁移编号、Portal
+> 目录和 IAM 表结构均以拆分计划与当前代码为准。
 
 > 基线：`baicie/ai-ops`，分支 `feat/record-doc-portal`，提交 `43d16315cc4b68cc705177d2c8faba1d8e42644e`。
 >
@@ -2047,7 +2051,7 @@ public record ObjectStorageProperties(
   }
 
   public static ObjectStorageProperties defaults() {
-    return new ObjectStorageProperties(null, null, null, null, 0, 0);
+    return new ObjectStorageProperties(null, null, null, null, 0, 0, null);
   }
 
   private static String blank(String value, String fallback) {

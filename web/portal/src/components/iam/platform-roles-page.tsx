@@ -1,32 +1,27 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { PermissionGate } from '@/auth/permission-gate'
+import { useTranslation } from 'react-i18next'
 import {
   usePlatformRoles,
   usePermissionTree,
 } from '@/hooks/iam/use-platform-roles'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Header } from '@/components/layout/header'
-import { Main } from '@/components/layout/main'
-import { ProfileDropdown } from '@/components/profile-dropdown'
-import { Search } from '@/components/search'
-import { ThemeSwitch } from '@/components/theme-switch'
+import { PlatformRoleCreateDialog } from './platform-role-create-dialog'
 import { RoleEditor, useRoleEditor } from './role-editor'
 
 export function PlatformRolesPage() {
+  const { t } = useTranslation()
   const rolesQuery = usePlatformRoles()
   const permissionsQuery = usePermissionTree()
   const [selectedCode, setSelectedCode] = useState<string | null>(null)
-  const editor = useRoleEditor(selectedCode ?? undefined)
-
+  const [createOpen, setCreateOpen] = useState(false)
   const firstRole = rolesQuery.data?.[0]
   const effectiveCode = selectedCode ?? firstRole?.roleCode ?? null
-
-  useEffect(() => {
-    if (!selectedCode && firstRole) {
-      editor.apply(firstRole)
-    }
-  }, [selectedCode, firstRole, editor])
+  const effectiveRole = rolesQuery.data?.find(
+    (role) => role.roleCode === effectiveCode
+  )
+  const editor = useRoleEditor(effectiveRole)
 
   const onSelect = async (next: string) => {
     const ok = await editor.confirmLeaveIfDirty()
@@ -40,22 +35,27 @@ export function PlatformRolesPage() {
 
   return (
     <>
-      <Header fixed>
-        <Search className='me-auto' />
-        <ThemeSwitch />
-        <ProfileDropdown />
-      </Header>
+      <main className='flex min-h-0 flex-1 flex-col gap-4 p-4 md:gap-6 md:p-6'>
+        <header className='flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between'>
+          <div>
+            <h1 className='text-xl font-semibold md:text-2xl'>
+              {t('platform.roles.title')}
+            </h1>
+            <p className='text-sm text-muted-foreground'>
+              {t('platform.roles.description')}
+            </p>
+          </div>
+          <PermissionGate anyOf={['platform:role:write']}>
+            <Button onClick={() => setCreateOpen(true)}>
+              {t('platform.roles.create')}
+            </Button>
+          </PermissionGate>
+        </header>
 
-      <Main className='min-h-0 flex-1 overflow-hidden p-0'>
-        <div className='grid h-full min-h-0 grid-cols-[280px_minmax(0,1fr)]'>
+        <div className='grid min-h-0 flex-1 grid-cols-[280px_minmax(0,1fr)] overflow-hidden rounded-lg border'>
           <aside className='flex flex-col overflow-y-auto border-r bg-muted/20'>
-            <div className='flex items-center justify-between border-b px-4 py-3'>
+            <div className='border-b px-4 py-3'>
               <h2 className='text-sm font-semibold'>角色</h2>
-              <PermissionGate anyOf={['platform:role:write']}>
-                <Button size='sm' variant='outline' disabled>
-                  新建
-                </Button>
-              </PermissionGate>
             </div>
             <ul className='flex flex-col'>
               {rolesQuery.data?.map((role) => (
@@ -90,9 +90,14 @@ export function PlatformRolesPage() {
           <RoleEditor
             editor={editor}
             permissionTree={permissionsQuery.data ?? []}
+            onDeleted={() => setSelectedCode(null)}
           />
         </div>
-      </Main>
+      </main>
+      <PlatformRoleCreateDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+      />
     </>
   )
 }

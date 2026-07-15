@@ -42,6 +42,7 @@ aiops:
     trace-id-header: ${AIOPS_TRACE_ID_HEADER:X-Trace-Id}
     http-metrics-enabled: ${AIOPS_HTTP_METRICS_ENABLED:true}
   runtime:
+    app: server
     phase: ${AIOPS_RUNTIME_PHASE:phase5}
   jwt:
     secret: ${AIOPS_JWT_SECRET:dev-secret-change-me-change-me-change-me}
@@ -79,6 +80,14 @@ aiops:
   work-record:
     export:
       max-rows: ${AIOPS_WORK_RECORD_EXPORT_MAX_ROWS:5000}
+  object-storage:
+    endpoint: ${AIOPS_MINIO_ENDPOINT:http://localhost:9002}
+    access-key: ${AIOPS_MINIO_ACCESS_KEY:minioadmin}
+    secret-key: ${AIOPS_MINIO_SECRET_KEY:minioadmin}
+    bucket: ${AIOPS_MINIO_BUCKET:aegisops-work-record}
+    region: ${AIOPS_MINIO_REGION:us-east-1}
+    attachment-max-bytes: ${AIOPS_ATTACHMENT_MAX_BYTES:20971520}
+    download-url-expiry-seconds: ${AIOPS_DOWNLOAD_URL_EXPIRY_SECONDS:300}
 
 springdoc:
   swagger-ui:

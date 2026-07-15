@@ -4,13 +4,14 @@ import io.aegisops.persistence.jooq.public_.tables.records.AutomationOutboxRecor
 import io.aegisops.worker.job.JobResult;
 import io.aegisops.worker.job.OutboxJob;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Worker-side dispatcher that picks pending rows from {@code automation_outbox}, routes them to the
@@ -55,40 +56,93 @@ public class OutboxPoller {
    * <p>Unmatched {@code job_name} rows are treated as failures with reason {@code "UNKNOWN_JOB"} so
    * they quickly drain through retries rather than block the queue.
    */
-  @Transactional
   public int tick() {
     if (!outboxProperties.enabled()) {
       return 0;
     }
+    OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+    outboxRepository.recoverExpiredLeases(outboxProperties.targetApp(), now);
     List<AutomationOutboxRecord> claimed =
         outboxRepository.claimNextPending(
-            outboxProperties.targetApp(), outboxProperties.batchSize());
+            outboxProperties.targetApp(),
+            outboxProperties.batchSize(),
+            now.plusNanos(outboxProperties.leaseDurationMs() * 1_000_000L));
     if (claimed.isEmpty()) {
       return 0;
     }
 
     int success = 0;
-    for (AutomationOutboxRecord row : claimed) {
-      OutboxJob job = jobsByName.get(row.getJobName());
-      JobResult result;
-      try {
-        if (job == null) {
-          result = JobResult.failure("UNKNOWN_JOB:" + row.getJobName());
-        } else {
-          result = job.handle(row);
+    LeaseHeartbeat heartbeat = startLeaseHeartbeat(claimed);
+    try {
+      for (AutomationOutboxRecord row : claimed) {
+        OutboxJob job = jobsByName.get(row.getJobName());
+        JobResult result;
+        try {
+          if (job == null) {
+            result = JobResult.failure("UNKNOWN_JOB:" + row.getJobName());
+          } else {
+            result = job.handle(row);
+          }
+        } catch (RuntimeException ex) {
+          LOGGER.warn("Outbox job {} threw for row {}", row.getJobName(), row.getId(), ex);
+          result = JobResult.failure(ex.getClass().getSimpleName() + ":" + ex.getMessage());
         }
-      } catch (RuntimeException ex) {
-        LOGGER.warn("Outbox job {} threw for row {}", row.getJobName(), row.getId(), ex);
-        result = JobResult.failure(ex.getClass().getSimpleName() + ":" + ex.getMessage());
-      }
 
-      if (result.isSuccess()) {
-        outboxRepository.markDone(row.getId(), OffsetDateTime.now());
-        success++;
-      } else {
-        outboxRepository.recordFailure(row.getId(), result.reason());
+        if (result.isSuccess()) {
+          outboxRepository.markDone(row.getId(), OffsetDateTime.now());
+          success++;
+        } else {
+          outboxRepository.recordFailure(row.getId(), result.reason());
+        }
       }
+    } finally {
+      heartbeat.close();
     }
     return success;
+  }
+
+  private LeaseHeartbeat startLeaseHeartbeat(List<AutomationOutboxRecord> rows) {
+    AtomicBoolean running = new AtomicBoolean(true);
+    long intervalMs = Math.max(250L, outboxProperties.leaseDurationMs() / 3L);
+    Thread thread =
+        Thread.startVirtualThread(
+            () -> {
+              while (running.get()) {
+                try {
+                  Thread.sleep(intervalMs);
+                } catch (InterruptedException ex) {
+                  Thread.currentThread().interrupt();
+                  return;
+                }
+                if (!running.get()) {
+                  return;
+                }
+                OffsetDateTime leaseUntil =
+                    OffsetDateTime.now(ZoneOffset.UTC)
+                        .plusNanos(outboxProperties.leaseDurationMs() * 1_000_000L);
+                for (AutomationOutboxRecord row : rows) {
+                  try {
+                    outboxRepository.extendLease(
+                        row.getId(), outboxProperties.targetApp(), leaseUntil);
+                  } catch (RuntimeException ex) {
+                    LOGGER.warn("Failed to extend outbox lease for row {}", row.getId(), ex);
+                  }
+                }
+              }
+            });
+    return new LeaseHeartbeat(running, thread);
+  }
+
+  private record LeaseHeartbeat(AtomicBoolean running, Thread thread) implements AutoCloseable {
+    @Override
+    public void close() {
+      running.set(false);
+      thread.interrupt();
+      try {
+        thread.join(1000L);
+      } catch (InterruptedException ex) {
+        Thread.currentThread().interrupt();
+      }
+    }
   }
 }

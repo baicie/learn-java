@@ -18,12 +18,8 @@ const role: PlatformRole = {
   rowVersion: 1,
 }
 
-interface HarnessProps {
-  initialCode?: string
-}
-
-function Harness({ initialCode }: HarnessProps) {
-  const editor = useRoleEditor(initialCode)
+function Harness() {
+  const editor = useRoleEditor()
   return (
     <div>
       <span data-testid='dirty'>{String(editor.state.isDirty)}</span>
@@ -72,12 +68,12 @@ const wrap = (ui: React.ReactNode) => (
 
 describe('useRoleEditor', () => {
   it('starts clean', async () => {
-    const screen = await render(wrap(<Harness initialCode='ops-viewer' />))
+    const screen = await render(wrap(<Harness />))
     await expect.element(screen.getByTestId('dirty')).toHaveTextContent('false')
   })
 
   it('marks dirty when permissions change', async () => {
-    const screen = await render(wrap(<Harness initialCode='ops-viewer' />))
+    const screen = await render(wrap(<Harness />))
     await act(async () => {
       ;(screen.getByTestId('apply').element() as HTMLButtonElement).click()
       ;(
@@ -91,7 +87,7 @@ describe('useRoleEditor', () => {
   })
 
   it('flags dangerous added codes', async () => {
-    const screen = await render(wrap(<Harness initialCode='ops-viewer' />))
+    const screen = await render(wrap(<Harness />))
     await act(async () => {
       ;(screen.getByTestId('apply').element() as HTMLButtonElement).click()
       ;(
@@ -104,7 +100,7 @@ describe('useRoleEditor', () => {
   })
 
   it('reset restores the initial set', async () => {
-    const screen = await render(wrap(<Harness initialCode='ops-viewer' />))
+    const screen = await render(wrap(<Harness />))
     await act(async () => {
       ;(screen.getByTestId('apply').element() as HTMLButtonElement).click()
       ;(

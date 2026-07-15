@@ -12,4 +12,8 @@ public interface WorkRecordCalendarPort {
   WorkRecordWorkMonth workMonth(String tenantId, YearMonth month);
 
   boolean isWorkday(String tenantId, LocalDate date);
+
+  int countWorkdays(String tenantId, Instant fromInclusive, Instant toExclusive);
+
+  Instant addWorkingMinutes(String tenantId, Instant start, int minutes);
 }

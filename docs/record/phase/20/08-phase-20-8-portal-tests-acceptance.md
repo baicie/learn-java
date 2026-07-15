@@ -17,10 +17,10 @@ related: []
 
 ## 数据库迁移
 
-### 4.8 V0035：权限初始化
+### 4.8 V0037：权限初始化
 
 ```sql
--- V0035__phase20_permissions.sql
+-- V0037__phase20_permissions.sql
 
 insert into iam.permission(
     permission_code,
@@ -58,19 +58,22 @@ set permission_name = excluded.permission_name,
     enabled = true,
     updated_at = now();
 
-insert into iam.role_permission(role_code, permission_code)
-select role_code, permission_code
-from (
-    values ('system_admin'), ('record_admin')
-) roles(role_code)
+insert into iam.role_permission(tenant_id, role_code, permission_code)
+select role.tenant_id, role.role_code, permission.permission_code
+from iam.role_definition role
 cross join iam.permission permission
-where permission.permission_code like 'work-record:%'
+where role.role_code in ('system_admin', 'record_admin')
+  and role.deleted_at is null
+  and permission.permission_code like 'work-record:%'
 on conflict do nothing;
 
-insert into iam.role_permission(role_code, permission_code)
-select 'normal_user', permission_code
-from iam.permission
-where permission_code in (
+insert into iam.role_permission(tenant_id, role_code, permission_code)
+select role.tenant_id, role.role_code, permission.permission_code
+from iam.role_definition role
+cross join iam.permission permission
+where role.role_code = 'normal_user'
+  and role.deleted_at is null
+  and permission.permission_code in (
     'work-record:import',
     'work-record:export:async',
     'work-record:comment',
@@ -84,10 +87,13 @@ where permission_code in (
 )
 on conflict do nothing;
 
-insert into iam.role_permission(role_code, permission_code)
-select 'readonly_user', permission_code
-from iam.permission
-where permission_code in (
+insert into iam.role_permission(tenant_id, role_code, permission_code)
+select role.tenant_id, role.role_code, permission.permission_code
+from iam.role_definition role
+cross join iam.permission permission
+where role.role_code = 'readonly_user'
+  and role.deleted_at is null
+  and permission.permission_code in (
     'work-record:market:read',
     'work-record:sla:read'
 )
@@ -943,8 +949,8 @@ function Metric({ title, value }: { title: string; value: number }) {
 ```tsx
 // src/routes/_authenticated/work-records/jobs.tsx
 import { createFileRoute } from '@tanstack/react-router'
-import { requireAnyPermission } from '@/features/auth/permission'
-import { JobCenterPage } from '@/features/work-records/extension/job-center-page'
+import { requireAnyPermission } from '@/auth/require-permission'
+import { JobCenterPage } from '@/pages/work-records/job-center'
 
 export const Route = createFileRoute('/_authenticated/work-records/jobs')({
   beforeLoad: () => requireAnyPermission(['work-record:import', 'work-record:export:async']),
@@ -955,8 +961,8 @@ export const Route = createFileRoute('/_authenticated/work-records/jobs')({
 ```tsx
 // src/routes/_authenticated/work-records/analytics.tsx
 import { createFileRoute } from '@tanstack/react-router'
-import { requirePermission } from '@/features/auth/permission'
-import { AnalyticsPage } from '@/features/work-records/extension/analytics-page'
+import { requirePermission } from '@/auth/require-permission'
+import { AnalyticsPage } from '@/pages/work-records/analytics'
 
 export const Route = createFileRoute('/_authenticated/work-records/analytics')({
   beforeLoad: () => requirePermission('work-record:analytics'),
@@ -1391,11 +1397,11 @@ SLA breached 状态
 
 ## 18. 实施顺序与提交边界
 
-Phase 20 不应一次提交 17 项能力。推荐：
+Phase 20 不应一次提交 19 项能力。推荐：
 
 ```text
 20.0 phase20/outbox-foundation
-  V0028
+  V0030
   Outbox availableAt/lease/idempotency
   AsyncJob/MinIO
 
@@ -1473,7 +1479,7 @@ mvn -B -ntp \
 
 ```text
 Phase 19 修复版通过
-V0028~V0035 在空库和历史库均迁移成功
+V0029~V0037 在空库和历史库均迁移成功
 MinIO bucket 策略与生命周期配置完成
 Worker 多实例 outbox 并发测试通过
 字段权限无法通过筛选/导出/AI 侧信道绕过

@@ -15,6 +15,10 @@ public class InspectionService {
     return repository.list(tenantId);
   }
 
+  public InspectionTaskRecord get(String tenantId, String id) {
+    return repository.find(tenantId, id);
+  }
+
   public InspectionTaskRecord create(
       String tenantId, CreateInspectionTaskRequest request, String createdBy) {
     if (request == null || request.name() == null || request.name().isBlank()) {

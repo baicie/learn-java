@@ -8,6 +8,8 @@ type Props = {
   children: ReactNode
 }
 
+const EMPTY_PERMISSIONS: string[] = []
+
 export function PermissionGate({
   any = [],
   all = [],
@@ -15,7 +17,7 @@ export function PermissionGate({
   children,
 }: Props) {
   const permissions = useAuthStore(
-    (state) => state.auth.principal?.permissions ?? []
+    (state) => state.auth.principal?.permissions ?? EMPTY_PERMISSIONS
   )
 
   const anyAllowed =
