@@ -43,7 +43,8 @@ public class JooqOutboxRepository implements OutboxRepository {
                      limit ?
                 )
                 update automation_outbox outbox
-                   set status = 'processing', lease_until = ?, updated_at = now()
+                   set status = 'processing', lease_until = cast(? as timestamptz),
+                       updated_at = now()
                   from candidates
                  where outbox.id = candidates.id
                 returning outbox.*
@@ -68,15 +69,13 @@ public class JooqOutboxRepository implements OutboxRepository {
 
   @Override
   public boolean extendLease(String id, String targetApp, OffsetDateTime leaseUntil) {
-    return dsl.execute(
-            """
-            update automation_outbox
-               set lease_until = ?, updated_at = now()
-             where id = ? and target_app = ? and status = 'processing'
-            """,
-            leaseUntil,
-            id,
-            targetApp)
+    return dsl.update(AUTOMATION_OUTBOX)
+            .set(AUTOMATION_OUTBOX.LEASE_UNTIL, leaseUntil)
+            .set(AUTOMATION_OUTBOX.UPDATED_AT, DSL.currentOffsetDateTime())
+            .where(AUTOMATION_OUTBOX.ID.eq(id))
+            .and(AUTOMATION_OUTBOX.TARGET_APP.eq(targetApp))
+            .and(AUTOMATION_OUTBOX.STATUS.eq("processing"))
+            .execute()
         == 1;
   }
 
@@ -89,15 +88,15 @@ public class JooqOutboxRepository implements OutboxRepository {
   @Override
   public boolean markDone(String id, OffsetDateTime processedAt) {
     int updated =
-        dsl.execute(
-            """
-                update automation_outbox
-                   set status = 'done', processed_at = ?, lease_until = null,
-                       error_message = null, updated_at = now()
-                 where id = ? and status = 'processing'
-                """,
-            processedAt,
-            id);
+        dsl.update(AUTOMATION_OUTBOX)
+            .set(AUTOMATION_OUTBOX.STATUS, "done")
+            .set(AUTOMATION_OUTBOX.PROCESSED_AT, processedAt)
+            .setNull(AUTOMATION_OUTBOX.LEASE_UNTIL)
+            .setNull(AUTOMATION_OUTBOX.ERROR_MESSAGE)
+            .set(AUTOMATION_OUTBOX.UPDATED_AT, DSL.currentOffsetDateTime())
+            .where(AUTOMATION_OUTBOX.ID.eq(id))
+            .and(AUTOMATION_OUTBOX.STATUS.eq("processing"))
+            .execute();
     return updated == 1;
   }
 
