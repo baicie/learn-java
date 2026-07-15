@@ -8,7 +8,7 @@ const permissionDefinitionSchema = z.object({
   moduleCode: z.string(),
   moduleName: z.string(),
   name: z.string(),
-  description: z.string().nullable(),
+  description: z.string().nullish(),
   riskLevel: permissionRiskSchema,
   dependencies: z.array(z.string()),
 })

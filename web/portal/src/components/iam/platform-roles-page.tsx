@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { PermissionGate } from '@/auth/permission-gate'
 import {
   usePlatformRoles,
@@ -19,16 +19,12 @@ export function PlatformRolesPage() {
   const permissionsQuery = usePermissionTree()
   const [selectedCode, setSelectedCode] = useState<string | null>(null)
   const [createOpen, setCreateOpen] = useState(false)
-  const editor = useRoleEditor(selectedCode ?? undefined)
-
   const firstRole = rolesQuery.data?.[0]
   const effectiveCode = selectedCode ?? firstRole?.roleCode ?? null
-
-  useEffect(() => {
-    if (!selectedCode && firstRole) {
-      editor.apply(firstRole)
-    }
-  }, [selectedCode, firstRole, editor])
+  const effectiveRole = rolesQuery.data?.find(
+    (role) => role.roleCode === effectiveCode
+  )
+  const editor = useRoleEditor(effectiveRole)
 
   const onSelect = async (next: string) => {
     const ok = await editor.confirmLeaveIfDirty()

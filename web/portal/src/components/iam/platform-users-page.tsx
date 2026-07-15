@@ -19,7 +19,7 @@ import { PlatformUserToolbar } from './platform-user-toolbar'
 const routeApi = getRouteApi('/_authenticated/platform/users/')
 
 export function PlatformUsersPage() {
-  const { t } = useTranslation('platform')
+  const { t } = useTranslation()
   const search = routeApi.useSearch()
   const navigate = routeApi.useNavigate()
   const [createOpen, setCreateOpen] = useState(false)

@@ -20,7 +20,7 @@ export function PlatformUserToolbar({
   value,
   onChange,
 }: PlatformUserToolbarProps) {
-  const { t } = useTranslation('platform')
+  const { t } = useTranslation()
 
   return (
     <div className='flex flex-wrap items-center gap-2 rounded-md border bg-card/40 p-3'>

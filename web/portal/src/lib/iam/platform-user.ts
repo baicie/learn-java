@@ -22,7 +22,7 @@ export const platformUserSchema = z.object({
   ),
   roles: z.array(roleRefSchema),
   dataScopes: z.record(z.string(), z.string()),
-  lastLoginAt: z.string().nullable(),
+  lastLoginAt: z.string().nullish(),
   createdAt: z.string(),
   updatedAt: z.string(),
   rowVersion: z.number().int(),

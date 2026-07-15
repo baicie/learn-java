@@ -32,7 +32,7 @@ export function PlatformUserCreateDialog({
   open,
   onOpenChange,
 }: PlatformUserCreateDialogProps) {
-  const { t } = useTranslation('platform')
+  const { t } = useTranslation()
   const mutation = useCreatePlatformUser()
   const roles = usePlatformRoles()
   const [form, setForm] = useState(EMPTY)

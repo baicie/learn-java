@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { PermissionGate } from '@/auth/permission-gate'
 import type {
   PermissionModule as PermissionModuleType,
@@ -38,99 +38,96 @@ export type RoleEditorApi = {
 }
 
 // eslint-disable-next-line react-refresh/only-export-components -- the editor hook and component share the same cohesive state model
-export function useRoleEditor(roleCode: string | undefined): RoleEditorApi {
+export function useRoleEditor(initialRole?: PlatformRole): RoleEditorApi {
   const [snapshot, setSnapshot] = useState<RoleEditorSnapshot | null>(null)
-  const replaceMutation = useReplaceRolePermissions(roleCode ?? '__none__')
-  const lastSavedRef = useRef<string>('')
+  const initialSnapshot = useMemo(
+    () => (initialRole ? snapshotOf(initialRole) : null),
+    [initialRole]
+  )
+  const currentSnapshot = snapshot ?? initialSnapshot
+  const replaceMutation = useReplaceRolePermissions(
+    currentSnapshot?.role.roleCode ?? '__none__'
+  )
   const confirm = useConfirm()
 
-  // Note: When the roleCode changes, callers are responsible for invoking
-  // apply(role) with the new role. We intentionally do not couple this hook
-  // to the role-fetch query.
-
   const apply = useCallback((role: PlatformRole) => {
-    const next: RoleEditorSnapshot = {
-      role,
-      selectedPermissions: new Set(role.permissions),
-      initialPermissions: new Set(role.permissions),
-    }
-    lastSavedRef.current = JSON.stringify([...next.selectedPermissions].sort())
-    setSnapshot(next)
+    setSnapshot(snapshotOf(role))
   }, [])
 
   const applyChange = useCallback(
     (codes: ReadonlyArray<string>, checked: boolean) => {
       setSnapshot((current) => {
-        if (!current) return current
-        const next = new Set(current.selectedPermissions)
+        const source = current ?? initialSnapshot
+        if (!source) return current
+        const next = new Set(source.selectedPermissions)
         for (const code of codes) {
           if (checked) next.add(code)
           else next.delete(code)
         }
         return {
-          role: current.role,
+          role: source.role,
           selectedPermissions: next,
-          initialPermissions: current.initialPermissions,
+          initialPermissions: source.initialPermissions,
         }
       })
     },
-    []
+    [initialSnapshot]
   )
 
   const reset = useCallback(() => {
-    if (!snapshot) return
+    if (!currentSnapshot) return
     setSnapshot({
-      role: snapshot.role,
-      selectedPermissions: new Set(snapshot.initialPermissions),
-      initialPermissions: snapshot.initialPermissions,
+      role: currentSnapshot.role,
+      selectedPermissions: new Set(currentSnapshot.initialPermissions),
+      initialPermissions: currentSnapshot.initialPermissions,
     })
-  }, [snapshot])
+  }, [currentSnapshot])
 
   const isDirty = useMemo(() => {
-    if (!snapshot) return false
+    if (!currentSnapshot) return false
     if (
-      snapshot.selectedPermissions.size !== snapshot.initialPermissions.size
+      currentSnapshot.selectedPermissions.size !==
+      currentSnapshot.initialPermissions.size
     ) {
       return true
     }
-    for (const code of snapshot.selectedPermissions) {
-      if (!snapshot.initialPermissions.has(code)) return true
+    for (const code of currentSnapshot.selectedPermissions) {
+      if (!currentSnapshot.initialPermissions.has(code)) return true
     }
     return false
-  }, [snapshot])
+  }, [currentSnapshot])
 
   const dangerousCodes = useMemo(() => {
-    if (!snapshot) return []
+    if (!currentSnapshot) return []
     const added: string[] = []
-    for (const code of snapshot.selectedPermissions) {
-      if (!snapshot.initialPermissions.has(code)) added.push(code)
+    for (const code of currentSnapshot.selectedPermissions) {
+      if (!currentSnapshot.initialPermissions.has(code)) added.push(code)
     }
     return added
-  }, [snapshot])
+  }, [currentSnapshot])
 
   const save = useCallback(
     async (reason: string, dangerousAcknowledged: boolean) => {
-      if (!snapshot) return
+      if (!currentSnapshot) return
       await replaceMutation.mutateAsync({
-        permissionCodes: [...snapshot.selectedPermissions],
+        permissionCodes: [...currentSnapshot.selectedPermissions],
         confirmation: { reason, dangerousAcknowledged },
       })
-      const next = new Set(snapshot.selectedPermissions)
-      lastSavedRef.current = JSON.stringify([...next].sort())
+      const next = new Set(currentSnapshot.selectedPermissions)
       setSnapshot({
-        role: snapshot.role,
+        role: currentSnapshot.role,
         selectedPermissions: next,
         initialPermissions: next,
       })
     },
-    [snapshot, replaceMutation]
+    [currentSnapshot, replaceMutation]
   )
 
   return {
     state: {
-      role: snapshot?.role ?? null,
-      selected: snapshot?.selectedPermissions ?? new Set(),
-      initial: snapshot?.initialPermissions ?? new Set(),
+      role: currentSnapshot?.role ?? null,
+      selected: currentSnapshot?.selectedPermissions ?? new Set(),
+      initial: currentSnapshot?.initialPermissions ?? new Set(),
       isDirty,
       dangerousCodes,
     },
@@ -148,6 +145,14 @@ export function useRoleEditor(roleCode: string | undefined): RoleEditorApi {
     },
     reset,
     apply,
+  }
+}
+
+function snapshotOf(role: PlatformRole): RoleEditorSnapshot {
+  return {
+    role,
+    selectedPermissions: new Set(role.permissions),
+    initialPermissions: new Set(role.permissions),
   }
 }
 

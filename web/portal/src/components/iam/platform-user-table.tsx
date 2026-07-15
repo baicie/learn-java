@@ -82,7 +82,7 @@ function Row({
 }) {
   const confirm = useConfirm()
   const queryClient = useQueryClient()
-  const { t } = useTranslation('platform')
+  const { t } = useTranslation()
   const changeStatus = useChangeUserStatus(user.id)
   const [manageOpen, setManageOpen] = useState(false)
 

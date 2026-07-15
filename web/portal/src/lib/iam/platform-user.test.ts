@@ -44,6 +44,12 @@ describe('platformUserSchema', () => {
     const parsed = platformUserSchema.parse({ ...userBase, email: null })
     expect(parsed.email).toBeNull()
   })
+
+  it('accepts an omitted last login time from the IAM API', () => {
+    const { lastLoginAt: _lastLoginAt, ...payload } = userBase
+    const parsed = platformUserSchema.parse(payload)
+    expect(parsed.lastLoginAt).toBeUndefined()
+  })
 })
 
 describe('platformUserPageSchema', () => {

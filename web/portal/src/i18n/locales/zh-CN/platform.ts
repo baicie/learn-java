@@ -32,6 +32,10 @@ export const platform = {
   'platform.users.confirm.disable.confirmLabel': '确认禁用',
   'platform.users.createDialog.title': '新建用户',
   'platform.users.createDialog.submit': '创建',
+  'platform.user.status.active': '正常',
+  'platform.user.status.disabled': '已禁用',
+  'platform.user.status.locked': '已锁定',
+  'platform.user.status.pending': '待激活',
   'platform.roles.create': '新建角色',
   'platform.roles.delete.system': '系统角色不可删除',
   'platform.roles.dirty.confirmLeave':
