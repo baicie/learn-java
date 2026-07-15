@@ -155,6 +155,8 @@ describe('record runtime pages', () => {
       const node = titleLocator.element() as HTMLInputElement
       expect(node.value).toBe('日报')
     })
+    await expect.element(screen.getByText('日报模板')).toBeVisible()
+    await expect.element(screen.getByText('tpl1')).not.toBeInTheDocument()
   })
 
   it('detail record page renders readonly view', async () => {

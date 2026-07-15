@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import {
   fetchRecordList,
   fetchRecordListMeta,
+  fetchRecordUserNames,
   fetchWorkdaySummary,
 } from '@/api/work-records/list'
 import { useDictionaryOptions } from '@/hooks/dictionaries/dictionary-query'
@@ -31,6 +32,25 @@ export function useWorkRecordList(
     metaQuery.data?.dictCodes ?? [],
     true
   )
+
+  const userIds = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          (listQuery.data?.items ?? []).flatMap((record) =>
+            [record.creatorId, record.ownerId].filter(
+              (value): value is string => Boolean(value)
+            )
+          )
+        )
+      ),
+    [listQuery.data?.items]
+  )
+  const userNamesQuery = useQuery({
+    queryKey: ['work-record-user-names', userIds],
+    queryFn: () => fetchRecordUserNames(userIds),
+    enabled: userIds.length > 0,
+  })
 
   const notifiedDictError = useRef<unknown>(null)
   const notifiedRefreshError = useRef<unknown>(null)
@@ -105,6 +125,7 @@ export function useWorkRecordList(
     total: listQuery.data?.total ?? 0,
 
     dictOptions: dictionaryQuery.options,
+    userNames: userNamesQuery.data ?? {},
     effectiveColumns,
 
     initialLoading: metaQuery.isLoading && !metaQuery.data,

@@ -2,7 +2,7 @@ import type { DynamicFilter, ListQueryState } from './types'
 
 const DEFAULT_LIST_QUERY: ListQueryState = {
   page: 1,
-  pageSize: 20,
+  pageSize: 30,
   quickView: 'all',
   workdayCount: 5,
   templateId: '',
@@ -26,7 +26,7 @@ export function normalizeListSearch(
     ...DEFAULT_LIST_QUERY,
     ...search,
     page: Math.max(1, Number(search.page ?? 1)),
-    pageSize: Math.min(Math.max(1, Number(search.pageSize ?? 20)), 200),
+    pageSize: Math.min(Math.max(1, Number(search.pageSize ?? 30)), 100),
     workdayCount: Math.min(Math.max(1, Number(search.workdayCount ?? 5)), 60),
     statuses: search.statuses ?? [],
     dynamicFilters: search.dynamicFilters ?? [],
@@ -45,7 +45,7 @@ export function parseListSearch(search: URLSearchParams): ListQueryState {
   const dynamicFilters = parseDynamicFilters(search.get('dynamicFilters'))
   return normalizeListSearch({
     page: Number(search.get('page') ?? 1),
-    pageSize: Number(search.get('pageSize') ?? 20),
+    pageSize: Number(search.get('pageSize') ?? 30),
     quickView: search.get('quickView') ?? 'all',
     workdayCount: Number(search.get('workdayCount') ?? 5),
     templateId: search.get('templateId') ?? '',

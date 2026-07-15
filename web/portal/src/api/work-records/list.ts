@@ -115,6 +115,18 @@ export async function fetchRecordListMeta(
   return apiResponseSchema(metaSchema).parse(data).data
 }
 
+export async function fetchRecordUserNames(
+  userIds: string[]
+): Promise<Record<string, string>> {
+  if (!userIds.length) return {}
+  const params = new URLSearchParams()
+  userIds.forEach((userId) => params.append('ids', userId))
+  const { data } = await apiClient.get('/api/work-record/users/display-names', {
+    params,
+  })
+  return apiResponseSchema(z.record(z.string(), z.string())).parse(data).data
+}
+
 const workdaySummarySchema = z.object({
   calendarId: z.string(),
   calendarName: z.string(),

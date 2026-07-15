@@ -22,7 +22,10 @@ export function DynamicFilterPanel({ fields, filters, onChange }: Props) {
   return (
     <details className='rounded-lg border p-4'>
       <summary className='cursor-pointer text-sm font-medium'>
-        {t('workRecords.list.dynamicFilters')}
+        <span>{t('workRecords.list.dynamicFilters')}</span>
+        <span className='ml-2 text-xs font-normal text-muted-foreground'>
+          {t('workRecords.list.dynamicFiltersDescription')}
+        </span>
       </summary>
       <div className='mt-3 grid gap-3 md:grid-cols-3'>
         {fields.length === 0 ? (

@@ -4,6 +4,7 @@ import { I18nextProvider } from 'react-i18next'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render } from 'vitest-browser-react'
 import { userEvent } from 'vitest/browser'
+import { useAuthStore } from '@/stores/auth-store'
 import { ConfirmProvider } from '@/components/feedback/confirm-provider'
 import { WorkRecordListPage } from './work-record-list-page'
 
@@ -126,6 +127,7 @@ vi.mock('@/api/work-records/list', () => {
       firstWorkday: '2026-07-01',
       lastWorkday: '2026-07-31',
     })),
+    fetchRecordUserNames: vi.fn(async () => ({ u1: '张三' })),
   }
 })
 
@@ -144,6 +146,20 @@ function renderPage() {
 describe('WorkRecordListPage', () => {
   beforeEach(() => {
     void i18n.changeLanguage(DEFAULT_LANGUAGE)
+    useAuthStore.getState().auth.setPrincipal({
+      userId: 'u1',
+      tenantId: 't1',
+      username: 'admin',
+      displayName: 'Admin',
+      roles: ['admin'],
+      permissions: [
+        'work-record:read:all',
+        'work-record:write',
+        'work-record:import',
+        'work-record:export',
+      ],
+      dataScopes: {},
+    })
   })
 
   it('renders enterprise list page', async () => {
@@ -160,6 +176,18 @@ describe('WorkRecordListPage', () => {
     expect(
       screen.getByText('列显示控制', { exact: true }).element()
     ).toBeTruthy()
+    await expect
+      .element(screen.getByRole('button', { name: '导入' }))
+      .toBeVisible()
+    await expect
+      .element(screen.getByRole('button', { name: '导出' }))
+      .toBeVisible()
+    await expect
+      .element(screen.getByRole('combobox', { name: '每页条数' }))
+      .toBeVisible()
+    await expect
+      .element(screen.getByText('按模板配置的动态字段精确筛选记录。'))
+      .toBeVisible()
   })
 
   it('keeps prior data when a refresh fails', async () => {
@@ -221,5 +249,32 @@ describe('WorkRecordListPage', () => {
       .toBeVisible()
 
     await expect.element(screen.getByText('加载失败')).not.toBeInTheDocument()
+  })
+
+  it('hides mutation actions from read-only users', async () => {
+    useAuthStore.getState().auth.setPrincipal({
+      userId: 'u2',
+      tenantId: 't1',
+      username: 'reader',
+      displayName: '只读用户',
+      roles: ['reader'],
+      permissions: ['work-record:read:self'],
+      dataScopes: {},
+    })
+
+    const screen = await renderPage()
+
+    await expect
+      .element(screen.getByRole('heading', { level: 1, name: '记录列表' }))
+      .toBeVisible()
+    await expect
+      .element(screen.getByRole('button', { name: '导入' }))
+      .not.toBeInTheDocument()
+    await expect
+      .element(screen.getByRole('button', { name: '导出' }))
+      .not.toBeInTheDocument()
+    await expect
+      .element(screen.getByRole('button', { name: '新建记录' }))
+      .not.toBeInTheDocument()
   })
 })

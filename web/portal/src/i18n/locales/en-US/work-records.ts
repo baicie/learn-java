@@ -21,6 +21,23 @@ export const workRecords = {
   'workRecords.list.workdaysCount': 'workdays',
   'workRecords.list.recentWorkdaysPrefix': 'Last',
   'workRecords.list.pageSizeOption': '{{count}} / page',
+  'workRecords.list.pageSize': 'Rows per page',
+  'workRecords.list.import': 'Import',
+  'workRecords.import.title': 'Import work records',
+  'workRecords.import.description':
+    'Upload an .xlsx file whose first row uses title, status, ownerId, recordTime, or template field codes. Maximum file size: 20 MiB.',
+  'workRecords.import.template': 'Target template',
+  'workRecords.import.templatePlaceholder': 'Select a published template',
+  'workRecords.import.file': 'Excel file',
+  'workRecords.import.invalidFile':
+    'Select an .xlsx file no larger than 20 MiB',
+  'workRecords.import.defaultStatus': 'Default status',
+  'workRecords.import.stopOnError': 'Stop processing after the first error',
+  'workRecords.import.submit': 'Start import',
+  'workRecords.import.submitting': 'Submitting…',
+  'workRecords.import.submitted':
+    'Import submitted. Track the result in asynchronous jobs.',
+  'workRecords.import.failed': 'Failed to submit import',
   'workRecords.list.activeFiltersLabel': 'Reset filters',
   'workRecords.list.noRecords': 'No records',
   'workRecords.list.dictLoadFailed':
@@ -61,13 +78,25 @@ export const workRecords = {
   'workRecords.list.export': 'Export',
   'workRecords.export.title': 'Export records',
   'workRecords.export.description': 'Export filtered records to CSV',
+  'workRecords.export.descriptionWithLimit':
+    'Export the current filtered results, up to {{max}} rows.',
   'workRecords.export.success': 'Export successful',
   'workRecords.export.failed': 'Export failed',
   'workRecords.export.currentFilters': 'Filtered records',
   'workRecords.export.records': 'records',
   'workRecords.export.format': 'Format',
   'workRecords.export.maxRows': 'Max rows',
+  'workRecords.export.rowCount': '{{count}} rows',
   'workRecords.export.confirm': 'Export',
+  'workRecords.export.confirmRequired': 'Confirm the export first',
+  'workRecords.export.columnRequired': 'Select at least one export column',
+  'workRecords.export.selectColumns': 'Select export columns',
+  'workRecords.export.currentColumns': 'Visible columns',
+  'workRecords.export.allColumns': 'All exportable columns',
+  'workRecords.export.dynamicField': 'Dynamic field',
+  'workRecords.export.auditConfirm':
+    'I confirm this export. The action will be recorded in the audit log.',
+  'workRecords.export.submitting': 'Exporting…',
   'workRecords.export.tooManyRows':
     '{{count}} records exceed the limit of {{max}}. Please narrow your filters.',
   // Filter operators

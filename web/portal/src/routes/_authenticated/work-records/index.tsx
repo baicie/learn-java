@@ -25,7 +25,7 @@ const dynamicFilterSchema = z.object({
 
 const recordsSearchSchema = z.object({
   page: z.coerce.number().int().min(1).catch(1),
-  pageSize: z.coerce.number().int().min(1).max(200).catch(20),
+  pageSize: z.coerce.number().int().min(1).max(100).catch(30),
   quickView: z.string().catch('all'),
   workdayCount: z.coerce.number().int().min(1).max(60).catch(5),
   templateId: z.string().catch(''),

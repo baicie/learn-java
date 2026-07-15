@@ -152,9 +152,6 @@ export function RecordRuntimeForm({
                         <SelectItem value='done'>
                           {t('workRecords.status.done')}
                         </SelectItem>
-                        <SelectItem value='archived'>
-                          {t('workRecords.status.archived')}
-                        </SelectItem>
                       </SelectGroup>
                     </SelectContent>
                   </Select>

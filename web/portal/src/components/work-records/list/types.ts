@@ -121,7 +121,7 @@ export type ListQueryState = {
 export function buildEmptyListQuery(): ListQueryState {
   return {
     page: 1,
-    pageSize: 20,
+    pageSize: 30,
     quickView: 'all',
     workdayCount: 0,
     templateId: '',

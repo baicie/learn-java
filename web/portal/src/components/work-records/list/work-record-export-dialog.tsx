@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { downloadExport, exportWorkRecords } from '@/api/work-records/export'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -29,6 +30,7 @@ export function WorkRecordExportDialog({
   currentColumns,
   total,
 }: Props) {
+  const { t } = useTranslation()
   const [selectedKeys, setSelectedKeys] = useState<string[]>([])
   const [submitting, setSubmitting] = useState(false)
   const [confirmed, setConfirmed] = useState(false)
@@ -80,18 +82,18 @@ export function WorkRecordExportDialog({
 
   const handleExport = async () => {
     if (!confirmed) {
-      setError('请先确认导出操作')
+      setError(t('workRecords.export.confirmRequired'))
       return
     }
 
     if (!selectedKeys.length) {
-      setError('至少选择一个导出列')
+      setError(t('workRecords.export.columnRequired'))
       return
     }
 
     if (overLimit) {
       setError(
-        `当前结果共 ${total} 条，超过最大导出行数 ${maxRows}，请缩小筛选范围`
+        t('workRecords.export.tooManyRows', { count: total, max: maxRows })
       )
       return
     }
@@ -105,7 +107,11 @@ export function WorkRecordExportDialog({
       downloadExport(download)
       onOpenChange(false)
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : '导出失败')
+      setError(
+        reason instanceof Error
+          ? reason.message
+          : t('workRecords.export.failed')
+      )
     } finally {
       setSubmitting(false)
     }
@@ -115,33 +121,42 @@ export function WorkRecordExportDialog({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className='max-w-2xl'>
         <DialogHeader>
-          <DialogTitle>导出工作记录</DialogTitle>
+          <DialogTitle>{t('workRecords.export.title')}</DialogTitle>
           <DialogDescription>
-            导出当前筛选结果。第一版使用同步 CSV，最多导出 {maxRows} 行。
+            {t('workRecords.export.descriptionWithLimit', { max: maxRows })}
           </DialogDescription>
         </DialogHeader>
 
         <div className='grid gap-4'>
           <div className='rounded-md border p-3 text-sm'>
             <div>
-              当前筛选结果：
-              <strong className='ml-1'>{total}</strong>条
+              {t('workRecords.export.currentFilters')}:
+              <strong className='ml-1'>
+                {t('workRecords.export.rowCount', { count: total })}
+              </strong>
             </div>
 
             <div>
-              最大导出行数：
-              <strong className='ml-1'>{maxRows}</strong>条
+              {t('workRecords.export.maxRows')}:
+              <strong className='ml-1'>
+                {t('workRecords.export.rowCount', { count: maxRows })}
+              </strong>
             </div>
 
             {overLimit ? (
-              <div className='mt-2 text-red-600'>
-                当前结果超过导出上限，请继续添加筛选条件。
+              <div className='mt-2 text-destructive'>
+                {t('workRecords.export.tooManyRows', {
+                  count: total,
+                  max: maxRows,
+                })}
               </div>
             ) : null}
           </div>
 
           <div className='flex items-center justify-between'>
-            <div className='text-sm font-medium'>选择导出列</div>
+            <div className='text-sm font-medium'>
+              {t('workRecords.export.selectColumns')}
+            </div>
 
             <div className='flex gap-2'>
               <Button
@@ -150,7 +165,7 @@ export function WorkRecordExportDialog({
                 size='sm'
                 onClick={() => setSelectedKeys(currentExportableKeys)}
               >
-                当前显示列
+                {t('workRecords.export.currentColumns')}
               </Button>
 
               <Button
@@ -161,7 +176,7 @@ export function WorkRecordExportDialog({
                   setSelectedKeys(exportableColumns.map((column) => column.key))
                 }
               >
-                全部可导出列
+                {t('workRecords.export.allColumns')}
               </Button>
             </div>
           </div>
@@ -181,7 +196,7 @@ export function WorkRecordExportDialog({
 
                 {column.source === 'custom' ? (
                   <span className='text-xs text-muted-foreground'>
-                    动态字段
+                    {t('workRecords.export.dynamicField')}
                   </span>
                 ) : null}
               </label>
@@ -194,11 +209,11 @@ export function WorkRecordExportDialog({
               onCheckedChange={(checked) => setConfirmed(checked === true)}
             />
 
-            <span>我确认导出当前筛选结果。导出行为会被记录到审计日志。</span>
+            <span>{t('workRecords.export.auditConfirm')}</span>
           </label>
 
           {error ? (
-            <div className='rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700'>
+            <div className='rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive'>
               {error}
             </div>
           ) : null}
@@ -211,7 +226,7 @@ export function WorkRecordExportDialog({
             disabled={submitting}
             onClick={() => onOpenChange(false)}
           >
-            取消
+            {t('common.cancel')}
           </Button>
 
           <Button
@@ -221,7 +236,9 @@ export function WorkRecordExportDialog({
             }
             onClick={handleExport}
           >
-            {submitting ? '导出中...' : '确认导出'}
+            {submitting
+              ? t('workRecords.export.submitting')
+              : t('workRecords.export.confirm')}
           </Button>
         </DialogFooter>
       </DialogContent>

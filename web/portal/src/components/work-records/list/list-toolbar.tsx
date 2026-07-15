@@ -88,9 +88,6 @@ export function ListToolbar({ meta, query, onChange }: Props) {
               <SelectItem value='done'>
                 {t('workRecords.list.status.done')}
               </SelectItem>
-              <SelectItem value='archived'>
-                {t('workRecords.list.status.archived')}
-              </SelectItem>
             </SelectGroup>
           </SelectContent>
         </Select>

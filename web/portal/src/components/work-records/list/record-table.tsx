@@ -18,6 +18,8 @@ type Props = {
   sortBy: string
   sortDir: 'asc' | 'desc'
   onSort: (sortBy: string, sortDir: 'asc' | 'desc') => void
+  templateNames?: Record<string, string>
+  userNames?: Record<string, string>
 }
 
 export function RecordTable({
@@ -27,6 +29,8 @@ export function RecordTable({
   sortBy,
   sortDir,
   onSort,
+  templateNames = {},
+  userNames = {},
 }: Props) {
   const { t } = useTranslation()
 
@@ -74,7 +78,14 @@ export function RecordTable({
             <TableRow key={record.id}>
               {columns.map((column) => (
                 <TableCell key={column.key}>
-                  {renderCell(record, column, dictOptions, t)}
+                  {renderCell(
+                    record,
+                    column,
+                    dictOptions,
+                    templateNames,
+                    userNames,
+                    t
+                  )}
                 </TableCell>
               ))}
               <TableCell>
@@ -101,6 +112,8 @@ function renderCell(
   record: WorkRecord,
   column: RecordListColumn,
   dictOptions: DictOptionMap,
+  templateNames: Record<string, string>,
+  userNames: Record<string, string>,
   t: TFunction
 ) {
   if (column.source === 'custom' && column.fieldCode) {
@@ -114,15 +127,17 @@ function renderCell(
     case 'status':
       return statusLabel(record.status, t)
     case 'ownerId':
-      return record.ownerId ?? '-'
+      return record.ownerId
+        ? (userNames[record.ownerId] ?? record.ownerId)
+        : '-'
     case 'creatorId':
-      return record.creatorId
+      return userNames[record.creatorId] ?? record.creatorId
     case 'recordTime':
       return formatDate(record.recordTime)
     case 'createdAt':
       return formatDate(record.createdAt)
     case 'templateId':
-      return record.templateId
+      return templateNames[record.templateId] ?? record.templateId
     default:
       return '-'
   }

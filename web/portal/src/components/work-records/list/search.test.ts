@@ -41,7 +41,7 @@ describe('work record list route search', () => {
     })
 
     expect(state.page).toBe(1)
-    expect(state.pageSize).toBe(200)
+    expect(state.pageSize).toBe(100)
     expect(state.workdayCount).toBe(60)
   })
 

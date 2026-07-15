@@ -4,6 +4,7 @@ import { useNavigate, useParams } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import {
   getWorkRecord,
+  listPublishedTemplates,
   listTemplateVersionFields,
   updateWorkRecord,
 } from '@/api/work-records/records'
@@ -61,6 +62,11 @@ export function EditRecordPage() {
     enabled: Boolean(
       recordQuery.data?.templateId && recordQuery.data?.templateVersionId
     ),
+  })
+
+  const templatesQuery = useQuery({
+    queryKey: ['work-record-runtime-templates'],
+    queryFn: listPublishedTemplates,
   })
 
   useEffect(() => {
@@ -159,7 +165,12 @@ export function EditRecordPage() {
     updateMutation.mutate(candidate)
   }
 
-  if (recordQuery.isLoading || fieldsQuery.isLoading || dictionaries.loading) {
+  if (
+    recordQuery.isLoading ||
+    fieldsQuery.isLoading ||
+    templatesQuery.isLoading ||
+    dictionaries.loading
+  ) {
     return <PageLoadingState />
   }
 
@@ -174,15 +185,26 @@ export function EditRecordPage() {
     )
   }
 
-  if (recordQuery.error || fieldsQuery.error || dictionaries.error) {
+  if (
+    recordQuery.error ||
+    fieldsQuery.error ||
+    templatesQuery.error ||
+    dictionaries.error
+  ) {
     return (
       <main className='p-4 md:p-6'>
         <ErrorState
-          error={recordQuery.error ?? fieldsQuery.error ?? dictionaries.error}
+          error={
+            recordQuery.error ??
+            fieldsQuery.error ??
+            templatesQuery.error ??
+            dictionaries.error
+          }
           onRetry={() => {
             void Promise.all([
               recordQuery.refetch(),
               fieldsQuery.refetch(),
+              templatesQuery.refetch(),
               dictionaries.refetch(),
             ])
           }}
@@ -194,8 +216,14 @@ export function EditRecordPage() {
   const syntheticTemplate: WorkRecordTemplate = {
     id: recordQuery.data.templateId,
     tenantId: recordQuery.data.tenantId,
-    code: recordQuery.data.templateId,
-    name: recordQuery.data.templateId,
+    code:
+      templatesQuery.data?.find(
+        (template) => template.id === recordQuery.data?.templateId
+      )?.code ?? recordQuery.data.templateId,
+    name:
+      templatesQuery.data?.find(
+        (template) => template.id === recordQuery.data?.templateId
+      )?.name ?? recordQuery.data.templateId,
     description: null,
     status: 'published',
     enabled: true,

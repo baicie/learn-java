@@ -19,15 +19,16 @@ related:
 
 ## Excel 导入与异步导出
 
-| 方法 | 路径                                           | 权限                                             | 用途                           |
-| ---- | ---------------------------------------------- | ------------------------------------------------ | ------------------------------ |
-| POST | `/api/work-record/imports/uploads`             | `work-record:import`                             | 创建一次性 Excel 直传会话      |
-| POST | `/api/work-record/imports`                     | `work-record:import`                             | 消费上传会话并创建导入任务     |
-| POST | `/api/work-record/async-exports`               | `work-record:export`、`work-record:export:async` | 创建异步导出任务               |
-| GET  | `/api/work-record/async-jobs`                  | 工作记录读取权限                                 | 查询当前用户的任务列表         |
-| GET  | `/api/work-record/async-jobs/{jobId}`          | 工作记录读取权限                                 | 查询任务详情与逐行结果         |
-| POST | `/api/work-record/async-jobs/{jobId}/cancel`   | 工作记录读取权限                                 | 取消尚未结束的本人任务         |
-| POST | `/api/work-record/async-jobs/{jobId}/download` | 工作记录读取权限                                 | 获取短时效、禁止缓存的下载地址 |
+| 方法 | 路径                                           | 权限                                             | 用途                             |
+| ---- | ---------------------------------------------- | ------------------------------------------------ | -------------------------------- |
+| POST | `/api/work-record/imports/uploads`             | `work-record:import`                             | 创建一次性 Excel 直传会话        |
+| POST | `/api/work-record/imports`                     | `work-record:import`                             | 消费上传会话并创建导入任务       |
+| GET  | `/api/work-record/users/display-names`         | 工作记录读取权限                                 | 按 ids 批量解析创建人/负责人名称 |
+| POST | `/api/work-record/async-exports`               | `work-record:export`、`work-record:export:async` | 创建异步导出任务                 |
+| GET  | `/api/work-record/async-jobs`                  | 工作记录读取权限                                 | 查询当前用户的任务列表           |
+| GET  | `/api/work-record/async-jobs/{jobId}`          | 工作记录读取权限                                 | 查询任务详情与逐行结果           |
+| POST | `/api/work-record/async-jobs/{jobId}/cancel`   | 工作记录读取权限                                 | 取消尚未结束的本人任务           |
+| POST | `/api/work-record/async-jobs/{jobId}/download` | 工作记录读取权限                                 | 获取短时效、禁止缓存的下载地址   |
 
 上传会话只能由创建者消费一次。Excel 公式不执行，逐行结果具有幂等键；导出文件由 worker 流式生成并写入对象存储。
 

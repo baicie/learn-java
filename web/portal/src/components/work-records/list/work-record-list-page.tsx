@@ -1,9 +1,17 @@
 import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
+import { PermissionGate } from '@/auth/permission-gate'
 import { useTranslation } from 'react-i18next'
 import { useWorkRecordList } from '@/hooks/work-records/use-work-record-list'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import {
   EmptyState,
   ErrorState,
@@ -18,6 +26,8 @@ import { ListToolbar } from './list-toolbar'
 import { QuickViewTabs } from './quick-view-tabs'
 import { RecordTable } from './record-table'
 import { buildEmptyListQuery, type ListQueryState } from './types'
+import { WorkRecordExportDialog } from './work-record-export-dialog'
+import { WorkRecordImportDialog } from './work-record-import-dialog'
 import { WorkdaySummaryCard } from './workday-summary-card'
 
 export function WorkRecordListPage() {
@@ -26,6 +36,8 @@ export function WorkRecordListPage() {
   const [query, setQuery] = useState<ListQueryState>(() =>
     buildEmptyListQuery()
   )
+  const [importOpen, setImportOpen] = useState(false)
+  const [exportOpen, setExportOpen] = useState(false)
   const view = useWorkRecordList(query, setQuery)
 
   const onSort = (sortBy: string, sortDir: 'asc' | 'desc') => {
@@ -78,16 +90,38 @@ export function WorkRecordListPage() {
         title={t('workRecords.list.title')}
         description={t('workRecords.list.description')}
         actions={
-          <Button
-            type='button'
-            onClick={() =>
-              navigate({
-                to: '/work-records/new',
-              })
-            }
-          >
-            {t('workRecords.list.create')}
-          </Button>
+          <div className='flex flex-wrap gap-2'>
+            <PermissionGate anyOf={['work-record:import']}>
+              <Button
+                type='button'
+                variant='outline'
+                onClick={() => setImportOpen(true)}
+              >
+                {t('workRecords.list.import')}
+              </Button>
+            </PermissionGate>
+            <PermissionGate anyOf={['work-record:export']}>
+              <Button
+                type='button'
+                variant='outline'
+                onClick={() => setExportOpen(true)}
+              >
+                {t('workRecords.list.export')}
+              </Button>
+            </PermissionGate>
+            <PermissionGate anyOf={['work-record:write']}>
+              <Button
+                type='button'
+                onClick={() =>
+                  navigate({
+                    to: '/work-records/new',
+                  })
+                }
+              >
+                {t('workRecords.list.create')}
+              </Button>
+            </PermissionGate>
+          </div>
         }
       >
         <ListToolbar
@@ -150,6 +184,13 @@ export function WorkRecordListPage() {
                 sortBy={query.sortBy}
                 sortDir={query.sortDir}
                 onSort={onSort}
+                templateNames={Object.fromEntries(
+                  (view.meta?.templates ?? []).map((template) => [
+                    template.id,
+                    template.name,
+                  ])
+                )}
+                userNames={view.userNames}
               />
             </ResponsiveTable>
           )}
@@ -161,6 +202,26 @@ export function WorkRecordListPage() {
               })}
             </span>
             <div className='flex items-center gap-2'>
+              <Select
+                value={String(query.pageSize)}
+                onValueChange={(value) =>
+                  setQuery({ ...query, page: 1, pageSize: Number(value) })
+                }
+              >
+                <SelectTrigger
+                  className='w-28'
+                  aria-label={t('workRecords.list.pageSize')}
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {[30, 50, 100].map((size) => (
+                    <SelectItem key={size} value={String(size)}>
+                      {t('workRecords.list.pageSizeOption', { count: size })}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <Button
                 type='button'
                 disabled={query.page <= 1}
@@ -189,6 +250,20 @@ export function WorkRecordListPage() {
           </div>
         </CardContent>
       </Card>
+
+      <WorkRecordImportDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        meta={view.meta}
+      />
+      <WorkRecordExportDialog
+        open={exportOpen}
+        onOpenChange={setExportOpen}
+        query={query}
+        meta={view.meta}
+        currentColumns={view.effectiveColumns}
+        total={view.total}
+      />
     </main>
   )
 }

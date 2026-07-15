@@ -36,12 +36,6 @@ export const navigation: NavigationItem[] = [
         anyPermissions: ['work-record:read:self', 'work-record:read:all'],
       },
       {
-        titleKey: 'nav.workRecords.designer',
-        to: '/work-records/templates',
-        icon: Library,
-        anyPermissions: ['work-record:template:read'],
-      },
-      {
         titleKey: 'nav.workRecords.operations',
         to: '/work-records/operations',
         icon: ChartNoAxesCombined,
@@ -53,6 +47,12 @@ export const navigation: NavigationItem[] = [
     titleKey: 'nav.platform.group',
     icon: Settings2,
     children: [
+      {
+        titleKey: 'nav.workRecords.designer',
+        to: '/work-records/templates',
+        icon: Library,
+        anyPermissions: ['work-record:template:read'],
+      },
       {
         titleKey: 'nav.platform.users',
         to: '/platform/users',

@@ -63,6 +63,8 @@ function renderTable(columns: RecordListColumn[], onSort = vi.fn()) {
         sortBy='recordTime'
         sortDir='desc'
         onSort={onSort}
+        templateNames={{ 'template-1': '日报模板' }}
+        userNames={{ 'user-1': '张三' }}
       />
     </I18nextProvider>
   )
@@ -89,5 +91,33 @@ describe('RecordTable', () => {
     await screen.getByRole('button', { name: '优先级' }).click()
 
     expect(onSort).toHaveBeenCalledWith('custom.priority', 'desc')
+  })
+
+  it('renders template name instead of internal id', async () => {
+    const screen = await renderTable([
+      {
+        ...column('unused', '模板'),
+        key: 'templateId',
+        source: 'builtin',
+        fieldCode: null,
+      },
+    ])
+
+    await expect.element(screen.getByText('日报模板')).toBeVisible()
+    await expect.element(screen.getByText('template-1')).not.toBeInTheDocument()
+  })
+
+  it('renders creator display name instead of internal id', async () => {
+    const screen = await renderTable([
+      {
+        ...column('unused', '创建人'),
+        key: 'creatorId',
+        source: 'builtin',
+        fieldCode: null,
+      },
+    ])
+
+    await expect.element(screen.getByText('张三')).toBeVisible()
+    await expect.element(screen.getByText('user-1')).not.toBeInTheDocument()
   })
 })
