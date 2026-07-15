@@ -1,17 +1,15 @@
 package io.aegisops.worker;
 
-import io.aegisops.common.runtime.RuntimeProperties;
-import io.aegisops.worker.outbox.OutboxProperties;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.FilterType;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RestController;
 
-@EnableConfigurationProperties({RuntimeProperties.class, OutboxProperties.class})
 @SpringBootApplication
+@ConfigurationPropertiesScan(basePackages = "io.aegisops")
 @ComponentScan(
     basePackages = "io.aegisops",
     excludeFilters =
