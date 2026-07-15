@@ -1,7 +1,7 @@
 ---
 title: 工作记录模板与表单体验修复计划
 type: fix
-status: review
+status: accepted
 phase: phase-21
 owner: ai
 created: 2026-07-15
@@ -63,7 +63,7 @@ related:
 - [x] 运行 Portal 定向测试及 `lint`、`typecheck`、`test`、`knip`、`build`。
 - [x] 运行 `aiops-work-record` 后端测试与数据库 migration 校验。
 - [x] 运行文档检查及影响面 CI；记录任何既有阻断。
-- [ ] 检查 diff、提交中文 Conventional Commit、推送分支并创建 PR。
+- [x] 检查 diff、提交中文 Conventional Commit、推送分支并创建 PR。
 
 ## 验证结果
 

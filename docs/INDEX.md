@@ -158,8 +158,8 @@ Do not edit it manually.
 
 | Title | Status | Phase | Updated | Path |
 |---|---|---|---|---|
+| 工作记录模板与表单体验修复计划 | accepted | phase-21 | 2026-07-15 | [docs/fixes/phase-21/2026-07-15-work-record-template-form-ux.md](fixes/phase-21/2026-07-15-work-record-template-form-ux.md) |
 | PR2 - RuntimePhase + health phase 标签 | accepted | phase-5 | 2026-06-30 | [docs/fixes/phase-5/2026-06-30-runtime-phase.md](fixes/phase-5/2026-06-30-runtime-phase.md) |
-| 工作记录模板与表单体验修复计划 | review | phase-21 | 2026-07-15 | [docs/fixes/phase-21/2026-07-15-work-record-template-form-ux.md](fixes/phase-21/2026-07-15-work-record-template-form-ux.md) |
 | 第二轮回盘问题修复总记录 | draft | phase-5 | 2026-06-30 | [docs/fixes/phase-5/2026-06-29-second-review-remediation.md](fixes/phase-5/2026-06-29-second-review-remediation.md) |
 
 ## phase
