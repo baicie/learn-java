@@ -66,11 +66,7 @@ public class AssetImportService {
 
   @Transactional
   public AssetImportPreviewResponse preview(
-      String tenantId,
-      String sourceInstanceId,
-      String fileName,
-      byte[] content,
-      String actorId) {
+      String tenantId, String sourceInstanceId, String fileName, byte[] content, String actorId) {
     requireSourceInstance(sourceInstanceId);
     String checksum = sha256(content);
     var existing = importRepository.findByChecksum(tenantId, sourceInstanceId, checksum);
@@ -86,9 +82,7 @@ public class AssetImportService {
       }
     }
     List<AssetImportRowDraft> drafts =
-        rows.stream()
-            .map(row -> previewRow(tenantId, sourceInstanceId, row, externalIds))
-            .toList();
+        rows.stream().map(row -> previewRow(tenantId, sourceInstanceId, row, externalIds)).toList();
     return importRepository.createPreview(
         tenantId,
         sourceInstanceId,
@@ -120,8 +114,7 @@ public class AssetImportService {
     if (job.conflictRows() > 0) {
       throw new ConflictException("导入任务存在冲突行，请处理为 create/link/skip 后再确认");
     }
-    if (!importRepository.start(
-        tenantId, jobId, actorId, OffsetDateTime.now(ZoneOffset.UTC))) {
+    if (!importRepository.start(tenantId, jobId, actorId, OffsetDateTime.now(ZoneOffset.UTC))) {
       throw new ConflictException("导入任务当前状态不可确认: " + job.status());
     }
 
@@ -138,8 +131,7 @@ public class AssetImportService {
         updated++;
       }
     }
-    importRepository.finish(
-        tenantId, jobId, created, updated, OffsetDateTime.now(ZoneOffset.UTC));
+    importRepository.finish(tenantId, jobId, created, updated, OffsetDateTime.now(ZoneOffset.UTC));
     audit(tenantId, actorId, "asset.import.confirm", jobId, Map.of("checksumJob", jobId));
     return get(tenantId, jobId);
   }
@@ -161,10 +153,7 @@ public class AssetImportService {
   }
 
   private AssetImportRowDraft previewRow(
-      String tenantId,
-      String sourceInstanceId,
-      AssetCsvRow row,
-      Map<String, Integer> externalIds) {
+      String tenantId, String sourceInstanceId, AssetCsvRow row, Map<String, Integer> externalIds) {
     List<String> errors = new ArrayList<>(validator.validate(row));
     if (externalIds.getOrDefault(row.externalId(), 0) > 1) {
       errors.add("EXTERNAL_ID_DUPLICATE");
@@ -172,12 +161,13 @@ public class AssetImportService {
     String status = errors.isEmpty() ? "valid" : "invalid";
     String action = null;
     if (errors.isEmpty()) {
-      var identities =
-          identityNormalizer.normalize(identityInputs(row), blankToNull(row.ip()));
+      var identities = identityNormalizer.normalize(identityInputs(row), blankToNull(row.ip()));
       Set<String> strongMatches =
           assetRepository.findAssetIdsByStrongIdentities(
               tenantId,
-              identities.stream().filter(identity -> identity.strength() == Strength.STRONG).toList());
+              identities.stream()
+                  .filter(identity -> identity.strength() == Strength.STRONG)
+                  .toList());
       var sourceMatch =
           assetRepository.findAssetIdBySourceLink(
               tenantId, "csv", sourceInstanceId, row.externalId());
@@ -299,8 +289,7 @@ public class AssetImportService {
     }
   }
 
-  private void audit(
-      String tenantId, String actorId, String action, String jobId, Object detail) {
+  private void audit(String tenantId, String actorId, String action, String jobId, Object detail) {
     try {
       auditService.record(
           new AuditRecordCommand(

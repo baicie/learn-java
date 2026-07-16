@@ -133,9 +133,7 @@ public class JooqAssetRepository implements AssetRepository {
   public List<AssetRelationResponse> listRelations(String tenantId, String assetId) {
     return dsl.selectFrom(ASSET_RELATION)
         .where(ASSET_RELATION.TENANT_ID.eq(tenantId))
-        .and(
-            ASSET_RELATION.FROM_ASSET_ID.eq(assetId)
-                .or(ASSET_RELATION.TO_ASSET_ID.eq(assetId)))
+        .and(ASSET_RELATION.FROM_ASSET_ID.eq(assetId).or(ASSET_RELATION.TO_ASSET_ID.eq(assetId)))
         .orderBy(ASSET_RELATION.CREATED_AT.desc())
         .fetch(
             row ->
@@ -191,10 +189,7 @@ public class JooqAssetRepository implements AssetRepository {
 
   @Override
   public String createRelation(
-      String tenantId,
-      String assetId,
-      CreateAssetRelationRequest request,
-      OffsetDateTime now) {
+      String tenantId, String assetId, CreateAssetRelationRequest request, OffsetDateTime now) {
     String relationId = "arel_" + Ids.newId();
     dsl.insertInto(ASSET_RELATION)
         .set(ASSET_RELATION.ID, relationId)
@@ -217,8 +212,7 @@ public class JooqAssetRepository implements AssetRepository {
             .where(ASSET_RELATION.TENANT_ID.eq(tenantId))
             .and(ASSET_RELATION.ID.eq(relationId))
             .and(
-                ASSET_RELATION.FROM_ASSET_ID.eq(assetId)
-                    .or(ASSET_RELATION.TO_ASSET_ID.eq(assetId)))
+                ASSET_RELATION.FROM_ASSET_ID.eq(assetId).or(ASSET_RELATION.TO_ASSET_ID.eq(assetId)))
             .execute()
         == 1;
   }
@@ -259,10 +253,7 @@ public class JooqAssetRepository implements AssetRepository {
       return false;
     }
     Condition condition =
-        ASSET_IDENTITY.TENANT_ID
-            .eq(tenantId)
-            .and(ASSET_IDENTITY.STRENGTH.eq("weak"))
-            .and(matches);
+        ASSET_IDENTITY.TENANT_ID.eq(tenantId).and(ASSET_IDENTITY.STRENGTH.eq("weak")).and(matches);
     if (excludedAssetId != null) {
       condition = condition.and(ASSET_IDENTITY.ASSET_ID.ne(excludedAssetId));
     }
@@ -322,8 +313,7 @@ public class JooqAssetRepository implements AssetRepository {
   }
 
   @Override
-  public String upsertSourceLink(
-      String assetId, AssetUpsertCommand command, OffsetDateTime now) {
+  public String upsertSourceLink(String assetId, AssetUpsertCommand command, OffsetDateTime now) {
     String sourceType = normalized(command.sourceType());
     String sourceInstanceId = command.sourceInstanceId().trim();
     String externalId = command.externalId().trim();
@@ -423,10 +413,7 @@ public class JooqAssetRepository implements AssetRepository {
   }
 
   private boolean refreshExistingStrongIdentity(
-      String assetId,
-      String tenantId,
-      NormalizedAssetIdentity identity,
-      OffsetDateTime now) {
+      String assetId, String tenantId, NormalizedAssetIdentity identity, OffsetDateTime now) {
     var existing =
         dsl.select(ASSET_IDENTITY.ID, ASSET_IDENTITY.ASSET_ID, ASSET_IDENTITY.VERIFIED)
             .from(ASSET_IDENTITY)
@@ -462,7 +449,8 @@ public class JooqAssetRepository implements AssetRepository {
         continue;
       }
       Condition current =
-          ASSET_IDENTITY.IDENTITY_TYPE
+          ASSET_IDENTITY
+              .IDENTITY_TYPE
               .eq(identity.identityType())
               .and(ASSET_IDENTITY.SCOPE_KEY.eq(identity.scopeKey()))
               .and(ASSET_IDENTITY.NORMALIZED_VALUE.eq(identity.normalizedValue()));
@@ -504,9 +492,7 @@ public class JooqAssetRepository implements AssetRepository {
                       .from(ASSET_SOURCE_LINK)
                       .where(ASSET_SOURCE_LINK.TENANT_ID.eq(tenantId))
                       .and(ASSET_SOURCE_LINK.ASSET_ID.eq(ASSET.ID))
-                      .and(
-                          ASSET_SOURCE_LINK.SOURCE_TYPE.eq(
-                              normalized(query.sourceType())))));
+                      .and(ASSET_SOURCE_LINK.SOURCE_TYPE.eq(normalized(query.sourceType())))));
     }
     return condition;
   }

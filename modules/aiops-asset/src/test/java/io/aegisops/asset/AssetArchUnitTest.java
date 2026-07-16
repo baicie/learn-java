@@ -9,8 +9,7 @@ import org.junit.jupiter.api.Test;
 
 class AssetArchUnitTest {
 
-  private final JavaClasses classes =
-      new ClassFileImporter().importPackages("io.aegisops.asset");
+  private final JavaClasses classes = new ClassFileImporter().importPackages("io.aegisops.asset");
 
   @Test
   void controllersMustResideInApiPackage() {

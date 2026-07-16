@@ -35,10 +35,7 @@ public interface AssetRepository {
   boolean archive(String tenantId, String assetId, long version, OffsetDateTime now);
 
   String createRelation(
-      String tenantId,
-      String assetId,
-      CreateAssetRelationRequest request,
-      OffsetDateTime now);
+      String tenantId, String assetId, CreateAssetRelationRequest request, OffsetDateTime now);
 
   boolean deleteRelation(String tenantId, String assetId, String relationId);
 

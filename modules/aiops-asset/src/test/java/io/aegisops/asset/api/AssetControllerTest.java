@@ -69,8 +69,7 @@ class AssetControllerTest {
         .andExpect(jsonPath("$.data.pageSize").value(100))
         .andExpect(jsonPath("$.data.items[0].id").value("asset-1"));
 
-    verify(queryService)
-        .page("tenant-1", new AssetQuery(1, 100, "host", "zabbix", "db", null));
+    verify(queryService).page("tenant-1", new AssetQuery(1, 100, "host", "zabbix", "db", null));
   }
 
   @Test

@@ -10,7 +10,8 @@ public class AssetIdentityResolver {
       Set<String> strongIdentityAssetIds,
       boolean hasWeakIdentityConflict) {
     Optional<String> sourceAsset = sourceLinkAssetId == null ? Optional.empty() : sourceLinkAssetId;
-    Set<String> strongAssets = strongIdentityAssetIds == null ? Set.of() : Set.copyOf(strongIdentityAssetIds);
+    Set<String> strongAssets =
+        strongIdentityAssetIds == null ? Set.of() : Set.copyOf(strongIdentityAssetIds);
 
     if (strongAssets.size() > 1) {
       throw new AssetIdentityConflictException("strong identities resolve to multiple assets");

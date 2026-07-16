@@ -13,11 +13,7 @@ import java.util.Set;
 public class AssetIdentityNormalizer {
   private static final Set<String> STRONG_TYPES =
       Set.of(
-          "cloud_instance_id",
-          "cmdb_ci_id",
-          "machine_id",
-          "k8s_uid",
-          "otel_service_instance_id");
+          "cloud_instance_id", "cmdb_ci_id", "machine_id", "k8s_uid", "otel_service_instance_id");
   private static final Set<String> WEAK_TYPES = Set.of("fqdn", "hostname", "ip", "display_name");
 
   public List<NormalizedAssetIdentity> normalize(
@@ -35,7 +31,8 @@ public class AssetIdentityNormalizer {
       }
       String type = normalizeType(input.identityType());
       Strength strength = strength(type);
-      String scope = hasText(input.scopeKey()) ? input.scopeKey().trim().toLowerCase(Locale.ROOT) : "global";
+      String scope =
+          hasText(input.scopeKey()) ? input.scopeKey().trim().toLowerCase(Locale.ROOT) : "global";
       String original = input.identityValue().trim();
       String normalized = original.toLowerCase(Locale.ROOT);
       var identity =

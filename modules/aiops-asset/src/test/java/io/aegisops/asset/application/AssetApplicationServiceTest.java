@@ -74,10 +74,8 @@ class AssetApplicationServiceTest {
     AssetUpsertCommand command = commandWithOnlyIp("csv", "sheet-a", "host-b", "10.0.0.8");
     when(repository.findAssetIdBySourceLink("tenant-1", "csv", "sheet-a", "host-b"))
         .thenReturn(Optional.empty());
-    when(repository.findAssetIdsByStrongIdentities(eq("tenant-1"), anyList()))
-        .thenReturn(Set.of());
-    when(repository.hasWeakIdentityConflict(eq("tenant-1"), anyList(), eq(null)))
-        .thenReturn(true);
+    when(repository.findAssetIdsByStrongIdentities(eq("tenant-1"), anyList())).thenReturn(Set.of());
+    when(repository.hasWeakIdentityConflict(eq("tenant-1"), anyList(), eq(null))).thenReturn(true);
     when(repository.createAsset(eq(command), any(OffsetDateTime.class))).thenReturn("asset-new");
 
     var result = service.upsert(command);

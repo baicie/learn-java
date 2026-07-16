@@ -68,8 +68,7 @@ class AssetImportServiceTest {
             eq("tenant-1"), eq("sheet-a"), eq("assets.csv"), any(), eq("user-1"), any(), any()))
         .thenReturn(job("previewed", 0));
 
-    var result =
-        service.preview("tenant-1", "sheet-a", "assets.csv", content, "user-1");
+    var result = service.preview("tenant-1", "sheet-a", "assets.csv", content, "user-1");
 
     assertThat(result.status()).isEqualTo("previewed");
     verifyNoInteractions(assetService);
@@ -81,18 +80,17 @@ class AssetImportServiceTest {
     when(importRepository.findByChecksum(eq("tenant-1"), eq("sheet-a"), any()))
         .thenReturn(Optional.of(job("previewed", 0)));
 
-    var result =
-        service.preview("tenant-1", "sheet-a", "assets.csv", content, "user-1");
+    var result = service.preview("tenant-1", "sheet-a", "assets.csv", content, "user-1");
 
     assertThat(result.jobId()).isEqualTo("job-1");
     verifyNoInteractions(parser, assetService);
-    verify(importRepository, never()).createPreview(any(), any(), any(), any(), any(), any(), any());
+    verify(importRepository, never())
+        .createPreview(any(), any(), any(), any(), any(), any(), any());
   }
 
   @Test
   void confirmRejectsUnresolvedStrongIdentityConflicts() {
-    when(importRepository.get("tenant-1", "job-1"))
-        .thenReturn(Optional.of(job("previewed", 1)));
+    when(importRepository.get("tenant-1", "job-1")).thenReturn(Optional.of(job("previewed", 1)));
 
     assertThatThrownBy(() -> service.confirm("tenant-1", "job-1", "user-1"))
         .isInstanceOf(ConflictException.class)

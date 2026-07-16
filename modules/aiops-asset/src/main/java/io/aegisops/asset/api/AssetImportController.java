@@ -45,9 +45,7 @@ public class AssetImportController {
   @PostMapping(value = "/preview", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
   @PreAuthorize("hasAuthority('asset:import')")
   public ApiResponse<AssetImportPreviewResponse> preview(
-      @RequestPart MultipartFile file,
-      @RequestParam String sourceInstanceId,
-      Principal principal)
+      @RequestPart MultipartFile file, @RequestParam String sourceInstanceId, Principal principal)
       throws IOException {
     return ApiResponse.ok(
         service.preview(
@@ -72,8 +70,7 @@ public class AssetImportController {
       @RequestParam(defaultValue = "100") @Min(1) int pageSize,
       @RequestParam(required = false) String status) {
     return ApiResponse.ok(
-        service.rows(
-            TenantContext.requireTenantId(), jobId, page, pageSize, status));
+        service.rows(TenantContext.requireTenantId(), jobId, page, pageSize, status));
   }
 
   @PostMapping("/{jobId}/confirm")
@@ -81,14 +78,12 @@ public class AssetImportController {
   public ApiResponse<AssetImportPreviewResponse> confirm(
       @PathVariable String jobId, Principal principal) {
     return ApiResponse.ok(
-        service.confirm(
-            TenantContext.requireTenantId(), jobId, principal.getName()));
+        service.confirm(TenantContext.requireTenantId(), jobId, principal.getName()));
   }
 
   @PostMapping("/{jobId}/cancel")
   @PreAuthorize("hasAuthority('asset:import')")
-  public ApiResponse<Map<String, Boolean>> cancel(
-      @PathVariable String jobId, Principal principal) {
+  public ApiResponse<Map<String, Boolean>> cancel(@PathVariable String jobId, Principal principal) {
     service.cancel(TenantContext.requireTenantId(), jobId, principal.getName());
     return ApiResponse.ok(Map.of("cancelled", true));
   }

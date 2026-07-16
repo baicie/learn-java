@@ -79,7 +79,8 @@ public class AssetCsvParser {
         throw new IllegalArgumentException("CSV 缺少必填列: " + required);
       }
     }
-    List<String> unknown = headers.stream().filter(header -> !TEMPLATE_HEADERS.contains(header)).toList();
+    List<String> unknown =
+        headers.stream().filter(header -> !TEMPLATE_HEADERS.contains(header)).toList();
     if (!unknown.isEmpty()) {
       throw new IllegalArgumentException("CSV 包含 unknown columns: " + unknown);
     }

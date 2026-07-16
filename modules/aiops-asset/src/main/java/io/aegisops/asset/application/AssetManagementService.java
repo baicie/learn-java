@@ -74,8 +74,7 @@ public class AssetManagementService {
       String tenantId, String assetId, UpdateAssetRequest request, String actorId) {
     AssetResponse before = queryService.get(tenantId, assetId);
     boolean updated =
-        repository.updateCanonical(
-            tenantId, assetId, request, OffsetDateTime.now(ZoneOffset.UTC));
+        repository.updateCanonical(tenantId, assetId, request, OffsetDateTime.now(ZoneOffset.UTC));
     if (!updated) {
       throw new ConflictException("资源已被其他操作更新，请刷新后重试");
     }
@@ -87,8 +86,7 @@ public class AssetManagementService {
   @Transactional
   public void archive(String tenantId, String assetId, long version, String actorId) {
     AssetResponse before = queryService.get(tenantId, assetId);
-    if (!repository.archive(
-        tenantId, assetId, version, OffsetDateTime.now(ZoneOffset.UTC))) {
+    if (!repository.archive(tenantId, assetId, version, OffsetDateTime.now(ZoneOffset.UTC))) {
       throw new ConflictException("资源已被其他操作更新，请刷新后重试");
     }
     audit(tenantId, actorId, "asset.archive", assetId, before, null, Map.of());
@@ -103,8 +101,7 @@ public class AssetManagementService {
       throw new ConflictException("资源不能关联自身");
     }
     String relationId =
-        repository.createRelation(
-            tenantId, assetId, request, OffsetDateTime.now(ZoneOffset.UTC));
+        repository.createRelation(tenantId, assetId, request, OffsetDateTime.now(ZoneOffset.UTC));
     audit(
         tenantId,
         actorId,
@@ -117,8 +114,7 @@ public class AssetManagementService {
   }
 
   @Transactional
-  public void deleteRelation(
-      String tenantId, String assetId, String relationId, String actorId) {
+  public void deleteRelation(String tenantId, String assetId, String relationId, String actorId) {
     queryService.get(tenantId, assetId);
     if (!repository.deleteRelation(tenantId, assetId, relationId)) {
       throw new ResourceNotFoundException("资源关系不存在: " + relationId);
@@ -143,14 +139,7 @@ public class AssetManagementService {
       Object detail) {
     auditService.record(
         new AuditRecordCommand(
-            tenantId,
-            actorId,
-            action,
-            "asset",
-            assetId,
-            json(before),
-            json(after),
-            json(detail)));
+            tenantId, actorId, action, "asset", assetId, json(before), json(after), json(detail)));
   }
 
   private String json(Object value) {

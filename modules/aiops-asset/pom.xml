@@ -12,6 +12,11 @@
   <dependencies>
     <dependency>
       <groupId>io.aegisops</groupId>
+      <artifactId>aiops-audit</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.aegisops</groupId>
       <artifactId>aiops-common</artifactId>
       <version>${project.version}</version>
     </dependency>
@@ -21,9 +26,9 @@
       <version>${project.version}</version>
     </dependency>
     <dependency>
-      <groupId>io.aegisops</groupId>
-      <artifactId>aiops-audit</artifactId>
-      <version>${project.version}</version>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-csv</artifactId>
+      <version>1.11.0</version>
     </dependency>
 
     <dependency>
@@ -32,7 +37,7 @@
     </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-web</artifactId>
+      <artifactId>spring-boot-starter-security</artifactId>
     </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>
@@ -40,12 +45,7 @@
     </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-security</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.commons</groupId>
-      <artifactId>commons-csv</artifactId>
-      <version>1.11.0</version>
+      <artifactId>spring-boot-starter-web</artifactId>
     </dependency>
 
     <dependency>

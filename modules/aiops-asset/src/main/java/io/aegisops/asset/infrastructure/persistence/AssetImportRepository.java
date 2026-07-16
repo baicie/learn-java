@@ -47,8 +47,10 @@ public class AssetImportRepository {
       OffsetDateTime now) {
     String jobId = "aimp_" + Ids.newId();
     int valid = (int) rows.stream().filter(row -> row.validationStatus().equals("valid")).count();
-    int invalid = (int) rows.stream().filter(row -> row.validationStatus().equals("invalid")).count();
-    int conflicts = (int) rows.stream().filter(row -> row.validationStatus().equals("conflict")).count();
+    int invalid =
+        (int) rows.stream().filter(row -> row.validationStatus().equals("invalid")).count();
+    int conflicts =
+        (int) rows.stream().filter(row -> row.validationStatus().equals("conflict")).count();
     dsl.insertInto(ASSET_IMPORT_JOB)
         .set(ASSET_IMPORT_JOB.ID, jobId)
         .set(ASSET_IMPORT_JOB.TENANT_ID, tenantId)
@@ -90,8 +92,7 @@ public class AssetImportRepository {
 
   public AssetImportRowPageResponse rows(
       String tenantId, String jobId, int page, int pageSize, String status) {
-    var condition =
-        ASSET_IMPORT_ROW.TENANT_ID.eq(tenantId).and(ASSET_IMPORT_ROW.JOB_ID.eq(jobId));
+    var condition = ASSET_IMPORT_ROW.TENANT_ID.eq(tenantId).and(ASSET_IMPORT_ROW.JOB_ID.eq(jobId));
     if (status != null && !status.isBlank()) {
       condition = condition.and(ASSET_IMPORT_ROW.VALIDATION_STATUS.eq(status));
     }
@@ -139,8 +140,7 @@ public class AssetImportRepository {
         .execute();
   }
 
-  public void finish(
-      String tenantId, String jobId, int created, int updated, OffsetDateTime now) {
+  public void finish(String tenantId, String jobId, int created, int updated, OffsetDateTime now) {
     dsl.update(ASSET_IMPORT_JOB)
         .set(ASSET_IMPORT_JOB.STATUS, "success")
         .set(ASSET_IMPORT_JOB.CREATED_ROWS, created)

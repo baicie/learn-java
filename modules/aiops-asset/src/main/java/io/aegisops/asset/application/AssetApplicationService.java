@@ -63,8 +63,7 @@ public class AssetApplicationService {
             weakIdentities,
             resolution.action() == AssetIdentityResolver.Action.CREATE ? null : assetId);
     String sourceLinkId = repository.upsertSourceLink(assetId, command, now);
-    repository.replaceSourceIdentities(
-        assetId, sourceLinkId, command.tenantId(), identities, now);
+    repository.replaceSourceIdentities(assetId, sourceLinkId, command.tenantId(), identities, now);
 
     return new AssetUpsertResult(
         assetId, sourceLinkId, actionLabel(resolution.action()), weakConflict);
@@ -72,16 +71,9 @@ public class AssetApplicationService {
 
   @Transactional
   public int markMissing(
-      String tenantId,
-      String sourceType,
-      String sourceInstanceId,
-      OffsetDateTime lastSeenBefore) {
+      String tenantId, String sourceType, String sourceInstanceId, OffsetDateTime lastSeenBefore) {
     return repository.markSourceLinksMissing(
-        tenantId,
-        sourceType,
-        sourceInstanceId,
-        lastSeenBefore,
-        OffsetDateTime.now(ZoneOffset.UTC));
+        tenantId, sourceType, sourceInstanceId, lastSeenBefore, OffsetDateTime.now(ZoneOffset.UTC));
   }
 
   private String actionLabel(AssetIdentityResolver.Action action) {

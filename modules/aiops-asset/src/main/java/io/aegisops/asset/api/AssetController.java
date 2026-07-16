@@ -37,8 +37,7 @@ public class AssetController {
   private final AssetQueryService queryService;
   private final AssetManagementService managementService;
 
-  public AssetController(
-      AssetQueryService queryService, AssetManagementService managementService) {
+  public AssetController(AssetQueryService queryService, AssetManagementService managementService) {
     this.queryService = queryService;
     this.managementService = managementService;
   }
@@ -56,8 +55,7 @@ public class AssetController {
     return ApiResponse.ok(
         queryService.page(
             TenantContext.requireTenantId(),
-            new AssetQuery(
-                page, boundedPageSize, assetType, sourceType, keyword, status)));
+            new AssetQuery(page, boundedPageSize, assetType, sourceType, keyword, status)));
   }
 
   @PostMapping
@@ -65,8 +63,7 @@ public class AssetController {
   public ApiResponse<AssetResponse> create(
       @Valid @RequestBody CreateAssetRequest request, Principal principal) {
     return ApiResponse.ok(
-        managementService.create(
-            TenantContext.requireTenantId(), request, principal.getName()));
+        managementService.create(TenantContext.requireTenantId(), request, principal.getName()));
   }
 
   @GetMapping("/{id}")
@@ -89,11 +86,8 @@ public class AssetController {
   @PostMapping("/{id}/archive")
   @PreAuthorize("hasAuthority('asset:write')")
   public ApiResponse<Map<String, Boolean>> archive(
-      @PathVariable String id,
-      @RequestParam @Min(0) long version,
-      Principal principal) {
-    managementService.archive(
-        TenantContext.requireTenantId(), id, version, principal.getName());
+      @PathVariable String id, @RequestParam @Min(0) long version, Principal principal) {
+    managementService.archive(TenantContext.requireTenantId(), id, version, principal.getName());
     return ApiResponse.ok(Map.of("archived", true));
   }
 
