@@ -126,7 +126,7 @@ public class JooqAssetRepository implements AssetRepository {
                     row.getIdentityValue(),
                     row.getNormalizedValue(),
                     row.getStrength(),
-                    Boolean.TRUE.equals(row.getVerified()))));
+                    Boolean.TRUE.equals(row.getVerified())));
   }
 
   @Override
