@@ -7,6 +7,7 @@ public record DataSourceRecord(
     String tenantId,
     String type,
     String name,
+    String endpoint,
     String status,
     OffsetDateTime createdAt,
     OffsetDateTime updatedAt,

@@ -1,5 +1,8 @@
 export const platform = {
   'nav.dashboard': 'Dashboard',
+  'nav.resources.group': 'Resources & Integrations',
+  'nav.resources.datasources': 'Data Sources',
+  'nav.resources.assets': 'Asset Center',
   'nav.workRecords.group': 'Work Records',
   'nav.workRecords.records': 'Records',
   'nav.workRecords.designer': 'Form Designer',

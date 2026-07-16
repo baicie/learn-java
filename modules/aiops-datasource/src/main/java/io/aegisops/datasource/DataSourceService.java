@@ -68,7 +68,8 @@ public class DataSourceService {
   public List<DataSourceRecord> list(String tenantId) {
     return jdbc.query(
         """
-                select id, tenant_id, type, name, status, created_at, updated_at, last_sync_at
+                select id, tenant_id, type, name, config_json->>'endpoint' as endpoint,
+                       status, created_at, updated_at, last_sync_at
                 from datasource where tenant_id = ? order by created_at desc
                 """,
         (rs, rowNum) ->
@@ -77,6 +78,7 @@ public class DataSourceService {
                 rs.getString("tenant_id"),
                 rs.getString("type"),
                 rs.getString("name"),
+                rs.getString("endpoint"),
                 rs.getString("status"),
                 rs.getObject("created_at", OffsetDateTime.class),
                 rs.getObject("updated_at", OffsetDateTime.class),
@@ -154,7 +156,8 @@ public class DataSourceService {
   private DataSourceRecord getRecord(String tenantId, String id) {
     return jdbc.queryForObject(
         """
-                select id, tenant_id, type, name, status, created_at, updated_at, last_sync_at
+                select id, tenant_id, type, name, config_json->>'endpoint' as endpoint,
+                       status, created_at, updated_at, last_sync_at
                 from datasource where tenant_id = ? and id = ?
                 """,
         (rs, rowNum) ->
@@ -163,6 +166,7 @@ public class DataSourceService {
                 rs.getString("tenant_id"),
                 rs.getString("type"),
                 rs.getString("name"),
+                rs.getString("endpoint"),
                 rs.getString("status"),
                 rs.getObject("created_at", OffsetDateTime.class),
                 rs.getObject("updated_at", OffsetDateTime.class),

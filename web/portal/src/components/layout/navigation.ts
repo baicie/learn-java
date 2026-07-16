@@ -1,5 +1,6 @@
 import {
   CalendarDays,
+  Boxes,
   ClipboardList,
   LayoutDashboard,
   ChartNoAxesCombined,
@@ -7,6 +8,8 @@ import {
   ListChecks,
   ScrollText,
   Settings2,
+  DatabaseZap,
+  PlugZap,
   ShieldCheck,
   Users,
 } from 'lucide-react'
@@ -24,6 +27,24 @@ export const navigation: NavigationItem[] = [
     titleKey: 'nav.dashboard',
     to: '/',
     icon: LayoutDashboard,
+  },
+  {
+    titleKey: 'nav.resources.group',
+    icon: DatabaseZap,
+    children: [
+      {
+        titleKey: 'nav.resources.datasources',
+        to: '/datasources',
+        icon: PlugZap,
+        anyPermissions: ['datasource:read'],
+      },
+      {
+        titleKey: 'nav.resources.assets',
+        to: '/assets',
+        icon: Boxes,
+        anyPermissions: ['asset:read'],
+      },
+    ],
   },
   {
     titleKey: 'nav.workRecords.group',
