@@ -26,9 +26,6 @@ if ! command -v docker >/dev/null 2>&1; then
   exit 1
 fi
 
-echo "==> Validate self-hosted runner contract"
-bash scripts/ci/test-self-hosted-runner-contract.sh
-
 echo "==> Parse release POMs"
 "$MAVEN" -B -ntp -f web/portal/pom.xml validate
 "$MAVEN" -B -ntp -f apps/aiops-worker/pom.xml validate

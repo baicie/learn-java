@@ -36,8 +36,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Verify runner toolchain
-        run: bash scripts/ci/self-hosted-runner-preflight.sh shellcheck
+      - name: Install shellcheck
+        run: sudo apt-get update && sudo apt-get install -y shellcheck
 
       - name: bash -n
         run: |
@@ -80,8 +80,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Verify runner toolchain
-        run: bash scripts/ci/self-hosted-runner-preflight.sh docker postgres
+      - name: Install psql
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
 
       - name: Verify SQL syntax
         run: |

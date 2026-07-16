@@ -32,15 +32,10 @@ run_frontend() {
 
   cd "$abs_dir"
 
-  install_args=(--prefer-offline)
-  if [ -n "${PNPM_STORE_DIR:-}" ]; then
-    install_args+=(--store-dir "$PNPM_STORE_DIR")
-  fi
-
   if [ -f "pnpm-lock.yaml" ]; then
-    pnpm install --frozen-lockfile "${install_args[@]}"
+    pnpm install --frozen-lockfile
   else
-    pnpm install "${install_args[@]}"
+    pnpm install
   fi
 
   has_script() {
@@ -63,12 +58,7 @@ run_frontend() {
   run_script "typecheck"
 
   if has_script "test:browser:install"; then
-    if [ "${AIOPS_CI_PREINSTALLED_BROWSER:-0}" = "1" ]; then
-      echo "[${dir}] reuse preinstalled Playwright browser"
-      pnpm exec playwright install --list | grep -qi chromium
-    else
-      run_script "test:browser:install"
-    fi
+    run_script "test:browser:install"
   fi
 
   if has_script "test:coverage"; then

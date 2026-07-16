@@ -25,8 +25,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Verify runner toolchain
-        run: bash scripts/ci/self-hosted-runner-preflight.sh node
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22"
 
       - name: Configure branch protection
         env:
