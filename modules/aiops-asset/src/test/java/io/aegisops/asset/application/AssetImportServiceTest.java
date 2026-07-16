@@ -16,6 +16,7 @@ import io.aegisops.asset.domain.rule.AssetCsvRowValidator;
 import io.aegisops.asset.domain.rule.AssetIdentityNormalizer;
 import io.aegisops.asset.infrastructure.adapter.AssetCsvParser;
 import io.aegisops.asset.infrastructure.adapter.AssetCsvRow;
+import io.aegisops.asset.infrastructure.persistence.AssetImportPreviewDraft;
 import io.aegisops.asset.infrastructure.persistence.AssetImportRepository;
 import io.aegisops.asset.infrastructure.persistence.AssetRepository;
 import io.aegisops.audit.AuditService;
@@ -44,11 +45,9 @@ class AssetImportServiceTest {
     assetService = mock(AssetApplicationService.class);
     service =
         new AssetImportService(
-            parser,
-            new AssetCsvRowValidator(),
-            new AssetIdentityNormalizer(),
+            new AssetImportPreviewer(
+                parser, new AssetCsvRowValidator(), new AssetIdentityNormalizer(), assetRepository),
             importRepository,
-            assetRepository,
             assetService,
             mock(AuditService.class),
             new ObjectMapper());
@@ -64,8 +63,7 @@ class AssetImportServiceTest {
         .thenReturn(Set.of());
     when(assetRepository.findAssetIdBySourceLink("tenant-1", "csv", "sheet-a", "host-1"))
         .thenReturn(Optional.empty());
-    when(importRepository.createPreview(
-            eq("tenant-1"), eq("sheet-a"), eq("assets.csv"), any(), eq("user-1"), any(), any()))
+    when(importRepository.createPreview(any(AssetImportPreviewDraft.class)))
         .thenReturn(job("previewed", 0));
 
     var result = service.preview("tenant-1", "sheet-a", "assets.csv", content, "user-1");
@@ -84,8 +82,7 @@ class AssetImportServiceTest {
 
     assertThat(result.jobId()).isEqualTo("job-1");
     verifyNoInteractions(parser, assetService);
-    verify(importRepository, never())
-        .createPreview(any(), any(), any(), any(), any(), any(), any());
+    verify(importRepository, never()).createPreview(any());
   }
 
   @Test

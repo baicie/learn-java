@@ -65,7 +65,7 @@ public class AssetManagementService {
                 Map.of(),
                 request.identities()));
     AssetResponse created = queryService.get(tenantId, result.assetId());
-    audit(tenantId, actorId, "asset.create", created.id(), null, created, Map.of());
+    audit(tenantId, actorId, new AssetAudit("asset.create", created.id(), null, created, Map.of()));
     return created;
   }
 
@@ -79,7 +79,7 @@ public class AssetManagementService {
       throw new ConflictException("资源已被其他操作更新，请刷新后重试");
     }
     AssetResponse after = queryService.get(tenantId, assetId);
-    audit(tenantId, actorId, "asset.update", assetId, before, after, Map.of());
+    audit(tenantId, actorId, new AssetAudit("asset.update", assetId, before, after, Map.of()));
     return after;
   }
 
@@ -89,7 +89,7 @@ public class AssetManagementService {
     if (!repository.archive(tenantId, assetId, version, OffsetDateTime.now(ZoneOffset.UTC))) {
       throw new ConflictException("资源已被其他操作更新，请刷新后重试");
     }
-    audit(tenantId, actorId, "asset.archive", assetId, before, null, Map.of());
+    audit(tenantId, actorId, new AssetAudit("asset.archive", assetId, before, null, Map.of()));
   }
 
   @Transactional
@@ -105,11 +105,12 @@ public class AssetManagementService {
     audit(
         tenantId,
         actorId,
-        "asset.relation.create",
-        assetId,
-        null,
-        null,
-        Map.of("relationId", relationId, "targetAssetId", request.targetAssetId()));
+        new AssetAudit(
+            "asset.relation.create",
+            assetId,
+            null,
+            null,
+            Map.of("relationId", relationId, "targetAssetId", request.targetAssetId())));
     return relationId;
   }
 
@@ -122,24 +123,21 @@ public class AssetManagementService {
     audit(
         tenantId,
         actorId,
-        "asset.relation.delete",
-        assetId,
-        null,
-        null,
-        Map.of("relationId", relationId));
+        new AssetAudit(
+            "asset.relation.delete", assetId, null, null, Map.of("relationId", relationId)));
   }
 
-  private void audit(
-      String tenantId,
-      String actorId,
-      String action,
-      String assetId,
-      Object before,
-      Object after,
-      Object detail) {
+  private void audit(String tenantId, String actorId, AssetAudit audit) {
     auditService.record(
         new AuditRecordCommand(
-            tenantId, actorId, action, "asset", assetId, json(before), json(after), json(detail)));
+            tenantId,
+            actorId,
+            audit.action(),
+            "asset",
+            audit.assetId(),
+            json(audit.before()),
+            json(audit.after()),
+            json(audit.detail())));
   }
 
   private String json(Object value) {
@@ -149,4 +147,7 @@ public class AssetManagementService {
       throw new IllegalArgumentException("资源审计快照无法序列化", exception);
     }
   }
+
+  private record AssetAudit(
+      String action, String assetId, Object before, Object after, Object detail) {}
 }

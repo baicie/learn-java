@@ -7,14 +7,10 @@ import io.aegisops.asset.api.dto.AssetImportRowPageResponse;
 import io.aegisops.asset.api.dto.AssetImportRowResponse;
 import io.aegisops.asset.api.dto.AssetUpsertCommand;
 import io.aegisops.asset.domain.model.AssetIdentityInput;
-import io.aegisops.asset.domain.model.NormalizedAssetIdentity.Strength;
-import io.aegisops.asset.domain.rule.AssetCsvRowValidator;
-import io.aegisops.asset.domain.rule.AssetIdentityNormalizer;
 import io.aegisops.asset.infrastructure.adapter.AssetCsvParser;
-import io.aegisops.asset.infrastructure.adapter.AssetCsvRow;
+import io.aegisops.asset.infrastructure.persistence.AssetImportPreviewDraft;
 import io.aegisops.asset.infrastructure.persistence.AssetImportRepository;
 import io.aegisops.asset.infrastructure.persistence.AssetImportRowDraft;
-import io.aegisops.asset.infrastructure.persistence.AssetRepository;
 import io.aegisops.audit.AuditRecordCommand;
 import io.aegisops.audit.AuditService;
 import io.aegisops.common.exception.ConflictException;
@@ -26,39 +22,27 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.HexFormat;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class AssetImportService {
-  private final AssetCsvParser parser;
-  private final AssetCsvRowValidator validator;
-  private final AssetIdentityNormalizer identityNormalizer;
+  private final AssetImportPreviewer previewer;
   private final AssetImportRepository importRepository;
-  private final AssetRepository assetRepository;
   private final AssetApplicationService assetService;
   private final AuditService auditService;
   private final ObjectMapper objectMapper;
 
   public AssetImportService(
-      AssetCsvParser parser,
-      AssetCsvRowValidator validator,
-      AssetIdentityNormalizer identityNormalizer,
+      AssetImportPreviewer previewer,
       AssetImportRepository importRepository,
-      AssetRepository assetRepository,
       AssetApplicationService assetService,
       AuditService auditService,
       ObjectMapper objectMapper) {
-    this.parser = parser;
-    this.validator = validator;
-    this.identityNormalizer = identityNormalizer;
+    this.previewer = previewer;
     this.importRepository = importRepository;
-    this.assetRepository = assetRepository;
     this.assetService = assetService;
     this.auditService = auditService;
     this.objectMapper = objectMapper;
@@ -74,23 +58,16 @@ public class AssetImportService {
       return existing.orElseThrow();
     }
 
-    List<AssetCsvRow> rows = parser.parse(content);
-    Map<String, Integer> externalIds = new LinkedHashMap<>();
-    for (AssetCsvRow row : rows) {
-      if (!row.externalId().isBlank()) {
-        externalIds.merge(row.externalId(), 1, Integer::sum);
-      }
-    }
-    List<AssetImportRowDraft> drafts =
-        rows.stream().map(row -> previewRow(tenantId, sourceInstanceId, row, externalIds)).toList();
+    List<AssetImportRowDraft> drafts = previewer.preview(tenantId, sourceInstanceId, content);
     return importRepository.createPreview(
-        tenantId,
-        sourceInstanceId,
-        safeFileName(fileName),
-        checksum,
-        actorId,
-        drafts,
-        OffsetDateTime.now(ZoneOffset.UTC));
+        new AssetImportPreviewDraft(
+            tenantId,
+            sourceInstanceId,
+            safeFileName(fileName),
+            checksum,
+            actorId,
+            drafts,
+            OffsetDateTime.now(ZoneOffset.UTC)));
   }
 
   public AssetImportPreviewResponse get(String tenantId, String jobId) {
@@ -152,43 +129,6 @@ public class AssetImportService {
         .getBytes(StandardCharsets.UTF_8);
   }
 
-  private AssetImportRowDraft previewRow(
-      String tenantId, String sourceInstanceId, AssetCsvRow row, Map<String, Integer> externalIds) {
-    List<String> errors = new ArrayList<>(validator.validate(row));
-    if (externalIds.getOrDefault(row.externalId(), 0) > 1) {
-      errors.add("EXTERNAL_ID_DUPLICATE");
-    }
-    String status = errors.isEmpty() ? "valid" : "invalid";
-    String action = null;
-    if (errors.isEmpty()) {
-      var identities = identityNormalizer.normalize(identityInputs(row), blankToNull(row.ip()));
-      Set<String> strongMatches =
-          assetRepository.findAssetIdsByStrongIdentities(
-              tenantId,
-              identities.stream()
-                  .filter(identity -> identity.strength() == Strength.STRONG)
-                  .toList());
-      var sourceMatch =
-          assetRepository.findAssetIdBySourceLink(
-              tenantId, "csv", sourceInstanceId, row.externalId());
-      if (strongMatches.size() > 1
-          || (sourceMatch.isPresent()
-              && !strongMatches.isEmpty()
-              && !strongMatches.contains(sourceMatch.orElseThrow()))) {
-        status = "conflict";
-        errors.add("STRONG_IDENTITY_CONFLICT");
-      } else if (sourceMatch.isPresent()) {
-        action = "update";
-      } else if (!strongMatches.isEmpty()) {
-        action = "link";
-      } else {
-        action = "create";
-      }
-    }
-    return new AssetImportRowDraft(
-        row.rowNumber(), row.externalId(), payload(row), status, action, List.copyOf(errors));
-  }
-
   private AssetUpsertCommand command(
       String tenantId, String sourceInstanceId, Map<String, Object> payload) {
     return new AssetUpsertCommand(
@@ -210,32 +150,6 @@ public class AssetImportService {
         "csv",
         payload,
         identityInputs(payload));
-  }
-
-  private Map<String, Object> payload(AssetCsvRow row) {
-    Map<String, Object> payload = new LinkedHashMap<>();
-    payload.put("externalId", row.externalId());
-    payload.put("assetType", row.assetType().toLowerCase(Locale.ROOT));
-    payload.put("name", row.name());
-    payload.put("displayName", row.displayName());
-    payload.put("environment", row.environment());
-    payload.put("site", row.site());
-    payload.put("ownerTeam", row.ownerTeam());
-    payload.put("criticality", row.criticality());
-    payload.put("ip", row.ip());
-    payload.put("machineId", row.machineId());
-    payload.put("cloudInstanceId", row.cloudInstanceId());
-    payload.put("k8sUid", row.k8sUid());
-    payload.put("tags", row.tags());
-    return Map.copyOf(payload);
-  }
-
-  private List<AssetIdentityInput> identityInputs(AssetCsvRow row) {
-    List<AssetIdentityInput> result = new ArrayList<>();
-    addIdentity(result, "machine_id", row.machineId());
-    addIdentity(result, "cloud_instance_id", row.cloudInstanceId());
-    addIdentity(result, "k8s_uid", row.k8sUid());
-    return List.copyOf(result);
   }
 
   private List<AssetIdentityInput> identityInputs(Map<String, Object> payload) {
@@ -260,10 +174,6 @@ public class AssetImportService {
   private String string(Map<String, Object> payload, String key) {
     Object value = payload.get(key);
     return value == null ? null : value.toString();
-  }
-
-  private String blankToNull(String value) {
-    return value == null || value.isBlank() ? null : value;
   }
 
   private String sha256(byte[] content) {

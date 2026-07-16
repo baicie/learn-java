@@ -37,14 +37,10 @@ public class AssetImportRepository {
         .fetchOptional(this::job);
   }
 
-  public AssetImportPreviewResponse createPreview(
-      String tenantId,
-      String sourceInstanceId,
-      String fileName,
-      String checksum,
-      String actorId,
-      List<AssetImportRowDraft> rows,
-      OffsetDateTime now) {
+  public AssetImportPreviewResponse createPreview(AssetImportPreviewDraft draft) {
+    String tenantId = draft.tenantId();
+    List<AssetImportRowDraft> rows = draft.rows();
+    OffsetDateTime now = draft.createdAt();
     String jobId = "aimp_" + Ids.newId();
     int valid = (int) rows.stream().filter(row -> row.validationStatus().equals("valid")).count();
     int invalid =
@@ -54,15 +50,15 @@ public class AssetImportRepository {
     dsl.insertInto(ASSET_IMPORT_JOB)
         .set(ASSET_IMPORT_JOB.ID, jobId)
         .set(ASSET_IMPORT_JOB.TENANT_ID, tenantId)
-        .set(ASSET_IMPORT_JOB.SOURCE_INSTANCE_ID, sourceInstanceId)
-        .set(ASSET_IMPORT_JOB.FILE_NAME, fileName)
-        .set(ASSET_IMPORT_JOB.CONTENT_SHA256, checksum)
+        .set(ASSET_IMPORT_JOB.SOURCE_INSTANCE_ID, draft.sourceInstanceId())
+        .set(ASSET_IMPORT_JOB.FILE_NAME, draft.fileName())
+        .set(ASSET_IMPORT_JOB.CONTENT_SHA256, draft.checksum())
         .set(ASSET_IMPORT_JOB.STATUS, "previewed")
         .set(ASSET_IMPORT_JOB.TOTAL_ROWS, rows.size())
         .set(ASSET_IMPORT_JOB.VALID_ROWS, valid)
         .set(ASSET_IMPORT_JOB.INVALID_ROWS, invalid)
         .set(ASSET_IMPORT_JOB.CONFLICT_ROWS, conflicts)
-        .set(ASSET_IMPORT_JOB.CREATED_BY, actorId)
+        .set(ASSET_IMPORT_JOB.CREATED_BY, draft.actorId())
         .set(ASSET_IMPORT_JOB.CREATED_AT, now)
         .set(ASSET_IMPORT_JOB.UPDATED_AT, now)
         .execute();
