@@ -19,6 +19,9 @@ cat >"$MOCK_BIN/docker" <<'MOCK_DOCKER'
 set -Eeuo pipefail
 printf 'docker %s\n' "$*" >>"$PREPARE_DOCKER_CALL_LOG"
 [ "${1:-}" = "info" ]
+if [ "${2:-}" = "--format" ]; then
+  printf '%s\n' "${PREPARE_DOCKER_MIRRORS:-[]}"
+fi
 MOCK_DOCKER
 
 cat >"$MOCK_BIN/sudo" <<'MOCK_SUDO'
@@ -28,35 +31,31 @@ printf 'sudo %s\n' "$*" >>"$PREPARE_DOCKER_CALL_LOG"
 exec "$@"
 MOCK_SUDO
 
-cat >"$MOCK_BIN/flock" <<'MOCK_FLOCK'
-#!/usr/bin/env bash
-set -Eeuo pipefail
-[ "${1:-}" = "-x" ]
-shift 2
-exec "$@"
-MOCK_FLOCK
-
-cat >"$TMP_ROOT/configure-mirror.sh" <<'MOCK_MIRROR'
-#!/usr/bin/env bash
-set -Eeuo pipefail
-printf 'mirror %s\n' "${DOCKER_RESTART_WAIT_SECONDS:-}" \
-  >>"$PREPARE_DOCKER_CALL_LOG"
-MOCK_MIRROR
-
 chmod +x \
   "$MOCK_BIN/docker" \
-  "$MOCK_BIN/sudo" \
-  "$MOCK_BIN/flock" \
-  "$TMP_ROOT/configure-mirror.sh"
+  "$MOCK_BIN/sudo"
 
 PATH="$MOCK_BIN:$PATH" \
 PREPARE_DOCKER_CALL_LOG="$CALL_LOG" \
-DOCKER_MIRROR_SCRIPT="$TMP_ROOT/configure-mirror.sh" \
-DOCKER_PREPARE_LOCK="$TMP_ROOT/prepare.lock" \
+PREPARE_DOCKER_MIRRORS='["https://mirror.ccs.tencentyun.com"]' \
 DOCKER_SOCKET="$TMP_ROOT/missing.sock" \
   bash "$PREPARE_SCRIPT"
 
-grep -Fq 'mirror 60' "$CALL_LOG"
-[ "$(grep -Fc 'docker info' "$CALL_LOG")" -eq 2 ]
+if grep -Fq 'sudo ' "$CALL_LOG"; then
+  echo "Docker preparation must not mutate or restart the host daemon." >&2
+  exit 1
+fi
+
+set +e
+PATH="$MOCK_BIN:$PATH" \
+PREPARE_DOCKER_CALL_LOG="$CALL_LOG" \
+PREPARE_DOCKER_MIRRORS='[]' \
+DOCKER_SOCKET="$TMP_ROOT/missing.sock" \
+  bash "$PREPARE_SCRIPT" >"$TMP_ROOT/missing-mirror.log" 2>&1
+missing_mirror_status=$?
+set -e
+
+[ "$missing_mirror_status" -ne 0 ]
+grep -Fq 'before starting the self-hosted runner' "$TMP_ROOT/missing-mirror.log"
 
 echo "Docker preparation wrapper simulation passed."
