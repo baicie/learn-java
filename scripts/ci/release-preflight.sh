@@ -51,8 +51,11 @@ bash -n deploy/scripts/deploy-app.sh
 bash -n deploy/scripts/configure-docker-mirror.sh
 bash -n scripts/ci/test-deploy-app.sh
 bash -n scripts/ci/test-configure-docker-mirror.sh
+bash -n scripts/ci/prepare-docker.sh
+bash -n scripts/ci/test-prepare-docker.sh
 bash scripts/ci/test-deploy-app.sh
 bash scripts/ci/test-configure-docker-mirror.sh
+bash scripts/ci/test-prepare-docker.sh
 grep -Fq 'DEPLOY_STAGE="port-preflight"' deploy/scripts/deploy-app.sh
 grep -Fq 'DEPLOY_STAGE="application-recreate"' deploy/scripts/deploy-app.sh
 grep -Fq 'remove_application_containers' deploy/scripts/deploy-app.sh
