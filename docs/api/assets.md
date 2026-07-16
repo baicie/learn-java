@@ -74,6 +74,21 @@ related:
 external_id,asset_type,name,display_name,environment,site,owner_team,criticality,ip,machine_id,cloud_instance_id,k8s_uid,tags
 ```
 
+## Zabbix 资源同步
+
+`POST /api/datasources/{id}/sync` 只创建状态为 `pending` 的同步运行和 `zabbix-sync` outbox 消息，并立即返回 HTTP 202：
+
+```json
+{
+  "success": true,
+  "data": { "runId": "sync_xxx", "status": "pending" }
+}
+```
+
+Worker 校验 outbox 的租户后执行采集。Zabbix Host 使用 `sourceType=zabbix`、`sourceInstanceId={datasourceId}`、`externalId={hostId}` 调用统一 Asset upsert；因此同一实例重复同步只更新 SourceLink，不同实例的相同 hostid 不冲突。Problem 通过标准 Alert ingest 服务写入。同步开始前仍为 active、但本轮未再次出现的 SourceLink 标记为 `missing`，不会自动归档规范资源。
+
+幂等键格式为 `zabbix-sync:{tenantId}:{datasourceId}:{runId}`。执行结果通过 `GET /api/datasources/{id}/sync-runs` 查询；采集失败时 run 和 datasource 都更新为 `failed/error`，由 outbox 重试策略决定是否重试。
+
 ## 一致性规则
 
 - SourceLink 精确匹配或强身份匹配时复用规范资源。

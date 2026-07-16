@@ -404,6 +404,24 @@ public class JooqAssetRepository implements AssetRepository {
     }
   }
 
+  @Override
+  public int markSourceLinksMissing(
+      String tenantId,
+      String sourceType,
+      String sourceInstanceId,
+      OffsetDateTime lastSeenBefore,
+      OffsetDateTime now) {
+    return dsl.update(ASSET_SOURCE_LINK)
+        .set(ASSET_SOURCE_LINK.SYNC_STATUS, "missing")
+        .set(ASSET_SOURCE_LINK.UPDATED_AT, now)
+        .where(ASSET_SOURCE_LINK.TENANT_ID.eq(tenantId))
+        .and(ASSET_SOURCE_LINK.SOURCE_TYPE.eq(normalized(sourceType)))
+        .and(ASSET_SOURCE_LINK.SOURCE_INSTANCE_ID.eq(sourceInstanceId))
+        .and(ASSET_SOURCE_LINK.LAST_SEEN_AT.lt(lastSeenBefore))
+        .and(ASSET_SOURCE_LINK.SYNC_STATUS.eq("active"))
+        .execute();
+  }
+
   private boolean refreshExistingStrongIdentity(
       String assetId,
       String tenantId,

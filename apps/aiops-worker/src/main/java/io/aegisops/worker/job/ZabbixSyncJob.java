@@ -1,27 +1,48 @@
 package io.aegisops.worker.job;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.aegisops.datasource.application.DataSourceSyncApplicationService;
 import io.aegisops.persistence.jooq.public_.tables.records.AutomationOutboxRecord;
 import org.springframework.stereotype.Component;
 
-/**
- * Phase 1 entry point: pull Zabbix hosts / triggers / problems and reconcile assets and alert
- * events.
- *
- * <p>MVP skeleton: the real implementation lives behind the {@code aiops-zabbix-adapter} module and
- * is wired in once Phase 1 begins. For now the job is a no-op so the {@code OutboxPoller} can
- * validate the dispatch plumbing end-to-end.
- */
 @Component
 public class ZabbixSyncJob implements OutboxJob {
+  public static final String JOB_NAME = "zabbix-sync";
+  private final DataSourceSyncApplicationService service;
+  private final ObjectMapper objectMapper;
+
+  public ZabbixSyncJob(DataSourceSyncApplicationService service, ObjectMapper objectMapper) {
+    this.service = service;
+    this.objectMapper = objectMapper;
+  }
 
   @Override
   public String jobName() {
-    return "zabbix-sync";
+    return JOB_NAME;
   }
 
   @Override
   public JobResult handle(AutomationOutboxRecord row) {
-    // Real implementation arrives with Phase 1 (ZabbixSyncService inside aiops-zabbix-adapter).
-    return JobResult.success();
+    try {
+      JsonNode payload = objectMapper.readTree(row.getPayload().data());
+      String tenantId = required(payload, "tenantId");
+      if (!tenantId.equals(row.getTenantId())) {
+        return JobResult.failure("TENANT_MISMATCH");
+      }
+      service.execute(
+          tenantId, required(payload, "datasourceId"), required(payload, "runId"));
+      return JobResult.success();
+    } catch (Exception exception) {
+      return JobResult.failure(exception.getClass().getSimpleName());
+    }
+  }
+
+  private String required(JsonNode payload, String field) {
+    String value = payload.path(field).asText().trim();
+    if (value.isEmpty()) {
+      throw new IllegalArgumentException(field + " is required");
+    }
+    return value;
   }
 }

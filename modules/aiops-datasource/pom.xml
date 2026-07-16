@@ -20,6 +20,16 @@
       <artifactId>aiops-zabbix-adapter</artifactId>
       <version>${project.version}</version>
     </dependency>
+    <dependency>
+      <groupId>io.aegisops</groupId>
+      <artifactId>aiops-asset</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.aegisops</groupId>
+      <artifactId>aiops-alert</artifactId>
+      <version>${project.version}</version>
+    </dependency>
 
     <dependency>
       <groupId>org.springframework.boot</groupId>

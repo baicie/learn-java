@@ -63,4 +63,11 @@ public interface AssetRepository {
       String tenantId,
       List<NormalizedAssetIdentity> identities,
       OffsetDateTime now);
+
+  int markSourceLinksMissing(
+      String tenantId,
+      String sourceType,
+      String sourceInstanceId,
+      OffsetDateTime lastSeenBefore,
+      OffsetDateTime now);
 }

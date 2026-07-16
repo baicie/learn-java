@@ -70,6 +70,20 @@ public class AssetApplicationService {
         assetId, sourceLinkId, actionLabel(resolution.action()), weakConflict);
   }
 
+  @Transactional
+  public int markMissing(
+      String tenantId,
+      String sourceType,
+      String sourceInstanceId,
+      OffsetDateTime lastSeenBefore) {
+    return repository.markSourceLinksMissing(
+        tenantId,
+        sourceType,
+        sourceInstanceId,
+        lastSeenBefore,
+        OffsetDateTime.now(ZoneOffset.UTC));
+  }
+
   private String actionLabel(AssetIdentityResolver.Action action) {
     return switch (action) {
       case CREATE -> "created";
