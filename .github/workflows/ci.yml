@@ -28,7 +28,6 @@ env:
   JAVA_VERSION: "21"
   NODE_VERSION: "22"
   PYTHON_VERSION: "3.12"
-  MAVEN_OPTS: "-Dmaven.repo.local=.m2/repository"
 
 jobs:
   docs:
@@ -63,6 +62,11 @@ jobs:
           distribution: temurin
           java-version: ${{ env.JAVA_VERSION }}
           cache: maven
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
 
       - name: Verify backend
         run: bash scripts/ci/backend.sh
