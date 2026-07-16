@@ -68,14 +68,8 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
-      - name: Setup Docker
-        uses: docker/setup-docker-action@v5
-        with:
-          context: ci-${{ github.run_id }}-${{ github.run_attempt }}-backend
-          set-host: true
-
-      - name: Verify Docker
-        run: docker info
+      - name: Prepare Docker
+        run: bash scripts/ci/prepare-docker.sh
 
       - name: Verify backend
         run: bash scripts/ci/backend.sh

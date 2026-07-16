@@ -50,11 +50,8 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Setup Docker
-        uses: docker/setup-docker-action@v5
-        with:
-          context: work-record-${{ github.run_id }}-${{ github.run_attempt }}
-          set-host: true
+      - name: Prepare Docker
+        run: bash scripts/ci/prepare-docker.sh
 
       - name: Start PostgreSQL
         run: |

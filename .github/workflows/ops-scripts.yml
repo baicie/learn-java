@@ -66,11 +66,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Docker
-        uses: docker/setup-docker-action@v5
-        with:
-          context: ops-${{ github.run_id }}-${{ github.run_attempt }}-postgres
-          set-host: true
+      - name: Prepare Docker
+        run: bash scripts/ci/prepare-docker.sh
 
       - name: Start PostgreSQL
         run: |
