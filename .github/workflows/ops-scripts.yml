@@ -8,6 +8,8 @@ on:
     paths:
       - "ops/**"
       - "infra/**"
+      - "apps/aiops-server/src/main/resources/db/migration/**"
+      - "scripts/ci/prepare-docker.sh"
       - ".github/workflows/ops-scripts.yml"
   push:
     branches:
@@ -16,12 +18,18 @@ on:
     paths:
       - "ops/**"
       - "infra/**"
+      - "apps/aiops-server/src/main/resources/db/migration/**"
+      - "scripts/ci/prepare-docker.sh"
       - ".github/workflows/ops-scripts.yml"
   workflow_call:
   workflow_dispatch:
 
 permissions:
   contents: read
+
+concurrency:
+  group: ops-scripts-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 defaults:
   run:

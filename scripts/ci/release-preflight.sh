@@ -84,6 +84,15 @@ grep -Fq 'deploy/scripts/configure-docker-mirror.sh' .github/workflows/deploy.ym
 grep -Fq 'envs: IMAGE_PREFIX,IMAGE_TAG' .github/workflows/deploy.yml
 grep -Fq 'needs: runtime-smoke' .github/workflows/deploy.yml
 grep -Fq 'name: Compose runtime smoke' .github/workflows/release-verify.yml
+grep -Fq "if: github.event_name != 'pull_request'" .github/workflows/release-verify.yml
+grep -Fq 'max-parallel: 1' .github/workflows/release-verify.yml
+grep -Fq 'max-parallel: 1' .github/workflows/deploy.yml
+grep -Fq 'group: ops-scripts-${{ github.workflow }}-${{ github.ref }}' \
+  .github/workflows/ops-scripts.yml
+if grep -Fq '      - "fix/**"' .github/workflows/release-verify.yml; then
+  echo "Release Verify must not run heavy validation on fix branch pushes." >&2
+  exit 1
+fi
 if grep -Fq 'envs: IMAGE_PREFIX,IMAGE_TAG,DOCKERHUB_USERNAME,DOCKERHUB_TOKEN' \
   .github/workflows/deploy.yml; then
   echo "Tencent Cloud VM must not receive Docker Hub credentials." >&2
