@@ -12,13 +12,15 @@ import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.aegisops.asset.api.dto.AssetImportPreviewResponse;
+import io.aegisops.asset.api.dto.ResolveAssetImportRowRequest;
+import io.aegisops.asset.application.port.AssetStore;
+import io.aegisops.asset.domain.model.AssetCsvRow;
 import io.aegisops.asset.domain.rule.AssetCsvRowValidator;
 import io.aegisops.asset.domain.rule.AssetIdentityNormalizer;
 import io.aegisops.asset.infrastructure.adapter.AssetCsvParser;
-import io.aegisops.asset.infrastructure.adapter.AssetCsvRow;
+import io.aegisops.asset.infrastructure.adapter.AssetImportErrorCsvWriter;
 import io.aegisops.asset.infrastructure.persistence.AssetImportPreviewDraft;
 import io.aegisops.asset.infrastructure.persistence.AssetImportRepository;
-import io.aegisops.asset.infrastructure.persistence.AssetRepository;
 import io.aegisops.audit.AuditService;
 import io.aegisops.common.exception.ConflictException;
 import java.nio.charset.StandardCharsets;
@@ -33,7 +35,7 @@ import org.junit.jupiter.api.Test;
 class AssetImportServiceTest {
   private AssetCsvParser parser;
   private AssetImportRepository importRepository;
-  private AssetRepository assetRepository;
+  private AssetStore assetRepository;
   private AssetApplicationService assetService;
   private AssetImportService service;
 
@@ -41,7 +43,7 @@ class AssetImportServiceTest {
   void setUp() {
     parser = mock(AssetCsvParser.class);
     importRepository = mock(AssetImportRepository.class);
-    assetRepository = mock(AssetRepository.class);
+    assetRepository = mock(AssetStore.class);
     assetService = mock(AssetApplicationService.class);
     service =
         new AssetImportService(
@@ -50,7 +52,8 @@ class AssetImportServiceTest {
             importRepository,
             assetService,
             mock(AuditService.class),
-            new ObjectMapper());
+            new ObjectMapper(),
+            new AssetImportErrorCsvWriter());
   }
 
   @Test
@@ -94,6 +97,43 @@ class AssetImportServiceTest {
         .hasMessageContaining("冲突行");
 
     verifyNoInteractions(assetService);
+  }
+
+  @Test
+  void skipResolutionAllowsConflictJobToContinue() {
+    when(importRepository.get("tenant-1", "job-1"))
+        .thenReturn(Optional.of(job("previewed", 1)), Optional.of(job("previewed", 0)));
+    when(importRepository.resolveConflictRow(
+            "tenant-1", "job-1", 2, "skip", null, OffsetDateTime.parse("2026-07-16T10:00:00Z")))
+        .thenReturn(true);
+
+    var result =
+        service.resolveConflict(
+            "tenant-1",
+            "job-1",
+            2,
+            new ResolveAssetImportRowRequest("skip", null),
+            "user-1",
+            OffsetDateTime.parse("2026-07-16T10:00:00Z"));
+
+    assertThat(result.conflictRows()).isZero();
+  }
+
+  @Test
+  void linkResolutionRequiresExistingTenantAsset() {
+    when(importRepository.get("tenant-1", "job-1")).thenReturn(Optional.of(job("previewed", 1)));
+    when(assetService.assetExists("tenant-1", "asset-404")).thenReturn(false);
+
+    assertThatThrownBy(
+            () ->
+                service.resolveConflict(
+                    "tenant-1",
+                    "job-1",
+                    2,
+                    new ResolveAssetImportRowRequest("link", "asset-404"),
+                    "user-1",
+                    OffsetDateTime.parse("2026-07-16T10:00:00Z")))
+        .hasMessageContaining("目标资源不存在");
   }
 
   private AssetCsvRow validRow() {

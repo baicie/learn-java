@@ -3,6 +3,7 @@ package io.aegisops.zabbix;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.content;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withServerError;
@@ -152,6 +153,27 @@ class DefaultZabbixClientTest {
     assertEquals(1, hosts.size());
     assertEquals("web-01", hosts.get(0).host());
     assertEquals("10.0.0.1", hosts.get(0).ip());
+  }
+
+  @Test
+  void getHostsReadsMachineIdentityFromInventory() {
+    server
+        .expect(requestTo(CONFIG.endpoint()))
+        .andRespond(
+            withSuccess(
+                "{\"jsonrpc\":\"2.0\",\"result\":\"token\",\"id\":1}", MediaType.APPLICATION_JSON));
+    server
+        .expect(requestTo(CONFIG.endpoint()))
+        .andExpect(content().string(org.hamcrest.Matchers.containsString("selectInventory")))
+        .andExpect(content().string(org.hamcrest.Matchers.containsString("selectTags")))
+        .andRespond(
+            withSuccess(
+                "{\"jsonrpc\":\"2.0\",\"result\":[{\"hostid\":\"1010\",\"host\":\"web-01\",\"name\":\"web-01\",\"status\":\"0\",\"interfaces\":[],\"groups\":[],\"inventory\":{\"serialno_a\":\"machine-001\"},\"tags\":[]}],\"id\":2}",
+                MediaType.APPLICATION_JSON));
+
+    List<ZabbixHost> hosts = client.getHosts(10);
+
+    assertEquals("machine-001", hosts.getFirst().machineId());
   }
 
   @Test

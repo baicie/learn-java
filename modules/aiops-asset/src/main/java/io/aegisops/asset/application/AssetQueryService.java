@@ -5,8 +5,9 @@ import io.aegisops.asset.api.dto.AssetPageResponse;
 import io.aegisops.asset.api.dto.AssetRelationResponse;
 import io.aegisops.asset.api.dto.AssetResponse;
 import io.aegisops.asset.api.dto.AssetSourceResponse;
+import io.aegisops.asset.api.dto.AssetSummaryResponse;
+import io.aegisops.asset.application.port.AssetStore;
 import io.aegisops.asset.domain.model.Asset;
-import io.aegisops.asset.infrastructure.persistence.AssetRepository;
 import io.aegisops.common.exception.ResourceNotFoundException;
 import java.util.List;
 import org.springframework.stereotype.Service;
@@ -15,9 +16,9 @@ import org.springframework.stereotype.Service;
 public class AssetQueryService {
   private static final int RECENT_ASSET_LIMIT = 100;
 
-  private final AssetRepository repository;
+  private final AssetStore repository;
 
-  public AssetQueryService(AssetRepository repository) {
+  public AssetQueryService(AssetStore repository) {
     this.repository = repository;
   }
 
@@ -27,6 +28,10 @@ public class AssetQueryService {
 
   public AssetPageResponse page(String tenantId, AssetQuery query) {
     return repository.page(tenantId, query);
+  }
+
+  public AssetSummaryResponse summary(String tenantId) {
+    return repository.summary(tenantId);
   }
 
   public AssetResponse get(String tenantId, String assetId) {

@@ -1,5 +1,6 @@
 package io.aegisops.asset.infrastructure.persistence;
 
+import static io.aegisops.persistence.AegisJooq.jsonbValue;
 import static io.aegisops.persistence.jooq.public_.tables.AssetImportJob.ASSET_IMPORT_JOB;
 import static io.aegisops.persistence.jooq.public_.tables.AssetImportRow.ASSET_IMPORT_ROW;
 
@@ -15,6 +16,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.jooq.DSLContext;
+import org.jooq.Field;
 import org.jooq.JSONB;
 import org.springframework.stereotype.Repository;
 
@@ -47,6 +49,16 @@ public class AssetImportRepository {
         (int) rows.stream().filter(row -> row.validationStatus().equals("invalid")).count();
     int conflicts =
         (int) rows.stream().filter(row -> row.validationStatus().equals("conflict")).count();
+    int creates =
+        (int) rows.stream().filter(row -> "create".equals(row.resolutionAction())).count();
+    int updates =
+        (int)
+            rows.stream()
+                .filter(
+                    row ->
+                        "update".equals(row.resolutionAction())
+                            || "link".equals(row.resolutionAction()))
+                .count();
     dsl.insertInto(ASSET_IMPORT_JOB)
         .set(ASSET_IMPORT_JOB.ID, jobId)
         .set(ASSET_IMPORT_JOB.TENANT_ID, tenantId)
@@ -58,6 +70,8 @@ public class AssetImportRepository {
         .set(ASSET_IMPORT_JOB.VALID_ROWS, valid)
         .set(ASSET_IMPORT_JOB.INVALID_ROWS, invalid)
         .set(ASSET_IMPORT_JOB.CONFLICT_ROWS, conflicts)
+        .set(ASSET_IMPORT_JOB.CREATED_ROWS, creates)
+        .set(ASSET_IMPORT_JOB.UPDATED_ROWS, updates)
         .set(ASSET_IMPORT_JOB.CREATED_BY, draft.actorId())
         .set(ASSET_IMPORT_JOB.CREATED_AT, now)
         .set(ASSET_IMPORT_JOB.UPDATED_AT, now)
@@ -107,9 +121,80 @@ public class AssetImportRepository {
     return dsl.selectFrom(ASSET_IMPORT_ROW)
         .where(ASSET_IMPORT_ROW.TENANT_ID.eq(tenantId))
         .and(ASSET_IMPORT_ROW.JOB_ID.eq(jobId))
-        .and(ASSET_IMPORT_ROW.VALIDATION_STATUS.eq("valid"))
+        .and(
+            ASSET_IMPORT_ROW
+                .VALIDATION_STATUS
+                .eq("valid")
+                .or(
+                    ASSET_IMPORT_ROW
+                        .VALIDATION_STATUS
+                        .eq("conflict")
+                        .and(ASSET_IMPORT_ROW.RESOLUTION_ACTION.isNotNull())))
         .orderBy(ASSET_IMPORT_ROW.ROW_NUMBER.asc())
         .fetch(this::row);
+  }
+
+  public List<AssetImportRowResponse> problemRows(String tenantId, String jobId, String status) {
+    var condition =
+        ASSET_IMPORT_ROW
+            .TENANT_ID
+            .eq(tenantId)
+            .and(ASSET_IMPORT_ROW.JOB_ID.eq(jobId))
+            .and(ASSET_IMPORT_ROW.VALIDATION_STATUS.in("invalid", "conflict"));
+    if (status != null && !status.isBlank()) {
+      condition = condition.and(ASSET_IMPORT_ROW.VALIDATION_STATUS.eq(status));
+    }
+    return dsl.selectFrom(ASSET_IMPORT_ROW)
+        .where(condition)
+        .orderBy(ASSET_IMPORT_ROW.ROW_NUMBER.asc())
+        .fetch(this::row);
+  }
+
+  public boolean resolveConflictRow(
+      String tenantId,
+      String jobId,
+      int rowNumber,
+      String action,
+      String targetAssetId,
+      OffsetDateTime now) {
+    int updated =
+        dsl.update(ASSET_IMPORT_ROW)
+            .set(ASSET_IMPORT_ROW.RESOLUTION_ACTION, action)
+            .set(ASSET_IMPORT_ROW.RESOLVED_ASSET_ID, targetAssetId)
+            .where(ASSET_IMPORT_ROW.TENANT_ID.eq(tenantId))
+            .and(ASSET_IMPORT_ROW.JOB_ID.eq(jobId))
+            .and(ASSET_IMPORT_ROW.ROW_NUMBER.eq(rowNumber))
+            .and(ASSET_IMPORT_ROW.VALIDATION_STATUS.eq("conflict"))
+            .and(ASSET_IMPORT_ROW.RESOLUTION_ACTION.isNull())
+            .execute();
+    if (updated != 1) {
+      return false;
+    }
+    int unresolved =
+        dsl.fetchCount(
+            dsl.selectFrom(ASSET_IMPORT_ROW)
+                .where(ASSET_IMPORT_ROW.TENANT_ID.eq(tenantId))
+                .and(ASSET_IMPORT_ROW.JOB_ID.eq(jobId))
+                .and(ASSET_IMPORT_ROW.VALIDATION_STATUS.eq("conflict"))
+                .and(ASSET_IMPORT_ROW.RESOLUTION_ACTION.isNull()));
+    dsl.update(ASSET_IMPORT_JOB)
+        .set(ASSET_IMPORT_JOB.CONFLICT_ROWS, unresolved)
+        .set(
+            ASSET_IMPORT_JOB.CREATED_ROWS,
+            action.equals("create")
+                ? ASSET_IMPORT_JOB.CREATED_ROWS.plus(1)
+                : ASSET_IMPORT_JOB.CREATED_ROWS)
+        .set(
+            ASSET_IMPORT_JOB.UPDATED_ROWS,
+            action.equals("link")
+                ? ASSET_IMPORT_JOB.UPDATED_ROWS.plus(1)
+                : ASSET_IMPORT_JOB.UPDATED_ROWS)
+        .set(ASSET_IMPORT_JOB.UPDATED_AT, now)
+        .where(ASSET_IMPORT_JOB.TENANT_ID.eq(tenantId))
+        .and(ASSET_IMPORT_JOB.ID.eq(jobId))
+        .and(ASSET_IMPORT_JOB.STATUS.eq("previewed"))
+        .execute();
+    return true;
   }
 
   public boolean start(String tenantId, String jobId, String actorId, OffsetDateTime now) {
@@ -129,7 +214,7 @@ public class AssetImportRepository {
       String tenantId, String jobId, int rowNumber, String assetId, String action) {
     dsl.update(ASSET_IMPORT_ROW)
         .set(ASSET_IMPORT_ROW.RESOLVED_ASSET_ID, assetId)
-        .set(ASSET_IMPORT_ROW.RESOLUTION_ACTION, action)
+        .set(ASSET_IMPORT_ROW.RESOLUTION_ACTION, persistedAction(action))
         .where(ASSET_IMPORT_ROW.TENANT_ID.eq(tenantId))
         .and(ASSET_IMPORT_ROW.JOB_ID.eq(jobId))
         .and(ASSET_IMPORT_ROW.ROW_NUMBER.eq(rowNumber))
@@ -186,9 +271,9 @@ public class AssetImportRepository {
         strings(row.getErrorCodes()));
   }
 
-  private JSONB json(Object value) {
+  private Field<JSONB> json(Object value) {
     try {
-      return JSONB.valueOf(objectMapper.writeValueAsString(value));
+      return jsonbValue(objectMapper.writeValueAsString(value));
     } catch (JsonProcessingException exception) {
       throw new IllegalArgumentException("import data is not serializable", exception);
     }
@@ -212,5 +297,13 @@ public class AssetImportRepository {
 
   private String blankToNull(String value) {
     return value == null || value.isBlank() ? null : value;
+  }
+
+  private String persistedAction(String action) {
+    return switch (action) {
+      case "created" -> "create";
+      case "updated" -> "update";
+      default -> action;
+    };
   }
 }

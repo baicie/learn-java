@@ -1,5 +1,6 @@
 package io.aegisops.asset.infrastructure.adapter;
 
+import io.aegisops.asset.domain.model.AssetCsvRow;
 import java.io.IOException;
 import java.io.StringReader;
 import java.nio.ByteBuffer;

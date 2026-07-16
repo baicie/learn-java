@@ -10,4 +10,5 @@ public record ZabbixHost(
     String status,
     String ip,
     List<String> groups,
+    String machineId,
     JsonNode raw) {}

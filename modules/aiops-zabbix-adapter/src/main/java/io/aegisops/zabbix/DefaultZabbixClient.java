@@ -68,6 +68,8 @@ final class DefaultZabbixClient implements ZabbixClient, JsonRpcCaller {
     params.put("output", List.of("hostid", "host", "name", "status"));
     params.put("selectInterfaces", List.of("ip", "dns", "main", "type"));
     params.put("selectGroups", List.of("groupid", "name"));
+    params.put("selectInventory", "extend");
+    params.put("selectTags", List.of("tag", "value"));
     params.put("sortfield", "name");
     params.put("limit", normalizeLimit(limit));
 
@@ -317,7 +319,33 @@ final class DefaultZabbixClient implements ZabbixClient, JsonRpcCaller {
         item.path("status").asText("0"),
         ip,
         groups,
+        machineId(item),
         item.deepCopy());
+  }
+
+  private String machineId(JsonNode item) {
+    JsonNode tags = item.path("tags");
+    if (tags.isArray()) {
+      for (String accepted : List.of("machine_id", "machine.id", "host_uuid", "system_uuid")) {
+        for (JsonNode tag : tags) {
+          if (accepted.equalsIgnoreCase(tag.path("tag").asText())) {
+            String value = tag.path("value").asText(null);
+            if (value != null && !value.isBlank()) {
+              return value.trim();
+            }
+          }
+        }
+      }
+    }
+
+    JsonNode inventory = item.path("inventory");
+    for (String field : List.of("serialno_a", "asset_tag")) {
+      String value = inventory.path(field).asText(null);
+      if (value != null && !value.isBlank()) {
+        return value.trim();
+      }
+    }
+    return null;
   }
 
   private ZabbixProblem toProblem(JsonNode item, String auth) {

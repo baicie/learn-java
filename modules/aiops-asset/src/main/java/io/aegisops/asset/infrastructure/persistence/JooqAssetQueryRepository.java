@@ -2,6 +2,8 @@ package io.aegisops.asset.infrastructure.persistence;
 
 import static io.aegisops.persistence.jooq.public_.tables.Asset.ASSET;
 import static io.aegisops.persistence.jooq.public_.tables.AssetIdentity.ASSET_IDENTITY;
+import static io.aegisops.persistence.jooq.public_.tables.AssetImportJob.ASSET_IMPORT_JOB;
+import static io.aegisops.persistence.jooq.public_.tables.AssetImportRow.ASSET_IMPORT_ROW;
 import static io.aegisops.persistence.jooq.public_.tables.AssetRelation.ASSET_RELATION;
 import static io.aegisops.persistence.jooq.public_.tables.AssetSourceLink.ASSET_SOURCE_LINK;
 
@@ -13,6 +15,7 @@ import io.aegisops.asset.api.dto.AssetPageResponse;
 import io.aegisops.asset.api.dto.AssetRelationResponse;
 import io.aegisops.asset.api.dto.AssetResponse;
 import io.aegisops.asset.api.dto.AssetSourceResponse;
+import io.aegisops.asset.api.dto.AssetSummaryResponse;
 import io.aegisops.asset.application.AssetQuery;
 import java.util.List;
 import java.util.Locale;
@@ -54,6 +57,37 @@ class JooqAssetQueryRepository {
         .and(ASSET.ID.eq(assetId))
         .and(ASSET.DELETED_AT.isNull())
         .fetchOptional(this::toResponse);
+  }
+
+  AssetSummaryResponse summary(String tenantId) {
+    Condition liveAssets = ASSET.TENANT_ID.eq(tenantId).and(ASSET.DELETED_AT.isNull());
+    long total = dsl.fetchCount(dsl.selectFrom(ASSET).where(liveAssets));
+    long active =
+        dsl.fetchCount(dsl.selectFrom(ASSET).where(liveAssets.and(ASSET.STATUS.eq("active"))));
+    long multiSource =
+        dsl.select(ASSET_SOURCE_LINK.ASSET_ID)
+            .from(ASSET_SOURCE_LINK)
+            .join(ASSET)
+            .on(ASSET.ID.eq(ASSET_SOURCE_LINK.ASSET_ID))
+            .and(ASSET.TENANT_ID.eq(ASSET_SOURCE_LINK.TENANT_ID))
+            .where(ASSET_SOURCE_LINK.TENANT_ID.eq(tenantId))
+            .and(ASSET.DELETED_AT.isNull())
+            .groupBy(ASSET_SOURCE_LINK.ASSET_ID)
+            .having(DSL.count().gt(1))
+            .fetch()
+            .size();
+    long pendingConflicts =
+        dsl.fetchCount(
+            dsl.select(ASSET_IMPORT_ROW.ID)
+                .from(ASSET_IMPORT_ROW)
+                .join(ASSET_IMPORT_JOB)
+                .on(ASSET_IMPORT_JOB.ID.eq(ASSET_IMPORT_ROW.JOB_ID))
+                .and(ASSET_IMPORT_JOB.TENANT_ID.eq(ASSET_IMPORT_ROW.TENANT_ID))
+                .where(ASSET_IMPORT_ROW.TENANT_ID.eq(tenantId))
+                .and(ASSET_IMPORT_ROW.VALIDATION_STATUS.eq("conflict"))
+                .and(ASSET_IMPORT_ROW.RESOLUTION_ACTION.isNull())
+                .and(ASSET_IMPORT_JOB.STATUS.eq("previewed")));
+    return new AssetSummaryResponse(total, active, multiSource, pendingConflicts);
   }
 
   List<AssetSourceResponse> listSources(String tenantId, String assetId) {

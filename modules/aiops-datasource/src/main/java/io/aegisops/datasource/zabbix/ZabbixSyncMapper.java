@@ -29,7 +29,8 @@ public class ZabbixSyncMapper {
 
     String status = "1".equals(host.status()) ? "disabled" : "active";
 
-    return new ZabbixHostAssetMapping(sourceId, name, displayName, host.ip(), tags, status);
+    return new ZabbixHostAssetMapping(
+        sourceId, name, displayName, host.ip(), host.machineId(), tags, status);
   }
 
   public ZabbixAlertEventMapping mapProblem(String datasourceId, ZabbixProblem problem) {

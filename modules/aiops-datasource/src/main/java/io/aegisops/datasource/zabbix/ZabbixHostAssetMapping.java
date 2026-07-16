@@ -7,5 +7,6 @@ public record ZabbixHostAssetMapping(
     String name,
     String displayName,
     String ip,
+    String machineId,
     Map<String, Object> tags,
     String status) {}

@@ -22,3 +22,5 @@ export const syncRunSchema = z.object({
   startedAt: z.string(),
   finishedAt: z.string().nullish(),
 })
+
+export type Datasource = z.infer<typeof datasourceSchema>

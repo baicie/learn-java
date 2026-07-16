@@ -5,6 +5,7 @@ import io.aegisops.asset.api.dto.AssetPageResponse;
 import io.aegisops.asset.api.dto.AssetRelationResponse;
 import io.aegisops.asset.api.dto.AssetResponse;
 import io.aegisops.asset.api.dto.AssetSourceResponse;
+import io.aegisops.asset.api.dto.AssetSummaryResponse;
 import io.aegisops.asset.api.dto.CreateAssetRelationRequest;
 import io.aegisops.asset.api.dto.CreateAssetRequest;
 import io.aegisops.asset.api.dto.UpdateAssetRequest;
@@ -56,6 +57,12 @@ public class AssetController {
         queryService.page(
             TenantContext.requireTenantId(),
             new AssetQuery(page, boundedPageSize, assetType, sourceType, keyword, status)));
+  }
+
+  @GetMapping("/summary")
+  @PreAuthorize("hasAuthority('asset:read')")
+  public ApiResponse<AssetSummaryResponse> summary() {
+    return ApiResponse.ok(queryService.summary(TenantContext.requireTenantId()));
   }
 
   @PostMapping

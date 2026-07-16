@@ -1,23 +1,13 @@
 import { useState } from 'react'
-import { DatabaseZap, Plus, RefreshCw, TestTube2 } from 'lucide-react'
+import { DatabaseZap, Plus } from 'lucide-react'
 import {
   useDatasources,
   useSyncDatasource,
-  useSyncRuns,
   useTestDatasource,
 } from '@/hooks/datasources/use-datasources'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import { DatasourceFormDialog } from '@/components/datasources/datasource-form-dialog'
+import { DatasourcesTable } from '@/components/datasources/datasources-table'
 import { notify } from '@/components/feedback/app-toaster'
 import {
   EmptyState,
@@ -98,104 +88,15 @@ export function DatasourcesPage() {
             }
           />
         ) : (
-          <Card>
-            <CardContent className='overflow-x-auto p-0'>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>名称</TableHead>
-                    <TableHead>类型</TableHead>
-                    <TableHead>Endpoint</TableHead>
-                    <TableHead>连接状态</TableHead>
-                    <TableHead>最近同步</TableHead>
-                    <TableHead>最近结果</TableHead>
-                    <TableHead className='text-right'>操作</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {sources.data.map((source) => (
-                    <TableRow key={source.id}>
-                      <TableCell className='font-medium'>
-                        {source.name}
-                      </TableCell>
-                      <TableCell>Zabbix</TableCell>
-                      <TableCell className='max-w-72 truncate font-mono text-xs'>
-                        {source.endpoint ?? '—'}
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={
-                            source.status === 'error'
-                              ? 'destructive'
-                              : 'outline'
-                          }
-                        >
-                          {source.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {source.lastSyncAt
-                          ? new Date(source.lastSyncAt).toLocaleString()
-                          : '尚未同步'}
-                      </TableCell>
-                      <TableCell>
-                        <RecentSyncResult datasourceId={source.id} />
-                      </TableCell>
-                      <TableCell>
-                        <PermissionGate any={['datasource:write']}>
-                          <div className='flex justify-end gap-1'>
-                            <Button
-                              size='sm'
-                              variant='ghost'
-                              disabled={test.isPending}
-                              onClick={() => testConnection(source.id)}
-                            >
-                              <TestTube2 />
-                              测试
-                            </Button>
-                            <Button
-                              size='sm'
-                              variant='ghost'
-                              disabled={sync.isPending}
-                              onClick={() => startSync(source.id)}
-                            >
-                              <RefreshCw />
-                              同步
-                            </Button>
-                          </div>
-                        </PermissionGate>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+          <DatasourcesTable
+            items={sources.data}
+            onTest={testConnection}
+            onSync={startSync}
+            pending={test.isPending || sync.isPending}
+          />
         )}
       </Main>
       <DatasourceFormDialog open={open} onOpenChange={setOpen} />
     </>
-  )
-}
-
-function RecentSyncResult({ datasourceId }: { datasourceId: string }) {
-  const runs = useSyncRuns(datasourceId)
-  const latest = runs.data?.[0]
-  if (runs.isLoading)
-    return <span className='text-muted-foreground'>读取中…</span>
-  if (!latest) return <span className='text-muted-foreground'>—</span>
-  return (
-    <Badge
-      variant={latest.status === 'failed' ? 'destructive' : 'secondary'}
-      title={latest.message ?? undefined}
-    >
-      {latest.status === 'pending'
-        ? '排队中'
-        : latest.status === 'running'
-          ? '同步中'
-          : latest.status === 'success'
-            ? '成功'
-            : '失败'}
-    </Badge>
   )
 }

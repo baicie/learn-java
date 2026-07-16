@@ -75,7 +75,7 @@
 
       <forcedTypes>
         <forcedType>
-          <userType>org.jooq.JSONB</userType>
+          <name>JSONB</name>
           <includeTypes>JSON</includeTypes>
         </forcedType>
       </forcedTypes>

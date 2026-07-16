@@ -3,9 +3,11 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Download, FileUp } from 'lucide-react'
 import {
   confirmAssetImport,
+  downloadAssetImportProblems,
   downloadAssetTemplate,
   listAssetImportRows,
   previewAssetImport,
+  resolveAssetImportConflict,
 } from '@/api/assets/assets-api'
 import { assetKeys } from '@/api/assets/query-keys'
 import { Button } from '@/components/ui/button'
@@ -20,6 +22,13 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import {
   Table,
   TableBody,
@@ -41,20 +50,48 @@ export function AssetImportDialog({
   const [file, setFile] = useState<File | null>(null)
   const [sourceInstanceId, setSourceInstanceId] = useState('manual-csv')
   const [jobId, setJobId] = useState('')
+  const [currentJob, setCurrentJob] =
+    useState<Awaited<ReturnType<typeof previewAssetImport>>>()
+  const [rowStatus, setRowStatus] = useState('all')
+  const [linkTargets, setLinkTargets] = useState<Record<number, string>>({})
   const preview = useMutation({
     mutationFn: () => {
       if (!file) throw new Error('请选择 CSV 文件')
       return previewAssetImport(file, sourceInstanceId)
     },
-    onSuccess: (job) => setJobId(job.jobId),
+    onSuccess: (job) => {
+      setJobId(job.jobId)
+      setCurrentJob(job)
+    },
     onError: (error) => notify.error(error, 'CSV 预检失败'),
   })
   const rows = useQuery({
-    queryKey: assetKeys.import(jobId),
-    queryFn: () => listAssetImportRows(jobId),
+    queryKey: [...assetKeys.import(jobId), rowStatus],
+    queryFn: () =>
+      listAssetImportRows(jobId, rowStatus === 'all' ? undefined : rowStatus),
     enabled: Boolean(jobId),
   })
-  const job = preview.data
+  const job = currentJob
+  const resolve = useMutation({
+    mutationFn: ({
+      rowNumber,
+      action,
+    }: {
+      rowNumber: number
+      action: 'create' | 'link' | 'skip'
+    }) =>
+      resolveAssetImportConflict(
+        jobId,
+        rowNumber,
+        action,
+        linkTargets[rowNumber]
+      ),
+    onSuccess: async (nextJob) => {
+      setCurrentJob(nextJob)
+      await queryClient.invalidateQueries({ queryKey: assetKeys.import(jobId) })
+    },
+    onError: (error) => notify.error(error, '处理冲突失败'),
+  })
   const confirm = useMutation({
     mutationFn: () => confirmAssetImport(jobId),
     onSuccess: async () => {
@@ -70,6 +107,15 @@ export function AssetImportDialog({
     const anchor = document.createElement('a')
     anchor.href = url
     anchor.download = 'asset-import-template.csv'
+    anchor.click()
+    URL.revokeObjectURL(url)
+  }
+  const downloadProblems = async () => {
+    const blob = await downloadAssetImportProblems(jobId)
+    const url = URL.createObjectURL(blob)
+    const anchor = document.createElement('a')
+    anchor.href = url
+    anchor.download = `asset-import-${jobId}-problems.csv`
     anchor.click()
     URL.revokeObjectURL(url)
   }
@@ -124,10 +170,31 @@ export function AssetImportDialog({
         ) : step === 2 && job ? (
           <div className='grid gap-4 py-3'>
             <div className='grid gap-3 sm:grid-cols-4'>
-              <Stat label='有效' value={job.validRows} />
-              <Stat label='预计新增/更新' value={job.validRows} />
+              <Stat label='预计新增' value={job.createdRows} />
+              <Stat label='预计更新/关联' value={job.updatedRows} />
               <Stat label='冲突' value={job.conflictRows} />
               <Stat label='错误' value={job.invalidRows} />
+            </div>
+            <div className='flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between'>
+              <Select value={rowStatus} onValueChange={setRowStatus}>
+                <SelectTrigger className='w-full sm:w-48'>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value='all'>全部结果</SelectItem>
+                  <SelectItem value='valid'>有效</SelectItem>
+                  <SelectItem value='conflict'>冲突</SelectItem>
+                  <SelectItem value='invalid'>错误</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button
+                variant='outline'
+                disabled={!job.conflictRows && !job.invalidRows}
+                onClick={() => void downloadProblems()}
+              >
+                <Download />
+                下载问题行
+              </Button>
             </div>
             <div className='max-h-96 overflow-auto rounded-lg border'>
               <Table>
@@ -138,6 +205,7 @@ export function AssetImportDialog({
                     <TableHead>动作</TableHead>
                     <TableHead>状态</TableHead>
                     <TableHead>问题</TableHead>
+                    <TableHead>冲突处理</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -150,6 +218,62 @@ export function AssetImportDialog({
                       <TableCell className='text-destructive'>
                         {row.errorCodes.join('、') || '—'}
                       </TableCell>
+                      <TableCell>
+                        {row.validationStatus === 'conflict' &&
+                        !row.resolutionAction ? (
+                          <div className='flex min-w-80 items-center gap-1'>
+                            <Button
+                              size='sm'
+                              variant='outline'
+                              onClick={() =>
+                                resolve.mutate({
+                                  rowNumber: row.rowNumber,
+                                  action: 'skip',
+                                })
+                              }
+                            >
+                              跳过
+                            </Button>
+                            <Button
+                              size='sm'
+                              variant='outline'
+                              onClick={() =>
+                                resolve.mutate({
+                                  rowNumber: row.rowNumber,
+                                  action: 'create',
+                                })
+                              }
+                            >
+                              独立创建
+                            </Button>
+                            <Input
+                              className='h-8'
+                              placeholder='目标 Asset ID'
+                              value={linkTargets[row.rowNumber] ?? ''}
+                              onChange={(event) =>
+                                setLinkTargets((current) => ({
+                                  ...current,
+                                  [row.rowNumber]: event.target.value,
+                                }))
+                              }
+                            />
+                            <Button
+                              size='sm'
+                              disabled={!linkTargets[row.rowNumber]}
+                              onClick={() =>
+                                resolve.mutate({
+                                  rowNumber: row.rowNumber,
+                                  action: 'link',
+                                })
+                              }
+                            >
+                              关联
+                            </Button>
+                          </div>
+                        ) : (
+                          (row.resolutionAction ?? '—')
+                        )}
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -157,7 +281,7 @@ export function AssetImportDialog({
             </div>
             {job.conflictRows ? (
               <p className='text-sm text-destructive'>
-                存在未处理冲突，第一阶段需跳过冲突行后才能确认。
+                存在未处理冲突，请选择跳过、独立创建或关联到已有资源。
               </p>
             ) : null}
           </div>
@@ -181,7 +305,7 @@ export function AssetImportDialog({
           ) : step === 2 ? (
             <Button
               disabled={
-                !job?.validRows ||
+                !(job?.createdRows || job?.updatedRows) ||
                 Boolean(job.conflictRows) ||
                 confirm.isPending
               }
@@ -189,7 +313,7 @@ export function AssetImportDialog({
             >
               {confirm.isPending
                 ? '导入中…'
-                : `确认导入 ${job?.validRows ?? 0} 条`}
+                : `确认导入 ${(job?.createdRows ?? 0) + (job?.updatedRows ?? 0)} 条`}
             </Button>
           ) : (
             <Button onClick={() => onOpenChange(false)}>完成</Button>

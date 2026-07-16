@@ -1,4 +1,4 @@
-package io.aegisops.asset.infrastructure.adapter;
+package io.aegisops.asset.domain.model;
 
 import java.util.Map;
 

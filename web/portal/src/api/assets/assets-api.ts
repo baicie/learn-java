@@ -9,6 +9,7 @@ import {
   assetRelationSchema,
   assetSchema,
   assetSourceSchema,
+  assetSummarySchema,
 } from '@/lib/assets/asset'
 
 export type AssetSearch = {
@@ -44,6 +45,11 @@ export type AssetInput = {
 export async function listAssets(search: AssetSearch) {
   const { data } = await apiClient.get('/api/assets', { params: search })
   return apiResponseSchema(assetPageSchema).parse(data).data
+}
+
+export async function getAssetSummary() {
+  const { data } = await apiClient.get('/api/assets/summary')
+  return apiResponseSchema(assetSummarySchema).parse(data).data
 }
 
 export async function getAsset(id: string) {
@@ -100,6 +106,30 @@ export async function listAssetImportRows(jobId: string, status?: string) {
 export async function confirmAssetImport(jobId: string) {
   const { data } = await apiClient.post(`/api/assets/imports/${jobId}/confirm`)
   return apiResponseSchema(assetImportSchema).parse(data).data
+}
+
+export async function resolveAssetImportConflict(
+  jobId: string,
+  rowNumber: number,
+  action: 'create' | 'link' | 'skip',
+  targetAssetId?: string
+) {
+  const { data } = await apiClient.post(
+    `/api/assets/imports/${jobId}/rows/${rowNumber}/resolution`,
+    { action, targetAssetId }
+  )
+  return apiResponseSchema(assetImportSchema).parse(data).data
+}
+
+export async function downloadAssetImportProblems(
+  jobId: string,
+  status?: 'invalid' | 'conflict'
+) {
+  const { data } = await apiClient.get(
+    `/api/assets/imports/${jobId}/problems.csv`,
+    { params: { status }, responseType: 'blob' }
+  )
+  return data as Blob
 }
 
 export async function downloadAssetTemplate() {

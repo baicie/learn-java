@@ -1,10 +1,11 @@
-package io.aegisops.asset.infrastructure.persistence;
+package io.aegisops.asset.application.port;
 
 import io.aegisops.asset.api.dto.AssetIdentityResponse;
 import io.aegisops.asset.api.dto.AssetPageResponse;
 import io.aegisops.asset.api.dto.AssetRelationResponse;
 import io.aegisops.asset.api.dto.AssetResponse;
 import io.aegisops.asset.api.dto.AssetSourceResponse;
+import io.aegisops.asset.api.dto.AssetSummaryResponse;
 import io.aegisops.asset.api.dto.AssetUpsertCommand;
 import io.aegisops.asset.api.dto.CreateAssetRelationRequest;
 import io.aegisops.asset.api.dto.UpdateAssetRequest;
@@ -16,10 +17,12 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
-public interface AssetRepository {
+public interface AssetStore {
   List<Asset> listRecent(String tenantId, int limit);
 
   AssetPageResponse page(String tenantId, AssetQuery query);
+
+  AssetSummaryResponse summary(String tenantId);
 
   Optional<AssetResponse> findById(String tenantId, String assetId);
 

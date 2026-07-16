@@ -2,6 +2,7 @@ package io.aegisops.persistence;
 
 import static io.aegisops.persistence.jooq.public_.Tables.AGENT_RUN;
 import static io.aegisops.persistence.jooq.public_.Tables.AI_DIAGNOSIS;
+import static io.aegisops.persistence.jooq.public_.Tables.ASSET_IMPORT_ROW;
 import static io.aegisops.persistence.jooq.public_.Tables.CHANGE_EVENT;
 import static io.aegisops.persistence.jooq.public_.Tables.INCIDENT;
 import static io.aegisops.persistence.jooq.public_.Tables.LOG_EVENT;
@@ -10,6 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import org.jooq.JSONB;
+import org.jooq.impl.SQLDataType;
 import org.junit.jupiter.api.Test;
 
 class JooqGeneratedSchemaTest {
@@ -40,5 +42,7 @@ class JooqGeneratedSchemaTest {
     assertEquals(JSONB.class, AGENT_RUN.SAFETY.getType());
     assertEquals(JSONB.class, LOG_EVENT.ATTRIBUTES.getType());
     assertEquals(JSONB.class, CHANGE_EVENT.ATTRIBUTES.getType());
+    assertEquals(SQLDataType.JSONB, ASSET_IMPORT_ROW.NORMALIZED_PAYLOAD.getDataType());
+    assertEquals(SQLDataType.JSONB, ASSET_IMPORT_ROW.ERROR_CODES.getDataType());
   }
 }

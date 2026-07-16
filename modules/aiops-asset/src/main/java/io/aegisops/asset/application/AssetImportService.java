@@ -6,8 +6,10 @@ import io.aegisops.asset.api.dto.AssetImportPreviewResponse;
 import io.aegisops.asset.api.dto.AssetImportRowPageResponse;
 import io.aegisops.asset.api.dto.AssetImportRowResponse;
 import io.aegisops.asset.api.dto.AssetUpsertCommand;
+import io.aegisops.asset.api.dto.ResolveAssetImportRowRequest;
 import io.aegisops.asset.domain.model.AssetIdentityInput;
 import io.aegisops.asset.infrastructure.adapter.AssetCsvParser;
+import io.aegisops.asset.infrastructure.adapter.AssetImportErrorCsvWriter;
 import io.aegisops.asset.infrastructure.persistence.AssetImportPreviewDraft;
 import io.aegisops.asset.infrastructure.persistence.AssetImportRepository;
 import io.aegisops.asset.infrastructure.persistence.AssetImportRowDraft;
@@ -24,6 +26,7 @@ import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,18 +37,21 @@ public class AssetImportService {
   private final AssetApplicationService assetService;
   private final AuditService auditService;
   private final ObjectMapper objectMapper;
+  private final AssetImportErrorCsvWriter errorCsvWriter;
 
   public AssetImportService(
       AssetImportPreviewer previewer,
       AssetImportRepository importRepository,
       AssetApplicationService assetService,
       AuditService auditService,
-      ObjectMapper objectMapper) {
+      ObjectMapper objectMapper,
+      AssetImportErrorCsvWriter errorCsvWriter) {
     this.previewer = previewer;
     this.importRepository = importRepository;
     this.assetService = assetService;
     this.auditService = auditService;
     this.objectMapper = objectMapper;
+    this.errorCsvWriter = errorCsvWriter;
   }
 
   @Transactional
@@ -82,6 +88,14 @@ public class AssetImportService {
     return importRepository.rows(tenantId, jobId, page, Math.min(pageSize, 100), status);
   }
 
+  public byte[] exportProblems(String tenantId, String jobId, String status) {
+    get(tenantId, jobId);
+    if (status != null && !status.isBlank() && !Set.of("invalid", "conflict").contains(status)) {
+      throw new IllegalArgumentException("导出状态只能是 invalid 或 conflict");
+    }
+    return errorCsvWriter.write(importRepository.problemRows(tenantId, jobId, status));
+  }
+
   @Transactional
   public AssetImportPreviewResponse confirm(String tenantId, String jobId, String actorId) {
     AssetImportPreviewResponse job = get(tenantId, jobId);
@@ -98,8 +112,14 @@ public class AssetImportService {
     int created = 0;
     int updated = 0;
     for (AssetImportRowResponse row : importRepository.validRows(tenantId, jobId)) {
+      if ("skip".equals(row.resolutionAction())) {
+        continue;
+      }
       AssetUpsertCommand command = command(tenantId, job.sourceInstanceId(), row.payload());
-      var result = assetService.upsert(command);
+      var result =
+          row.validationStatus().equals("conflict")
+              ? assetService.upsertResolved(command, row.resolutionAction(), row.resolvedAssetId())
+              : assetService.upsert(command);
       importRepository.resolveRow(
           tenantId, jobId, row.rowNumber(), result.assetId(), result.action());
       if (result.action().equals("created")) {
@@ -110,6 +130,46 @@ public class AssetImportService {
     }
     importRepository.finish(tenantId, jobId, created, updated, OffsetDateTime.now(ZoneOffset.UTC));
     audit(tenantId, actorId, "asset.import.confirm", jobId, Map.of("checksumJob", jobId));
+    return get(tenantId, jobId);
+  }
+
+  @Transactional
+  public AssetImportPreviewResponse resolveConflict(
+      String tenantId,
+      String jobId,
+      int rowNumber,
+      ResolveAssetImportRowRequest request,
+      String actorId,
+      OffsetDateTime now) {
+    AssetImportPreviewResponse job = get(tenantId, jobId);
+    if (!job.status().equals("previewed")) {
+      throw new ConflictException("只有待确认的导入任务可以处理冲突");
+    }
+    String action = request.action().trim().toLowerCase(java.util.Locale.ROOT);
+    if (!Set.of("create", "link", "skip").contains(action)) {
+      throw new IllegalArgumentException("冲突处理动作必须是 create、link 或 skip");
+    }
+    String targetAssetId = blankToNull(request.targetAssetId());
+    if (action.equals("link")) {
+      if (targetAssetId == null) {
+        throw new IllegalArgumentException("link 操作必须指定目标资源");
+      }
+      if (!assetService.assetExists(tenantId, targetAssetId)) {
+        throw new IllegalArgumentException("目标资源不存在或不属于当前租户");
+      }
+    } else if (targetAssetId != null) {
+      throw new IllegalArgumentException("只有 link 操作可以指定目标资源");
+    }
+    if (!importRepository.resolveConflictRow(
+        tenantId, jobId, rowNumber, action, targetAssetId, now)) {
+      throw new ConflictException("导入冲突行不存在或已经处理");
+    }
+    audit(
+        tenantId,
+        actorId,
+        "asset.import.conflict.resolve",
+        jobId,
+        Map.of("rowNumber", rowNumber, "action", action));
     return get(tenantId, jobId);
   }
 
@@ -174,6 +234,10 @@ public class AssetImportService {
   private String string(Map<String, Object> payload, String key) {
     Object value = payload.get(key);
     return value == null ? null : value.toString();
+  }
+
+  private String blankToNull(String value) {
+    return value == null || value.isBlank() ? null : value.trim();
   }
 
   private String sha256(byte[] content) {

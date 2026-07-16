@@ -1,6 +1,6 @@
 package io.aegisops.asset.domain.rule;
 
-import io.aegisops.asset.infrastructure.adapter.AssetCsvRow;
+import io.aegisops.asset.domain.model.AssetCsvRow;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;

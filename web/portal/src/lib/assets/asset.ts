@@ -27,6 +27,13 @@ export const assetPageSchema = z.object({
   items: z.array(assetSchema),
 })
 
+export const assetSummarySchema = z.object({
+  totalAssets: z.number().int().nonnegative(),
+  activeAssets: z.number().int().nonnegative(),
+  multiSourceAssets: z.number().int().nonnegative(),
+  pendingConflicts: z.number().int().nonnegative(),
+})
+
 export const assetSourceSchema = z.object({
   id: z.string(),
   sourceType: z.string(),

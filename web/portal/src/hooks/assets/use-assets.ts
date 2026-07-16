@@ -3,6 +3,7 @@ import {
   archiveAsset,
   createAsset,
   getAsset,
+  getAssetSummary,
   listAssetIdentities,
   listAssetRelations,
   listAssets,
@@ -17,6 +18,13 @@ export function useAssets(search: AssetSearch) {
   return useQuery({
     queryKey: assetKeys.list(search),
     queryFn: () => listAssets(search),
+  })
+}
+
+export function useAssetSummary() {
+  return useQuery({
+    queryKey: assetKeys.summary(),
+    queryFn: getAssetSummary,
   })
 }
 

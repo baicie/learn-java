@@ -22,6 +22,7 @@ class ZabbixSyncMapperTest {
             "0",
             "10.0.0.10",
             List.of("Linux servers"),
+            null,
             null);
 
     ZabbixHostAssetMapping mapping = mapper.mapHost("ds_1", host);
@@ -40,11 +41,36 @@ class ZabbixSyncMapperTest {
   void shouldMapDisabledHost() {
     ZabbixHost host =
         new ZabbixHost(
-            "10084", "aiops-demo-host", "AI Ops Demo Host", "1", "10.0.0.10", List.of(), null);
+            "10084",
+            "aiops-demo-host",
+            "AI Ops Demo Host",
+            "1",
+            "10.0.0.10",
+            List.of(),
+            null,
+            null);
 
     ZabbixHostAssetMapping mapping = mapper.mapHost("ds_1", host);
 
     assertThat(mapping.status()).isEqualTo("disabled");
+  }
+
+  @Test
+  void shouldExposeMachineIdentityFromZabbixHost() {
+    ZabbixHost host =
+        new ZabbixHost(
+            "10084",
+            "aiops-demo-host",
+            "AI Ops Demo Host",
+            "0",
+            "10.0.0.10",
+            List.of(),
+            "machine-001",
+            null);
+
+    ZabbixHostAssetMapping mapping = mapper.mapHost("ds_1", host);
+
+    assertThat(mapping.machineId()).isEqualTo("machine-001");
   }
 
   @Test
@@ -102,7 +128,7 @@ class ZabbixSyncMapperTest {
 
   @Test
   void shouldReturnNullWhenHostIdMissing() {
-    ZabbixHost host = new ZabbixHost(null, "host", "host", "0", "127.0.0.1", List.of(), null);
+    ZabbixHost host = new ZabbixHost(null, "host", "host", "0", "127.0.0.1", List.of(), null, null);
 
     assertThat(mapper.mapHost("ds_1", host)).isNull();
   }

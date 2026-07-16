@@ -1,10 +1,7 @@
 import { useState } from 'react'
-import { Link } from '@tanstack/react-router'
 import { Boxes, FileUp, Plus, SearchIcon } from 'lucide-react'
 import type { AssetSearch } from '@/api/assets/assets-api'
-import { assetTypeLabels } from '@/lib/assets/asset'
-import { useAssets } from '@/hooks/assets/use-assets'
-import { Badge } from '@/components/ui/badge'
+import { useAssets, useAssetSummary } from '@/hooks/assets/use-assets'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -15,16 +12,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import { AssetFormDialog } from '@/components/assets/asset-form-dialog'
 import { AssetImportDialog } from '@/components/assets/asset-import-dialog'
+import { AssetsTable } from '@/components/assets/assets-table'
 import {
   EmptyState,
   ErrorState,
@@ -48,6 +38,7 @@ export function AssetsPage({
   const [importOpen, setImportOpen] = useState(false)
   const [keyword, setKeyword] = useState(search.keyword ?? '')
   const assets = useAssets(search)
+  const summary = useAssetSummary()
   const items = assets.data?.items ?? []
 
   return (
@@ -83,16 +74,16 @@ export function AssetsPage({
           </div>
         </div>
         <div className='grid gap-3 sm:grid-cols-2 xl:grid-cols-4'>
-          <Summary label='资源总数' value={assets.data?.total ?? 0} />
+          <Summary label='资源总数' value={summary.data?.totalAssets ?? 0} />
+          <Summary label='活跃资源' value={summary.data?.activeAssets ?? 0} />
           <Summary
-            label='当前页活跃资源'
-            value={items.filter((item) => item.status === 'active').length}
+            label='多来源资源'
+            value={summary.data?.multiSourceAssets ?? 0}
           />
           <Summary
-            label='当前页多来源资源'
-            value={items.filter((item) => item.sourceCount > 1).length}
+            label='待处理冲突'
+            value={summary.data?.pendingConflicts ?? 0}
           />
-          <Summary label='待处理冲突' value={0} />
         </div>
         <div className='flex flex-col gap-2 sm:flex-row'>
           <div className='relative flex-1'>
@@ -181,93 +172,14 @@ export function AssetsPage({
             }
           />
         ) : (
-          <Card>
-            <CardContent className='overflow-x-auto p-0'>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>名称</TableHead>
-                    <TableHead>类型</TableHead>
-                    <TableHead>环境</TableHead>
-                    <TableHead>地址/标识</TableHead>
-                    <TableHead>来源</TableHead>
-                    <TableHead>负责人</TableHead>
-                    <TableHead>关键等级</TableHead>
-                    <TableHead>状态</TableHead>
-                    <TableHead>最近更新</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {items.map((asset) => (
-                    <TableRow key={asset.id}>
-                      <TableCell>
-                        <Link
-                          className='font-medium hover:underline'
-                          to='/assets/$assetId'
-                          params={{ assetId: asset.id }}
-                        >
-                          {asset.displayName || asset.name}
-                        </Link>
-                        <div className='text-xs text-muted-foreground'>
-                          {asset.name}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {assetTypeLabels[asset.assetType] ?? asset.assetType}
-                      </TableCell>
-                      <TableCell>{asset.environment || '—'}</TableCell>
-                      <TableCell className='font-mono text-xs'>
-                        {asset.ip || asset.id}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant='outline'>
-                          {asset.sourceCount > 1
-                            ? `${asset.sourceCount} 个来源`
-                            : '单一来源'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{asset.ownerTeam || '—'}</TableCell>
-                      <TableCell>{asset.criticality}</TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={
-                            asset.status === 'active' ? 'default' : 'secondary'
-                          }
-                        >
-                          {asset.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {new Date(asset.updatedAt).toLocaleString()}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+          <AssetsTable
+            items={items}
+            page={search.page}
+            pageSize={search.pageSize}
+            total={assets.data?.total ?? 0}
+            onPageChange={(page) => onSearch({ page })}
+          />
         )}
-        {assets.data && assets.data.total > search.pageSize ? (
-          <div className='flex items-center justify-end gap-2'>
-            <Button
-              variant='outline'
-              disabled={search.page <= 1}
-              onClick={() => onSearch({ page: search.page - 1 })}
-            >
-              上一页
-            </Button>
-            <span className='text-sm text-muted-foreground'>
-              第 {search.page} 页
-            </span>
-            <Button
-              variant='outline'
-              disabled={search.page * search.pageSize >= assets.data.total}
-              onClick={() => onSearch({ page: search.page + 1 })}
-            >
-              下一页
-            </Button>
-          </div>
-        ) : null}
       </Main>
       <AssetFormDialog open={createOpen} onOpenChange={setCreateOpen} />
       <AssetImportDialog open={importOpen} onOpenChange={setImportOpen} />

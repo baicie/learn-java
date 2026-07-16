@@ -14,6 +14,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import io.aegisops.asset.api.dto.AssetPageResponse;
 import io.aegisops.asset.api.dto.AssetResponse;
+import io.aegisops.asset.api.dto.AssetSummaryResponse;
 import io.aegisops.asset.application.AssetManagementService;
 import io.aegisops.asset.application.AssetQuery;
 import io.aegisops.asset.application.AssetQueryService;
@@ -70,6 +71,19 @@ class AssetControllerTest {
         .andExpect(jsonPath("$.data.items[0].id").value("asset-1"));
 
     verify(queryService).page("tenant-1", new AssetQuery(1, 100, "host", "zabbix", "db", null));
+  }
+
+  @Test
+  void readerCanLoadTenantWideAssetSummary() throws Exception {
+    when(queryService.summary("tenant-1")).thenReturn(new AssetSummaryResponse(12, 10, 3, 2));
+
+    mockMvc
+        .perform(get("/api/assets/summary").with(user("reader").authorities(() -> "asset:read")))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.totalAssets").value(12))
+        .andExpect(jsonPath("$.data.activeAssets").value(10))
+        .andExpect(jsonPath("$.data.multiSourceAssets").value(3))
+        .andExpect(jsonPath("$.data.pendingConflicts").value(2));
   }
 
   @Test

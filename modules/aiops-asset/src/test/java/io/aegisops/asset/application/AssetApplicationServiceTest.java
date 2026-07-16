@@ -10,10 +10,11 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import io.aegisops.asset.api.dto.AssetUpsertCommand;
+import io.aegisops.asset.application.port.AssetStore;
 import io.aegisops.asset.domain.model.AssetIdentityInput;
+import io.aegisops.asset.domain.model.NormalizedAssetIdentity;
 import io.aegisops.asset.domain.rule.AssetIdentityNormalizer;
 import io.aegisops.asset.domain.rule.AssetIdentityResolver;
-import io.aegisops.asset.infrastructure.persistence.AssetRepository;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
@@ -21,15 +22,16 @@ import java.util.Optional;
 import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
 class AssetApplicationServiceTest {
 
-  private AssetRepository repository;
+  private AssetStore repository;
   private AssetApplicationService service;
 
   @BeforeEach
   void setUp() {
-    repository = mock(AssetRepository.class);
+    repository = mock(AssetStore.class);
     service =
         new AssetApplicationService(
             repository, new AssetIdentityNormalizer(), new AssetIdentityResolver());
@@ -83,6 +85,39 @@ class AssetApplicationServiceTest {
     assertThat(result.assetId()).isEqualTo("asset-new");
     assertThat(result.action()).isEqualTo("created");
     assertThat(result.hasWeakIdentityConflict()).isTrue();
+  }
+
+  @Test
+  void explicitLinkKeepsOnlyStrongIdentitiesOwnedByTarget() {
+    AssetUpsertCommand command = command("csv", "sheet-a", "host-a", "machine-1");
+    when(repository.findById("tenant-1", "asset-target"))
+        .thenReturn(Optional.of(mock(io.aegisops.asset.api.dto.AssetResponse.class)));
+    when(repository.findAssetIdsByStrongIdentities(eq("tenant-1"), anyList()))
+        .thenReturn(Set.of("asset-target"));
+
+    var result = service.upsertResolved(command, "link", "asset-target");
+
+    assertThat(result.action()).isEqualTo("linked");
+    verify(repository).updateAsset(eq("asset-target"), eq(command), any(OffsetDateTime.class));
+    verify(repository)
+        .replaceSourceIdentities(
+            eq("asset-target"), eq("source-link-1"), eq("tenant-1"), anyList(), any());
+  }
+
+  @Test
+  void explicitCreateDropsConflictingStrongIdentity() {
+    AssetUpsertCommand command = command("csv", "sheet-a", "host-a", "machine-1");
+    when(repository.createAsset(eq(command), any(OffsetDateTime.class))).thenReturn("asset-new");
+
+    var result = service.upsertResolved(command, "create", null);
+
+    assertThat(result.action()).isEqualTo("created");
+    ArgumentCaptor<List<NormalizedAssetIdentity>> identities = ArgumentCaptor.forClass(List.class);
+    verify(repository)
+        .replaceSourceIdentities(
+            eq("asset-new"), eq("source-link-1"), eq("tenant-1"), identities.capture(), any());
+    assertThat(identities.getValue())
+        .allMatch(identity -> identity.strength() == NormalizedAssetIdentity.Strength.WEAK);
   }
 
   private AssetUpsertCommand command(

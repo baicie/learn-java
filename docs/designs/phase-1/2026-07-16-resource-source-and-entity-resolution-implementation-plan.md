@@ -1,7 +1,7 @@
 ---
 title: 统一资源来源与实体解析实施计划
 type: design
-status: draft
+status: accepted
 phase: phase-1
 owner: ai
 created: 2026-07-16
@@ -14,6 +14,8 @@ related:
 ---
 
 # 统一资源来源与实体解析 Implementation Plan
+
+> 实施状态：Phase 1 范围已完成。原子步骤保留为设计时的执行分解；实际验收结果与复现方式以 [多来源资源中心验收记录](../../phases/phase-1/asset-source-acceptance.md) 为准。本次还补齐了 CSV 冲突处置、问题导出、租户统计、Zabbix machine ID 提取以及真实 PostgreSQL/Portal E2E，未提前实现 Kubernetes、APM、RUM 等后续阶段 Adapter。
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking. AegisOps 项目规则优先于通用 Skill；本计划不使用多 Agent，也不引入新微服务。
 

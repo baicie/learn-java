@@ -19,7 +19,8 @@ class AssetPermissionMigrationContractTest {
     assertThat(sql).contains("'asset:write'");
     assertThat(sql).contains("'asset:import'");
     assertThat(sql).contains("insert into iam.permission_definition");
-    assertThat(sql).contains("insert into iam.role_permission(tenant_id,role_code,permission_code)");
+    assertThat(sql)
+        .contains("insert into iam.role_permission(tenant_id,role_code,permission_code)");
     assertThat(sql).contains("r.role_code='system_admin'");
   }
 }

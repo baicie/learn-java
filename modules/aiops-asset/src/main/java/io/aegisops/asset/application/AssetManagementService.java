@@ -7,7 +7,7 @@ import io.aegisops.asset.api.dto.AssetUpsertCommand;
 import io.aegisops.asset.api.dto.CreateAssetRelationRequest;
 import io.aegisops.asset.api.dto.CreateAssetRequest;
 import io.aegisops.asset.api.dto.UpdateAssetRequest;
-import io.aegisops.asset.infrastructure.persistence.AssetRepository;
+import io.aegisops.asset.application.port.AssetStore;
 import io.aegisops.audit.AuditRecordCommand;
 import io.aegisops.audit.AuditService;
 import io.aegisops.common.exception.ConflictException;
@@ -23,14 +23,14 @@ import org.springframework.transaction.annotation.Transactional;
 public class AssetManagementService {
   private final AssetApplicationService applicationService;
   private final AssetQueryService queryService;
-  private final AssetRepository repository;
+  private final AssetStore repository;
   private final AuditService auditService;
   private final ObjectMapper objectMapper;
 
   public AssetManagementService(
       AssetApplicationService applicationService,
       AssetQueryService queryService,
-      AssetRepository repository,
+      AssetStore repository,
       AuditService auditService,
       ObjectMapper objectMapper) {
     this.applicationService = applicationService;

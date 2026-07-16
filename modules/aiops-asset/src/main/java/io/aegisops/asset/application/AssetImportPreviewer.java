@@ -1,13 +1,13 @@
 package io.aegisops.asset.application;
 
+import io.aegisops.asset.application.port.AssetStore;
+import io.aegisops.asset.domain.model.AssetCsvRow;
 import io.aegisops.asset.domain.model.AssetIdentityInput;
 import io.aegisops.asset.domain.model.NormalizedAssetIdentity.Strength;
 import io.aegisops.asset.domain.rule.AssetCsvRowValidator;
 import io.aegisops.asset.domain.rule.AssetIdentityNormalizer;
 import io.aegisops.asset.infrastructure.adapter.AssetCsvParser;
-import io.aegisops.asset.infrastructure.adapter.AssetCsvRow;
 import io.aegisops.asset.infrastructure.persistence.AssetImportRowDraft;
-import io.aegisops.asset.infrastructure.persistence.AssetRepository;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -21,13 +21,13 @@ class AssetImportPreviewer {
   private final AssetCsvParser parser;
   private final AssetCsvRowValidator validator;
   private final AssetIdentityNormalizer identityNormalizer;
-  private final AssetRepository assetRepository;
+  private final AssetStore assetRepository;
 
   AssetImportPreviewer(
       AssetCsvParser parser,
       AssetCsvRowValidator validator,
       AssetIdentityNormalizer identityNormalizer,
-      AssetRepository assetRepository) {
+      AssetStore assetRepository) {
     this.parser = parser;
     this.validator = validator;
     this.identityNormalizer = identityNormalizer;

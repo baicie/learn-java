@@ -2,9 +2,11 @@ package io.aegisops.asset.api;
 
 import io.aegisops.asset.api.dto.AssetImportPreviewResponse;
 import io.aegisops.asset.api.dto.AssetImportRowPageResponse;
+import io.aegisops.asset.api.dto.ResolveAssetImportRowRequest;
 import io.aegisops.asset.application.AssetImportService;
 import io.aegisops.common.api.ApiResponse;
 import io.aegisops.common.tenant.TenantContext;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import java.io.IOException;
 import java.security.Principal;
@@ -17,6 +19,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
@@ -71,6 +74,35 @@ public class AssetImportController {
       @RequestParam(required = false) String status) {
     return ApiResponse.ok(
         service.rows(TenantContext.requireTenantId(), jobId, page, pageSize, status));
+  }
+
+  @GetMapping("/{jobId}/problems.csv")
+  @PreAuthorize("hasAuthority('asset:import')")
+  public ResponseEntity<byte[]> exportProblems(
+      @PathVariable String jobId, @RequestParam(required = false) String status) {
+    return ResponseEntity.ok()
+        .contentType(MediaType.parseMediaType("text/csv;charset=UTF-8"))
+        .header(
+            HttpHeaders.CONTENT_DISPOSITION,
+            "attachment; filename=asset-import-" + jobId + "-problems.csv")
+        .body(service.exportProblems(TenantContext.requireTenantId(), jobId, status));
+  }
+
+  @PostMapping("/{jobId}/rows/{rowNumber}/resolution")
+  @PreAuthorize("hasAuthority('asset:import')")
+  public ApiResponse<AssetImportPreviewResponse> resolveConflict(
+      @PathVariable String jobId,
+      @PathVariable @Min(1) int rowNumber,
+      @Valid @RequestBody ResolveAssetImportRowRequest request,
+      Principal principal) {
+    return ApiResponse.ok(
+        service.resolveConflict(
+            TenantContext.requireTenantId(),
+            jobId,
+            rowNumber,
+            request,
+            principal.getName(),
+            java.time.OffsetDateTime.now(java.time.ZoneOffset.UTC)));
   }
 
   @PostMapping("/{jobId}/confirm")

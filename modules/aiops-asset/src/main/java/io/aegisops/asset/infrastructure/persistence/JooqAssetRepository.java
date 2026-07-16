@@ -12,10 +12,12 @@ import io.aegisops.asset.api.dto.AssetPageResponse;
 import io.aegisops.asset.api.dto.AssetRelationResponse;
 import io.aegisops.asset.api.dto.AssetResponse;
 import io.aegisops.asset.api.dto.AssetSourceResponse;
+import io.aegisops.asset.api.dto.AssetSummaryResponse;
 import io.aegisops.asset.api.dto.AssetUpsertCommand;
 import io.aegisops.asset.api.dto.CreateAssetRelationRequest;
 import io.aegisops.asset.api.dto.UpdateAssetRequest;
 import io.aegisops.asset.application.AssetQuery;
+import io.aegisops.asset.application.port.AssetStore;
 import io.aegisops.asset.domain.model.Asset;
 import io.aegisops.asset.domain.model.NormalizedAssetIdentity;
 import io.aegisops.asset.domain.model.NormalizedAssetIdentity.Strength;
@@ -34,7 +36,7 @@ import org.jooq.JSONB;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public class JooqAssetRepository implements AssetRepository {
+public class JooqAssetRepository implements AssetStore {
   private final DSLContext dsl;
   private final ObjectMapper objectMapper;
   private final JooqAssetQueryRepository queryRepository;
@@ -69,6 +71,11 @@ public class JooqAssetRepository implements AssetRepository {
   @Override
   public AssetPageResponse page(String tenantId, AssetQuery query) {
     return queryRepository.page(tenantId, query);
+  }
+
+  @Override
+  public AssetSummaryResponse summary(String tenantId) {
+    return queryRepository.summary(tenantId);
   }
 
   @Override
