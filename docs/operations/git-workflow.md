@@ -41,7 +41,7 @@ git push -u origin HEAD
 - `Secrets Guard`：所有 PR 与主干 push 都扫描被跟踪的环境文件和密钥字面量。
 - `Ops Scripts`：在运维脚本、基础设施、Flyway migration 或 Docker Runner 准备脚本变化时运行 Shell 与 PostgreSQL smoke；同一 PR 的旧运行自动取消。
 - `Work Record E2E`：需要完整 E2E 时给 PR 添加 `e2e` 标签。
-- `Release Verify`：PR 只运行 Release preflight；合并到 `mvp` 后或手动触发时，串行构建四个容器镜像并执行 Compose runtime smoke。
+- `Release Verify`：所有 PR 只运行 Release preflight；合并到 `mvp` 后或手动触发时，串行构建四个容器镜像并执行 Compose runtime smoke。
 - `Deploy`：仅在 `mvp` 的 `Release Verify` 成功后自动部署，镜像矩阵单并发执行，保留另一台 Runner 给 PR 检查。
 
 PR 合并门禁保持稳定，不对 required workflow 使用路径级跳过：

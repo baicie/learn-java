@@ -4,21 +4,6 @@ on:
   pull_request:
     branches:
       - mvp
-    paths:
-      - "apps/**"
-      - "modules/**"
-      - "web/**"
-      - "contracts/**"
-      - "deploy/**"
-      - "scripts/**"
-      - "infra/checkstyle/**"
-      - "pom.xml"
-      - "package.json"
-      - "pnpm-lock.yaml"
-      - "pnpm-workspace.yaml"
-      - ".dockerignore"
-      - ".github/workflows/release-verify.yml"
-      - ".github/workflows/deploy.yml"
 
   push:
     branches:

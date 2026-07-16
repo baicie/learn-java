@@ -89,6 +89,11 @@ grep -Fq 'max-parallel: 1' .github/workflows/release-verify.yml
 grep -Fq 'max-parallel: 1' .github/workflows/deploy.yml
 grep -Fq 'group: ops-scripts-${{ github.workflow }}-${{ github.ref }}' \
   .github/workflows/ops-scripts.yml
+if sed -n '/^  pull_request:/,/^  push:/p' \
+  .github/workflows/release-verify.yml | grep -Fq '    paths:'; then
+  echo "Release Verify preflight must run on every pull request to mvp." >&2
+  exit 1
+fi
 if grep -Fq '      - "fix/**"' .github/workflows/release-verify.yml; then
   echo "Release Verify must not run heavy validation on fix branch pushes." >&2
   exit 1
