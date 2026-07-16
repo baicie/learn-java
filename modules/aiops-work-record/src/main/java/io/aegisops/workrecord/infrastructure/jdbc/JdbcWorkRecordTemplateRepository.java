@@ -30,14 +30,15 @@ public class JdbcWorkRecordTemplateRepository implements WorkRecordTemplateRepos
   public List<WorkRecordTemplate> list(String tenantId, boolean includeDisabled) {
     return jdbc.query(
         """
-        select id, tenant_id, code, name, description, status, enabled, current_version_id,
+        select id, tenant_id, code, name, description, status, enabled, is_default,
+               current_version_id,
                draft_schema_json::text, draft_designer_json::text,
                created_by, created_at, updated_at, deleted_at
           from work_record.wr_template
          where tenant_id = :tenantId
            and deleted_at is null
            and (:includeDisabled = true or enabled = true)
-         order by updated_at desc
+         order by is_default desc, updated_at desc
         """,
         Map.of("tenantId", tenantId, "includeDisabled", includeDisabled),
         (rs, rowNum) -> mapTemplate(rs));
@@ -48,7 +49,8 @@ public class JdbcWorkRecordTemplateRepository implements WorkRecordTemplateRepos
     List<WorkRecordTemplate> rows =
         jdbc.query(
             """
-            select id, tenant_id, code, name, description, status, enabled, current_version_id,
+            select id, tenant_id, code, name, description, status, enabled, is_default,
+                   current_version_id,
                    draft_schema_json::text, draft_designer_json::text,
                    created_by, created_at, updated_at, deleted_at
               from work_record.wr_template
@@ -64,7 +66,8 @@ public class JdbcWorkRecordTemplateRepository implements WorkRecordTemplateRepos
     List<WorkRecordTemplate> rows =
         jdbc.query(
             """
-            select id, tenant_id, code, name, description, status, enabled, current_version_id,
+            select id, tenant_id, code, name, description, status, enabled, is_default,
+                   current_version_id,
                    draft_schema_json::text, draft_designer_json::text,
                    created_by, created_at, updated_at, deleted_at
               from work_record.wr_template
@@ -184,9 +187,35 @@ public class JdbcWorkRecordTemplateRepository implements WorkRecordTemplateRepos
         """
         update work_record.wr_template
            set enabled = false,
+               is_default = false,
                status = 'disabled'
          where tenant_id = :tenantId
            and id = :templateId
+           and deleted_at is null
+        """,
+        Map.of("tenantId", tenantId, "templateId", templateId));
+  }
+
+  @Override
+  public void setDefault(String tenantId, String templateId) {
+    jdbc.update(
+        """
+        update work_record.wr_template
+           set is_default = false
+         where tenant_id = :tenantId
+           and is_default = true
+           and deleted_at is null
+        """,
+        Map.of("tenantId", tenantId));
+    jdbc.update(
+        """
+        update work_record.wr_template
+           set is_default = true
+         where tenant_id = :tenantId
+           and id = :templateId
+           and enabled = true
+           and status = 'published'
+           and current_version_id is not null
            and deleted_at is null
         """,
         Map.of("tenantId", tenantId, "templateId", templateId));
@@ -198,6 +227,7 @@ public class JdbcWorkRecordTemplateRepository implements WorkRecordTemplateRepos
         """
         update work_record.wr_template
            set enabled = false,
+               is_default = false,
                status = 'archived'
          where tenant_id = :tenantId
            and id = :templateId
@@ -215,6 +245,7 @@ public class JdbcWorkRecordTemplateRepository implements WorkRecordTemplateRepos
         rs.getString("description"),
         TemplateStatus.from(rs.getString("status")),
         rs.getBoolean("enabled"),
+        rs.getBoolean("is_default"),
         rs.getString("current_version_id"),
         rs.getString("draft_schema_json"),
         rs.getString("draft_designer_json"),

@@ -144,7 +144,7 @@ describe('record runtime pages', () => {
   it('new record page renders form', async () => {
     const screen = await renderWithClient(<NewRecordPage />)
     await expect.element(screen.getByText('新建记录')).toBeVisible()
-    await expect.element(screen.getByText('选择模板')).toBeVisible()
+    await expect.element(screen.getByText('日报模板')).toBeVisible()
   })
 
   it('edit record page renders form with current title', async () => {

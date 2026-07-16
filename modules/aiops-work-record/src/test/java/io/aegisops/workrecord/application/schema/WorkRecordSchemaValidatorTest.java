@@ -93,6 +93,24 @@ class WorkRecordSchemaValidatorTest {
   }
 
   @Test
+  void shouldRejectDictSourceForNonOptionField() throws Exception {
+    var ext =
+        objectMapper.readTree(
+            """
+            {
+              "fieldCode": "summary",
+              "fieldType": "text",
+              "optionSource": "dict",
+              "dictCode": "record_priority"
+            }
+            """);
+
+    assertThatThrownBy(() -> validator.validateFieldExtension(ext, ".properties.summary"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("optionSource is only allowed for select/multi_select");
+  }
+
+  @Test
   void shouldRejectUnsupportedSchemaVersion() throws Exception {
     var root =
         objectMapper.readTree(

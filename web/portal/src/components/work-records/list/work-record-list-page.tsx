@@ -127,6 +127,7 @@ export function WorkRecordListPage() {
         <ListToolbar
           meta={view.meta}
           query={query}
+          userOptions={view.userOptions}
           onChange={(patch) => setQuery({ ...query, ...patch, page: 1 })}
         />
       </TableToolbar>

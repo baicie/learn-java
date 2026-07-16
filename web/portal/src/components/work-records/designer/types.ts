@@ -14,6 +14,14 @@ export type WorkRecordFieldType = (typeof WORK_RECORD_FIELD_TYPES)[number]
 
 type WorkRecordOptionSource = 'static' | 'dict'
 
+export type DesignerValidationRules = {
+  minLength?: number
+  maxLength?: number
+  pattern?: string
+  minimum?: number
+  maximum?: number
+}
+
 export type DesignerField = {
   id: string
   fieldName: string
@@ -22,6 +30,9 @@ export type DesignerField = {
   required: boolean
   optionSource: WorkRecordOptionSource
   dictCode: string
+  staticOptions?: string[]
+  columnSpan?: 1 | 2
+  validation?: DesignerValidationRules
   listVisible: boolean
   filterable: boolean
   exportable: boolean
@@ -40,6 +51,7 @@ export type WorkRecordTemplate = {
   description?: string | null
   status: 'draft' | 'published' | 'disabled' | 'archived'
   enabled: boolean
+  isDefault?: boolean
   currentVersionId?: string | null
   draftSchemaJson: string
   draftDesignerJson: string
@@ -77,6 +89,8 @@ export type WorkRecordVersionField = {
   dictCode?: string | null
   optionsJson: string
   schemaPath?: string | null
+  columnSpan?: 1 | 2
+  validationJson?: string
   listVisible: boolean
   filterable: boolean
   exportable: boolean

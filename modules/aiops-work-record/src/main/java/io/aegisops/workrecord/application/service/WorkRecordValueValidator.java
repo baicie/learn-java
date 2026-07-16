@@ -16,6 +16,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -154,6 +156,57 @@ public class WorkRecordValueValidator {
       case DATETIME -> validateDatetime(field, value);
       case SELECT -> validateSelect(tenantId, field, value);
       case MULTI_SELECT -> validateMultiSelect(tenantId, field, value);
+    }
+    validateRules(field, value);
+  }
+
+  private void validateRules(WorkRecordField field, JsonNode value) {
+    JsonNode rules = validationRules(field);
+    if (value.isTextual()) {
+      int length = value.asText().length();
+      if (rules.has("minLength") && length < rules.path("minLength").asInt()) {
+        throw new IllegalArgumentException("field is shorter than minLength: " + field.fieldCode());
+      }
+      if (rules.has("maxLength") && length > rules.path("maxLength").asInt()) {
+        throw new IllegalArgumentException("field is longer than maxLength: " + field.fieldCode());
+      }
+      if (rules.hasNonNull("pattern")) {
+        try {
+          if (!Pattern.compile(rules.path("pattern").asText()).matcher(value.asText()).find()) {
+            throw new IllegalArgumentException(
+                "field does not match pattern: " + field.fieldCode());
+          }
+        } catch (PatternSyntaxException ex) {
+          throw new IllegalArgumentException(
+              "invalid field validation pattern: " + field.fieldCode(), ex);
+        }
+      }
+    }
+    if (value.isNumber()) {
+      if (rules.has("minimum") && value.asDouble() < rules.path("minimum").asDouble()) {
+        throw new IllegalArgumentException("field is less than minimum: " + field.fieldCode());
+      }
+      if (rules.has("maximum") && value.asDouble() > rules.path("maximum").asDouble()) {
+        throw new IllegalArgumentException("field is greater than maximum: " + field.fieldCode());
+      }
+    }
+  }
+
+  private JsonNode validationRules(WorkRecordField field) {
+    try {
+      JsonNode rules =
+          objectMapper.readTree(
+              field.validationJson() == null || field.validationJson().isBlank()
+                  ? "{}"
+                  : field.validationJson());
+      if (!rules.isObject()) {
+        throw new IllegalArgumentException("validationJson must be object: " + field.fieldCode());
+      }
+      return rules;
+    } catch (IllegalArgumentException ex) {
+      throw ex;
+    } catch (Exception ex) {
+      throw new IllegalArgumentException("invalid validationJson: " + field.fieldCode(), ex);
     }
   }
 

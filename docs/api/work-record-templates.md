@@ -5,7 +5,7 @@ status: accepted
 phase: phase-21
 owner: ai
 created: 2026-07-14
-updated: 2026-07-14
+updated: 2026-07-15
 related:
   - modules/aiops-work-record/src/main/java/io/aegisops/workrecord/api/WorkRecordTemplateController.java
   - docs/adr/0007-portal-route-oriented-source-layout.md
@@ -25,6 +25,7 @@ related:
 | POST | `/api/work-record/templates/{templateId}/copy`                        | 复制模板                  |
 | POST | `/api/work-record/templates/{templateId}/enable`                      | 启用模板                  |
 | POST | `/api/work-record/templates/{templateId}/disable`                     | 禁用模板                  |
+| POST | `/api/work-record/templates/{templateId}/default`                     | 设为租户默认模板          |
 | POST | `/api/work-record/templates/{templateId}/archive`                     | 归档模板                  |
 | POST | `/api/work-record/templates/{templateId}/validate-publish`            | 发布前校验                |
 | POST | `/api/work-record/templates/{templateId}/publish`                     | 发布新版本                |
@@ -40,3 +41,14 @@ Portal 资源路由：
 ```
 
 模板身份必须来自路由参数；设计器不得默认选择列表第一项。
+
+模板响应包含 `isDefault`。每个租户最多一个默认模板；只有已启用、已发布且存在当前版本的模板可以设为默认。新建记录优先选择默认模板，没有默认模板时回退到列表中的第一个可用模板。
+
+版本字段响应新增：
+
+| 字段             | 含义                                                      |
+| ---------------- | --------------------------------------------------------- |
+| `columnSpan`     | 两列表单占位，`1` 为半宽，`2` 为整行                      |
+| `validationJson` | 随模板版本冻结的标准规则 JSON，支持长度、正则与数字上下限 |
+
+校验规则属于模板版本契约，不引用平台字典或可变的中心规则。文本规则使用 `minLength`、`maxLength`、`pattern`；数字规则使用 `minimum`、`maximum`。Portal 提交前校验，服务端执行最终校验。

@@ -14,13 +14,13 @@ function withProviders(node: React.ReactNode) {
 }
 
 describe('TemplateSwitchSelect', () => {
-  it('asks for confirmation when dirty', async () => {
+  it('asks for confirmation when dynamic fields contain values', async () => {
     const onChange = vi.fn()
 
     const screen = await withProviders(
       <TemplateSwitchSelect
         value='tpl-1'
-        dirty
+        hasDynamicValues
         templates={[
           { id: 'tpl-1', name: '日报' },
           { id: 'tpl-2', name: '周报' },
@@ -41,13 +41,13 @@ describe('TemplateSwitchSelect', () => {
     expect(onChange).toHaveBeenCalledWith('tpl-2')
   })
 
-  it('switches immediately when not dirty', async () => {
+  it('switches immediately when dynamic fields are empty', async () => {
     const onChange = vi.fn()
 
     const screen = await withProviders(
       <TemplateSwitchSelect
         value='tpl-1'
-        dirty={false}
+        hasDynamicValues={false}
         templates={[
           { id: 'tpl-1', name: '日报' },
           { id: 'tpl-2', name: '周报' },

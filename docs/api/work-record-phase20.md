@@ -24,6 +24,7 @@ related:
 | POST | `/api/work-record/imports/uploads`             | `work-record:import`                             | 创建一次性 Excel 直传会话        |
 | POST | `/api/work-record/imports`                     | `work-record:import`                             | 消费上传会话并创建导入任务       |
 | GET  | `/api/work-record/users/display-names`         | 工作记录读取权限                                 | 按 ids 批量解析创建人/负责人名称 |
+| GET  | `/api/work-record/users/options`               | 工作记录读取权限                                 | 查询当前租户活跃负责人选项       |
 | POST | `/api/work-record/async-exports`               | `work-record:export`、`work-record:export:async` | 创建异步导出任务                 |
 | GET  | `/api/work-record/async-jobs`                  | 工作记录读取权限                                 | 查询当前用户的任务列表           |
 | GET  | `/api/work-record/async-jobs/{jobId}`          | 工作记录读取权限                                 | 查询任务详情与逐行结果           |

@@ -7,11 +7,13 @@ export function LockedFieldCodeInput({
   value,
   locked,
   error,
+  hint,
   onChange,
 }: {
   value: string
   locked: boolean
   error?: string
+  hint?: string
   onChange: (value: string) => void
 }) {
   const { t } = useTranslation()
@@ -22,7 +24,7 @@ export function LockedFieldCodeInput({
       label={t('workRecords.designer.property.fieldCode')}
       required
       error={error}
-      hint={t('workRecords.designer.fieldCodeLockedHint')}
+      hint={hint ?? t('workRecords.designer.fieldCodeLockedHint')}
     >
       {(controlProps) => (
         <div className='relative'>

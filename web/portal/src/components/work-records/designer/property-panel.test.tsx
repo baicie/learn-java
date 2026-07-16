@@ -55,4 +55,96 @@ describe('PropertyPanel', () => {
       exportable: false,
     })
   })
+
+  it('does not show a validation warning for a valid editable field code', async () => {
+    const screen = await render(
+      <I18nextProvider i18n={i18n} defaultNS='translation'>
+        <PropertyPanel
+          field={{ ...field, locked: false, referenced: false }}
+          dictTypes={[]}
+          onChange={vi.fn()}
+        />
+      </I18nextProvider>
+    )
+
+    await expect.element(screen.getByRole('alert')).not.toBeInTheDocument()
+    await expect
+      .element(
+        screen.getByText('规则：字母开头，仅支持字母、数字和下划线，最长 64 位')
+      )
+      .toBeVisible()
+  })
+
+  it('only shows option source for select fields', async () => {
+    const screen = await render(
+      <I18nextProvider i18n={i18n} defaultNS='translation'>
+        <PropertyPanel
+          field={{
+            ...field,
+            fieldType: 'text',
+            optionSource: 'static',
+            dictCode: '',
+          }}
+          dictTypes={[]}
+          onChange={vi.fn()}
+        />
+      </I18nextProvider>
+    )
+
+    await expect.element(screen.getByText('选项来源')).not.toBeInTheDocument()
+  })
+
+  it('updates field width and text validation rules', async () => {
+    const onChange = vi.fn()
+    const screen = await render(
+      <I18nextProvider i18n={i18n} defaultNS='translation'>
+        <PropertyPanel
+          field={{
+            ...field,
+            locked: false,
+            fieldType: 'text',
+            optionSource: 'static',
+            dictCode: '',
+            columnSpan: 2,
+            validation: {},
+          }}
+          dictTypes={[]}
+          onChange={onChange}
+        />
+      </I18nextProvider>
+    )
+
+    await screen.getByRole('combobox', { name: '字段宽度' }).click()
+    await screen.getByRole('option', { name: '半宽（一行两个）' }).click()
+    expect(onChange).toHaveBeenCalledWith('field-1', { columnSpan: 1 })
+
+    await screen.getByRole('spinbutton', { name: '最小长度' }).fill('3')
+    expect(onChange).toHaveBeenCalledWith('field-1', {
+      validation: { minLength: 3 },
+    })
+  })
+
+  it('edits static options for select fields', async () => {
+    const onChange = vi.fn()
+    const screen = await render(
+      <I18nextProvider i18n={i18n} defaultNS='translation'>
+        <PropertyPanel
+          field={{
+            ...field,
+            locked: false,
+            optionSource: 'static',
+            dictCode: '',
+            staticOptions: ['P0'],
+          }}
+          dictTypes={[]}
+          onChange={onChange}
+        />
+      </I18nextProvider>
+    )
+
+    await screen.getByRole('textbox', { name: '静态选项' }).fill('P0\nP1')
+    expect(onChange).toHaveBeenCalledWith('field-1', {
+      staticOptions: ['P0', 'P1'],
+    })
+  })
 })

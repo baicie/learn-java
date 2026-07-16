@@ -138,6 +138,34 @@ describe('RecordRuntimeForm', () => {
     await screen.getByRole('button', { name: '提交' }).click()
     expect(onSubmitDone).toHaveBeenCalled()
   })
+
+  it('renders half-width fields in a responsive two-column grid', async () => {
+    const screen = await withProviders(
+      <RecordRuntimeForm
+        mode='create'
+        templates={[template()]}
+        fields={[
+          { ...field('summary', 'text', false), columnSpan: 1 },
+          { ...field('hours', 'number', false), columnSpan: 1 },
+        ]}
+        dictOptions={{}}
+        value={value({})}
+        errors={{}}
+        dirty={false}
+        onChange={vi.fn()}
+        onSaveDraft={vi.fn()}
+        onSubmitDone={vi.fn()}
+        onCancel={vi.fn()}
+      />
+    )
+
+    const summary = screen
+      .getByText('summary')
+      .element()
+      .closest('[data-field-id]')
+    expect(summary?.className).toContain('md:col-span-1')
+    expect(summary?.parentElement?.className).toContain('md:grid-cols-2')
+  })
 })
 
 function value(

@@ -54,6 +54,7 @@ public class WorkRecordAuditSnapshots {
     result.put("description", value.description());
     result.put("status", value.status().value());
     result.put("enabled", value.enabled());
+    result.put("isDefault", value.isDefault());
     result.put("currentVersionId", value.currentVersionId());
     result.put("draftSchema", parseObject(value.draftSchemaJson()));
     result.put("draftDesigner", parseObject(value.draftDesignerJson()));

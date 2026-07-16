@@ -5,6 +5,7 @@ import {
   fetchRecordList,
   fetchRecordListMeta,
   fetchRecordUserNames,
+  fetchRecordUserOptions,
   fetchWorkdaySummary,
 } from '@/api/work-records/list'
 import { useDictionaryOptions } from '@/hooks/dictionaries/dictionary-query'
@@ -50,6 +51,10 @@ export function useWorkRecordList(
     queryKey: ['work-record-user-names', userIds],
     queryFn: () => fetchRecordUserNames(userIds),
     enabled: userIds.length > 0,
+  })
+  const userOptionsQuery = useQuery({
+    queryKey: ['work-record-user-options'],
+    queryFn: fetchRecordUserOptions,
   })
 
   const notifiedDictError = useRef<unknown>(null)
@@ -126,6 +131,7 @@ export function useWorkRecordList(
 
     dictOptions: dictionaryQuery.options,
     userNames: userNamesQuery.data ?? {},
+    userOptions: userOptionsQuery.data ?? [],
     effectiveColumns,
 
     initialLoading: metaQuery.isLoading && !metaQuery.data,

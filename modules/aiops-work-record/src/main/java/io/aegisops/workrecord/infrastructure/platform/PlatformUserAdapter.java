@@ -3,8 +3,11 @@ package io.aegisops.workrecord.infrastructure.platform;
 import io.aegisops.common.exception.NotFoundException;
 import io.aegisops.user.UserAccount;
 import io.aegisops.user.UserService;
+import io.aegisops.workrecord.application.command.WorkRecordUserOption;
 import io.aegisops.workrecord.application.port.WorkRecordUserPort;
 import java.util.Collection;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Map;
 import org.springframework.stereotype.Component;
 
@@ -40,5 +43,21 @@ public class PlatformUserAdapter implements WorkRecordUserPort {
   @Override
   public Map<String, String> displayNames(String tenantId, Collection<String> userIds) {
     return userService.displayNames(tenantId, userIds);
+  }
+
+  @Override
+  public List<WorkRecordUserOption> activeOptions(String tenantId) {
+    return userService.listByTenant(tenantId).stream()
+        .filter(user -> tenantId.equals(user.tenantId()))
+        .filter(user -> "active".equalsIgnoreCase(user.status()))
+        .map(
+            user ->
+                new WorkRecordUserOption(
+                    user.id(),
+                    user.displayName() == null || user.displayName().isBlank()
+                        ? user.username()
+                        : user.displayName()))
+        .sorted(Comparator.comparing(WorkRecordUserOption::label))
+        .toList();
   }
 }

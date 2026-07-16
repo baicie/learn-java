@@ -48,6 +48,7 @@ vi.mock('@/api/work-records/templates', () => ({
   enableTemplate: vi.fn(),
   disableTemplate: vi.fn(),
   archiveTemplate: vi.fn(),
+  setDefaultTemplate: vi.fn(),
 }))
 
 describe('WorkRecordTemplatesPage', () => {
@@ -77,6 +78,9 @@ describe('WorkRecordTemplatesPage', () => {
       .toBeVisible()
     await expect
       .element(screen.getByRole('button', { name: '版本' }))
+      .toBeVisible()
+    await expect
+      .element(screen.getByRole('button', { name: '设为默认' }))
       .toBeVisible()
     const designerLink = screen.getByRole('link', { name: '设计' })
     await expect.element(designerLink).toBeVisible()

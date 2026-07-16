@@ -15,12 +15,50 @@ public record TemplateFieldIndexEntry(
     String dictCode,
     String optionsJson,
     String schemaPath,
+    int columnSpan,
+    String validationJson,
     boolean listVisible,
     boolean filterable,
     boolean exportable,
     boolean statistical,
     int sortOrder,
     boolean enabled) {
+
+  public TemplateFieldIndexEntry(
+      String fieldName,
+      String fieldCode,
+      FieldType fieldType,
+      boolean required,
+      String defaultValue,
+      OptionSource optionSource,
+      String dictCode,
+      String optionsJson,
+      String schemaPath,
+      boolean listVisible,
+      boolean filterable,
+      boolean exportable,
+      boolean statistical,
+      int sortOrder,
+      boolean enabled) {
+    this(
+        fieldName,
+        fieldCode,
+        fieldType,
+        required,
+        defaultValue,
+        optionSource,
+        dictCode,
+        optionsJson,
+        schemaPath,
+        2,
+        "{}",
+        listVisible,
+        filterable,
+        exportable,
+        statistical,
+        sortOrder,
+        enabled);
+  }
 
   public static TemplateFieldIndexEntry enabled(FormFieldDescriptor field) {
     return new TemplateFieldIndexEntry(
@@ -33,6 +71,8 @@ public record TemplateFieldIndexEntry(
         field.dictCode(),
         field.optionsJson(),
         field.schemaPath(),
+        field.columnSpan(),
+        field.validationJson(),
         field.listVisible(),
         field.filterable(),
         field.exportable(),
@@ -52,6 +92,8 @@ public record TemplateFieldIndexEntry(
         field.dictCode(),
         field.optionsJson(),
         field.schemaPath(),
+        field.columnSpan(),
+        field.validationJson(),
         field.listVisible(),
         field.filterable(),
         field.exportable(),

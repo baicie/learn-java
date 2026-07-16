@@ -7,6 +7,7 @@ import type {
   RecordListMeta,
   RecordWorkdaySummary,
   WorkRecord,
+  WorkRecordUserOption,
 } from '@/components/work-records/list/types'
 
 const recordStatusSchema = z.preprocess(
@@ -125,6 +126,15 @@ export async function fetchRecordUserNames(
     params,
   })
   return apiResponseSchema(z.record(z.string(), z.string())).parse(data).data
+}
+
+export async function fetchRecordUserOptions(): Promise<
+  WorkRecordUserOption[]
+> {
+  const { data } = await apiClient.get('/api/work-record/users/options')
+  return apiResponseSchema(
+    z.array(z.object({ id: z.string(), label: z.string() }))
+  ).parse(data).data
 }
 
 const workdaySummarySchema = z.object({

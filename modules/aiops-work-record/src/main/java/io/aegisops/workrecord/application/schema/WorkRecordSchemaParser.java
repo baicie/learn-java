@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.regex.Pattern;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -85,6 +86,7 @@ public class WorkRecordSchemaParser {
 
     FieldType fieldType = FieldType.from(fieldTypeValue);
     OptionSource optionSource = OptionSource.from(optionSourceValue);
+    validateFieldRules(fieldNode, fieldType, optionSource, fieldCode);
 
     return new FormFieldDescriptor(
         textOrDefault(fieldNode, "title", fieldCode),
@@ -95,6 +97,8 @@ public class WorkRecordSchemaParser {
         dictCode,
         optionsJson(fieldNode),
         schemaPath,
+        ext.path("columnSpan").asInt(2),
+        validationJson(fieldNode),
         ext.path("listVisible").asBoolean(false),
         ext.path("filterable").asBoolean(false),
         ext.path("exportable").asBoolean(true),
@@ -144,6 +148,93 @@ public class WorkRecordSchemaParser {
       return "[]";
     } catch (Exception ex) {
       throw new IllegalArgumentException("invalid field options", ex);
+    }
+  }
+
+  private String validationJson(JsonNode fieldNode) {
+    try {
+      var rules = objectMapper.createObjectNode();
+      copyRule(fieldNode, rules, "minLength");
+      copyRule(fieldNode, rules, "maxLength");
+      copyRule(fieldNode, rules, "pattern");
+      copyRule(fieldNode, rules, "minimum");
+      copyRule(fieldNode, rules, "maximum");
+      return objectMapper.writeValueAsString(rules);
+    } catch (Exception ex) {
+      throw new IllegalArgumentException("invalid field validation rules", ex);
+    }
+  }
+
+  private void validateFieldRules(
+      JsonNode fieldNode, FieldType fieldType, OptionSource optionSource, String fieldCode) {
+    boolean optionField = fieldType == FieldType.SELECT || fieldType == FieldType.MULTI_SELECT;
+    if (optionField && optionSource == OptionSource.STATIC && !hasStaticOptions(fieldNode)) {
+      throw new IllegalArgumentException("static options are required: " + fieldCode);
+    }
+
+    try {
+      boolean textField = fieldType == FieldType.TEXT || fieldType == FieldType.TEXTAREA;
+      boolean numberField = fieldType == FieldType.NUMBER;
+      if (!textField
+          && (fieldNode.has("minLength")
+              || fieldNode.has("maxLength")
+              || fieldNode.has("pattern"))) {
+        throw new IllegalArgumentException("text validation rules require a text field");
+      }
+      if (!numberField && (fieldNode.has("minimum") || fieldNode.has("maximum"))) {
+        throw new IllegalArgumentException("number validation rules require a number field");
+      }
+      validateLengthRule(fieldNode, "minLength");
+      validateLengthRule(fieldNode, "maxLength");
+      if (fieldNode.has("minLength")
+          && fieldNode.has("maxLength")
+          && fieldNode.path("minLength").asInt() > fieldNode.path("maxLength").asInt()) {
+        throw new IllegalArgumentException("minLength exceeds maxLength");
+      }
+      if (fieldNode.has("pattern")) {
+        if (!fieldNode.path("pattern").isTextual()) {
+          throw new IllegalArgumentException("pattern must be string");
+        }
+        Pattern.compile(fieldNode.path("pattern").asText());
+      }
+      validateNumberRule(fieldNode, "minimum");
+      validateNumberRule(fieldNode, "maximum");
+      if (fieldNode.has("minimum")
+          && fieldNode.has("maximum")
+          && fieldNode.path("minimum").asDouble() > fieldNode.path("maximum").asDouble()) {
+        throw new IllegalArgumentException("minimum exceeds maximum");
+      }
+    } catch (IllegalArgumentException ex) {
+      throw new IllegalArgumentException("invalid field validation rules: " + fieldCode, ex);
+    }
+  }
+
+  private boolean hasStaticOptions(JsonNode fieldNode) {
+    JsonNode values = fieldNode.path("enum");
+    if (values.isArray() && !values.isEmpty()) return true;
+    JsonNode dataSource = fieldNode.path("x-component-props").path("dataSource");
+    return dataSource.isArray() && !dataSource.isEmpty();
+  }
+
+  private void validateLengthRule(JsonNode fieldNode, String name) {
+    if (!fieldNode.has(name)) return;
+    JsonNode value = fieldNode.path(name);
+    if (!value.isIntegralNumber() || value.asInt() < 0) {
+      throw new IllegalArgumentException(name + " must be a non-negative integer");
+    }
+  }
+
+  private void validateNumberRule(JsonNode fieldNode, String name) {
+    if (fieldNode.has(name) && !fieldNode.path(name).isNumber()) {
+      throw new IllegalArgumentException(name + " must be a number");
+    }
+  }
+
+  private void copyRule(
+      JsonNode source, com.fasterxml.jackson.databind.node.ObjectNode target, String name) {
+    JsonNode value = source.get(name);
+    if (value != null && !value.isNull()) {
+      target.set(name, value);
     }
   }
 

@@ -45,6 +45,8 @@ public class JdbcWorkRecordFieldIndexRepository implements WorkRecordFieldIndexR
       params.put("dictCode", nullable(field.dictCode()));
       params.put("options", field.optionsJson() == null ? "[]" : field.optionsJson());
       params.put("schemaPath", nullable(field.schemaPath()));
+      params.put("columnSpan", field.columnSpan());
+      params.put("validation", field.validationJson() == null ? "{}" : field.validationJson());
       params.put("listVisible", field.listVisible());
       params.put("filterable", field.filterable());
       params.put("exportable", field.exportable());
@@ -57,12 +59,13 @@ public class JdbcWorkRecordFieldIndexRepository implements WorkRecordFieldIndexR
           insert into work_record.wr_template_field(
             id, tenant_id, template_id, template_version_id,
             field_name, field_code, field_type, required, default_value,
-            option_source, dict_code, options_json, schema_path,
+            option_source, dict_code, options_json, schema_path, column_span, validation_json,
             list_visible, filterable, exportable, statistical, sort_order, enabled)
           values (
             :id, :tenantId, :templateId, :versionId,
             :fieldName, :fieldCode, :fieldType, :required, :defaultValue,
-            :optionSource, :dictCode, cast(:options as jsonb), :schemaPath,
+            :optionSource, :dictCode, cast(:options as jsonb), :schemaPath, :columnSpan,
+            cast(:validation as jsonb),
             :listVisible, :filterable, :exportable, :statistical, :sortOrder, :enabled)
           """,
           params);
@@ -83,6 +86,7 @@ public class JdbcWorkRecordFieldIndexRepository implements WorkRecordFieldIndexR
         """
         select id, tenant_id, template_id, template_version_id, field_name, field_code, field_type,
                required, default_value, option_source, dict_code, options_json::text, schema_path,
+               column_span, validation_json::text,
                list_visible, filterable, exportable, statistical, sort_order, enabled,
                created_at, updated_at
           from work_record.wr_template_field
@@ -120,6 +124,7 @@ public class JdbcWorkRecordFieldIndexRepository implements WorkRecordFieldIndexR
         """
         select id, tenant_id, template_id, template_version_id, field_name, field_code, field_type,
                required, default_value, option_source, dict_code, options_json::text, schema_path,
+               column_span, validation_json::text,
                list_visible, filterable, exportable, statistical, sort_order, enabled,
                created_at, updated_at
           from work_record.wr_template_field
@@ -141,6 +146,7 @@ public class JdbcWorkRecordFieldIndexRepository implements WorkRecordFieldIndexR
         """
         select id, tenant_id, template_id, template_version_id, field_name, field_code, field_type,
                required, default_value, option_source, dict_code, options_json::text, schema_path,
+               column_span, validation_json::text,
                list_visible, filterable, exportable, statistical, sort_order, enabled,
                created_at, updated_at
           from work_record.wr_template_field
@@ -168,6 +174,8 @@ public class JdbcWorkRecordFieldIndexRepository implements WorkRecordFieldIndexR
         rs.getString("dict_code"),
         rs.getString("options_json"),
         rs.getString("schema_path"),
+        rs.getInt("column_span"),
+        rs.getString("validation_json"),
         rs.getBoolean("list_visible"),
         rs.getBoolean("filterable"),
         rs.getBoolean("exportable"),

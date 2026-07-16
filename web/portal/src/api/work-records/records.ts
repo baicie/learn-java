@@ -31,6 +31,7 @@ const templateSchema = z.object({
   description: z.string().nullable().optional(),
   status: templateStatusSchema,
   enabled: z.boolean(),
+  isDefault: z.boolean().optional().default(false),
   currentVersionId: z.string().nullable().optional(),
   draftSchemaJson: z.string(),
   draftDesignerJson: z.string(),
@@ -54,6 +55,11 @@ const recordFieldSchema = z.object({
   dictCode: z.string().nullable().optional(),
   optionsJson: z.string(),
   schemaPath: z.string().nullable().optional(),
+  columnSpan: z
+    .union([z.literal(1), z.literal(2)])
+    .optional()
+    .default(2),
+  validationJson: z.string().optional().default('{}'),
   listVisible: z.boolean(),
   filterable: z.boolean(),
   exportable: z.boolean(),

@@ -16,6 +16,7 @@ import {
   normalizeSortOrder,
   parseDraftSchema,
   schemaToJson,
+  supportsOptions,
   validateDesignerFields,
 } from '@/components/work-records/designer/schema'
 import {
@@ -156,6 +157,18 @@ export function useWorkRecordDesigner(templateId: string) {
         if (field.locked) {
           next.fieldCode = field.fieldCode
           next.fieldType = field.fieldType
+        }
+        if (next.fieldType !== field.fieldType) {
+          const sameValidationFamily =
+            (field.fieldType === 'text' || field.fieldType === 'textarea') &&
+            (next.fieldType === 'text' || next.fieldType === 'textarea')
+          if (!sameValidationFamily) {
+            next.validation = {}
+          }
+        }
+        if (!supportsOptions(next.fieldType)) {
+          next.optionSource = 'static'
+          next.dictCode = ''
         }
         if (next.optionSource === 'static') {
           next.dictCode = ''

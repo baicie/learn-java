@@ -27,5 +27,7 @@ public interface WorkRecordTemplateRepository {
 
   void disable(String tenantId, String templateId);
 
+  void setDefault(String tenantId, String templateId);
+
   void archive(String tenantId, String templateId);
 }

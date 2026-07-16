@@ -156,4 +156,51 @@ describe('validateRecordForm', () => {
     expect(errors['custom.offsetDate']).toBeUndefined()
     expect(errors['custom.multiField']).toBe('多选格式无效')
   })
+
+  it('applies versioned text validation rules', () => {
+    const errors = validateRecordForm(
+      {
+        title: '日报',
+        templateId: 'tpl1',
+        templateVersionId: 'v1',
+        status: 'done',
+        ownerId: '',
+        recordTime: '2026-07-10T10:00',
+        customData: { summary: 'ab' },
+      },
+      [
+        {
+          ...buildFields()[0],
+          validationJson: JSON.stringify({ minLength: 3, maxLength: 10 }),
+        },
+      ],
+      'done'
+    )
+
+    expect(errors['custom.summary']).toBe('工作总结不能少于 3 个字符')
+  })
+
+  it('applies versioned number range validation rules', () => {
+    const errors = validateRecordForm(
+      {
+        title: '日报',
+        templateId: 'tpl1',
+        templateVersionId: 'v1',
+        status: 'done',
+        ownerId: '',
+        recordTime: '2026-07-10T10:00',
+        customData: { summary: 25 },
+      },
+      [
+        {
+          ...buildFields()[0],
+          fieldType: 'number',
+          validationJson: JSON.stringify({ minimum: 0, maximum: 24 }),
+        },
+      ],
+      'done'
+    )
+
+    expect(errors['custom.summary']).toBe('工作总结不能大于 24')
+  })
 })

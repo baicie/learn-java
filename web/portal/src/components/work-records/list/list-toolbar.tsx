@@ -9,15 +9,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import type { ListQueryState, RecordListMeta } from './types'
+import type {
+  ListQueryState,
+  RecordListMeta,
+  WorkRecordUserOption,
+} from './types'
 
 type Props = {
   meta?: RecordListMeta
   query: ListQueryState
+  userOptions: WorkRecordUserOption[]
   onChange: (patch: Partial<ListQueryState>) => void
 }
 
-export function ListToolbar({ meta, query, onChange }: Props) {
+export function ListToolbar({ meta, query, userOptions, onChange }: Props) {
   const { t } = useTranslation()
   return (
     <div className='grid gap-3 rounded-lg border p-4'>
@@ -51,11 +56,29 @@ export function ListToolbar({ meta, query, onChange }: Props) {
           </SelectContent>
         </Select>
 
-        <Input
-          placeholder={t('workRecords.field.owner')}
-          value={query.ownerId}
-          onChange={(event) => onChange({ ownerId: event.target.value })}
-        />
+        <Select
+          value={query.ownerId || 'all'}
+          onValueChange={(value) =>
+            onChange({ ownerId: value === 'all' ? '' : value })
+          }
+        >
+          <SelectTrigger
+            className='w-full'
+            aria-label={t('workRecords.field.owner')}
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              <SelectItem value='all'>全部负责人</SelectItem>
+              {userOptions.map((user) => (
+                <SelectItem key={user.id} value={user.id}>
+                  {user.label}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          </SelectContent>
+        </Select>
 
         <Input
           placeholder={t('workRecords.field.creator')}

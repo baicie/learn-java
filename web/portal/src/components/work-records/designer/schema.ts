@@ -1,5 +1,6 @@
 import {
   type DesignerField,
+  type DesignerValidationRules,
   type SchemaDiffItem,
   type WorkRecordFieldType,
   WORK_RECORD_FIELD_TYPES,
@@ -26,6 +27,20 @@ const RESERVED_FIELD_CODES = new Set([
   'deleted_at',
 ])
 
+export function fieldCodeValidationError(
+  fieldCode: string
+): string | undefined {
+  const normalized = fieldCode.trim()
+  if (!normalized) return '字段编码不能为空'
+  if (!FIELD_CODE_PATTERN.test(normalized)) return '字段编码不符合规则'
+  if (RESERVED_FIELD_CODES.has(normalized)) return '字段编码是保留字'
+  return undefined
+}
+
+export function supportsOptions(fieldType: WorkRecordFieldType): boolean {
+  return fieldType === 'select' || fieldType === 'multi_select'
+}
+
 function newId(fallback: string): string {
   const browserCrypto =
     typeof globalThis !== 'undefined' ? globalThis.crypto : undefined
@@ -45,6 +60,9 @@ export function newDesignerField(
     required: false,
     optionSource: 'static',
     dictCode: '',
+    staticOptions: [],
+    columnSpan: 2,
+    validation: {},
     listVisible: false,
     filterable: false,
     exportable: true,
@@ -80,12 +98,9 @@ export function validateDesignerFields(fields: DesignerField[]): string[] {
       errors.push('字段名称不能为空')
     }
 
-    if (!field.fieldCode.trim()) {
-      errors.push(`${field.fieldName} 的字段编码不能为空`)
-    } else if (!FIELD_CODE_PATTERN.test(field.fieldCode)) {
-      errors.push(`${field.fieldName} 的字段编码不符合规则`)
-    } else if (RESERVED_FIELD_CODES.has(field.fieldCode)) {
-      errors.push(`${field.fieldName} 的字段编码是保留字`)
+    const fieldCodeError = fieldCodeValidationError(field.fieldCode)
+    if (fieldCodeError) {
+      errors.push(`${field.fieldName} 的${fieldCodeError}`)
     }
 
     if (seen.has(field.fieldCode)) {
@@ -97,13 +112,24 @@ export function validateDesignerFields(fields: DesignerField[]): string[] {
       errors.push(`不支持的字段类型：${field.fieldType}`)
     }
 
-    if (field.optionSource === 'dict' && !field.dictCode.trim()) {
+    if (!supportsOptions(field.fieldType) && field.optionSource === 'dict') {
+      errors.push(`${field.fieldName}：只有单选和多选字段可以配置选项来源`)
+    } else if (field.optionSource === 'dict' && !field.dictCode.trim()) {
       errors.push(`${field.fieldName} 选择了字典绑定，但没有选择字典`)
     }
 
     if (field.optionSource === 'static' && field.dictCode.trim()) {
       errors.push(`${field.fieldName} 是静态选项，不应绑定字典`)
     }
+    if (
+      supportsOptions(field.fieldType) &&
+      field.optionSource === 'static' &&
+      !field.staticOptions?.length
+    ) {
+      errors.push(`${field.fieldName} 至少需要一个静态选项`)
+    }
+
+    validateRules(field, errors)
   }
 
   return errors
@@ -122,10 +148,17 @@ export function buildWorkRecordSchema(fields: DesignerField[]) {
       required.push(field.fieldCode)
     }
 
+    const validation = field.validation ?? {}
     properties[field.fieldCode] = {
       type: schemaType(field.fieldType),
       title: field.fieldName,
       'x-component': componentName(field.fieldType),
+      ...(supportsOptions(field.fieldType) &&
+      field.optionSource === 'static' &&
+      field.staticOptions?.length
+        ? { enum: field.staticOptions }
+        : {}),
+      ...validationSchema(validation),
       'x-work-record': {
         fieldCode: field.fieldCode,
         fieldType: field.fieldType,
@@ -133,6 +166,7 @@ export function buildWorkRecordSchema(fields: DesignerField[]) {
         ...(field.optionSource === 'dict' && field.dictCode
           ? { dictCode: field.dictCode }
           : {}),
+        columnSpan: field.columnSpan ?? 2,
         listVisible: field.listVisible,
         filterable: field.filterable,
         exportable: field.exportable,
@@ -161,6 +195,9 @@ function buildDesignerJson(fields: DesignerField[]) {
       enabled: field.enabled,
       locked: field.locked,
       referenced: field.referenced,
+      columnSpan: field.columnSpan ?? 2,
+      validation: field.validation ?? {},
+      staticOptions: field.staticOptions ?? [],
     })),
   }
 }
@@ -240,6 +277,9 @@ export function parseDraftSchema(
         Array.isArray(root.required) && root.required.includes(propertyName),
       optionSource: extNode.optionSource === 'dict' ? 'dict' : 'static',
       dictCode: String(extNode.dictCode ?? ''),
+      staticOptions: readStaticOptions(fieldNode.enum),
+      columnSpan: extNode.columnSpan === 1 ? 1 : 2,
+      validation: readValidation(fieldNode),
       listVisible: Boolean(extNode.listVisible),
       filterable: Boolean(extNode.filterable),
       exportable:
@@ -286,6 +326,9 @@ function restoreDisabledDesignerFields(
       required: Boolean(item.required),
       optionSource: item.optionSource === 'dict' ? 'dict' : 'static',
       dictCode: String(item.dictCode ?? ''),
+      staticOptions: readStaticOptions(item.staticOptions),
+      columnSpan: item.columnSpan === 1 ? 1 : 2,
+      validation: readDesignerValidation(item.validation),
       listVisible: Boolean(item.listVisible),
       filterable: Boolean(item.filterable),
       exportable:
@@ -336,6 +379,9 @@ export function mergePublishedLocks(
         required: published.required,
         optionSource: published.optionSource,
         dictCode: published.dictCode ?? '',
+        staticOptions: parseStaticOptionsJson(published.optionsJson),
+        columnSpan: published.columnSpan === 1 ? 1 : 2,
+        validation: parseValidationJson(published.validationJson),
         listVisible: published.listVisible,
         filterable: published.filterable,
         exportable: published.exportable,
@@ -454,4 +500,105 @@ function componentName(fieldType: WorkRecordFieldType) {
     boolean: 'Switch',
   }
   return components[fieldType]
+}
+
+function validationSchema(rules: DesignerValidationRules) {
+  return Object.fromEntries(
+    Object.entries(rules).filter(
+      ([, value]) => value !== undefined && value !== ''
+    )
+  )
+}
+
+function readValidation(
+  node: Record<string, unknown>
+): DesignerValidationRules {
+  return {
+    ...numberRule(node, 'minLength'),
+    ...numberRule(node, 'maxLength'),
+    ...(typeof node.pattern === 'string' && node.pattern
+      ? { pattern: node.pattern }
+      : {}),
+    ...numberRule(node, 'minimum'),
+    ...numberRule(node, 'maximum'),
+  }
+}
+
+function readDesignerValidation(value: unknown): DesignerValidationRules {
+  return value && typeof value === 'object'
+    ? readValidation(value as Record<string, unknown>)
+    : {}
+}
+
+function parseValidationJson(value?: string): DesignerValidationRules {
+  if (!value) return {}
+  return readDesignerValidation(safeParseObject(value))
+}
+
+function parseStaticOptionsJson(value?: string): string[] {
+  if (!value) return []
+  try {
+    return readStaticOptions(JSON.parse(value))
+  } catch {
+    return []
+  }
+}
+
+function readStaticOptions(value: unknown): string[] {
+  if (!Array.isArray(value)) return []
+  return value
+    .filter(
+      (item): item is string | number | boolean =>
+        typeof item === 'string' ||
+        typeof item === 'number' ||
+        typeof item === 'boolean'
+    )
+    .map(String)
+}
+
+function numberRule(node: Record<string, unknown>, key: string) {
+  return typeof node[key] === 'number' && Number.isFinite(node[key])
+    ? { [key]: node[key] }
+    : {}
+}
+
+function validateRules(field: DesignerField, errors: string[]) {
+  const rules = field.validation ?? {}
+  const textField = field.fieldType === 'text' || field.fieldType === 'textarea'
+  const numberField = field.fieldType === 'number'
+  if (
+    !textField &&
+    (rules.minLength !== undefined ||
+      rules.maxLength !== undefined ||
+      Boolean(rules.pattern))
+  ) {
+    errors.push(`${field.fieldName}：文本校验规则只能用于文本字段`)
+  }
+  if (
+    !numberField &&
+    (rules.minimum !== undefined || rules.maximum !== undefined)
+  ) {
+    errors.push(`${field.fieldName}：数值校验规则只能用于数字字段`)
+  }
+  if (
+    rules.minLength !== undefined &&
+    rules.maxLength !== undefined &&
+    rules.minLength > rules.maxLength
+  ) {
+    errors.push(`${field.fieldName} 的最小长度不能大于最大长度`)
+  }
+  if (
+    rules.minimum !== undefined &&
+    rules.maximum !== undefined &&
+    rules.minimum > rules.maximum
+  ) {
+    errors.push(`${field.fieldName} 的最小值不能大于最大值`)
+  }
+  if (rules.pattern) {
+    try {
+      new RegExp(rules.pattern)
+    } catch {
+      errors.push(`${field.fieldName} 的正则表达式无效`)
+    }
+  }
 }
