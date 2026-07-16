@@ -8,6 +8,8 @@ on:
     paths:
       - "ops/**"
       - "infra/**"
+      - "apps/aiops-server/src/main/resources/db/migration/**"
+      - "scripts/ci/prepare-docker.sh"
       - ".github/workflows/ops-scripts.yml"
   push:
     branches:
@@ -16,12 +18,18 @@ on:
     paths:
       - "ops/**"
       - "infra/**"
+      - "apps/aiops-server/src/main/resources/db/migration/**"
+      - "scripts/ci/prepare-docker.sh"
       - ".github/workflows/ops-scripts.yml"
   workflow_call:
   workflow_dispatch:
 
 permissions:
   contents: read
+
+concurrency:
+  group: ops-scripts-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 defaults:
   run:
@@ -30,7 +38,7 @@ defaults:
 jobs:
   shellcheck:
     name: shellcheck + bash -n
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, aegisops-cn]
     timeout-minutes: 5
     steps:
       - name: Checkout
@@ -54,31 +62,49 @@ jobs:
 
   postgres-smoke:
     name: Phase 19 SQL smoke
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, aegisops-cn]
     timeout-minutes: 15
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_USER: aegisops
-          POSTGRES_PASSWORD: aegisops
-          POSTGRES_DB: aegisops
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U aegisops"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
     env:
       PGHOST: 127.0.0.1
-      PGPORT: "5432"
       PGUSER: aegisops
       PGPASSWORD: aegisops
       PGDATABASE: aegisops
+      POSTGRES_CONTAINER: aegisops-postgres-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Prepare Docker
+        run: bash scripts/ci/prepare-docker.sh
+
+      - name: Start PostgreSQL
+        run: |
+          docker run --detach --rm \
+            --name "$POSTGRES_CONTAINER" \
+            --env POSTGRES_USER="$PGUSER" \
+            --env POSTGRES_PASSWORD="$PGPASSWORD" \
+            --env POSTGRES_DB="$PGDATABASE" \
+            --publish 127.0.0.1::5432 \
+            postgres:16-alpine
+
+          PGPORT="$(
+            docker port "$POSTGRES_CONTAINER" 5432/tcp \
+              | sed -E 's/.*:([0-9]+)$/\1/' \
+              | head -n 1
+          )"
+          test -n "$PGPORT"
+          echo "PGPORT=$PGPORT" >> "$GITHUB_ENV"
+
+          for attempt in $(seq 1 20); do
+            if docker exec "$POSTGRES_CONTAINER" \
+              pg_isready -U "$PGUSER" -d "$PGDATABASE"; then
+              exit 0
+            fi
+            sleep 2
+          done
+
+          docker logs "$POSTGRES_CONTAINER"
+          exit 1
 
       - name: Install psql
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
@@ -117,3 +143,7 @@ jobs:
           if [ -z "$SHELL_FILES" ]; then
             echo "backup output missing"; exit 1; fi
           bash ops/backup/postgres-restore-verify.sh "$BACKUP_DIR"/*.dump
+
+      - name: Cleanup PostgreSQL
+        if: always()
+        run: docker rm --force "$POSTGRES_CONTAINER" || true

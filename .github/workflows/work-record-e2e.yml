@@ -29,24 +29,10 @@ jobs:
         'e2e'
       )
 
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, aegisops-cn]
     timeout-minutes: 35
-
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_DB: aegisops
-          POSTGRES_USER: aegisops
-          POSTGRES_PASSWORD: aegisops
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd
-          "pg_isready -U aegisops -d aegisops"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 20
+    env:
+      POSTGRES_CONTAINER: work-record-postgres-${{ github.run_id }}-${{ github.run_attempt }}
 
     steps:
       - name: Checkout
@@ -63,6 +49,38 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: "22"
+
+      - name: Prepare Docker
+        run: bash scripts/ci/prepare-docker.sh
+
+      - name: Start PostgreSQL
+        run: |
+          docker run --detach --rm \
+            --name "$POSTGRES_CONTAINER" \
+            --env POSTGRES_DB=aegisops \
+            --env POSTGRES_USER=aegisops \
+            --env POSTGRES_PASSWORD=aegisops \
+            --publish 127.0.0.1::5432 \
+            postgres:16-alpine
+
+          PGPORT="$(
+            docker port "$POSTGRES_CONTAINER" 5432/tcp \
+              | sed -E 's/.*:([0-9]+)$/\1/' \
+              | head -n 1
+          )"
+          test -n "$PGPORT"
+          echo "PGPORT=$PGPORT" >> "$GITHUB_ENV"
+
+          for attempt in $(seq 1 20); do
+            if docker exec "$POSTGRES_CONTAINER" \
+              pg_isready -U aegisops -d aegisops; then
+              exit 0
+            fi
+            sleep 2
+          done
+
+          docker logs "$POSTGRES_CONTAINER"
+          exit 1
 
       - name: Enable pnpm
         run: |
@@ -88,7 +106,6 @@ jobs:
 
       - name: Start current backend commit
         env:
-          AIOPS_DB_URL: jdbc:postgresql://127.0.0.1:5432/aegisops
           AIOPS_DB_USERNAME: aegisops
           AIOPS_DB_PASSWORD: aegisops
           AIOPS_SERVER_PORT: "8080"
@@ -97,6 +114,8 @@ jobs:
           AIOPS_OBSERVABILITY_ENABLED: "false"
           AIOPS_EVIDENCE_VICTORIA_ENABLED: "false"
         run: |
+          export AIOPS_DB_URL="jdbc:postgresql://127.0.0.1:${PGPORT}/aegisops"
+
           SERVER_JAR="$(
             find apps/aiops-server/target \
               -maxdepth 1 \
@@ -131,6 +150,7 @@ jobs:
         run: |
           psql \
             -h 127.0.0.1 \
+            -p "$PGPORT" \
             -U aegisops \
             -d aegisops \
             -f scripts/ci/seed-work-record-e2e.sql
@@ -206,3 +226,14 @@ jobs:
             /tmp/aegisops-portal.log
           if-no-files-found: warn
           retention-days: 14
+
+      - name: Cleanup services
+        if: always()
+        run: |
+          if [ -f /tmp/aiops-server.pid ]; then
+            kill "$(cat /tmp/aiops-server.pid)" || true
+          fi
+          if [ -f /tmp/aegisops-portal.pid ]; then
+            kill "$(cat /tmp/aegisops-portal.pid)" || true
+          fi
+          docker rm --force "$POSTGRES_CONTAINER" || true
