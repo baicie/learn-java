@@ -30,8 +30,7 @@ class ZabbixAssetReconciliationTest {
     ZabbixClientFactory factory = mock(ZabbixClientFactory.class);
     ZabbixClient client = mock(ZabbixClient.class);
     AssetApplicationService assets = mock(AssetApplicationService.class);
-    when(jdbc.queryForObject(anyString(), eq(Integer.class), any(), any(), any()))
-        .thenReturn(1);
+    when(jdbc.queryForObject(anyString(), eq(Integer.class), any(), any(), any())).thenReturn(1);
     when(jdbc.queryForObject(anyString(), eq(String.class), any(), any()))
         .thenReturn(
             "{\"endpoint\":\"https://zabbix.example/api_jsonrpc.php\",\"apiToken\":\"secret\"}");
@@ -44,8 +43,7 @@ class ZabbixAssetReconciliationTest {
     when(client.getProblems(1000)).thenReturn(List.of());
     when(assets.upsert(any()))
         .thenReturn(new AssetUpsertResult("asset-1", "source-1", "created", false));
-    when(assets.markMissing(eq("tenant-1"), eq("zabbix"), eq("ds-1"), any()))
-        .thenReturn(0);
+    when(assets.markMissing(eq("tenant-1"), eq("zabbix"), eq("ds-1"), any())).thenReturn(0);
     var service =
         new DataSourceSyncApplicationService(
             jdbc,

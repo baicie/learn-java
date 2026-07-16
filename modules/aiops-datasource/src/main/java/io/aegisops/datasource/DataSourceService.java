@@ -51,8 +51,7 @@ public class DataSourceService {
         runId,
         tenantId,
         id);
-    Map<String, Object> payload =
-        Map.of("tenantId", tenantId, "datasourceId", id, "runId", runId);
+    Map<String, Object> payload = Map.of("tenantId", tenantId, "datasourceId", id, "runId", runId);
     outboxWriter.enqueue(
         new OutboxMessage(
             tenantId,
@@ -274,5 +273,4 @@ public class DataSourceService {
   private String newId(String prefix) {
     return prefix + "_" + UUID.randomUUID().toString().replace("-", "");
   }
-
 }

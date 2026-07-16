@@ -58,79 +58,92 @@ public class DataSourceSyncApplicationService {
     SyncStats stats = new SyncStats();
     try {
       ZabbixClient client = clientFactory.create(loadConfig(tenantId, datasourceId));
-      Map<String, String> assetIdsByHostId = new LinkedHashMap<>();
-      for (var host : client.getHosts(1000)) {
-        ZabbixHostAssetMapping mapping = mapper.mapHost(datasourceId, host);
-        if (mapping == null) {
-          continue;
-        }
-        var result =
-            assetService.upsert(
-                new AssetUpsertCommand(
-                    tenantId,
-                    "host",
-                    mapping.name(),
-                    mapping.displayName(),
-                    null,
-                    stringTag(mapping.tags(), "environment"),
-                    null,
-                    null,
-                    "normal",
-                    mapping.ip(),
-                    mapping.tags(),
-                    "zabbix",
-                    datasourceId,
-                    datasourceId,
-                    host.hostId(),
-                    "sync",
-                    Map.of("hostId", host.hostId(), "status", mapping.status()),
-                    List.of(
-                        new AssetIdentityInput(
-                            "zabbix_host_id", datasourceId, host.hostId(), true))));
-        assetIdsByHostId.put(host.hostId(), result.assetId());
-        if (result.action().equals("created")) {
-          stats.hostsCreated++;
-        } else {
-          stats.hostsUpdated++;
-        }
-      }
-
-      stats.hostsMissing =
-          assetService.markMissing(tenantId, "zabbix", datasourceId, syncStarted);
-      for (var problem : client.getProblems(1000)) {
-        ZabbixAlertEventMapping mapping = mapper.mapProblem(datasourceId, problem);
-        if (mapping == null) {
-          continue;
-        }
-        String assetId =
-            mapping.hostIds().isEmpty() ? null : assetIdsByHostId.get(mapping.hostIds().getFirst());
-        var result =
-            alertService.ingest(
-                tenantId,
-                new AlertIngestRequest(
-                    "zabbix",
-                    mapping.sourceEventId(),
-                    mapping.severity(),
-                    mapping.title(),
-                    mapping.description(),
-                    assetId,
-                    mapping.entityType(),
-                    mapping.entityName(),
-                    mapping.labels(),
-                    mapping.startsAt(),
-                    null,
-                    mapping.status(),
-                    rawPayload(mapping.rawPayload())));
-        if (result.created()) {
-          stats.alertsCreated++;
-        } else {
-          stats.alertsUpdated++;
-        }
-      }
+      Map<String, String> assetIdsByHostId = syncHosts(tenantId, datasourceId, client, stats);
+      stats.hostsMissing = assetService.markMissing(tenantId, "zabbix", datasourceId, syncStarted);
+      syncProblems(tenantId, datasourceId, client, assetIdsByHostId, stats);
       complete(tenantId, datasourceId, runId, stats);
     } catch (RuntimeException exception) {
       fail(tenantId, datasourceId, runId, stats, exception);
       throw new AppException("DATASOURCE_SYNC_FAILED", exception.getMessage());
+    }
+  }
+
+  private Map<String, String> syncHosts(
+      String tenantId, String datasourceId, ZabbixClient client, SyncStats stats) {
+    Map<String, String> assetIdsByHostId = new LinkedHashMap<>();
+    for (var host : client.getHosts(1000)) {
+      ZabbixHostAssetMapping mapping = mapper.mapHost(datasourceId, host);
+      if (mapping == null) {
+        continue;
+      }
+      var result =
+          assetService.upsert(
+              new AssetUpsertCommand(
+                  tenantId,
+                  "host",
+                  mapping.name(),
+                  mapping.displayName(),
+                  null,
+                  stringTag(mapping.tags(), "environment"),
+                  null,
+                  null,
+                  "normal",
+                  mapping.ip(),
+                  mapping.tags(),
+                  "zabbix",
+                  datasourceId,
+                  datasourceId,
+                  host.hostId(),
+                  "sync",
+                  Map.of("hostId", host.hostId(), "status", mapping.status()),
+                  List.of(
+                      new AssetIdentityInput(
+                          "zabbix_host_id", datasourceId, host.hostId(), true))));
+      assetIdsByHostId.put(host.hostId(), result.assetId());
+      if (result.action().equals("created")) {
+        stats.hostsCreated++;
+      } else {
+        stats.hostsUpdated++;
+      }
+    }
+    return assetIdsByHostId;
+  }
+
+  private void syncProblems(
+      String tenantId,
+      String datasourceId,
+      ZabbixClient client,
+      Map<String, String> assetIdsByHostId,
+      SyncStats stats) {
+    for (var problem : client.getProblems(1000)) {
+      ZabbixAlertEventMapping mapping = mapper.mapProblem(datasourceId, problem);
+      if (mapping == null) {
+        continue;
+      }
+      String assetId =
+          mapping.hostIds().isEmpty() ? null : assetIdsByHostId.get(mapping.hostIds().getFirst());
+      var result =
+          alertService.ingest(
+              tenantId,
+              new AlertIngestRequest(
+                  "zabbix",
+                  mapping.sourceEventId(),
+                  mapping.severity(),
+                  mapping.title(),
+                  mapping.description(),
+                  assetId,
+                  mapping.entityType(),
+                  mapping.entityName(),
+                  mapping.labels(),
+                  mapping.startsAt(),
+                  null,
+                  mapping.status(),
+                  rawPayload(mapping.rawPayload())));
+      if (result.created()) {
+        stats.alertsCreated++;
+      } else {
+        stats.alertsUpdated++;
+      }
     }
   }
 
@@ -163,8 +176,7 @@ public class DataSourceSyncApplicationService {
     }
   }
 
-  private void complete(
-      String tenantId, String datasourceId, String runId, SyncStats stats) {
+  private void complete(String tenantId, String datasourceId, String runId, SyncStats stats) {
     jdbc.update(
         "update datasource_sync_run set status='success',message='Sync completed',stats_json=?::jsonb,finished_at=now() where tenant_id=? and id=?",
         json(stats.toMap()),

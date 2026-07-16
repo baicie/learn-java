@@ -12,12 +12,7 @@
   <dependencies>
     <dependency>
       <groupId>io.aegisops</groupId>
-      <artifactId>aiops-common</artifactId>
-      <version>${project.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>io.aegisops</groupId>
-      <artifactId>aiops-zabbix-adapter</artifactId>
+      <artifactId>aiops-alert</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
@@ -27,7 +22,12 @@
     </dependency>
     <dependency>
       <groupId>io.aegisops</groupId>
-      <artifactId>aiops-alert</artifactId>
+      <artifactId>aiops-common</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.aegisops</groupId>
+      <artifactId>aiops-zabbix-adapter</artifactId>
       <version>${project.version}</version>
     </dependency>
 
