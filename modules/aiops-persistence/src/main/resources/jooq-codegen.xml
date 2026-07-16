@@ -48,7 +48,8 @@
 
       <includes>
         tenant | sys_user | sys_role | sys_permission | sys_user_role | sys_role_permission |
-        datasource | datasource_sync_run | asset | asset_relation | alert_event | incident |
+        datasource | datasource_sync_run | asset | asset_relation | asset_source_link |
+        asset_identity | asset_import_job | asset_import_row | alert_event | incident |
         incident_event | incident_timeline | audit_log | rca_analysis | ai_diagnosis |
         diagnosis_evidence |
         agent_run | agent_run_step | agent_eval_result | log_event | change_event |
@@ -74,7 +75,7 @@
 
       <forcedTypes>
         <forcedType>
-          <userType>org.jooq.JSONB</userType>
+          <name>JSONB</name>
           <includeTypes>JSON</includeTypes>
         </forcedType>
       </forcedTypes>

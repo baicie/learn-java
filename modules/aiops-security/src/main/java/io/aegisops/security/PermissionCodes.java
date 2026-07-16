@@ -10,6 +10,8 @@ public final class PermissionCodes {
   public static final String DATASOURCE_READ = "datasource:read";
   public static final String DATASOURCE_WRITE = "datasource:write";
   public static final String ASSET_READ = "asset:read";
+  public static final String ASSET_WRITE = "asset:write";
+  public static final String ASSET_IMPORT = "asset:import";
   public static final String ALERT_READ = "alert:read";
   public static final String ALERT_WRITE = "alert:write";
   public static final String INCIDENT_READ = "incident:read";
@@ -68,6 +70,8 @@ public final class PermissionCodes {
           DATASOURCE_READ,
           DATASOURCE_WRITE,
           ASSET_READ,
+          ASSET_WRITE,
+          ASSET_IMPORT,
           ALERT_READ,
           ALERT_WRITE,
           INCIDENT_READ,

@@ -3,15 +3,12 @@ package io.aegisops.datasource;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.aegisops.common.exception.AppException;
-import io.aegisops.datasource.zabbix.ZabbixAlertEventMapping;
-import io.aegisops.datasource.zabbix.ZabbixExternalIds;
-import io.aegisops.datasource.zabbix.ZabbixHostAssetMapping;
-import io.aegisops.datasource.zabbix.ZabbixSyncMapper;
+import io.aegisops.common.outbox.OutboxMessage;
+import io.aegisops.common.outbox.OutboxWriter;
+import io.aegisops.datasource.api.dto.StartSyncResponse;
 import io.aegisops.zabbix.ZabbixClient;
 import io.aegisops.zabbix.ZabbixClientFactory;
 import io.aegisops.zabbix.ZabbixConfig;
-import io.aegisops.zabbix.ZabbixHost;
-import io.aegisops.zabbix.ZabbixProblem;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
@@ -19,6 +16,7 @@ import java.util.UUID;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class DataSourceService {
@@ -27,23 +25,50 @@ public class DataSourceService {
   private final JdbcTemplate jdbc;
   private final ObjectMapper objectMapper;
   private final ZabbixClientFactory zabbixClientFactory;
-  private final ZabbixSyncMapper zabbixSyncMapper;
+  private final OutboxWriter outboxWriter;
 
   public DataSourceService(
       JdbcTemplate jdbc,
       ObjectMapper objectMapper,
       ZabbixClientFactory zabbixClientFactory,
-      ZabbixSyncMapper zabbixSyncMapper) {
+      OutboxWriter outboxWriter) {
     this.jdbc = jdbc;
     this.objectMapper = objectMapper;
     this.zabbixClientFactory = zabbixClientFactory;
-    this.zabbixSyncMapper = zabbixSyncMapper;
+    this.outboxWriter = outboxWriter;
+  }
+
+  @Transactional
+  public StartSyncResponse startSync(String tenantId, String id) {
+    DataSourceEntity entity = getEntity(tenantId, id);
+    ensureZabbix(entity);
+    String runId = newId("sync");
+    jdbc.update(
+        """
+        insert into datasource_sync_run(id, tenant_id, datasource_id, sync_type, status, started_at)
+        values (?, ?, ?, 'manual', 'pending', now())
+        """,
+        runId,
+        tenantId,
+        id);
+    Map<String, Object> payload = Map.of("tenantId", tenantId, "datasourceId", id, "runId", runId);
+    outboxWriter.enqueue(
+        new OutboxMessage(
+            tenantId,
+            "worker",
+            "zabbix-sync",
+            payload,
+            "zabbix-sync:" + tenantId + ":" + id + ":" + runId,
+            3,
+            null));
+    return new StartSyncResponse(runId, "pending");
   }
 
   public List<DataSourceRecord> list(String tenantId) {
     return jdbc.query(
         """
-                select id, tenant_id, type, name, status, created_at, updated_at, last_sync_at
+                select id, tenant_id, type, name, config_json->>'endpoint' as endpoint,
+                       status, created_at, updated_at, last_sync_at
                 from datasource where tenant_id = ? order by created_at desc
                 """,
         (rs, rowNum) ->
@@ -52,6 +77,7 @@ public class DataSourceService {
                 rs.getString("tenant_id"),
                 rs.getString("type"),
                 rs.getString("name"),
+                rs.getString("endpoint"),
                 rs.getString("status"),
                 rs.getObject("created_at", OffsetDateTime.class),
                 rs.getObject("updated_at", OffsetDateTime.class),
@@ -102,84 +128,6 @@ public class DataSourceService {
     }
   }
 
-  public SyncDataSourceResponse sync(String tenantId, String id) {
-    DataSourceEntity entity = getEntity(tenantId, id);
-    ensureZabbix(entity);
-
-    String runId = newId("sync");
-    jdbc.update(
-        """
-                insert into datasource_sync_run(id, tenant_id, datasource_id, sync_type, status, started_at)
-                values (?, ?, ?, 'manual', 'running', now())
-                """,
-        runId,
-        tenantId,
-        id);
-
-    SyncStats stats = new SyncStats();
-    try {
-      ZabbixClient client = zabbixClient(entity);
-      for (ZabbixHost host : client.getHosts(1000)) {
-        UpsertResult result = upsertHostAsset(tenantId, id, host);
-        if (result.created()) {
-          stats.hostsCreated++;
-        } else {
-          stats.hostsUpdated++;
-        }
-      }
-
-      for (ZabbixProblem problem : client.getProblems(1000)) {
-        UpsertResult result = upsertAlertEvent(tenantId, id, problem);
-        if (result.created()) {
-          stats.alertsCreated++;
-        } else {
-          stats.alertsUpdated++;
-        }
-      }
-      String statsJson = writeJson(stats.toMap());
-      jdbc.update(
-          """
-                    update datasource_sync_run
-                    set status = 'success', message = ?, stats_json = ?::jsonb, finished_at = now()
-                    where tenant_id = ? and id = ?
-                    """,
-          "Sync completed",
-          statsJson,
-          tenantId,
-          runId);
-      jdbc.update(
-          "update datasource set status = 'active', last_sync_at = now(), updated_at = now() where tenant_id = ? and id = ?",
-          tenantId,
-          id);
-
-      return new SyncDataSourceResponse(
-          runId,
-          "success",
-          stats.hostsCreated,
-          stats.hostsUpdated,
-          stats.alertsCreated,
-          stats.alertsUpdated,
-          "Sync completed");
-    } catch (RuntimeException ex) {
-      String statsJson = writeJson(stats.toMap());
-      jdbc.update(
-          """
-                    update datasource_sync_run
-                    set status = 'failed', message = ?, stats_json = ?::jsonb, finished_at = now()
-                    where tenant_id = ? and id = ?
-                    """,
-          ex.getMessage(),
-          statsJson,
-          tenantId,
-          runId);
-      jdbc.update(
-          "update datasource set status = 'error', updated_at = now() where tenant_id = ? and id = ?",
-          tenantId,
-          id);
-      throw new AppException("DATASOURCE_SYNC_FAILED", ex.getMessage());
-    }
-  }
-
   public List<SyncRunRecord> syncRuns(String tenantId, String datasourceId) {
     ensureExists(tenantId, datasourceId);
     return jdbc.query(
@@ -207,7 +155,8 @@ public class DataSourceService {
   private DataSourceRecord getRecord(String tenantId, String id) {
     return jdbc.queryForObject(
         """
-                select id, tenant_id, type, name, status, created_at, updated_at, last_sync_at
+                select id, tenant_id, type, name, config_json->>'endpoint' as endpoint,
+                       status, created_at, updated_at, last_sync_at
                 from datasource where tenant_id = ? and id = ?
                 """,
         (rs, rowNum) ->
@@ -216,6 +165,7 @@ public class DataSourceService {
                 rs.getString("tenant_id"),
                 rs.getString("type"),
                 rs.getString("name"),
+                rs.getString("endpoint"),
                 rs.getString("status"),
                 rs.getObject("created_at", OffsetDateTime.class),
                 rs.getObject("updated_at", OffsetDateTime.class),
@@ -301,118 +251,6 @@ public class DataSourceService {
     }
   }
 
-  private UpsertResult upsertHostAsset(String tenantId, String datasourceId, ZabbixHost host) {
-    ZabbixHostAssetMapping mapping = zabbixSyncMapper.mapHost(datasourceId, host);
-    if (mapping == null) {
-      return UpsertResult.asUpdated();
-    }
-
-    String tagsJson = writeJson(mapping.tags());
-
-    Boolean created =
-        jdbc.queryForObject(
-            """
-                insert into asset(id, tenant_id, asset_type, name, display_name, source, source_id, ip, tags, status, created_at, updated_at)
-                values (?, ?, 'host', ?, ?, 'zabbix', ?, ?, ?::jsonb, ?, now(), now())
-                on conflict (tenant_id, source, source_id) where source_id is not null
-                do update set
-                  name = excluded.name,
-                  display_name = excluded.display_name,
-                  ip = excluded.ip,
-                  tags = excluded.tags,
-                  status = excluded.status,
-                  updated_at = now()
-                returning (xmax = 0) as created
-                """,
-            Boolean.class,
-            newId("asset"),
-            tenantId,
-            mapping.name(),
-            mapping.displayName(),
-            mapping.sourceId(),
-            mapping.ip(),
-            tagsJson,
-            mapping.status());
-
-    return Boolean.TRUE.equals(created) ? UpsertResult.asCreated() : UpsertResult.asUpdated();
-  }
-
-  private UpsertResult upsertAlertEvent(
-      String tenantId, String datasourceId, ZabbixProblem problem) {
-    ZabbixAlertEventMapping mapping = zabbixSyncMapper.mapProblem(datasourceId, problem);
-    if (mapping == null) {
-      return UpsertResult.asUpdated();
-    }
-
-    String assetId = null;
-
-    if (!mapping.hostIds().isEmpty()) {
-      assetId =
-          findAssetIdBySourceId(
-              tenantId, ZabbixExternalIds.sourceId(datasourceId, mapping.hostIds().get(0)));
-    }
-
-    String labelsJson = writeJson(mapping.labels());
-    String rawPayloadJson = writeJson(mapping.rawPayload());
-
-    Boolean created =
-        jdbc.queryForObject(
-            """
-                insert into alert_event(id, tenant_id, source, source_event_id, severity, title, description,
-                                        asset_id, entity_type, entity_name, labels, starts_at, status, raw_payload,
-                                        fingerprint, aggregation_key, created_at, updated_at)
-                values (?, ?, 'zabbix', ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?, ?, ?::jsonb, ?, ?, now(), now())
-                on conflict (tenant_id, source, source_event_id) where source_event_id is not null
-                do update set
-                  severity = excluded.severity,
-                  title = excluded.title,
-                  description = excluded.description,
-                  asset_id = excluded.asset_id,
-                  entity_type = excluded.entity_type,
-                  entity_name = excluded.entity_name,
-                  labels = excluded.labels,
-                  starts_at = excluded.starts_at,
-                  status = excluded.status,
-                  raw_payload = excluded.raw_payload,
-                  fingerprint = excluded.fingerprint,
-                  aggregation_key = excluded.aggregation_key,
-                  updated_at = now()
-                returning (xmax = 0) as created
-                """,
-            Boolean.class,
-            newId("alert"),
-            tenantId,
-            mapping.sourceEventId(),
-            mapping.severity(),
-            mapping.title(),
-            mapping.description(),
-            assetId,
-            mapping.entityType(),
-            mapping.entityName(),
-            labelsJson,
-            mapping.startsAt(),
-            mapping.status(),
-            rawPayloadJson,
-            mapping.fingerprint(),
-            mapping.aggregationKey());
-
-    return Boolean.TRUE.equals(created) ? UpsertResult.asCreated() : UpsertResult.asUpdated();
-  }
-
-  private String findAssetIdBySourceId(String tenantId, String sourceId) {
-    try {
-      return jdbc.queryForObject(
-          """
-                    select id from asset where tenant_id = ? and source = 'zabbix' and source_id = ?
-                    """,
-          String.class,
-          tenantId,
-          sourceId);
-    } catch (EmptyResultDataAccessException ex) {
-      return null;
-    }
-  }
-
   private String normalizeType(String type) {
     return type == null ? "" : type.trim().toLowerCase();
   }
@@ -434,30 +272,5 @@ public class DataSourceService {
 
   private String newId(String prefix) {
     return prefix + "_" + UUID.randomUUID().toString().replace("-", "");
-  }
-
-  private record UpsertResult(boolean created) {
-    static UpsertResult asCreated() {
-      return new UpsertResult(true);
-    }
-
-    static UpsertResult asUpdated() {
-      return new UpsertResult(false);
-    }
-  }
-
-  private static final class SyncStats {
-    int hostsCreated;
-    int hostsUpdated;
-    int alertsCreated;
-    int alertsUpdated;
-
-    Map<String, Object> toMap() {
-      return Map.of(
-          "hostsCreated", hostsCreated,
-          "hostsUpdated", hostsUpdated,
-          "alertsCreated", alertsCreated,
-          "alertsUpdated", alertsUpdated);
-    }
   }
 }

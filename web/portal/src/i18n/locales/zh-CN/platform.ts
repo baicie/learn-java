@@ -1,5 +1,8 @@
 export const platform = {
   'nav.dashboard': '工作台',
+  'nav.resources.group': '资源与接入',
+  'nav.resources.datasources': '数据源',
+  'nav.resources.assets': '资源中心',
   'nav.workRecords.group': '工作记录',
   'nav.workRecords.records': '记录列表',
   'nav.workRecords.designer': '表单设计',

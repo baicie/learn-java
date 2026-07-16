@@ -20,6 +20,8 @@ import { Route as authSignInRouteImport } from './routes/(auth)/sign-in'
 import { Route as AuthenticatedSettingsRouteRouteImport } from './routes/_authenticated/settings/route'
 import { Route as AuthenticatedWorkRecordsIndexRouteImport } from './routes/_authenticated/work-records/index'
 import { Route as AuthenticatedSettingsIndexRouteImport } from './routes/_authenticated/settings/index'
+import { Route as AuthenticatedDatasourcesIndexRouteImport } from './routes/_authenticated/datasources/index'
+import { Route as AuthenticatedAssetsIndexRouteImport } from './routes/_authenticated/assets/index'
 import { Route as AuthenticatedWorkRecordsTemplatesRouteImport } from './routes/_authenticated/work-records/templates'
 import { Route as AuthenticatedWorkRecordsOperationsRouteImport } from './routes/_authenticated/work-records/operations'
 import { Route as AuthenticatedWorkRecordsNewRouteImport } from './routes/_authenticated/work-records/new'
@@ -32,6 +34,7 @@ import { Route as AuthenticatedPlatformRolesRouteImport } from './routes/_authen
 import { Route as AuthenticatedPlatformDictionariesRouteImport } from './routes/_authenticated/platform/dictionaries'
 import { Route as AuthenticatedPlatformCalendarsRouteImport } from './routes/_authenticated/platform/calendars'
 import { Route as AuthenticatedErrorsErrorRouteImport } from './routes/_authenticated/errors/$error'
+import { Route as AuthenticatedAssetsAssetIdRouteImport } from './routes/_authenticated/assets/$assetId'
 import { Route as AuthenticatedWorkRecordsTemplatesIndexRouteImport } from './routes/_authenticated/work-records/templates.index'
 import { Route as AuthenticatedPlatformUsersIndexRouteImport } from './routes/_authenticated/platform/users/index'
 import { Route as AuthenticatedWorkRecordsRecordIdEditRouteImport } from './routes/_authenticated/work-records/$recordId.edit'
@@ -93,6 +96,18 @@ const AuthenticatedSettingsIndexRoute =
     id: '/',
     path: '/',
     getParentRoute: () => AuthenticatedSettingsRouteRoute,
+  } as any)
+const AuthenticatedDatasourcesIndexRoute =
+  AuthenticatedDatasourcesIndexRouteImport.update({
+    id: '/datasources/',
+    path: '/datasources/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAssetsIndexRoute =
+  AuthenticatedAssetsIndexRouteImport.update({
+    id: '/assets/',
+    path: '/assets/',
+    getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedWorkRecordsTemplatesRoute =
   AuthenticatedWorkRecordsTemplatesRouteImport.update({
@@ -166,6 +181,12 @@ const AuthenticatedErrorsErrorRoute =
     path: '/errors/$error',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedAssetsAssetIdRoute =
+  AuthenticatedAssetsAssetIdRouteImport.update({
+    id: '/assets/$assetId',
+    path: '/assets/$assetId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedWorkRecordsTemplatesIndexRoute =
   AuthenticatedWorkRecordsTemplatesIndexRouteImport.update({
     id: '/',
@@ -200,6 +221,7 @@ export interface FileRoutesByFullPath {
   '/404': typeof errors404Route
   '/500': typeof errors500Route
   '/503': typeof errors503Route
+  '/assets/$assetId': typeof AuthenticatedAssetsAssetIdRoute
   '/errors/$error': typeof AuthenticatedErrorsErrorRoute
   '/platform/calendars': typeof AuthenticatedPlatformCalendarsRoute
   '/platform/dictionaries': typeof AuthenticatedPlatformDictionariesRoute
@@ -212,6 +234,8 @@ export interface FileRoutesByFullPath {
   '/work-records/new': typeof AuthenticatedWorkRecordsNewRoute
   '/work-records/operations': typeof AuthenticatedWorkRecordsOperationsRoute
   '/work-records/templates': typeof AuthenticatedWorkRecordsTemplatesRouteWithChildren
+  '/assets/': typeof AuthenticatedAssetsIndexRoute
+  '/datasources/': typeof AuthenticatedDatasourcesIndexRoute
   '/settings/': typeof AuthenticatedSettingsIndexRoute
   '/work-records/': typeof AuthenticatedWorkRecordsIndexRoute
   '/work-records/$recordId/edit': typeof AuthenticatedWorkRecordsRecordIdEditRoute
@@ -227,6 +251,7 @@ export interface FileRoutesByTo {
   '/500': typeof errors500Route
   '/503': typeof errors503Route
   '/': typeof AuthenticatedIndexRoute
+  '/assets/$assetId': typeof AuthenticatedAssetsAssetIdRoute
   '/errors/$error': typeof AuthenticatedErrorsErrorRoute
   '/platform/calendars': typeof AuthenticatedPlatformCalendarsRoute
   '/platform/dictionaries': typeof AuthenticatedPlatformDictionariesRoute
@@ -238,6 +263,8 @@ export interface FileRoutesByTo {
   '/work-records/$recordId': typeof AuthenticatedWorkRecordsRecordIdRouteWithChildren
   '/work-records/new': typeof AuthenticatedWorkRecordsNewRoute
   '/work-records/operations': typeof AuthenticatedWorkRecordsOperationsRoute
+  '/assets': typeof AuthenticatedAssetsIndexRoute
+  '/datasources': typeof AuthenticatedDatasourcesIndexRoute
   '/settings': typeof AuthenticatedSettingsIndexRoute
   '/work-records': typeof AuthenticatedWorkRecordsIndexRoute
   '/work-records/$recordId/edit': typeof AuthenticatedWorkRecordsRecordIdEditRoute
@@ -256,6 +283,7 @@ export interface FileRoutesById {
   '/(errors)/500': typeof errors500Route
   '/(errors)/503': typeof errors503Route
   '/_authenticated/': typeof AuthenticatedIndexRoute
+  '/_authenticated/assets/$assetId': typeof AuthenticatedAssetsAssetIdRoute
   '/_authenticated/errors/$error': typeof AuthenticatedErrorsErrorRoute
   '/_authenticated/platform/calendars': typeof AuthenticatedPlatformCalendarsRoute
   '/_authenticated/platform/dictionaries': typeof AuthenticatedPlatformDictionariesRoute
@@ -268,6 +296,8 @@ export interface FileRoutesById {
   '/_authenticated/work-records/new': typeof AuthenticatedWorkRecordsNewRoute
   '/_authenticated/work-records/operations': typeof AuthenticatedWorkRecordsOperationsRoute
   '/_authenticated/work-records/templates': typeof AuthenticatedWorkRecordsTemplatesRouteWithChildren
+  '/_authenticated/assets/': typeof AuthenticatedAssetsIndexRoute
+  '/_authenticated/datasources/': typeof AuthenticatedDatasourcesIndexRoute
   '/_authenticated/settings/': typeof AuthenticatedSettingsIndexRoute
   '/_authenticated/work-records/': typeof AuthenticatedWorkRecordsIndexRoute
   '/_authenticated/work-records/$recordId/edit': typeof AuthenticatedWorkRecordsRecordIdEditRoute
@@ -286,6 +316,7 @@ export interface FileRouteTypes {
     | '/404'
     | '/500'
     | '/503'
+    | '/assets/$assetId'
     | '/errors/$error'
     | '/platform/calendars'
     | '/platform/dictionaries'
@@ -298,6 +329,8 @@ export interface FileRouteTypes {
     | '/work-records/new'
     | '/work-records/operations'
     | '/work-records/templates'
+    | '/assets/'
+    | '/datasources/'
     | '/settings/'
     | '/work-records/'
     | '/work-records/$recordId/edit'
@@ -313,6 +346,7 @@ export interface FileRouteTypes {
     | '/500'
     | '/503'
     | '/'
+    | '/assets/$assetId'
     | '/errors/$error'
     | '/platform/calendars'
     | '/platform/dictionaries'
@@ -324,6 +358,8 @@ export interface FileRouteTypes {
     | '/work-records/$recordId'
     | '/work-records/new'
     | '/work-records/operations'
+    | '/assets'
+    | '/datasources'
     | '/settings'
     | '/work-records'
     | '/work-records/$recordId/edit'
@@ -341,6 +377,7 @@ export interface FileRouteTypes {
     | '/(errors)/500'
     | '/(errors)/503'
     | '/_authenticated/'
+    | '/_authenticated/assets/$assetId'
     | '/_authenticated/errors/$error'
     | '/_authenticated/platform/calendars'
     | '/_authenticated/platform/dictionaries'
@@ -353,6 +390,8 @@ export interface FileRouteTypes {
     | '/_authenticated/work-records/new'
     | '/_authenticated/work-records/operations'
     | '/_authenticated/work-records/templates'
+    | '/_authenticated/assets/'
+    | '/_authenticated/datasources/'
     | '/_authenticated/settings/'
     | '/_authenticated/work-records/'
     | '/_authenticated/work-records/$recordId/edit'
@@ -450,6 +489,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsIndexRouteImport
       parentRoute: typeof AuthenticatedSettingsRouteRoute
     }
+    '/_authenticated/datasources/': {
+      id: '/_authenticated/datasources/'
+      path: '/datasources'
+      fullPath: '/datasources/'
+      preLoaderRoute: typeof AuthenticatedDatasourcesIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/assets/': {
+      id: '/_authenticated/assets/'
+      path: '/assets'
+      fullPath: '/assets/'
+      preLoaderRoute: typeof AuthenticatedAssetsIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/work-records/templates': {
       id: '/_authenticated/work-records/templates'
       path: '/work-records/templates'
@@ -532,6 +585,13 @@ declare module '@tanstack/react-router' {
       path: '/errors/$error'
       fullPath: '/errors/$error'
       preLoaderRoute: typeof AuthenticatedErrorsErrorRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/assets/$assetId': {
+      id: '/_authenticated/assets/$assetId'
+      path: '/assets/$assetId'
+      fullPath: '/assets/$assetId'
+      preLoaderRoute: typeof AuthenticatedAssetsAssetIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/work-records/templates/': {
@@ -624,6 +684,7 @@ const AuthenticatedWorkRecordsTemplatesRouteWithChildren =
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedSettingsRouteRoute: typeof AuthenticatedSettingsRouteRouteWithChildren
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
+  AuthenticatedAssetsAssetIdRoute: typeof AuthenticatedAssetsAssetIdRoute
   AuthenticatedErrorsErrorRoute: typeof AuthenticatedErrorsErrorRoute
   AuthenticatedPlatformCalendarsRoute: typeof AuthenticatedPlatformCalendarsRoute
   AuthenticatedPlatformDictionariesRoute: typeof AuthenticatedPlatformDictionariesRoute
@@ -632,6 +693,8 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedWorkRecordsNewRoute: typeof AuthenticatedWorkRecordsNewRoute
   AuthenticatedWorkRecordsOperationsRoute: typeof AuthenticatedWorkRecordsOperationsRoute
   AuthenticatedWorkRecordsTemplatesRoute: typeof AuthenticatedWorkRecordsTemplatesRouteWithChildren
+  AuthenticatedAssetsIndexRoute: typeof AuthenticatedAssetsIndexRoute
+  AuthenticatedDatasourcesIndexRoute: typeof AuthenticatedDatasourcesIndexRoute
   AuthenticatedWorkRecordsIndexRoute: typeof AuthenticatedWorkRecordsIndexRoute
   AuthenticatedPlatformUsersIndexRoute: typeof AuthenticatedPlatformUsersIndexRoute
 }
@@ -639,6 +702,7 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedSettingsRouteRoute: AuthenticatedSettingsRouteRouteWithChildren,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
+  AuthenticatedAssetsAssetIdRoute: AuthenticatedAssetsAssetIdRoute,
   AuthenticatedErrorsErrorRoute: AuthenticatedErrorsErrorRoute,
   AuthenticatedPlatformCalendarsRoute: AuthenticatedPlatformCalendarsRoute,
   AuthenticatedPlatformDictionariesRoute:
@@ -651,6 +715,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
     AuthenticatedWorkRecordsOperationsRoute,
   AuthenticatedWorkRecordsTemplatesRoute:
     AuthenticatedWorkRecordsTemplatesRouteWithChildren,
+  AuthenticatedAssetsIndexRoute: AuthenticatedAssetsIndexRoute,
+  AuthenticatedDatasourcesIndexRoute: AuthenticatedDatasourcesIndexRoute,
   AuthenticatedWorkRecordsIndexRoute: AuthenticatedWorkRecordsIndexRoute,
   AuthenticatedPlatformUsersIndexRoute: AuthenticatedPlatformUsersIndexRoute,
 }

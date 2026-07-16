@@ -25,6 +25,7 @@ class ZabbixEvidenceCollectorScopeTest {
                     "0",
                     "127.0.0.1",
                     List.of("AegisOps Demo"),
+                    null,
                     null)));
 
     ZabbixEvidenceDao.AlertContext alert =
@@ -62,7 +63,7 @@ class ZabbixEvidenceCollectorScopeTest {
         .thenReturn(
             List.of(
                 new ZabbixHost(
-                    "99999", "other-host", "Other Host", "0", "127.0.0.1", List.of(), null)));
+                    "99999", "other-host", "Other Host", "0", "127.0.0.1", List.of(), null, null)));
 
     ZabbixEvidenceDao.AlertContext alert =
         new ZabbixEvidenceDao.AlertContext(
