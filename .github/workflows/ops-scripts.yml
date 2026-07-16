@@ -30,14 +30,14 @@ defaults:
 jobs:
   shellcheck:
     name: shellcheck + bash -n
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, aegisops-cn]
     timeout-minutes: 5
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install shellcheck
-        run: sudo apt-get update && sudo apt-get install -y shellcheck
+      - name: Verify runner toolchain
+        run: bash scripts/ci/self-hosted-runner-preflight.sh shellcheck
 
       - name: bash -n
         run: |
@@ -54,7 +54,7 @@ jobs:
 
   postgres-smoke:
     name: Phase 19 SQL smoke
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, aegisops-cn]
     timeout-minutes: 15
     services:
       postgres:
@@ -80,8 +80,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install psql
-        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Verify runner toolchain
+        run: bash scripts/ci/self-hosted-runner-preflight.sh docker postgres
 
       - name: Verify SQL syntax
         run: |

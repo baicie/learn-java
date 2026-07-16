@@ -13,6 +13,10 @@ on:
 permissions:
   contents: read
 
+env:
+  AIOPS_CI_PREINSTALLED_BROWSER: "1"
+  AIOPS_NPM_REGISTRY: ${{ vars.AIOPS_NPM_REGISTRY }}
+
 concurrency:
   group: >
     work-record-e2e-${{
@@ -29,7 +33,7 @@ jobs:
         'e2e'
       )
 
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, aegisops-cn]
     timeout-minutes: 35
 
     services:
@@ -52,31 +56,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Java
-        uses: actions/setup-java@v5
-        with:
-          distribution: temurin
-          java-version: "21"
-          cache: maven
-
-      - name: Setup Node
-        uses: actions/setup-node@v6
-        with:
-          node-version: "22"
-
-      - name: Enable pnpm
-        run: |
-          corepack enable
-          corepack prepare pnpm@10.33.4 --activate
-          pnpm --version
-
-      - name: Install PostgreSQL client
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y postgresql-client
+      - name: Verify runner toolchain
+        run: >-
+          bash scripts/ci/self-hosted-runner-preflight.sh
+          java node docker postgres
 
       - name: Install frontend dependencies
-        run: pnpm install --frozen-lockfile
+        run: >-
+          pnpm install --frozen-lockfile --prefer-offline
+          --store-dir "$PNPM_STORE_DIR"
 
       - name: Build current backend commit
         run: |
@@ -135,8 +123,8 @@ jobs:
             -d aegisops \
             -f scripts/ci/seed-work-record-e2e.sql
 
-      - name: Install Chromium
-        run: pnpm -C web/portal run e2e:install
+      - name: Verify preinstalled Chromium
+        run: pnpm -C web/portal exec playwright install --list | grep -qi chromium
 
       - name: Start current portal commit
         env:

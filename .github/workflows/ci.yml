@@ -25,44 +25,37 @@ defaults:
     shell: bash
 
 env:
-  JAVA_VERSION: "21"
-  NODE_VERSION: "22"
-  PYTHON_VERSION: "3.12"
-  MAVEN_OPTS: "-Dmaven.repo.local=.m2/repository"
+  AIOPS_CI_PREINSTALLED_BROWSER: "1"
+  AIOPS_NPM_REGISTRY: ${{ vars.AIOPS_NPM_REGISTRY }}
+  AIOPS_PIP_INDEX_URL: ${{ vars.AIOPS_PIP_INDEX_URL }}
 
 jobs:
   docs:
     name: Docs
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, aegisops-cn]
     timeout-minutes: 5
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node
-        uses: actions/setup-node@v6
-        with:
-          node-version: ${{ env.NODE_VERSION }}
+      - name: Verify runner toolchain
+        run: bash scripts/ci/self-hosted-runner-preflight.sh node
 
       - name: Check docs
         run: bash scripts/ci/docs.sh
 
   backend:
     name: Backend
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, aegisops-cn]
     timeout-minutes: 20
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Java
-        uses: actions/setup-java@v5
-        with:
-          distribution: temurin
-          java-version: ${{ env.JAVA_VERSION }}
-          cache: maven
+      - name: Verify runner toolchain
+        run: bash scripts/ci/self-hosted-runner-preflight.sh java docker
 
       - name: Verify backend
         run: bash scripts/ci/backend.sh
@@ -80,23 +73,15 @@ jobs:
 
   frontend:
     name: Frontend
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, aegisops-cn]
     timeout-minutes: 20
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node
-        uses: actions/setup-node@v6
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-
-      - name: Enable pnpm
-        run: |
-          corepack enable
-          corepack prepare pnpm@10.33.4 --activate
-          pnpm --version
+      - name: Verify runner toolchain
+        run: bash scripts/ci/self-hosted-runner-preflight.sh node
 
       - name: Verify frontend
         run: bash scripts/ci/frontend.sh
@@ -112,26 +97,22 @@ jobs:
 
   agent:
     name: AI Agent
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, aegisops-cn]
     timeout-minutes: 10
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-          cache: pip
-          cache-dependency-path: apps/aiops-agent/pyproject.toml
+      - name: Verify runner toolchain
+        run: bash scripts/ci/self-hosted-runner-preflight.sh python
 
       - name: Verify AI agent
         run: bash scripts/ci/agent.sh
 
   summary:
     name: CI Summary
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, aegisops-cn]
     needs: [docs, backend, frontend, agent]
     if: always()
 

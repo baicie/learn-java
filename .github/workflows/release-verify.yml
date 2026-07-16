@@ -49,31 +49,18 @@ concurrency:
   group: release-verify-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  JAVA_VERSION: "21"
-  NODE_VERSION: "22"
-
 jobs:
   preflight:
     name: Release contract
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, aegisops-cn]
     timeout-minutes: 10
 
     steps:
       - name: Checkout
         uses: actions/checkout@v5
 
-      - name: Setup Java
-        uses: actions/setup-java@v5
-        with:
-          distribution: temurin
-          java-version: ${{ env.JAVA_VERSION }}
-          cache: maven
-
-      - name: Setup Node
-        uses: actions/setup-node@v6
-        with:
-          node-version: ${{ env.NODE_VERSION }}
+      - name: Verify runner toolchain
+        run: bash scripts/ci/self-hosted-runner-preflight.sh java node docker
 
       - name: Validate release descriptors
         run: |
@@ -91,7 +78,7 @@ jobs:
 
   container-build:
     name: Container ${{ matrix.name }}
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, aegisops-cn]
     timeout-minutes: 35
     needs: preflight
 
@@ -123,8 +110,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - name: Verify runner toolchain
+        run: bash scripts/ci/self-hosted-runner-preflight.sh docker
 
       - name: Smoke-build image
         uses: docker/build-push-action@v6
@@ -134,13 +121,11 @@ jobs:
           build-args: ${{ matrix.build_args }}
           platforms: linux/amd64
           push: false
-          cache-from: type=gha,scope=${{ matrix.name }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.name }}
           provenance: false
 
   runtime-smoke:
     name: Compose runtime smoke
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, aegisops-cn]
     timeout-minutes: 30
     needs: container-build
 
@@ -148,8 +133,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - name: Verify runner toolchain
+        run: bash scripts/ci/self-hosted-runner-preflight.sh docker
 
       - name: Load aiops-server image
         uses: docker/build-push-action@v6
@@ -159,7 +144,6 @@ jobs:
           platforms: linux/amd64
           load: true
           tags: local/aegisops:verify-server
-          cache-from: type=gha,scope=aiops-server
           provenance: false
 
       - name: Load aiops-agent image
@@ -170,7 +154,6 @@ jobs:
           platforms: linux/amd64
           load: true
           tags: local/aegisops:verify-agent
-          cache-from: type=gha,scope=aiops-agent
           provenance: false
 
       - name: Load aiops-worker image
@@ -185,7 +168,6 @@ jobs:
           platforms: linux/amd64
           load: true
           tags: local/aegisops:verify-worker
-          cache-from: type=gha,scope=aiops-worker
           provenance: false
 
       - name: Load aiops-runner image
@@ -196,7 +178,6 @@ jobs:
           platforms: linux/amd64
           load: true
           tags: local/aegisops:verify-runner
-          cache-from: type=gha,scope=aiops-runner
           provenance: false
 
       - name: Start full runtime and verify container health
