@@ -5,13 +5,11 @@ status: accepted
 phase: global
 owner: ai
 created: 2026-06-30
-updated: 2026-06-30
+updated: 2026-07-16
 related:
   - .agents/skills/aegisops/SKILL.md
   - docs/architecture.md
 ---
-
-# Core Domain Models
 
 # Core Domain Models
 
@@ -78,3 +76,30 @@ Tenant 1 ─┬─ n User
 - 命名：`V\d{4}__init_[a-z_]+\.sql`，不允许 v1 / legacy / old 前缀
 - 唯一事实源：每张表一旦创建即为权威，不允许双写兼容层
 - 详细规则见 `.agents/skills/aegisops/references/doc-governance.md` 与 SKILL §17
+
+## 6. Asset 多来源身份模型（Phase 1）
+
+Asset 是租户内的规范资源，不再用单一 `source + source_id` 表达来源。来源、身份和关系拆分如下：
+
+```text
+Asset 1 ─ n AssetSourceLink
+      1 ─ n AssetIdentity
+      n ─ n AssetRelation
+```
+
+- `AssetSourceLink`：记录 `source_type + source_instance_id + external_id`，用于同一外部对象的幂等更新。
+- `AssetIdentity`：记录跨来源身份。`machine_id`、`cloud_instance_id`、`cmdb_ci_id`、`k8s_uid`、`otel_service_instance_id` 为强身份，可确定性合并。
+- hostname、FQDN、IP 和展示名仅为弱身份，不允许据此自动合并。
+- `AssetRelation`：保存 `depends_on`、`runs_on`、`contains` 等拓扑关系，并记录来源与置信度。
+- CSV 是 `ingestion_channel`，不是长期 DataSource；Zabbix、Kubernetes、OpenTelemetry 才是长期连接。
+- 所有查找、更新、归档和关系操作均按 `tenant_id` 隔离；归档使用版本号进行乐观锁控制。
+
+确定性解析顺序：
+
+```text
+SourceLink 精确命中
+  → 强身份精确命中
+  → 创建新 Asset
+```
+
+CSV 预检使用内容 SHA-256 保证同一租户、同一来源实例下的幂等性；确认阶段统一调用 Asset Upsert，不建立第二套写入逻辑。
