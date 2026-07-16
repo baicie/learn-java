@@ -20,7 +20,7 @@ set -Eeuo pipefail
 printf 'docker %s\n' "$*" >>"$PREPARE_DOCKER_CALL_LOG"
 [ "${1:-}" = "info" ]
 if [ "${2:-}" = "--format" ]; then
-  printf '%s\n' "${PREPARE_DOCKER_MIRRORS:-[]}"
+  printf '%s\n' "${PREPARE_DOCKER_MIRRORS:-}"
 fi
 MOCK_DOCKER
 
@@ -37,7 +37,7 @@ chmod +x \
 
 PATH="$MOCK_BIN:$PATH" \
 PREPARE_DOCKER_CALL_LOG="$CALL_LOG" \
-PREPARE_DOCKER_MIRRORS='["https://mirror.ccs.tencentyun.com"]' \
+PREPARE_DOCKER_MIRRORS='https://mirror.ccs.tencentyun.com/' \
 DOCKER_SOCKET="$TMP_ROOT/missing.sock" \
   bash "$PREPARE_SCRIPT"
 
@@ -49,7 +49,7 @@ fi
 set +e
 PATH="$MOCK_BIN:$PATH" \
 PREPARE_DOCKER_CALL_LOG="$CALL_LOG" \
-PREPARE_DOCKER_MIRRORS='[]' \
+PREPARE_DOCKER_MIRRORS='' \
 DOCKER_SOCKET="$TMP_ROOT/missing.sock" \
   bash "$PREPARE_SCRIPT" >"$TMP_ROOT/missing-mirror.log" 2>&1
 missing_mirror_status=$?

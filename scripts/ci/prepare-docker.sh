@@ -15,8 +15,16 @@ if ! docker info >/dev/null 2>&1; then
   fi
 fi
 
-MIRRORS="$(docker info --format '{{json .RegistryConfig.Mirrors}}')"
-if [[ "$MIRRORS" != *"\"$DOCKER_MIRROR_URL\""* ]]; then
+MIRRORS="$(docker info --format '{{range .RegistryConfig.Mirrors}}{{println .}}{{end}}')"
+MIRROR_FOUND=0
+while IFS= read -r mirror; do
+  if [ "${mirror%/}" = "${DOCKER_MIRROR_URL%/}" ]; then
+    MIRROR_FOUND=1
+    break
+  fi
+done <<<"$MIRRORS"
+
+if [ "$MIRROR_FOUND" -ne 1 ]; then
   echo "Docker mirror is not configured: $DOCKER_MIRROR_URL" >&2
   echo "Run 'sudo bash deploy/scripts/configure-docker-mirror.sh' on the host before starting the self-hosted runner." >&2
   exit 1
