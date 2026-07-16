@@ -1,8 +1,8 @@
-package io.aegisops.asset;
+package io.aegisops.asset.domain.model;
 
 import java.time.OffsetDateTime;
 
-public record AssetRecord(
+public record Asset(
     String id,
     String tenantId,
     String assetType,

@@ -1,5 +1,7 @@
-package io.aegisops.asset;
+package io.aegisops.asset.api;
 
+import io.aegisops.asset.application.AssetQueryService;
+import io.aegisops.asset.domain.model.Asset;
 import io.aegisops.common.api.ApiResponse;
 import io.aegisops.common.tenant.TenantContext;
 import java.util.List;
@@ -19,7 +21,7 @@ public class AssetController {
 
   @GetMapping
   @PreAuthorize("hasAuthority('asset:read')")
-  public ApiResponse<List<AssetRecord>> list() {
+  public ApiResponse<List<Asset>> list() {
     return ApiResponse.ok(service.listRecent(TenantContext.requireTenantId()));
   }
 }
