@@ -71,6 +71,7 @@ jobs:
       - name: Setup Docker
         uses: docker/setup-docker-action@v5
         with:
+          context: ci-${{ github.run_id }}-${{ github.run_attempt }}-backend
           set-host: true
 
       - name: Verify Docker

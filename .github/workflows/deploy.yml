@@ -49,6 +49,9 @@ jobs:
         with:
           node-version: "22"
 
+      - name: Set up Docker Compose
+        uses: docker/setup-compose-action@v2
+
       - name: Validate release descriptors
         run: bash scripts/ci/release-preflight.sh
 
@@ -94,6 +97,12 @@ jobs:
         with:
           ref: ${{ env.RELEASE_REF }}
 
+      - name: Set up Docker
+        uses: docker/setup-docker-action@v5
+        with:
+          context: deploy-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.name }}
+          set-host: true
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -129,6 +138,15 @@ jobs:
         uses: actions/checkout@v5
         with:
           ref: ${{ env.RELEASE_REF }}
+
+      - name: Set up Docker
+        uses: docker/setup-docker-action@v5
+        with:
+          context: deploy-${{ github.run_id }}-${{ github.run_attempt }}-runtime
+          set-host: true
+
+      - name: Set up Docker Compose
+        uses: docker/setup-compose-action@v2
 
       - name: Start immutable release and verify health
         env:
