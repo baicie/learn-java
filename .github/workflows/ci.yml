@@ -68,6 +68,14 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
+      - name: Setup Docker
+        uses: docker/setup-docker-action@v5
+        with:
+          set-host: true
+
+      - name: Verify Docker
+        run: docker info
+
       - name: Verify backend
         run: bash scripts/ci/backend.sh
 
