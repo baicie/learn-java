@@ -5,24 +5,13 @@ on:
     branches:
       - mvp
 
-  push:
+  workflow_run:
+    workflows:
+      - CI
+    types:
+      - completed
     branches:
       - mvp
-    paths:
-      - "apps/**"
-      - "modules/**"
-      - "web/**"
-      - "contracts/**"
-      - "deploy/**"
-      - "scripts/**"
-      - "infra/checkstyle/**"
-      - "pom.xml"
-      - "package.json"
-      - "pnpm-lock.yaml"
-      - "pnpm-workspace.yaml"
-      - ".dockerignore"
-      - ".github/workflows/release-verify.yml"
-      - ".github/workflows/deploy.yml"
 
   workflow_dispatch:
 
@@ -30,39 +19,71 @@ permissions:
   contents: read
 
 concurrency:
-  group: release-verify-${{ github.ref }}
+  group: release-verify-${{ github.event.workflow_run.head_branch || github.ref }}
   cancel-in-progress: true
 
 env:
   JAVA_VERSION: "21"
   NODE_VERSION: "22"
+  RELEASE_REF: ${{ github.event.workflow_run.head_sha || github.sha }}
 
 jobs:
   preflight:
     name: Release contract
     runs-on: [self-hosted, linux, x64, aegisops-cn]
     timeout-minutes: 10
+    outputs:
+      release_required: ${{ steps.scope.outputs.release_required }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+        with:
+          ref: ${{ env.RELEASE_REF }}
+          fetch-depth: 2
+
+      - name: Require successful upstream CI
+        if: github.event_name == 'workflow_run'
+        run: |
+          if [ "${{ github.event.workflow_run.conclusion }}" != "success" ]; then
+            echo "::error::Upstream CI did not pass."
+            exit 1
+          fi
+
+      - name: Detect release-relevant changes
+        id: scope
+        run: |
+          if [ "${{ github.event_name }}" != "workflow_run" ] \
+            || ! git rev-parse HEAD^ >/dev/null 2>&1 \
+            || ! git diff --quiet HEAD^ HEAD -- \
+              apps modules web contracts deploy scripts infra/checkstyle \
+              pom.xml package.json pnpm-lock.yaml pnpm-workspace.yaml \
+              .dockerignore .github/workflows/release-verify.yml \
+              .github/workflows/deploy.yml; then
+            echo "release_required=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "release_required=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Setup Java
+        if: steps.scope.outputs.release_required == 'true'
         uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: ${{ env.JAVA_VERSION }}
-          cache: maven
 
       - name: Setup Node
+        if: steps.scope.outputs.release_required == 'true'
         uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
 
       - name: Set up Docker Compose
+        if: steps.scope.outputs.release_required == 'true'
         uses: docker/setup-compose-action@v2
 
       - name: Validate release descriptors
+        if: steps.scope.outputs.release_required == 'true'
         run: |
           set -o pipefail
           bash scripts/ci/release-preflight.sh 2>&1 | tee release-preflight.log
@@ -73,72 +94,23 @@ jobs:
         with:
           name: release-preflight-diagnostics
           path: release-preflight.log
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 14
-
-  container-build:
-    name: Container ${{ matrix.name }}
-    runs-on: [self-hosted, linux, x64, aegisops-cn]
-    timeout-minutes: 35
-    needs: preflight
-    if: github.event_name != 'pull_request'
-
-    strategy:
-      fail-fast: false
-      max-parallel: 1
-      matrix:
-        include:
-          - name: aiops-server
-            context: .
-            dockerfile: ./apps/aiops-server/Dockerfile
-            build_args: ""
-          - name: aiops-agent
-            context: ./apps/aiops-agent
-            dockerfile: ./apps/aiops-agent/Dockerfile
-            build_args: ""
-          - name: aiops-worker
-            context: .
-            dockerfile: ./deploy/docker/java-app.Dockerfile
-            build_args: |
-              APP_MODULE=apps/aiops-worker
-              APP_NAME=aiops-worker
-              APP_PORT=8081
-          - name: aiops-runner
-            context: .
-            dockerfile: ./apps/aiops-runner/Dockerfile
-            build_args: ""
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v5
-
-      - name: Prepare Docker
-        run: bash scripts/ci/prepare-docker.sh
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Smoke-build image
-        uses: docker/build-push-action@v6
-        with:
-          context: ${{ matrix.context }}
-          file: ${{ matrix.dockerfile }}
-          build-args: ${{ matrix.build_args }}
-          platforms: linux/amd64
-          push: false
-          cache-from: type=gha,scope=${{ matrix.name }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.name }}
-          provenance: false
 
   runtime-smoke:
     name: Compose runtime smoke
     runs-on: [self-hosted, linux, x64, aegisops-cn]
-    timeout-minutes: 30
-    needs: container-build
+    timeout-minutes: 45
+    needs: preflight
+    if: >-
+      github.event_name != 'pull_request' &&
+      needs.preflight.outputs.release_required == 'true'
 
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+        with:
+          ref: ${{ env.RELEASE_REF }}
 
       - name: Prepare Docker
         run: bash scripts/ci/prepare-docker.sh
@@ -146,63 +118,35 @@ jobs:
       - name: Set up Docker Compose
         uses: docker/setup-compose-action@v2
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Load aiops-server image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./apps/aiops-server/Dockerfile
-          platforms: linux/amd64
-          load: true
-          tags: local/aegisops:verify-server
-          cache-from: type=gha,scope=aiops-server
-          provenance: false
-
-      - name: Load aiops-agent image
-        uses: docker/build-push-action@v6
-        with:
-          context: ./apps/aiops-agent
-          file: ./apps/aiops-agent/Dockerfile
-          platforms: linux/amd64
-          load: true
-          tags: local/aegisops:verify-agent
-          cache-from: type=gha,scope=aiops-agent
-          provenance: false
-
-      - name: Load aiops-worker image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./deploy/docker/java-app.Dockerfile
-          build-args: |
-            APP_MODULE=apps/aiops-worker
-            APP_NAME=aiops-worker
-            APP_PORT=8081
-          platforms: linux/amd64
-          load: true
-          tags: local/aegisops:verify-worker
-          cache-from: type=gha,scope=aiops-worker
-          provenance: false
-
-      - name: Load aiops-runner image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./apps/aiops-runner/Dockerfile
-          platforms: linux/amd64
-          load: true
-          tags: local/aegisops:verify-runner
-          cache-from: type=gha,scope=aiops-runner
-          provenance: false
+      - name: Build release images once with host cache
+        run: |
+          set -Eeuo pipefail
+          docker build \
+            --file apps/aiops-server/Dockerfile \
+            --tag "local/aegisops:${RELEASE_REF}-server" \
+            .
+          docker build \
+            --file apps/aiops-agent/Dockerfile \
+            --tag "local/aegisops:${RELEASE_REF}-agent" \
+            apps/aiops-agent
+          docker build \
+            --file deploy/docker/java-app.Dockerfile \
+            --build-arg APP_MODULE=apps/aiops-worker \
+            --build-arg APP_NAME=aiops-worker \
+            --build-arg APP_PORT=8081 \
+            --tag "local/aegisops:${RELEASE_REF}-worker" \
+            .
+          docker build \
+            --file apps/aiops-runner/Dockerfile \
+            --tag "local/aegisops:${RELEASE_REF}-runner" \
+            .
 
       - name: Start full runtime and verify container health
         env:
-          AIOPS_SERVER_IMAGE: local/aegisops:verify-server
-          AIOPS_AGENT_IMAGE: local/aegisops:verify-agent
-          AIOPS_WORKER_IMAGE: local/aegisops:verify-worker
-          AIOPS_RUNNER_IMAGE: local/aegisops:verify-runner
+          AIOPS_SERVER_IMAGE: local/aegisops:${{ env.RELEASE_REF }}-server
+          AIOPS_AGENT_IMAGE: local/aegisops:${{ env.RELEASE_REF }}-agent
+          AIOPS_WORKER_IMAGE: local/aegisops:${{ env.RELEASE_REF }}-worker
+          AIOPS_RUNNER_IMAGE: local/aegisops:${{ env.RELEASE_REF }}-runner
         run: |
           set -Eeuo pipefail
 
@@ -254,10 +198,10 @@ jobs:
       - name: Capture runtime diagnostics
         if: failure()
         env:
-          AIOPS_SERVER_IMAGE: local/aegisops:verify-server
-          AIOPS_AGENT_IMAGE: local/aegisops:verify-agent
-          AIOPS_WORKER_IMAGE: local/aegisops:verify-worker
-          AIOPS_RUNNER_IMAGE: local/aegisops:verify-runner
+          AIOPS_SERVER_IMAGE: local/aegisops:${{ env.RELEASE_REF }}-server
+          AIOPS_AGENT_IMAGE: local/aegisops:${{ env.RELEASE_REF }}-agent
+          AIOPS_WORKER_IMAGE: local/aegisops:${{ env.RELEASE_REF }}-worker
+          AIOPS_RUNNER_IMAGE: local/aegisops:${{ env.RELEASE_REF }}-runner
         run: bash scripts/ci/capture-runtime-diagnostics.sh
 
       - name: Upload runtime diagnostics
@@ -272,8 +216,8 @@ jobs:
       - name: Cleanup runtime smoke
         if: always()
         env:
-          AIOPS_SERVER_IMAGE: local/aegisops:verify-server
-          AIOPS_AGENT_IMAGE: local/aegisops:verify-agent
-          AIOPS_WORKER_IMAGE: local/aegisops:verify-worker
-          AIOPS_RUNNER_IMAGE: local/aegisops:verify-runner
+          AIOPS_SERVER_IMAGE: local/aegisops:${{ env.RELEASE_REF }}-server
+          AIOPS_AGENT_IMAGE: local/aegisops:${{ env.RELEASE_REF }}-agent
+          AIOPS_WORKER_IMAGE: local/aegisops:${{ env.RELEASE_REF }}-worker
+          AIOPS_RUNNER_IMAGE: local/aegisops:${{ env.RELEASE_REF }}-runner
         run: docker compose -f deploy/docker-compose.app.yml down --volumes --remove-orphans || true
