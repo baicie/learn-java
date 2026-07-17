@@ -28,7 +28,7 @@ related:
 - `web/portal/src/components/work-records/list/*`：负责人下拉筛选。
 - `web/portal/src/api/work-records/*`：默认模板、字段元数据和活跃用户查询契约。
 - `modules/aiops-work-record/*`：模板默认值、字段布局/规则索引、用户查询与服务端值校验。
-- `apps/aiops-server/src/main/resources/db/migration/V0037__work_record_template_form_ux.sql`：默认模板、字段宽度与规则 JSON 持久化。
+- `apps/aiops-server/src/main/resources/db/migration/V0039__init_work_record_template_form_ux.sql`：默认模板、字段宽度与规则 JSON 持久化。
 - `docs/api/work-record-templates.md`：模板默认值与字段契约说明。
 
 ## Task 1：修复设计器字段契约
