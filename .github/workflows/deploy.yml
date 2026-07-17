@@ -30,67 +30,60 @@ jobs:
     runs-on: [self-hosted, linux, x64, aegisops-cn]
     timeout-minutes: 10
     if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    outputs:
+      release_required: ${{ steps.scope.outputs.release_required }}
 
     steps:
       - name: Checkout exact release commit
         uses: actions/checkout@v5
         with:
           ref: ${{ env.RELEASE_REF }}
+          fetch-depth: 2
+
+      - name: Detect release-relevant changes
+        id: scope
+        run: |
+          if [ "${{ github.event_name }}" != "workflow_run" ] \
+            || ! git rev-parse HEAD^ >/dev/null 2>&1 \
+            || ! git diff --quiet HEAD^ HEAD -- \
+              apps modules web contracts deploy scripts infra/checkstyle \
+              pom.xml package.json pnpm-lock.yaml pnpm-workspace.yaml \
+              .dockerignore .github/workflows/release-verify.yml \
+              .github/workflows/deploy.yml; then
+            echo "release_required=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "release_required=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Setup Java
+        if: steps.scope.outputs.release_required == 'true'
         uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "21"
-          cache: maven
 
       - name: Setup Node
+        if: steps.scope.outputs.release_required == 'true'
         uses: actions/setup-node@v6
         with:
           node-version: "22"
 
       - name: Set up Docker Compose
+        if: steps.scope.outputs.release_required == 'true'
         uses: docker/setup-compose-action@v2
 
       - name: Validate release descriptors
+        if: steps.scope.outputs.release_required == 'true'
         run: bash scripts/ci/release-preflight.sh
 
-  build-images:
-    name: Build ${{ matrix.name }}
+  publish-images:
+    name: Publish verified images
     runs-on: [self-hosted, linux, x64, aegisops-cn]
-    timeout-minutes: 35
+    timeout-minutes: 60
     needs: preflight
+    if: needs.preflight.outputs.release_required == 'true'
     environment:
       name: aegisops-prod
-
-    strategy:
-      fail-fast: false
-      max-parallel: 1
-      matrix:
-        include:
-          - name: aiops-server
-            tag_suffix: server
-            context: .
-            dockerfile: ./apps/aiops-server/Dockerfile
-            build_args: ""
-          - name: aiops-agent
-            tag_suffix: agent
-            context: ./apps/aiops-agent
-            dockerfile: ./apps/aiops-agent/Dockerfile
-            build_args: ""
-          - name: aiops-worker
-            tag_suffix: worker
-            context: .
-            dockerfile: ./deploy/docker/java-app.Dockerfile
-            build_args: |
-              APP_MODULE=apps/aiops-worker
-              APP_NAME=aiops-worker
-              APP_PORT=8081
-          - name: aiops-runner
-            tag_suffix: runner
-            context: .
-            dockerfile: ./apps/aiops-runner/Dockerfile
-            build_args: ""
 
     steps:
       - name: Checkout exact release commit
@@ -101,33 +94,54 @@ jobs:
       - name: Prepare Docker
         run: bash scripts/ci/prepare-docker.sh
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
       - name: Log in to Docker Hub
         uses: docker/login-action@v4
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build and push immutable image
-        uses: docker/build-push-action@v6
-        with:
-          context: ${{ matrix.context }}
-          file: ${{ matrix.dockerfile }}
-          build-args: ${{ matrix.build_args }}
-          platforms: linux/amd64
-          push: true
-          tags: ${{ env.IMAGE_PREFIX }}:${{ env.IMAGE_TAG }}-${{ matrix.tag_suffix }}
-          cache-from: type=gha,scope=${{ matrix.name }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.name }}
-          provenance: false
+      - name: Reuse verified images or build missing images
+        run: |
+          set -Eeuo pipefail
+
+          ensure_image() {
+            local image=$1
+            shift
+            if docker image inspect "$image" >/dev/null 2>&1; then
+              echo "Reusing $image from Release Verify"
+              return 0
+            fi
+            echo "$image is missing; rebuilding with the host Docker cache"
+            docker build --tag "$image" "$@"
+          }
+
+          ensure_image "local/aegisops:${RELEASE_REF}-server" \
+            --file apps/aiops-server/Dockerfile .
+          ensure_image "local/aegisops:${RELEASE_REF}-agent" \
+            --file apps/aiops-agent/Dockerfile apps/aiops-agent
+          ensure_image "local/aegisops:${RELEASE_REF}-worker" \
+            --file deploy/docker/java-app.Dockerfile \
+            --build-arg APP_MODULE=apps/aiops-worker \
+            --build-arg APP_NAME=aiops-worker \
+            --build-arg APP_PORT=8081 .
+          ensure_image "local/aegisops:${RELEASE_REF}-runner" \
+            --file apps/aiops-runner/Dockerfile .
+
+      - name: Push immutable images
+        run: |
+          set -Eeuo pipefail
+          for component in server agent worker runner; do
+            local_image="local/aegisops:${RELEASE_REF}-${component}"
+            remote_image="${IMAGE_PREFIX}:${IMAGE_TAG}-${component}"
+            docker tag "$local_image" "$remote_image"
+            docker push "$remote_image"
+          done
 
   runtime-smoke:
     name: Runtime smoke
     runs-on: [self-hosted, linux, x64, aegisops-cn]
     timeout-minutes: 15
-    needs: build-images
+    needs: publish-images
     environment:
       name: aegisops-prod
 

@@ -43,7 +43,6 @@ jobs:
         with:
           distribution: temurin
           java-version: "21"
-          cache: maven
 
       - name: Setup Node
         uses: actions/setup-node@v6
@@ -85,16 +84,21 @@ jobs:
       - name: Enable pnpm
         run: |
           corepack enable
-          corepack prepare pnpm@10.33.4 --activate
+          if ! command -v pnpm >/dev/null 2>&1 \
+            || [ "$(pnpm --version)" != "10.33.4" ]; then
+            corepack prepare pnpm@10.33.4 --activate
+          fi
           pnpm --version
 
       - name: Install PostgreSQL client
         run: |
-          sudo apt-get update
-          sudo apt-get install -y postgresql-client
+          if ! command -v psql >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y postgresql-client
+          fi
 
       - name: Install frontend dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --prefer-offline
 
       - name: Build current backend commit
         run: |
@@ -199,7 +203,7 @@ jobs:
         run: pnpm -C web/portal run e2e
 
       - name: Upload Playwright report
-        if: always()
+        if: failure()
         uses: actions/upload-artifact@v7
         with:
           name: work-record-playwright-report
@@ -217,7 +221,7 @@ jobs:
           retention-days: 14
 
       - name: Upload service logs
-        if: always()
+        if: failure()
         uses: actions/upload-artifact@v7
         with:
           name: work-record-e2e-service-logs

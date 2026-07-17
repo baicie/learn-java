@@ -53,9 +53,11 @@ bash -n scripts/ci/test-deploy-app.sh
 bash -n scripts/ci/test-configure-docker-mirror.sh
 bash -n scripts/ci/prepare-docker.sh
 bash -n scripts/ci/test-prepare-docker.sh
+bash -n scripts/ci/test-workflow-resource-policy.sh
 bash scripts/ci/test-deploy-app.sh
 bash scripts/ci/test-configure-docker-mirror.sh
 bash scripts/ci/test-prepare-docker.sh
+bash scripts/ci/test-workflow-resource-policy.sh
 grep -Fq 'DEPLOY_STAGE="port-preflight"' deploy/scripts/deploy-app.sh
 grep -Fq 'DEPLOY_STAGE="application-recreate"' deploy/scripts/deploy-app.sh
 grep -Fq 'remove_application_containers' deploy/scripts/deploy-app.sh
@@ -84,12 +86,10 @@ grep -Fq 'deploy/scripts/configure-docker-mirror.sh' .github/workflows/deploy.ym
 grep -Fq 'envs: IMAGE_PREFIX,IMAGE_TAG' .github/workflows/deploy.yml
 grep -Fq 'needs: runtime-smoke' .github/workflows/deploy.yml
 grep -Fq 'name: Compose runtime smoke' .github/workflows/release-verify.yml
-grep -Fq "if: github.event_name != 'pull_request'" .github/workflows/release-verify.yml
-grep -Fq 'max-parallel: 1' .github/workflows/release-verify.yml
-grep -Fq 'max-parallel: 1' .github/workflows/deploy.yml
+grep -Fq 'needs.preflight.outputs.release_required' .github/workflows/release-verify.yml
 grep -Fq 'group: ops-scripts-${{ github.workflow }}-${{ github.ref }}' \
   .github/workflows/ops-scripts.yml
-if sed -n '/^  pull_request:/,/^  push:/p' \
+if sed -n '/^  pull_request:/,/^  workflow_run:/p' \
   .github/workflows/release-verify.yml | grep -Fq '    paths:'; then
   echo "Release Verify preflight must run on every pull request to mvp." >&2
   exit 1

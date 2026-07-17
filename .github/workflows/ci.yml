@@ -51,6 +51,8 @@ jobs:
     name: Backend
     runs-on: [self-hosted, linux, x64, aegisops-cn]
     timeout-minutes: 20
+    needs: frontend
+    if: ${{ !cancelled() }}
 
     steps:
       - name: Checkout
@@ -61,7 +63,6 @@ jobs:
         with:
           distribution: temurin
           java-version: ${{ env.JAVA_VERSION }}
-          cache: maven
 
       - name: Setup Node
         uses: actions/setup-node@v6
@@ -75,20 +76,22 @@ jobs:
         run: bash scripts/ci/backend.sh
 
       - name: Upload backend coverage
-        if: always()
+        if: failure()
         uses: actions/upload-artifact@v7
         with:
           name: backend-coverage
           path: |
             modules/aiops-platform/target/site/jacoco
             modules/aiops-work-record/target/site/jacoco
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 14
 
   frontend:
     name: Frontend
     runs-on: [self-hosted, linux, x64, aegisops-cn]
     timeout-minutes: 20
+    needs: agent
+    if: ${{ !cancelled() }}
 
     steps:
       - name: Checkout
@@ -102,25 +105,35 @@ jobs:
       - name: Enable pnpm
         run: |
           corepack enable
-          corepack prepare pnpm@10.33.4 --activate
+          if ! command -v pnpm >/dev/null 2>&1 \
+            || [ "$(pnpm --version)" != "10.33.4" ]; then
+            corepack prepare pnpm@10.33.4 --activate
+          fi
           pnpm --version
+
+      - name: Verify local startup process
+        run: |
+          pnpm install --frozen-lockfile --prefer-offline
+          pnpm test:start
 
       - name: Verify frontend
         run: bash scripts/ci/frontend.sh
 
       - name: Upload portal coverage
-        if: always()
+        if: failure()
         uses: actions/upload-artifact@v7
         with:
           name: portal-coverage
           path: web/portal/coverage
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 14
 
   agent:
     name: AI Agent
     runs-on: [self-hosted, linux, x64, aegisops-cn]
     timeout-minutes: 10
+    needs: docs
+    if: ${{ !cancelled() }}
 
     steps:
       - name: Checkout
@@ -130,8 +143,6 @@ jobs:
         uses: actions/setup-python@v6
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-          cache: pip
-          cache-dependency-path: apps/aiops-agent/pyproject.toml
 
       - name: Verify AI agent
         run: bash scripts/ci/agent.sh
@@ -140,7 +151,7 @@ jobs:
     name: CI Summary
     runs-on: [self-hosted, linux, x64, aegisops-cn]
     needs: [docs, backend, frontend, agent]
-    if: always()
+    if: ${{ !cancelled() }}
 
     steps:
       - name: Block merge on any failure

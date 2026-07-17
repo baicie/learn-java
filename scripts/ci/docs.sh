@@ -12,6 +12,7 @@ if ! command -v pnpm >/dev/null 2>&1; then
   fi
 fi
 
-pnpm install --frozen-lockfile
+pnpm install --frozen-lockfile --prefer-offline
 pnpm exec tsx scripts/ci/docs.ts
 pnpm exec tsx scripts/docs.ts check
+bash scripts/ci/test-workflow-resource-policy.sh

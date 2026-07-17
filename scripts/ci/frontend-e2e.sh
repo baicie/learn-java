@@ -21,6 +21,6 @@ done
 
 corepack enable
 
-pnpm install --frozen-lockfile
+pnpm install --frozen-lockfile --prefer-offline
 pnpm -C web/portal run e2e:install
 pnpm -C web/portal run e2e
