@@ -1,4 +1,4 @@
--- Phase 21: work-record template form UX contract.
+-- Phase 21: work-record template form UX contract (after asset migrations).
 
 alter table work_record.wr_template
   add column if not exists is_default boolean not null default false;
