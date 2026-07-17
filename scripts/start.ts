@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { spawn, execSync } from "node:child_process";
+import { spawn, execSync, type ChildProcess } from "node:child_process";
 import { existsSync, mkdirSync, openSync, writeFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -385,7 +385,49 @@ async function startBackendOnly(): Promise<void> {
   await waitForAppHealth("server", pid);
 }
 
-async function startFrontend(): Promise<void> {
+async function waitForFrontendHealth(
+  child: ChildProcess,
+  timeoutMs = HEALTH_TIMEOUT_MS,
+): Promise<void> {
+  const url = "http://127.0.0.1:5173";
+  const started = Date.now();
+
+  while (Date.now() - started < timeoutMs) {
+    if (child.exitCode !== null) {
+      throw new Error(
+        `Frontend exited before it became ready (code=${child.exitCode}).`,
+      );
+    }
+    try {
+      const response = await fetch(url);
+      if (response.ok) {
+        console.log(`  \u2713 Frontend is ready (${url})`);
+        return;
+      }
+    } catch {
+      // Keep polling until Vite binds the port or exits.
+    }
+    await sleep(200);
+  }
+
+  child.kill();
+  throw new Error("Frontend did not become ready within 60 seconds.");
+}
+
+function waitForProcess(child: ChildProcess): Promise<void> {
+  return new Promise((resolve, reject) => {
+    child.once("error", reject);
+    child.once("exit", (code, signal) => {
+      if (code === 0 || signal === "SIGINT" || signal === "SIGTERM") resolve();
+      else
+        reject(
+          new Error(`Frontend exited with code=${code} signal=${signal}.`),
+        );
+    });
+  });
+}
+
+async function startFrontend(onReady?: () => void): Promise<void> {
   if (!existsSync(FRONTEND_DIR)) {
     console.error("  Frontend not found at web/portal/");
     return;
@@ -393,29 +435,28 @@ async function startFrontend(): Promise<void> {
   const FRONTEND_PORT = 5173;
   const occupant = await findPortOccupant(FRONTEND_PORT);
   if (occupant) {
-    console.warn(
-      `\n  Port ${FRONTEND_PORT} is already in use by ${occupant.name} (PID=${occupant.pid}).`,
-    );
-    console.warn(
-      `  Vite will fall back to the next free port, so http://localhost:${FRONTEND_PORT} will keep serving the older app.`,
-    );
-    console.warn(
-      `  If you want ${FRONTEND_PORT} to serve the new frontend, stop the existing process first:`,
-    );
-    console.warn(`    Stop-Process -Id ${occupant.pid} -Force`);
-    console.warn(
-      `  Then re-run: pnpm dev (or pnpm dev:frontend). The script will not auto-kill user processes.`,
+    throw new Error(
+      `Port ${FRONTEND_PORT} is already in use by ${occupant.name} (PID=${occupant.pid}). Stop it before running pnpm dev.`,
     );
   }
   console.log(`\n  Frontend dev server: http://localhost:${FRONTEND_PORT}`);
-  console.log("  (Frontend starts independently via its own package manager scripts)");
-  const pkgCmd = isWin ? "pnpm.cmd dev" : "pnpm dev";
-  spawn(pkgCmd, [], {
-    cwd: FRONTEND_DIR,
-    stdio: "inherit",
-    detached: true,
-    shell: true,
-  }).unref();
+  console.log(
+    "  (Frontend starts independently via its own package manager scripts)",
+  );
+  const pkgCmd = isWin ? "pnpm.cmd" : "pnpm";
+  const child = spawn(
+    pkgCmd,
+    ["run", "dev", "--host", "127.0.0.1", "--port", "5173", "--strictPort"],
+    {
+      cwd: FRONTEND_DIR,
+      stdio: "inherit",
+      shell: isWin,
+    },
+  );
+  const exited = waitForProcess(child);
+  await waitForFrontendHealth(child);
+  onReady?.();
+  await exited;
 }
 
 async function findPortOccupant(
@@ -570,13 +611,15 @@ async function main(): Promise<void> {
       console.log("\n  2. Building & starting aiops-server...");
       await startBackendOnly();
       console.log("\n  3. Starting frontend dev server...");
-      await startFrontend();
-      printHeader("Dev Stack Ready");
-      console.log("  Server:    http://localhost:8080");
-      console.log("  Swagger:   http://localhost:8080/swagger-ui.html");
-      console.log("  Frontend:  http://localhost:5173 (Portal)");
-      console.log();
-      console.log("  To stop: pnpm stop (or tsx scripts/start.ts stop)");
+      await startFrontend(() => {
+        printHeader("Dev Stack Ready");
+        console.log("  Server:    http://localhost:8080");
+        console.log("  Swagger:   http://localhost:8080/swagger-ui.html");
+        console.log("  Frontend:  http://localhost:5173 (Portal)");
+        console.log();
+        console.log("  Press Ctrl+C to stop the frontend dev server.");
+        console.log("  Run pnpm stop separately to stop aiops-server.");
+      });
       break;
 
     case "stop":

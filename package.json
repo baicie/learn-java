@@ -19,6 +19,7 @@
     "lint": "pnpm -C web/portal run lint",
     "format": "pnpm -C web/portal run format:check && mvn -B -ntp spotless:check",
     "typecheck": "pnpm -C web/portal run typecheck && mvn -B -ntp -DskipTests compile",
+    "test:start": "node --import tsx --test scripts/start.test.ts",
     "test": "pnpm -C web/portal run test && mvn -B -ntp test && bash scripts/ci/agent.sh",
     "ci": "bash scripts/ci/verify-local.sh",
     "ci:docs": "bash scripts/ci/docs.sh",
