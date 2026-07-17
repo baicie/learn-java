@@ -1,9 +1,21 @@
 #!/usr/bin/env node
 
 import { spawn, execSync, type ChildProcess } from "node:child_process";
-import { existsSync, mkdirSync, openSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  openSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+
+import {
+  isManagedAppProcess,
+  parseJavaProcessList,
+  parseJavaSystemProperties,
+} from "./start-process.ts";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -71,6 +83,11 @@ function isPidRunning(pid: number): boolean {
   } catch {
     return false;
   }
+}
+
+function appJarPath(key: keyof typeof APPS): string {
+  const app = APPS[key];
+  return join(root, app.dir, "target", `${app.name}-0.1.0-SNAPSHOT.jar`);
 }
 
 function parseJavaMajor(output: string): number | null {
@@ -249,6 +266,7 @@ async function cleanInfra(): Promise<void> {
 }
 
 async function buildBackend(): Promise<void> {
+  await prepareBackendBuild(Object.keys(APPS) as (keyof typeof APPS)[]);
   printHeader("Building Backend (Maven)");
   const runtime = assertJavaRuntime();
   console.log(
@@ -271,12 +289,7 @@ async function startApp(key: keyof typeof APPS): Promise<number | null> {
   const javaRoot = findJavaRoot(root);
   if (!javaRoot) return null;
 
-  const jar = join(
-    javaRoot,
-    app.dir,
-    "target",
-    `${app.name}-0.1.0-SNAPSHOT.jar`,
-  );
+  const jar = appJarPath(key);
   if (!existsSync(jar)) {
     console.error(`  ${app.name}: JAR not found`);
     console.error(`  Run 'tsx scripts/start.ts backend' to build first.`);
@@ -366,6 +379,7 @@ async function startBackend(): Promise<void> {
 }
 
 async function startBackendOnly(): Promise<void> {
+  await prepareBackendBuild(["server"]);
   printHeader("Building Server Only (Maven)");
   const runtime = assertJavaRuntime();
   console.log(
@@ -496,21 +510,66 @@ function runCapture(cmd: string): Promise<string> {
   });
 }
 
+async function findManagedAppProcesses(
+  key: keyof typeof APPS,
+): Promise<number[]> {
+  const javaProcesses = parseJavaProcessList(await runCapture("jcmd -l"));
+  const expectedJar = appJarPath(key);
+  const jarName = `${APPS[key].name}-0.1.0-SNAPSHOT.jar`.toLowerCase();
+  const matches: number[] = [];
+
+  for (const [pid, command] of javaProcesses) {
+    if (!command.toLowerCase().includes(jarName)) continue;
+
+    const properties = parseJavaSystemProperties(
+      await runCapture(`jcmd ${pid} VM.system_properties`),
+    );
+    const workingDirectory = properties.get("user.dir");
+    if (
+      workingDirectory &&
+      isManagedAppProcess(command, workingDirectory, expectedJar)
+    ) {
+      matches.push(pid);
+    }
+  }
+
+  return matches;
+}
+
+async function terminateProcess(pid: number): Promise<void> {
+  if (!isPidRunning(pid)) return;
+
+  process.kill(pid);
+  const deadline = Date.now() + 10_000;
+  while (isPidRunning(pid) && Date.now() < deadline) {
+    await sleep(100);
+  }
+  if (isPidRunning(pid)) {
+    throw new Error(`Process ${pid} did not stop within 10 seconds.`);
+  }
+}
+
 async function stopApp(key: keyof typeof APPS): Promise<void> {
-  const {
-    existsSync: exists,
-    readFileSync: read,
-    unlinkSync: rm,
-  } = await import("node:fs");
   const pidFile = join(root, `.pid-${key}`);
-  if (!exists(pidFile)) return;
-  const pid = parseInt(read(pidFile, "utf8").trim(), 10);
-  try {
-    process.kill(pid);
-    rm(pidFile);
-    console.log(`  \u2713 ${APPS[key].name} stopped`);
-  } catch {
-    rm(pidFile);
+  const managedPids = new Set(await findManagedAppProcesses(key));
+
+  for (const pid of managedPids) {
+    await terminateProcess(pid);
+    console.log(`  \u2713 ${APPS[key].name} stopped (PID: ${pid})`);
+  }
+
+  if (existsSync(pidFile)) unlinkSync(pidFile);
+}
+
+async function prepareBackendBuild(keys: (keyof typeof APPS)[]): Promise<void> {
+  for (const key of keys) {
+    await stopApp(key);
+    const occupant = await findPortOccupant(APPS[key].port);
+    if (occupant) {
+      throw new Error(
+        `Port ${APPS[key].port} is already in use by ${occupant.name} (PID=${occupant.pid}) and is not a ${APPS[key].name} process from this workspace. Stop it before starting AegisOps.`,
+      );
+    }
   }
 }
 
