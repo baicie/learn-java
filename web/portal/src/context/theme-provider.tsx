@@ -59,6 +59,15 @@ export function ThemeProvider({
     const applyTheme = (currentResolvedTheme: ResolvedTheme) => {
       root.classList.remove('light', 'dark') // Remove existing theme classes
       root.classList.add(currentResolvedTheme) // Add the new theme class
+
+      const themeColor = window
+        .getComputedStyle(root)
+        .getPropertyValue('--background')
+        .trim()
+      const metaThemeColor = document.querySelector("meta[name='theme-color']")
+      if (themeColor && metaThemeColor) {
+        metaThemeColor.setAttribute('content', themeColor)
+      }
     }
 
     const handleChange = () => {
