@@ -5,6 +5,7 @@ import io.aegisops.evidence.dto.EvidenceQueryRequest;
 import io.aegisops.evidence.dto.EvidenceQueryResponse;
 import io.aegisops.evidence.dto.LogEvidence;
 import io.aegisops.evidence.dto.MetricEvidence;
+import io.aegisops.evidence.dto.MultiSourceEvidence;
 import java.time.OffsetDateTime;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.stereotype.Service;
@@ -31,6 +32,7 @@ public class AgentEvidenceService {
     MetricEvidence metrics = safeMetrics(normalized);
     LogEvidence logs = safeLogs(normalized);
     ChangeEvidence changes = safeChanges(normalized);
+    MultiSourceEvidence multiSource = safeMultiSource(normalized);
 
     return new EvidenceQueryResponse(
         normalized.contractVersion(),
@@ -39,7 +41,8 @@ public class AgentEvidenceService {
         normalized.traceId(),
         metrics,
         logs,
-        changes);
+        changes,
+        multiSource);
   }
 
   private MetricEvidence safeMetrics(EvidenceQueryRequest request) {
@@ -65,6 +68,15 @@ public class AgentEvidenceService {
     } catch (Exception ex) {
       return ChangeEvidence.unavailable(
           "Change evidence query failed: " + ex.getClass().getSimpleName());
+    }
+  }
+
+  private MultiSourceEvidence safeMultiSource(EvidenceQueryRequest request) {
+    try {
+      return repository.queryMultiSource(request, 100);
+    } catch (Exception ex) {
+      return MultiSourceEvidence.unavailable(
+          "Multi-source evidence query failed: " + ex.getClass().getSimpleName());
     }
   }
 

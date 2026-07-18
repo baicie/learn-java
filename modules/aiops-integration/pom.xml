@@ -14,12 +14,27 @@
   <dependencies>
     <dependency>
       <groupId>io.aegisops</groupId>
+      <artifactId>aiops-asset</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.aegisops</groupId>
       <artifactId>aiops-common</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>io.aegisops</groupId>
       <artifactId>aiops-datasource</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.aegisops</groupId>
+      <artifactId>aiops-otel-adapter</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.aegisops</groupId>
+      <artifactId>aiops-rum-adapter</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>

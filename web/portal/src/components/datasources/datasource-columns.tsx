@@ -6,6 +6,17 @@ import { Button } from '@/components/ui/button'
 import { PermissionGate } from '@/components/permission-gate'
 import { RecentSyncResult } from './recent-sync-result'
 
+const typeLabels: Record<Datasource['type'], string> = {
+  zabbix: 'Zabbix',
+  kubernetes: 'Kubernetes',
+  opentelemetry: 'OpenTelemetry',
+  rum: 'RUM',
+  github: 'GitHub Actions',
+  gitlab: 'GitLab',
+  jenkins: 'Jenkins',
+  webhook: 'Webhook',
+}
+
 export function datasourceColumns({
   onTest,
   onSync,
@@ -23,7 +34,11 @@ export function datasourceColumns({
         <span className='font-medium'>{row.original.name}</span>
       ),
     },
-    { accessorKey: 'type', header: '类型', cell: () => 'Zabbix' },
+    {
+      accessorKey: 'type',
+      header: '类型',
+      cell: ({ row }) => typeLabels[row.original.type],
+    },
     {
       accessorKey: 'endpoint',
       header: 'Endpoint',
@@ -63,15 +78,17 @@ export function datasourceColumns({
       cell: ({ row }) => (
         <PermissionGate any={['datasource:write']}>
           <div className='flex justify-end gap-1'>
-            <Button
-              size='sm'
-              variant='ghost'
-              disabled={pending}
-              onClick={() => onTest(row.original.id)}
-            >
-              <TestTube2 />
-              测试
-            </Button>
+            {['zabbix', 'kubernetes'].includes(row.original.type) && (
+              <Button
+                size='sm'
+                variant='ghost'
+                disabled={pending}
+                onClick={() => onTest(row.original.id)}
+              >
+                <TestTube2 />
+                测试
+              </Button>
+            )}
             <Button
               size='sm'
               variant='ghost'

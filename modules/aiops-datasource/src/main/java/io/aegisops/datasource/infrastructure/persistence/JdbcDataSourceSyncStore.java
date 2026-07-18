@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.aegisops.common.exception.AppException;
 import io.aegisops.datasource.application.port.DataSourceSyncStore;
+import io.aegisops.kubernetes.domain.model.KubernetesConfig;
 import io.aegisops.zabbix.ZabbixConfig;
 import java.util.Map;
 import org.springframework.dao.EmptyResultDataAccessException;
@@ -51,6 +52,23 @@ public class JdbcDataSourceSyncStore implements DataSourceSyncStore {
               tenantId,
               datasourceId);
       return objectMapper.readValue(json, ZabbixConfig.class);
+    } catch (EmptyResultDataAccessException exception) {
+      throw new AppException("DATASOURCE_NOT_FOUND", "Datasource not found");
+    } catch (JsonProcessingException exception) {
+      throw new AppException("DATASOURCE_CONFIG_INVALID", "Datasource config is invalid");
+    }
+  }
+
+  @Override
+  public KubernetesConfig loadKubernetesConfig(String tenantId, String datasourceId) {
+    try {
+      String json =
+          jdbc.queryForObject(
+              "select config_json::text from datasource where tenant_id=? and id=? and type='kubernetes'",
+              String.class,
+              tenantId,
+              datasourceId);
+      return objectMapper.readValue(json, KubernetesConfig.class);
     } catch (EmptyResultDataAccessException exception) {
       throw new AppException("DATASOURCE_NOT_FOUND", "Datasource not found");
     } catch (JsonProcessingException exception) {

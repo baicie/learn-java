@@ -1,5 +1,6 @@
 package io.aegisops.datasource.application.port;
 
+import io.aegisops.kubernetes.domain.model.KubernetesConfig;
 import io.aegisops.zabbix.ZabbixConfig;
 import java.util.Map;
 
@@ -9,6 +10,8 @@ public interface DataSourceSyncStore {
   void start(String tenantId, String datasourceId, String runId);
 
   ZabbixConfig loadZabbixConfig(String tenantId, String datasourceId);
+
+  KubernetesConfig loadKubernetesConfig(String tenantId, String datasourceId);
 
   void complete(String tenantId, String datasourceId, String runId, Map<String, Object> statistics);
 

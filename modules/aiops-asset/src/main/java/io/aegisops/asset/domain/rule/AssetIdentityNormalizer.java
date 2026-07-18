@@ -14,7 +14,8 @@ public class AssetIdentityNormalizer {
   private static final Set<String> STRONG_TYPES =
       Set.of(
           "cloud_instance_id", "cmdb_ci_id", "machine_id", "k8s_uid", "otel_service_instance_id");
-  private static final Set<String> WEAK_TYPES = Set.of("fqdn", "hostname", "ip", "display_name");
+  private static final Set<String> WEAK_TYPES =
+      Set.of("fqdn", "hostname", "ip", "display_name", "url");
 
   public List<NormalizedAssetIdentity> normalize(
       List<AssetIdentityInput> inputs, String ipAddress) {

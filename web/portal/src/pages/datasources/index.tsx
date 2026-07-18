@@ -77,13 +77,11 @@ export function DatasourcesPage() {
         ) : !sources.data?.length ? (
           <EmptyState
             title='还没有数据源'
-            description='添加 Zabbix 数据源后即可同步主机和告警。'
+            description='添加 Zabbix、Kubernetes 或被动接入数据源后即可开始采集。'
             icon={<DatabaseZap className='size-6' />}
             action={
               <PermissionGate any={['datasource:write']}>
-                <Button onClick={() => setOpen(true)}>
-                  添加 Zabbix 数据源
-                </Button>
+                <Button onClick={() => setOpen(true)}>添加数据源</Button>
               </PermissionGate>
             }
           />

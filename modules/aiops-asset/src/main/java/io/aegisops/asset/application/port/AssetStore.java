@@ -40,6 +40,14 @@ public interface AssetStore {
   String createRelation(
       String tenantId, String assetId, CreateAssetRelationRequest request, OffsetDateTime now);
 
+  void upsertSourceRelation(
+      String tenantId,
+      String fromAssetId,
+      String toAssetId,
+      String relationType,
+      String source,
+      OffsetDateTime now);
+
   boolean deleteRelation(String tenantId, String assetId, String relationId);
 
   Optional<String> findAssetIdBySourceLink(
