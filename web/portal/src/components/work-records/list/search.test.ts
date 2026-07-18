@@ -5,8 +5,13 @@ import {
   stringifyListSearch,
   toRouteSearch,
 } from './search'
+import { buildEmptyListQuery } from './types'
 
 describe('work record list route search', () => {
+  it('starts with a valid recent-workday count', () => {
+    expect(buildEmptyListQuery().workdayCount).toBe(5)
+  })
+
   it('restores full query state from route search', () => {
     const state = normalizeListSearch({
       page: 2,
