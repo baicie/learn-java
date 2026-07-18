@@ -43,6 +43,28 @@ describe('filterNavigation', () => {
     expect(JSON.stringify(result)).toContain('/platform/roles')
   })
 
+  it('keeps operations for every permission accepted by its route', () => {
+    for (const permission of [
+      'work-record:analytics',
+      'work-record:handover',
+      'work-record:ai:generate',
+      'work-record:approval:act',
+    ]) {
+      const result = filterNavigation(navigation, principal([permission]))
+
+      expect(JSON.stringify(result)).toContain('/work-records/operations')
+    }
+  })
+
+  it('does not expose the unimplemented audit log route', () => {
+    const result = filterNavigation(
+      navigation,
+      principal(['audit:read'], ['system_admin'])
+    )
+
+    expect(JSON.stringify(result)).not.toContain('/platform/audit-logs')
+  })
+
   it('keeps dashboard when principal is missing', () => {
     const result = filterNavigation(navigation, null)
 

@@ -49,6 +49,9 @@ import {
 } from '@/components/ui/table'
 import { Textarea } from '@/components/ui/textarea'
 import { notify } from '@/components/feedback/app-toaster'
+import { PermissionGate } from '@/components/permission-gate'
+
+const WRITE_PERMISSION = 'platform:dict:write'
 
 type TypeEditor = { mode: 'create' | 'edit'; value?: DictType }
 type ItemEditor = { mode: 'create' | 'edit'; value?: DictItem }
@@ -254,10 +257,12 @@ export function DictionariesPage() {
         <Card>
           <CardHeader className='flex flex-row items-center justify-between'>
             <CardTitle>字典类型</CardTitle>
-            <Button size='sm' onClick={() => openTypeEditor('create')}>
-              <Plus data-icon='inline-start' />
-              新增
-            </Button>
+            <PermissionGate any={[WRITE_PERMISSION]}>
+              <Button size='sm' onClick={() => openTypeEditor('create')}>
+                <Plus data-icon='inline-start' />
+                新增
+              </Button>
+            </PermissionGate>
           </CardHeader>
           <CardContent className='grid gap-2'>
             {types.data?.map((item) => (
@@ -284,14 +289,16 @@ export function DictionariesPage() {
                     </span>
                   </span>
                 </Button>
-                <Button
-                  size='icon'
-                  variant='ghost'
-                  aria-label={`编辑 ${item.dictName}`}
-                  onClick={() => openTypeEditor('edit', item)}
-                >
-                  <Pencil />
-                </Button>
+                <PermissionGate any={[WRITE_PERMISSION]}>
+                  <Button
+                    size='icon'
+                    variant='ghost'
+                    aria-label={`编辑 ${item.dictName}`}
+                    onClick={() => openTypeEditor('edit', item)}
+                  >
+                    <Pencil />
+                  </Button>
+                </PermissionGate>
               </div>
             ))}
           </CardContent>
@@ -309,14 +316,16 @@ export function DictionariesPage() {
             </div>
             {selectedType ? (
               <div className='flex flex-wrap gap-2'>
-                <Button
-                  size='sm'
-                  variant='outline'
-                  onClick={() => setTransferMode('import')}
-                >
-                  <Upload data-icon='inline-start' />
-                  导入
-                </Button>
+                <PermissionGate any={[WRITE_PERMISSION]}>
+                  <Button
+                    size='sm'
+                    variant='outline'
+                    onClick={() => setTransferMode('import')}
+                  >
+                    <Upload data-icon='inline-start' />
+                    导入
+                  </Button>
+                </PermissionGate>
                 <Button
                   size='sm'
                   variant='outline'
@@ -325,21 +334,23 @@ export function DictionariesPage() {
                   <Download data-icon='inline-start' />
                   导出
                 </Button>
-                {!selectedType.systemBuiltin && selectedType.enabled ? (
-                  <Button
-                    size='sm'
-                    variant='outline'
-                    onClick={() =>
-                      disableDictType(selectedType.dictCode).then(refresh)
-                    }
-                  >
-                    禁用字典
+                <PermissionGate any={[WRITE_PERMISSION]}>
+                  {!selectedType.systemBuiltin && selectedType.enabled ? (
+                    <Button
+                      size='sm'
+                      variant='outline'
+                      onClick={() =>
+                        disableDictType(selectedType.dictCode).then(refresh)
+                      }
+                    >
+                      禁用字典
+                    </Button>
+                  ) : null}
+                  <Button size='sm' onClick={() => openItemEditor('create')}>
+                    <Plus data-icon='inline-start' />
+                    新增字段
                   </Button>
-                ) : null}
-                <Button size='sm' onClick={() => openItemEditor('create')}>
-                  <Plus data-icon='inline-start' />
-                  新增字段
-                </Button>
+                </PermissionGate>
               </div>
             ) : null}
           </CardHeader>
@@ -367,35 +378,37 @@ export function DictionariesPage() {
                       <TableCell>{item.enabled ? '启用' : '禁用'}</TableCell>
                       <TableCell>{item.sortOrder}</TableCell>
                       <TableCell>
-                        <div className='flex justify-end gap-1'>
-                          <Button
-                            size='sm'
-                            variant='outline'
-                            onClick={() => openItemEditor('edit', item)}
-                          >
-                            <Pencil data-icon='inline-start' />
-                            编辑
-                          </Button>
-                          <Button
-                            size='sm'
-                            variant='outline'
-                            onClick={() =>
-                              selectedType &&
-                              (item.enabled
-                                ? disableDictItem(
-                                    selectedType.dictCode,
-                                    item.id
-                                  ).then(refresh)
-                                : updateDictItem(
-                                    selectedType.dictCode,
-                                    item.id,
-                                    { enabled: true }
-                                  ).then(refresh))
-                            }
-                          >
-                            {item.enabled ? '禁用' : '启用'}
-                          </Button>
-                        </div>
+                        <PermissionGate any={[WRITE_PERMISSION]}>
+                          <div className='flex justify-end gap-1'>
+                            <Button
+                              size='sm'
+                              variant='outline'
+                              onClick={() => openItemEditor('edit', item)}
+                            >
+                              <Pencil data-icon='inline-start' />
+                              编辑
+                            </Button>
+                            <Button
+                              size='sm'
+                              variant='outline'
+                              onClick={() =>
+                                selectedType &&
+                                (item.enabled
+                                  ? disableDictItem(
+                                      selectedType.dictCode,
+                                      item.id
+                                    ).then(refresh)
+                                  : updateDictItem(
+                                      selectedType.dictCode,
+                                      item.id,
+                                      { enabled: true }
+                                    ).then(refresh))
+                              }
+                            >
+                              {item.enabled ? '禁用' : '启用'}
+                            </Button>
+                          </div>
+                        </PermissionGate>
                       </TableCell>
                     </TableRow>
                   ))}

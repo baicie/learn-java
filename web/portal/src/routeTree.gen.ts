@@ -10,68 +10,38 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
-import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
-import { Route as errors503RouteImport } from './routes/(errors)/503'
-import { Route as errors500RouteImport } from './routes/(errors)/500'
-import { Route as errors404RouteImport } from './routes/(errors)/404'
-import { Route as errors403RouteImport } from './routes/(errors)/403'
-import { Route as errors401RouteImport } from './routes/(errors)/401'
 import { Route as authSignInRouteImport } from './routes/(auth)/sign-in'
+import { Route as errors401RouteImport } from './routes/(errors)/401'
+import { Route as errors403RouteImport } from './routes/(errors)/403'
+import { Route as errors404RouteImport } from './routes/(errors)/404'
+import { Route as errors500RouteImport } from './routes/(errors)/500'
+import { Route as errors503RouteImport } from './routes/(errors)/503'
+import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as AuthenticatedSettingsRouteRouteImport } from './routes/_authenticated/settings/route'
-import { Route as AuthenticatedWorkRecordsIndexRouteImport } from './routes/_authenticated/work-records/index'
-import { Route as AuthenticatedSettingsIndexRouteImport } from './routes/_authenticated/settings/index'
-import { Route as AuthenticatedDatasourcesIndexRouteImport } from './routes/_authenticated/datasources/index'
 import { Route as AuthenticatedAssetsIndexRouteImport } from './routes/_authenticated/assets/index'
-import { Route as AuthenticatedWorkRecordsTemplatesRouteImport } from './routes/_authenticated/work-records/templates'
-import { Route as AuthenticatedWorkRecordsOperationsRouteImport } from './routes/_authenticated/work-records/operations'
-import { Route as AuthenticatedWorkRecordsNewRouteImport } from './routes/_authenticated/work-records/new'
-import { Route as AuthenticatedWorkRecordsRecordIdRouteImport } from './routes/_authenticated/work-records/$recordId'
-import { Route as AuthenticatedSettingsNotificationsRouteImport } from './routes/_authenticated/settings/notifications'
-import { Route as AuthenticatedSettingsDisplayRouteImport } from './routes/_authenticated/settings/display'
-import { Route as AuthenticatedSettingsAppearanceRouteImport } from './routes/_authenticated/settings/appearance'
-import { Route as AuthenticatedSettingsAccountRouteImport } from './routes/_authenticated/settings/account'
-import { Route as AuthenticatedPlatformRolesRouteImport } from './routes/_authenticated/platform/roles'
-import { Route as AuthenticatedPlatformDictionariesRouteImport } from './routes/_authenticated/platform/dictionaries'
-import { Route as AuthenticatedPlatformCalendarsRouteImport } from './routes/_authenticated/platform/calendars'
-import { Route as AuthenticatedErrorsErrorRouteImport } from './routes/_authenticated/errors/$error'
 import { Route as AuthenticatedAssetsAssetIdRouteImport } from './routes/_authenticated/assets/$assetId'
-import { Route as AuthenticatedWorkRecordsTemplatesIndexRouteImport } from './routes/_authenticated/work-records/templates.index'
+import { Route as AuthenticatedDatasourcesIndexRouteImport } from './routes/_authenticated/datasources/index'
+import { Route as AuthenticatedErrorsErrorRouteImport } from './routes/_authenticated/errors/$error'
+import { Route as AuthenticatedPlatformCalendarsRouteImport } from './routes/_authenticated/platform/calendars'
+import { Route as AuthenticatedPlatformDictionariesRouteImport } from './routes/_authenticated/platform/dictionaries'
+import { Route as AuthenticatedPlatformRolesRouteImport } from './routes/_authenticated/platform/roles'
+import { Route as AuthenticatedSettingsIndexRouteImport } from './routes/_authenticated/settings/index'
+import { Route as AuthenticatedSettingsAccountRouteImport } from './routes/_authenticated/settings/account'
+import { Route as AuthenticatedSettingsAppearanceRouteImport } from './routes/_authenticated/settings/appearance'
+import { Route as AuthenticatedSettingsDisplayRouteImport } from './routes/_authenticated/settings/display'
+import { Route as AuthenticatedSettingsNotificationsRouteImport } from './routes/_authenticated/settings/notifications'
+import { Route as AuthenticatedWorkRecordsIndexRouteImport } from './routes/_authenticated/work-records/index'
+import { Route as AuthenticatedWorkRecordsRecordIdRouteImport } from './routes/_authenticated/work-records/$recordId'
+import { Route as AuthenticatedWorkRecordsNewRouteImport } from './routes/_authenticated/work-records/new'
+import { Route as AuthenticatedWorkRecordsOperationsRouteImport } from './routes/_authenticated/work-records/operations'
+import { Route as AuthenticatedWorkRecordsTemplatesRouteImport } from './routes/_authenticated/work-records/templates'
 import { Route as AuthenticatedPlatformUsersIndexRouteImport } from './routes/_authenticated/platform/users/index'
 import { Route as AuthenticatedWorkRecordsRecordIdEditRouteImport } from './routes/_authenticated/work-records/$recordId.edit'
+import { Route as AuthenticatedWorkRecordsTemplatesIndexRouteImport } from './routes/_authenticated/work-records/templates.index'
 import { Route as AuthenticatedWorkRecordsTemplatesTemplateIdDesignerRouteImport } from './routes/_authenticated/work-records/templates.$templateId.designer'
 
 const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
   id: '/_authenticated',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const errors503Route = errors503RouteImport.update({
-  id: '/(errors)/503',
-  path: '/503',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const errors500Route = errors500RouteImport.update({
-  id: '/(errors)/500',
-  path: '/500',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const errors404Route = errors404RouteImport.update({
-  id: '/(errors)/404',
-  path: '/404',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const errors403Route = errors403RouteImport.update({
-  id: '/(errors)/403',
-  path: '/403',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const errors401Route = errors401RouteImport.update({
-  id: '/(errors)/401',
-  path: '/401',
   getParentRoute: () => rootRouteImport,
 } as any)
 const authSignInRoute = authSignInRouteImport.update({
@@ -79,28 +49,40 @@ const authSignInRoute = authSignInRouteImport.update({
   path: '/sign-in',
   getParentRoute: () => rootRouteImport,
 } as any)
+const errors401Route = errors401RouteImport.update({
+  id: '/(errors)/401',
+  path: '/401',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const errors403Route = errors403RouteImport.update({
+  id: '/(errors)/403',
+  path: '/403',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const errors404Route = errors404RouteImport.update({
+  id: '/(errors)/404',
+  path: '/404',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const errors500Route = errors500RouteImport.update({
+  id: '/(errors)/500',
+  path: '/500',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const errors503Route = errors503RouteImport.update({
+  id: '/(errors)/503',
+  path: '/503',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedSettingsRouteRoute =
   AuthenticatedSettingsRouteRouteImport.update({
     id: '/settings',
     path: '/settings',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedWorkRecordsIndexRoute =
-  AuthenticatedWorkRecordsIndexRouteImport.update({
-    id: '/work-records/',
-    path: '/work-records/',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedSettingsIndexRoute =
-  AuthenticatedSettingsIndexRouteImport.update({
-    id: '/',
-    path: '/',
-    getParentRoute: () => AuthenticatedSettingsRouteRoute,
-  } as any)
-const AuthenticatedDatasourcesIndexRoute =
-  AuthenticatedDatasourcesIndexRouteImport.update({
-    id: '/datasources/',
-    path: '/datasources/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedAssetsIndexRoute =
@@ -109,70 +91,16 @@ const AuthenticatedAssetsIndexRoute =
     path: '/assets/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const AuthenticatedWorkRecordsTemplatesRoute =
-  AuthenticatedWorkRecordsTemplatesRouteImport.update({
-    id: '/work-records/templates',
-    path: '/work-records/templates',
+const AuthenticatedAssetsAssetIdRoute =
+  AuthenticatedAssetsAssetIdRouteImport.update({
+    id: '/assets/$assetId',
+    path: '/assets/$assetId',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const AuthenticatedWorkRecordsOperationsRoute =
-  AuthenticatedWorkRecordsOperationsRouteImport.update({
-    id: '/work-records/operations',
-    path: '/work-records/operations',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedWorkRecordsNewRoute =
-  AuthenticatedWorkRecordsNewRouteImport.update({
-    id: '/work-records/new',
-    path: '/work-records/new',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedWorkRecordsRecordIdRoute =
-  AuthenticatedWorkRecordsRecordIdRouteImport.update({
-    id: '/work-records/$recordId',
-    path: '/work-records/$recordId',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedSettingsNotificationsRoute =
-  AuthenticatedSettingsNotificationsRouteImport.update({
-    id: '/notifications',
-    path: '/notifications',
-    getParentRoute: () => AuthenticatedSettingsRouteRoute,
-  } as any)
-const AuthenticatedSettingsDisplayRoute =
-  AuthenticatedSettingsDisplayRouteImport.update({
-    id: '/display',
-    path: '/display',
-    getParentRoute: () => AuthenticatedSettingsRouteRoute,
-  } as any)
-const AuthenticatedSettingsAppearanceRoute =
-  AuthenticatedSettingsAppearanceRouteImport.update({
-    id: '/appearance',
-    path: '/appearance',
-    getParentRoute: () => AuthenticatedSettingsRouteRoute,
-  } as any)
-const AuthenticatedSettingsAccountRoute =
-  AuthenticatedSettingsAccountRouteImport.update({
-    id: '/account',
-    path: '/account',
-    getParentRoute: () => AuthenticatedSettingsRouteRoute,
-  } as any)
-const AuthenticatedPlatformRolesRoute =
-  AuthenticatedPlatformRolesRouteImport.update({
-    id: '/platform/roles',
-    path: '/platform/roles',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedPlatformDictionariesRoute =
-  AuthenticatedPlatformDictionariesRouteImport.update({
-    id: '/platform/dictionaries',
-    path: '/platform/dictionaries',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedPlatformCalendarsRoute =
-  AuthenticatedPlatformCalendarsRouteImport.update({
-    id: '/platform/calendars',
-    path: '/platform/calendars',
+const AuthenticatedDatasourcesIndexRoute =
+  AuthenticatedDatasourcesIndexRouteImport.update({
+    id: '/datasources/',
+    path: '/datasources/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedErrorsErrorRoute =
@@ -181,17 +109,83 @@ const AuthenticatedErrorsErrorRoute =
     path: '/errors/$error',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const AuthenticatedAssetsAssetIdRoute =
-  AuthenticatedAssetsAssetIdRouteImport.update({
-    id: '/assets/$assetId',
-    path: '/assets/$assetId',
+const AuthenticatedPlatformCalendarsRoute =
+  AuthenticatedPlatformCalendarsRouteImport.update({
+    id: '/platform/calendars',
+    path: '/platform/calendars',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const AuthenticatedWorkRecordsTemplatesIndexRoute =
-  AuthenticatedWorkRecordsTemplatesIndexRouteImport.update({
+const AuthenticatedPlatformDictionariesRoute =
+  AuthenticatedPlatformDictionariesRouteImport.update({
+    id: '/platform/dictionaries',
+    path: '/platform/dictionaries',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedPlatformRolesRoute =
+  AuthenticatedPlatformRolesRouteImport.update({
+    id: '/platform/roles',
+    path: '/platform/roles',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedSettingsIndexRoute =
+  AuthenticatedSettingsIndexRouteImport.update({
     id: '/',
     path: '/',
-    getParentRoute: () => AuthenticatedWorkRecordsTemplatesRoute,
+    getParentRoute: () => AuthenticatedSettingsRouteRoute,
+  } as any)
+const AuthenticatedSettingsAccountRoute =
+  AuthenticatedSettingsAccountRouteImport.update({
+    id: '/account',
+    path: '/account',
+    getParentRoute: () => AuthenticatedSettingsRouteRoute,
+  } as any)
+const AuthenticatedSettingsAppearanceRoute =
+  AuthenticatedSettingsAppearanceRouteImport.update({
+    id: '/appearance',
+    path: '/appearance',
+    getParentRoute: () => AuthenticatedSettingsRouteRoute,
+  } as any)
+const AuthenticatedSettingsDisplayRoute =
+  AuthenticatedSettingsDisplayRouteImport.update({
+    id: '/display',
+    path: '/display',
+    getParentRoute: () => AuthenticatedSettingsRouteRoute,
+  } as any)
+const AuthenticatedSettingsNotificationsRoute =
+  AuthenticatedSettingsNotificationsRouteImport.update({
+    id: '/notifications',
+    path: '/notifications',
+    getParentRoute: () => AuthenticatedSettingsRouteRoute,
+  } as any)
+const AuthenticatedWorkRecordsIndexRoute =
+  AuthenticatedWorkRecordsIndexRouteImport.update({
+    id: '/work-records/',
+    path: '/work-records/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedWorkRecordsRecordIdRoute =
+  AuthenticatedWorkRecordsRecordIdRouteImport.update({
+    id: '/work-records/$recordId',
+    path: '/work-records/$recordId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedWorkRecordsNewRoute =
+  AuthenticatedWorkRecordsNewRouteImport.update({
+    id: '/work-records/new',
+    path: '/work-records/new',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedWorkRecordsOperationsRoute =
+  AuthenticatedWorkRecordsOperationsRouteImport.update({
+    id: '/work-records/operations',
+    path: '/work-records/operations',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedWorkRecordsTemplatesRoute =
+  AuthenticatedWorkRecordsTemplatesRouteImport.update({
+    id: '/work-records/templates',
+    path: '/work-records/templates',
+    getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedPlatformUsersIndexRoute =
   AuthenticatedPlatformUsersIndexRouteImport.update({
@@ -204,6 +198,12 @@ const AuthenticatedWorkRecordsRecordIdEditRoute =
     id: '/edit',
     path: '/edit',
     getParentRoute: () => AuthenticatedWorkRecordsRecordIdRoute,
+  } as any)
+const AuthenticatedWorkRecordsTemplatesIndexRoute =
+  AuthenticatedWorkRecordsTemplatesIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedWorkRecordsTemplatesRoute,
   } as any)
 const AuthenticatedWorkRecordsTemplatesTemplateIdDesignerRoute =
   AuthenticatedWorkRecordsTemplatesTemplateIdDesignerRouteImport.update({
@@ -419,39 +419,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/': {
-      id: '/_authenticated/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof AuthenticatedIndexRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/(errors)/503': {
-      id: '/(errors)/503'
-      path: '/503'
-      fullPath: '/503'
-      preLoaderRoute: typeof errors503RouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/(errors)/500': {
-      id: '/(errors)/500'
-      path: '/500'
-      fullPath: '/500'
-      preLoaderRoute: typeof errors500RouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/(errors)/404': {
-      id: '/(errors)/404'
-      path: '/404'
-      fullPath: '/404'
-      preLoaderRoute: typeof errors404RouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/(errors)/403': {
-      id: '/(errors)/403'
-      path: '/403'
-      fullPath: '/403'
-      preLoaderRoute: typeof errors403RouteImport
+    '/(auth)/sign-in': {
+      id: '/(auth)/sign-in'
+      path: '/sign-in'
+      fullPath: '/sign-in'
+      preLoaderRoute: typeof authSignInRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/(errors)/401': {
@@ -461,39 +433,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof errors401RouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/(auth)/sign-in': {
-      id: '/(auth)/sign-in'
-      path: '/sign-in'
-      fullPath: '/sign-in'
-      preLoaderRoute: typeof authSignInRouteImport
+    '/(errors)/403': {
+      id: '/(errors)/403'
+      path: '/403'
+      fullPath: '/403'
+      preLoaderRoute: typeof errors403RouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/(errors)/404': {
+      id: '/(errors)/404'
+      path: '/404'
+      fullPath: '/404'
+      preLoaderRoute: typeof errors404RouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(errors)/500': {
+      id: '/(errors)/500'
+      path: '/500'
+      fullPath: '/500'
+      preLoaderRoute: typeof errors500RouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(errors)/503': {
+      id: '/(errors)/503'
+      path: '/503'
+      fullPath: '/503'
+      preLoaderRoute: typeof errors503RouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/': {
+      id: '/_authenticated/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/settings': {
       id: '/_authenticated/settings'
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof AuthenticatedSettingsRouteRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/work-records/': {
-      id: '/_authenticated/work-records/'
-      path: '/work-records'
-      fullPath: '/work-records/'
-      preLoaderRoute: typeof AuthenticatedWorkRecordsIndexRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/settings/': {
-      id: '/_authenticated/settings/'
-      path: '/'
-      fullPath: '/settings/'
-      preLoaderRoute: typeof AuthenticatedSettingsIndexRouteImport
-      parentRoute: typeof AuthenticatedSettingsRouteRoute
-    }
-    '/_authenticated/datasources/': {
-      id: '/_authenticated/datasources/'
-      path: '/datasources'
-      fullPath: '/datasources/'
-      preLoaderRoute: typeof AuthenticatedDatasourcesIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/assets/': {
@@ -503,81 +482,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAssetsIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/work-records/templates': {
-      id: '/_authenticated/work-records/templates'
-      path: '/work-records/templates'
-      fullPath: '/work-records/templates'
-      preLoaderRoute: typeof AuthenticatedWorkRecordsTemplatesRouteImport
+    '/_authenticated/assets/$assetId': {
+      id: '/_authenticated/assets/$assetId'
+      path: '/assets/$assetId'
+      fullPath: '/assets/$assetId'
+      preLoaderRoute: typeof AuthenticatedAssetsAssetIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/work-records/operations': {
-      id: '/_authenticated/work-records/operations'
-      path: '/work-records/operations'
-      fullPath: '/work-records/operations'
-      preLoaderRoute: typeof AuthenticatedWorkRecordsOperationsRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/work-records/new': {
-      id: '/_authenticated/work-records/new'
-      path: '/work-records/new'
-      fullPath: '/work-records/new'
-      preLoaderRoute: typeof AuthenticatedWorkRecordsNewRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/work-records/$recordId': {
-      id: '/_authenticated/work-records/$recordId'
-      path: '/work-records/$recordId'
-      fullPath: '/work-records/$recordId'
-      preLoaderRoute: typeof AuthenticatedWorkRecordsRecordIdRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/settings/notifications': {
-      id: '/_authenticated/settings/notifications'
-      path: '/notifications'
-      fullPath: '/settings/notifications'
-      preLoaderRoute: typeof AuthenticatedSettingsNotificationsRouteImport
-      parentRoute: typeof AuthenticatedSettingsRouteRoute
-    }
-    '/_authenticated/settings/display': {
-      id: '/_authenticated/settings/display'
-      path: '/display'
-      fullPath: '/settings/display'
-      preLoaderRoute: typeof AuthenticatedSettingsDisplayRouteImport
-      parentRoute: typeof AuthenticatedSettingsRouteRoute
-    }
-    '/_authenticated/settings/appearance': {
-      id: '/_authenticated/settings/appearance'
-      path: '/appearance'
-      fullPath: '/settings/appearance'
-      preLoaderRoute: typeof AuthenticatedSettingsAppearanceRouteImport
-      parentRoute: typeof AuthenticatedSettingsRouteRoute
-    }
-    '/_authenticated/settings/account': {
-      id: '/_authenticated/settings/account'
-      path: '/account'
-      fullPath: '/settings/account'
-      preLoaderRoute: typeof AuthenticatedSettingsAccountRouteImport
-      parentRoute: typeof AuthenticatedSettingsRouteRoute
-    }
-    '/_authenticated/platform/roles': {
-      id: '/_authenticated/platform/roles'
-      path: '/platform/roles'
-      fullPath: '/platform/roles'
-      preLoaderRoute: typeof AuthenticatedPlatformRolesRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/platform/dictionaries': {
-      id: '/_authenticated/platform/dictionaries'
-      path: '/platform/dictionaries'
-      fullPath: '/platform/dictionaries'
-      preLoaderRoute: typeof AuthenticatedPlatformDictionariesRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/platform/calendars': {
-      id: '/_authenticated/platform/calendars'
-      path: '/platform/calendars'
-      fullPath: '/platform/calendars'
-      preLoaderRoute: typeof AuthenticatedPlatformCalendarsRouteImport
+    '/_authenticated/datasources/': {
+      id: '/_authenticated/datasources/'
+      path: '/datasources'
+      fullPath: '/datasources/'
+      preLoaderRoute: typeof AuthenticatedDatasourcesIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/errors/$error': {
@@ -587,19 +503,96 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedErrorsErrorRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/assets/$assetId': {
-      id: '/_authenticated/assets/$assetId'
-      path: '/assets/$assetId'
-      fullPath: '/assets/$assetId'
-      preLoaderRoute: typeof AuthenticatedAssetsAssetIdRouteImport
+    '/_authenticated/platform/calendars': {
+      id: '/_authenticated/platform/calendars'
+      path: '/platform/calendars'
+      fullPath: '/platform/calendars'
+      preLoaderRoute: typeof AuthenticatedPlatformCalendarsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/work-records/templates/': {
-      id: '/_authenticated/work-records/templates/'
+    '/_authenticated/platform/dictionaries': {
+      id: '/_authenticated/platform/dictionaries'
+      path: '/platform/dictionaries'
+      fullPath: '/platform/dictionaries'
+      preLoaderRoute: typeof AuthenticatedPlatformDictionariesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/platform/roles': {
+      id: '/_authenticated/platform/roles'
+      path: '/platform/roles'
+      fullPath: '/platform/roles'
+      preLoaderRoute: typeof AuthenticatedPlatformRolesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/settings/': {
+      id: '/_authenticated/settings/'
       path: '/'
-      fullPath: '/work-records/templates/'
-      preLoaderRoute: typeof AuthenticatedWorkRecordsTemplatesIndexRouteImport
-      parentRoute: typeof AuthenticatedWorkRecordsTemplatesRoute
+      fullPath: '/settings/'
+      preLoaderRoute: typeof AuthenticatedSettingsIndexRouteImport
+      parentRoute: typeof AuthenticatedSettingsRouteRoute
+    }
+    '/_authenticated/settings/account': {
+      id: '/_authenticated/settings/account'
+      path: '/account'
+      fullPath: '/settings/account'
+      preLoaderRoute: typeof AuthenticatedSettingsAccountRouteImport
+      parentRoute: typeof AuthenticatedSettingsRouteRoute
+    }
+    '/_authenticated/settings/appearance': {
+      id: '/_authenticated/settings/appearance'
+      path: '/appearance'
+      fullPath: '/settings/appearance'
+      preLoaderRoute: typeof AuthenticatedSettingsAppearanceRouteImport
+      parentRoute: typeof AuthenticatedSettingsRouteRoute
+    }
+    '/_authenticated/settings/display': {
+      id: '/_authenticated/settings/display'
+      path: '/display'
+      fullPath: '/settings/display'
+      preLoaderRoute: typeof AuthenticatedSettingsDisplayRouteImport
+      parentRoute: typeof AuthenticatedSettingsRouteRoute
+    }
+    '/_authenticated/settings/notifications': {
+      id: '/_authenticated/settings/notifications'
+      path: '/notifications'
+      fullPath: '/settings/notifications'
+      preLoaderRoute: typeof AuthenticatedSettingsNotificationsRouteImport
+      parentRoute: typeof AuthenticatedSettingsRouteRoute
+    }
+    '/_authenticated/work-records/': {
+      id: '/_authenticated/work-records/'
+      path: '/work-records'
+      fullPath: '/work-records/'
+      preLoaderRoute: typeof AuthenticatedWorkRecordsIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/work-records/$recordId': {
+      id: '/_authenticated/work-records/$recordId'
+      path: '/work-records/$recordId'
+      fullPath: '/work-records/$recordId'
+      preLoaderRoute: typeof AuthenticatedWorkRecordsRecordIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/work-records/new': {
+      id: '/_authenticated/work-records/new'
+      path: '/work-records/new'
+      fullPath: '/work-records/new'
+      preLoaderRoute: typeof AuthenticatedWorkRecordsNewRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/work-records/operations': {
+      id: '/_authenticated/work-records/operations'
+      path: '/work-records/operations'
+      fullPath: '/work-records/operations'
+      preLoaderRoute: typeof AuthenticatedWorkRecordsOperationsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/work-records/templates': {
+      id: '/_authenticated/work-records/templates'
+      path: '/work-records/templates'
+      fullPath: '/work-records/templates'
+      preLoaderRoute: typeof AuthenticatedWorkRecordsTemplatesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/platform/users/': {
       id: '/_authenticated/platform/users/'
@@ -614,6 +607,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/work-records/$recordId/edit'
       preLoaderRoute: typeof AuthenticatedWorkRecordsRecordIdEditRouteImport
       parentRoute: typeof AuthenticatedWorkRecordsRecordIdRoute
+    }
+    '/_authenticated/work-records/templates/': {
+      id: '/_authenticated/work-records/templates/'
+      path: '/'
+      fullPath: '/work-records/templates/'
+      preLoaderRoute: typeof AuthenticatedWorkRecordsTemplatesIndexRouteImport
+      parentRoute: typeof AuthenticatedWorkRecordsTemplatesRoute
     }
     '/_authenticated/work-records/templates/$templateId/designer': {
       id: '/_authenticated/work-records/templates/$templateId/designer'

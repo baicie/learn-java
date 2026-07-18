@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { apiClient } from '@/lib/api-client'
-import { listDatasources, syncDatasource } from './datasources-api'
+import {
+  listDatasources,
+  syncDatasource,
+  testDatasource,
+} from './datasources-api'
 
 vi.mock('@/lib/api-client', () => ({
   apiClient: { get: vi.fn(), post: vi.fn() },
@@ -43,5 +47,24 @@ describe('datasource api', () => {
       status: 'pending',
     })
     expect(apiClient.post).toHaveBeenCalledWith('/api/datasources/ds-1/sync')
+  })
+
+  it('parses the backend connection test contract', async () => {
+    vi.mocked(apiClient.post).mockResolvedValue({
+      data: {
+        success: true,
+        data: {
+          ok: true,
+          message: 'zabbix connection succeeded',
+          version: '6.0.47',
+        },
+      },
+    })
+
+    await expect(testDatasource('ds-1')).resolves.toEqual({
+      ok: true,
+      message: 'zabbix connection succeeded',
+      version: '6.0.47',
+    })
   })
 })

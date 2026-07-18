@@ -40,9 +40,10 @@ class PermissionCodesTest {
             "work-record:market:install",
             "work-record:approval:act",
             "work-record:sla:manage",
+            "datasource:ingest",
             "asset:write",
             "asset:import")
-        .hasSize(53);
+        .hasSize(54);
   }
 
   @Test
@@ -74,7 +75,7 @@ class PermissionCodesTest {
   @Test
   void legacyPermissionsAreComplete() {
     assertThat(PermissionCodes.LEGACY_AIOPS_PERMISSIONS)
-        .contains("asset:read", "asset:write", "asset:import")
-        .hasSize(17);
+        .contains("datasource:ingest", "asset:read", "asset:write", "asset:import")
+        .hasSize(18);
   }
 }

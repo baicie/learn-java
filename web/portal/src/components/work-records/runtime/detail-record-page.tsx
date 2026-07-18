@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate, useParams } from '@tanstack/react-router'
+import { useAuthorization } from '@/auth/use-authorization'
 import { useTranslation } from 'react-i18next'
 import { fetchRecordUserNames } from '@/api/work-records/list'
 import {
@@ -20,6 +21,7 @@ import { RecordExtensionPanel } from './record-extension-panel'
 import { RecordReadonlyView } from './record-readonly-view'
 
 export function DetailRecordPage() {
+  const principal = useAuthorization()
   const navigate = useNavigate()
   const { recordId } = useParams({ strict: false }) as { recordId: string }
   const { t } = useTranslation()
@@ -140,7 +142,10 @@ export function DetailRecordPage() {
         fields={fields}
         dictOptions={dictionaries.items}
         customData={parseCustomData(recordQuery.data)}
-        canEdit={recordQuery.data.status !== 'archived'}
+        canEdit={
+          recordQuery.data.status !== 'archived' &&
+          Boolean(principal?.permissions.includes('work-record:write'))
+        }
         history={history}
         historyLoading={historyQuery.isLoading}
         historyError={historyQuery.error as Error | null}

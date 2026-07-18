@@ -5,7 +5,7 @@ status: accepted
 phase: phase-1
 owner: ai
 created: 2026-07-17
-updated: 2026-07-17
+updated: 2026-07-18
 related:
   - modules/aiops-integration/src/main/java/io/aegisops/integration/api/OperationsIngestController.java
   - apps/aiops-server/src/main/resources/db/migration/V0040__init_service_catalog_and_ingestion.sql
@@ -13,7 +13,7 @@ related:
 
 # 多来源可观测与变更接入 API
 
-三个接入接口均位于受保护的 `/api/**` 空间，使用当前 JWT 中的 `tenant_id`，并校验路径中的 DataSource 属于同一租户且类型匹配。客户端不能提交租户 ID。全局请求体上限由 `aiops.web.request.max-body-bytes` 控制，默认 2 MiB。
+三个接入接口均位于受保护的 `/api/**` 空间，要求 `datasource:ingest` 权限，使用当前 JWT 中的 `tenant_id`，并校验路径中的 DataSource 属于同一租户且类型匹配。客户端不能提交租户 ID。全局请求体上限由 `aiops.web.request.max-body-bytes` 控制，默认 2 MiB。
 
 | 方法 | 路径                                                     | DataSource 类型                          | 用途                                       |
 | ---- | -------------------------------------------------------- | ---------------------------------------- | ------------------------------------------ |

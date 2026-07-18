@@ -216,15 +216,17 @@ export function WorkRecordTemplatesPage() {
                       <FileClock className='mr-1 size-4' />
                       版本
                     </Button>
-                    <Button variant='outline' size='sm' asChild>
-                      <Link
-                        to='/work-records/templates/$templateId/designer'
-                        params={{ templateId: template.id }}
-                      >
-                        <Settings2 className='mr-1 size-4' />
-                        设计
-                      </Link>
-                    </Button>
+                    <PermissionGate anyOf={['work-record:template:write']}>
+                      <Button variant='outline' size='sm' asChild>
+                        <Link
+                          to='/work-records/templates/$templateId/designer'
+                          params={{ templateId: template.id }}
+                        >
+                          <Settings2 className='mr-1 size-4' />
+                          设计
+                        </Link>
+                      </Button>
+                    </PermissionGate>
                     <PermissionGate anyOf={['work-record:template:write']}>
                       {!template.isDefault &&
                       template.enabled &&

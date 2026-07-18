@@ -56,6 +56,58 @@ class PermissionNormalizerTest {
   }
 
   @Test
+  void should_include_transitive_dependencies() {
+    PermissionDefinitionRepository repo = Mockito.mock(PermissionDefinitionRepository.class);
+    Mockito.when(repo.listAll())
+        .thenReturn(
+            List.of(
+                def("work-record:read:self", "work-record", PermissionRisk.NORMAL, Set.of()),
+                def(
+                    "work-record:ai:generate",
+                    "work-record",
+                    PermissionRisk.HIGH,
+                    Set.of("work-record:read:self")),
+                def(
+                    "work-record:ai:review",
+                    "work-record",
+                    PermissionRisk.SENSITIVE,
+                    Set.of("work-record:ai:generate"))));
+    PermissionNormalizer normalizer = new PermissionNormalizer(repo);
+
+    var result = normalizer.normalize(Set.of("work-record:ai:review"));
+
+    assertThat(result.permissions())
+        .containsExactlyInAnyOrder(
+            "work-record:read:self", "work-record:ai:generate", "work-record:ai:review");
+  }
+
+  @Test
+  void should_reject_disabled_transitive_dependency() {
+    PermissionDefinitionRepository repo = Mockito.mock(PermissionDefinitionRepository.class);
+    Mockito.when(repo.listAll())
+        .thenReturn(
+            List.of(
+                new PermissionDefinition(
+                    "work-record:read:self",
+                    "work-record",
+                    "read",
+                    "",
+                    PermissionRisk.NORMAL,
+                    Set.of(),
+                    0,
+                    false),
+                def(
+                    "work-record:ai:generate",
+                    "work-record",
+                    PermissionRisk.HIGH,
+                    Set.of("work-record:read:self"))));
+    PermissionNormalizer normalizer = new PermissionNormalizer(repo);
+
+    assertThatThrownBy(() -> normalizer.normalize(Set.of("work-record:ai:generate")))
+        .isInstanceOf(IamDomainException.class);
+  }
+
+  @Test
   void should_reject_unknown_permissions() {
     PermissionDefinitionRepository repo = Mockito.mock(PermissionDefinitionRepository.class);
     Mockito.when(repo.listAll())

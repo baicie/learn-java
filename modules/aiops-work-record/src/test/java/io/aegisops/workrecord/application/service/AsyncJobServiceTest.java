@@ -11,6 +11,7 @@ import io.aegisops.common.exception.ConflictException;
 import io.aegisops.common.exception.ResourceNotFoundException;
 import io.aegisops.common.outbox.OutboxMessage;
 import io.aegisops.common.outbox.OutboxWriter;
+import io.aegisops.security.UserPrincipal;
 import io.aegisops.workrecord.application.command.AsyncJobQuery;
 import io.aegisops.workrecord.application.command.CreateAsyncJobCommand;
 import io.aegisops.workrecord.application.port.AsyncJobRepository;
@@ -22,7 +23,9 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 class AsyncJobServiceTest {
@@ -80,7 +83,17 @@ class AsyncJobServiceTest {
     when(repository.cancelQueued("tenant-1", "job-1", OffsetDateTime.parse("2026-07-14T10:00Z")))
         .thenReturn(Optional.of(cancelled));
 
-    assertThat(service.cancel("tenant-1", "job-1", "user-1", false).status())
+    assertThat(
+            service
+                .cancel(
+                    "tenant-1",
+                    "job-1",
+                    principal(
+                        Set.of(
+                            "work-record:read:self",
+                            "work-record:export",
+                            "work-record:export:async")))
+                .status())
         .isEqualTo(AsyncJobStatus.CANCELLED);
   }
 
@@ -89,16 +102,65 @@ class AsyncJobServiceTest {
     when(repository.findById("tenant-1", "job-1"))
         .thenReturn(Optional.of(job(AsyncJobStatus.SUCCEEDED)));
 
-    assertThatThrownBy(() -> service.cancel("tenant-1", "job-1", "user-1", false))
+    assertThatThrownBy(
+            () ->
+                service.cancel(
+                    "tenant-1",
+                    "job-1",
+                    principal(
+                        Set.of(
+                            "work-record:read:self",
+                            "work-record:export",
+                            "work-record:export:async"))))
         .isInstanceOf(ConflictException.class);
   }
 
+  @Test
+  void readerCannotCancelExportJob() {
+    when(repository.findById("tenant-1", "job-1"))
+        .thenReturn(Optional.of(job(AsyncJobStatus.QUEUED)));
+
+    assertThatThrownBy(
+            () -> service.cancel("tenant-1", "job-1", principal(Set.of("work-record:read:self"))))
+        .isInstanceOf(org.springframework.security.access.AccessDeniedException.class);
+  }
+
+  @Test
+  void unsupportedJobTypeFailsClosed() {
+    when(repository.findById("tenant-1", "job-1"))
+        .thenReturn(Optional.of(job(AsyncJobStatus.QUEUED, AsyncJobType.AI_SUMMARY)));
+
+    assertThatThrownBy(
+            () ->
+                service.cancel(
+                    "tenant-1",
+                    "job-1",
+                    principal(
+                        Set.of(
+                            "work-record:read:self",
+                            "work-record:export",
+                            "work-record:export:async"))))
+        .isInstanceOf(org.springframework.security.access.AccessDeniedException.class);
+  }
+
+  private static UserPrincipal principal(Set<String> permissions) {
+    return new UserPrincipal(
+        new UserPrincipal.Identity("user-1", "tenant-1", "alice", "Alice"),
+        Set.of(),
+        permissions,
+        Map.of());
+  }
+
   private static AsyncJob job(AsyncJobStatus status) {
+    return job(status, AsyncJobType.EXCEL_EXPORT);
+  }
+
+  private static AsyncJob job(AsyncJobStatus status, AsyncJobType type) {
     OffsetDateTime now = OffsetDateTime.parse("2026-07-14T09:00Z");
     return new AsyncJob(
         "job-1",
         "tenant-1",
-        AsyncJobType.EXCEL_EXPORT,
+        type,
         status,
         "user-1",
         "{}",

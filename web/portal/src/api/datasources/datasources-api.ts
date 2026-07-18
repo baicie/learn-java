@@ -44,7 +44,7 @@ export async function testDatasource(id: string) {
   const { data } = await apiClient.post(`/api/datasources/${id}/test`)
   return apiResponseSchema(
     z.object({
-      success: z.boolean(),
+      ok: z.boolean(),
       message: z.string(),
       version: z.string().nullish(),
     })

@@ -5,7 +5,7 @@ import { WorkRecordDesigner } from '@/pages/work-records/designer'
 export const Route = createFileRoute(
   '/_authenticated/work-records/templates/$templateId/designer'
 )({
-  beforeLoad: () => requireAnyPermission(['work-record:template:read']),
+  beforeLoad: () => requireAnyPermission(['work-record:template:write']),
   component: Component,
 })
 

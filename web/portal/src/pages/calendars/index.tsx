@@ -49,6 +49,7 @@ import { useConfirm } from '@/components/feedback/confirm-provider'
 import { PermissionGate } from '@/components/permission-gate'
 
 const WRITE_PERMISSION = 'platform:calendar:write'
+const IMPORT_PERMISSION = 'platform:calendar:import'
 
 function monthRange(year: number, month: number) {
   const start = `${year}-${String(month).padStart(2, '0')}-01`
@@ -424,7 +425,7 @@ ${year}-01-01,HOLIDAY,false,元旦,
                 </Button>
               </PermissionGate>
               {selectedCalendar ? (
-                <PermissionGate any={[WRITE_PERMISSION]}>
+                <PermissionGate any={[IMPORT_PERMISSION]}>
                   <Button
                     size='sm'
                     variant='outline'

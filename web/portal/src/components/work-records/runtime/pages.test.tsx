@@ -3,6 +3,7 @@ import { i18n } from '@/i18n'
 import { I18nextProvider } from 'react-i18next'
 import { describe, expect, it, vi } from 'vitest'
 import { render } from 'vitest-browser-react'
+import { useAuthStore } from '@/stores/auth-store'
 import { ConfirmProvider } from '@/components/feedback/confirm-provider'
 import { DetailRecordPage } from './detail-record-page'
 import { EditRecordPage } from './edit-record-page'
@@ -186,6 +187,15 @@ describe('record runtime pages', () => {
   })
 
   it('detail record page renders readonly view', async () => {
+    useAuthStore.getState().auth.setPrincipal({
+      userId: 'u1',
+      tenantId: 't1',
+      username: 'u1',
+      displayName: 'U1',
+      roles: [],
+      permissions: ['work-record:read:self'],
+      dataScopes: {},
+    })
     const screen = await renderWithClient(<DetailRecordPage />)
     await expect
       .element(screen.getByRole('heading', { name: '日报' }))
@@ -197,5 +207,8 @@ describe('record runtime pages', () => {
     await expect.element(screen.getByText('张三').first()).toBeVisible()
     await expect.element(screen.getByText('tpl1')).not.toBeInTheDocument()
     await expect.element(screen.getByText('u1')).not.toBeInTheDocument()
+    await expect
+      .element(screen.getByRole('button', { name: '编辑' }))
+      .not.toBeInTheDocument()
   })
 })
