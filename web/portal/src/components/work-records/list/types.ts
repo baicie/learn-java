@@ -128,7 +128,7 @@ export function buildEmptyListQuery(): ListQueryState {
     page: 1,
     pageSize: 30,
     quickView: 'all',
-    workdayCount: 0,
+    workdayCount: 5,
     templateId: '',
     templateVersionId: '',
     statuses: [],
