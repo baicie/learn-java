@@ -46,6 +46,7 @@ deploy/
 │     └─ test_offline_values.py
 │
 ├─ docker-compose.app.yml           # 腾讯云 VM 部署用的 compose（postgres + server + agent + worker + runner）
+├─ docker-compose.zabbix.yml        # 腾讯云 VM 可选 Zabbix 测试环境（Web 端口 8083）
 │
 ├─ tests/                           # 跨 helm chart 与 dockerfile 的 Python 测试
 │  └─ test_deploy_scripts.py        # 校验 deploy 脚本、镜像清单、Dockerfile 行为
@@ -123,3 +124,12 @@ cat deploy/offline/images.txt
 - `deploy/` 不参与 `docker compose up`、不承担本地开发依赖
 - `infra/` 不参与 Helm 渲染、不出现在生产镜像中
 - 修改本目录下任何文件，PR 描述必须显式列出影响的镜像 / chart 版本
+
+## 手动部署 Zabbix
+
+在 GitHub Actions 中运行 `Deploy Component`，部署目标选择 `zabbix`。工作流复用主部署的
+`aegisops-prod` 环境与腾讯云 VM 密钥，首次执行会在服务器生成
+`~/workspace/aegisops/deploy/.env.zabbix`，随后启动独立的 Zabbix Compose 项目。
+
+Web 地址为 `http://<PERF_VM_HOST>:8083`。首次登录使用 Zabbix 默认账号后应立即修改密码；
+服务器安全组应仅向可信来源开放 8083，外部 Agent 需要接入时再开放 10051。
