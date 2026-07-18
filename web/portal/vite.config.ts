@@ -23,6 +23,7 @@ export default defineConfig({
   },
   optimizeDeps: {
     exclude: ['fsevents'],
+    include: ['@radix-ui/react-switch'],
   },
   server: {
     proxy: {
