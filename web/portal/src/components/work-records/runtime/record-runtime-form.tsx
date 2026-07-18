@@ -16,6 +16,7 @@ import {
   FormErrorSummary,
   FormFieldShell,
 } from '@/components/form/form-field-shell'
+import type { WorkRecordUserOption } from '../list/types'
 import { DynamicFieldControl } from './dynamic-field-control'
 import { hasMeaningfulCustomData, setCustomValue, statusLabel } from './schema'
 import {
@@ -35,6 +36,7 @@ type RecordRuntimeFormProps = {
   templates: WorkRecordTemplate[]
   fields: WorkRecordField[]
   dictOptions: RuntimeDictOptions
+  userOptions?: WorkRecordUserOption[]
   value: WorkRecordRuntimeFormValue
   errors: Record<string, string>
   dirty: boolean
@@ -56,6 +58,7 @@ export function RecordRuntimeForm({
   templates,
   fields,
   dictOptions,
+  userOptions = [],
   value,
   errors,
   dirty,
@@ -166,14 +169,31 @@ export function RecordRuntimeForm({
 
               <FormFieldShell id='ownerId' label={t('workRecords.field.owner')}>
                 {(controlProps) => (
-                  <Input
-                    {...controlProps}
-                    placeholder={t('workRecords.form.ownerPlaceholder')}
-                    value={value.ownerId}
-                    onChange={(event) =>
-                      onChange({ ...value, ownerId: event.target.value })
+                  <Select
+                    value={value.ownerId || 'none'}
+                    onValueChange={(ownerId) =>
+                      onChange({
+                        ...value,
+                        ownerId: ownerId === 'none' ? '' : ownerId,
+                      })
                     }
-                  />
+                  >
+                    <SelectTrigger {...controlProps} className='w-full'>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        <SelectItem value='none'>
+                          {t('workRecords.form.ownerPlaceholder')}
+                        </SelectItem>
+                        {userOptions.map((user) => (
+                          <SelectItem key={user.id} value={user.id}>
+                            {user.label}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
                 )}
               </FormFieldShell>
 
@@ -228,6 +248,7 @@ export function RecordRuntimeForm({
                       field={field}
                       value={value.customData[field.fieldCode]}
                       dictOptions={dictOptions}
+                      mode={mode}
                       controlProps={controlProps}
                       onChange={(fieldValue) =>
                         onChange(

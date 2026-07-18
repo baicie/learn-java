@@ -18,6 +18,7 @@ import type {
 type RecordReadonlyViewProps = {
   record: WorkRecord
   template?: WorkRecordTemplate
+  userNames?: Record<string, string>
   fields: WorkRecordField[]
   dictOptions: RuntimeDictOptions
   customData: Record<string, unknown>
@@ -32,6 +33,7 @@ type RecordReadonlyViewProps = {
 export function RecordReadonlyView({
   record,
   template,
+  userNames = {},
   fields,
   dictOptions,
   customData,
@@ -93,11 +95,15 @@ export function RecordReadonlyView({
           />
           <Info
             label={t('workRecords.field.owner')}
-            value={record.ownerId ?? '-'}
+            value={
+              record.ownerId
+                ? (userNames[record.ownerId] ?? record.ownerId)
+                : '-'
+            }
           />
           <Info
             label={t('workRecords.field.creator')}
-            value={record.creatorId}
+            value={userNames[record.creatorId] ?? record.creatorId}
           />
           <Info
             label={t('workRecords.field.recordTime')}

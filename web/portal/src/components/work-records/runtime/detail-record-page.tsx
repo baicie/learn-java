@@ -2,12 +2,14 @@ import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate, useParams } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
+import { fetchRecordUserNames } from '@/api/work-records/list'
 import {
   getWorkRecord,
   listTemplateVersionFields,
   listWorkRecordHistory,
   parseCustomData,
 } from '@/api/work-records/records'
+import { listTemplates } from '@/api/work-records/templates'
 import { useDictionaryItemsMap } from '@/hooks/dictionaries/dictionary-query'
 import {
   EmptyState,
@@ -48,6 +50,22 @@ export function DetailRecordPage() {
     enabled: Boolean(recordId),
   })
 
+  const templatesQuery = useQuery({
+    queryKey: ['work-record-templates'],
+    queryFn: listTemplates,
+  })
+
+  const userIds = recordQuery.data
+    ? [recordQuery.data.creatorId, recordQuery.data.ownerId].filter(
+        (value): value is string => Boolean(value)
+      )
+    : []
+  const userNamesQuery = useQuery({
+    queryKey: ['work-record-user-names', userIds],
+    queryFn: () => fetchRecordUserNames(userIds),
+    enabled: userIds.length > 0,
+  })
+
   const fields = useMemo(() => fieldsQuery.data ?? [], [fieldsQuery.data])
 
   const dictCodes = useMemo(
@@ -65,12 +83,22 @@ export function DetailRecordPage() {
 
   const dictionaries = useDictionaryItemsMap(dictCodes, true)
 
-  if (recordQuery.isLoading || fieldsQuery.isLoading || dictionaries.loading) {
+  if (
+    recordQuery.isLoading ||
+    fieldsQuery.isLoading ||
+    templatesQuery.isLoading ||
+    userNamesQuery.isLoading ||
+    dictionaries.loading
+  ) {
     return <PageLoadingState />
   }
 
   const blockingError =
-    recordQuery.error ?? fieldsQuery.error ?? dictionaries.error
+    recordQuery.error ??
+    fieldsQuery.error ??
+    templatesQuery.error ??
+    userNamesQuery.error ??
+    dictionaries.error
 
   if (blockingError && !recordQuery.data) {
     return (
@@ -81,6 +109,8 @@ export function DetailRecordPage() {
             void Promise.all([
               recordQuery.refetch(),
               fieldsQuery.refetch(),
+              templatesQuery.refetch(),
+              userNamesQuery.refetch(),
               dictionaries.refetch(),
             ])
           }}
@@ -103,6 +133,10 @@ export function DetailRecordPage() {
     <>
       <RecordReadonlyView
         record={recordQuery.data}
+        template={templatesQuery.data?.find(
+          (template) => template.id === recordQuery.data?.templateId
+        )}
+        userNames={userNamesQuery.data ?? {}}
         fields={fields}
         dictOptions={dictionaries.items}
         customData={parseCustomData(recordQuery.data)}

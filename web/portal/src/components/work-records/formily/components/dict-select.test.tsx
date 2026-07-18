@@ -78,4 +78,24 @@ describe('FormilyDictSelect', () => {
     )
     await expect.element(screen.getByText('中（已禁用）')).toBeVisible()
   })
+
+  it('hides disabled values that are not selected', async () => {
+    const screen = await render(
+      wrap(<WorkRecordSchemaField schema={schema} />, {
+        mode: 'create',
+        dictOptions: {
+          priority: [
+            { value: 'P1', label: '高', enabled: true },
+            { value: 'P2', label: '中', enabled: false },
+          ],
+        },
+      })
+    )
+
+    await screen.getByRole('combobox').click()
+    await expect.element(screen.getByText('高')).toBeVisible()
+    await expect
+      .element(screen.getByText('中（已禁用）'))
+      .not.toBeInTheDocument()
+  })
 })
