@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { spawn } from 'node:child_process'
+import { spawn, spawnSync } from 'node:child_process'
 import { test } from 'node:test'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -43,8 +43,11 @@ test('frontend command remains alive after Vite becomes ready', async (context) 
   context.after(() => {
     if (!child.pid) return
     try {
-      if (process.platform === 'win32') child.kill()
-      else process.kill(-child.pid, 'SIGTERM')
+      if (process.platform === 'win32') {
+        spawnSync('taskkill', ['/pid', String(child.pid), '/t', '/f'], {
+          stdio: 'ignore',
+        })
+      } else process.kill(-child.pid, 'SIGTERM')
     } catch {
       // The process group may already be gone.
     }
