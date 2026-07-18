@@ -10,6 +10,12 @@ import {
 } from 'lucide-react'
 import { assetTypeLabels, sourceLabels } from '@/lib/assets/asset'
 import { useArchiveAsset, useAssetDetail } from '@/hooks/assets/use-assets'
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -234,28 +240,32 @@ export function AssetDetailPage({ assetId }: { assetId: string }) {
               </CardHeader>
               <CardContent>
                 {sources.length ? (
-                  <div className='grid gap-3'>
+                  <Accordion type='multiple'>
                     {sources.map((source) => (
-                      <div key={source.id} className='rounded-md border p-3'>
-                        <div className='flex items-center justify-between'>
-                          <Badge variant='outline'>
-                            {sourceLabels[source.sourceType] ??
-                              source.sourceType}
-                          </Badge>
-                          <span className='text-xs text-muted-foreground'>
-                            {source.syncStatus}
+                      <AccordionItem key={source.id} value={source.id}>
+                        <AccordionTrigger>
+                          <span className='flex flex-wrap items-center gap-2'>
+                            <Badge variant='outline'>
+                              {sourceLabels[source.sourceType] ??
+                                source.sourceType}
+                            </Badge>
+                            <span className='text-xs text-muted-foreground'>
+                              {source.syncStatus}
+                            </span>
                           </span>
-                        </div>
-                        <p className='mt-2 font-mono text-xs break-all'>
-                          {source.externalId}
-                        </p>
-                        <p className='mt-2 text-xs text-muted-foreground'>
-                          最近发现{' '}
-                          {new Date(source.lastSeenAt).toLocaleString()}
-                        </p>
-                      </div>
+                        </AccordionTrigger>
+                        <AccordionContent className='grid gap-2'>
+                          <p className='font-mono text-xs break-all'>
+                            {source.externalId}
+                          </p>
+                          <p className='text-xs text-muted-foreground'>
+                            最近发现{' '}
+                            {new Date(source.lastSeenAt).toLocaleString()}
+                          </p>
+                        </AccordionContent>
+                      </AccordionItem>
                     ))}
-                  </div>
+                  </Accordion>
                 ) : (
                   <EmptyState compact title='暂无来源' />
                 )}
