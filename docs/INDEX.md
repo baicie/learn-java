@@ -24,202 +24,204 @@ Do not edit it manually.
 
 ## operation
 
-| Title                   | Status   | Phase   | Updated    | Path                                                          |
-| ----------------------- | -------- | ------- | ---------- | ------------------------------------------------------------- |
-| Automation Safety Rules | accepted | global  | 2026-06-30 | [docs/automation-safety.md](automation-safety.md)             |
-| Agent Skill 管理        | accepted | global  | 2026-07-14 | [docs/operations/agent-skills.md](operations/agent-skills.md) |
-| Git 工作流              | accepted | phase-8 | 2026-07-17 | [docs/operations/git-workflow.md](operations/git-workflow.md) |
-| 项目文档导航            | accepted | global  | 2026-07-14 | [docs/README.md](README.md)                                   |
+| Title | Status | Phase | Updated | Path |
+|---|---|---|---|---|
+| Automation Safety Rules | accepted | global | 2026-06-30 | [docs/automation-safety.md](automation-safety.md) |
+| Agent Skill 管理 | accepted | global | 2026-07-14 | [docs/operations/agent-skills.md](operations/agent-skills.md) |
+| Git 工作流 | accepted | phase-8 | 2026-07-17 | [docs/operations/git-workflow.md](operations/git-workflow.md) |
+| 项目文档导航 | accepted | global | 2026-07-14 | [docs/README.md](README.md) |
 
 ## adr
 
-| Title                                                          | Status   | Phase       | Updated    | Path                                                                                                              |
-| -------------------------------------------------------------- | -------- | ----------- | ---------- | ----------------------------------------------------------------------------------------------------------------- |
-| aiops-agent（Python LangGraph 运行时）的边界与可见性           | accepted | global      | 2026-06-30 | [docs/adr/0003-aiops-agent-boundary.md](adr/0003-aiops-agent-boundary.md)                                         |
-| 工作记录表 schema 命名（public vs work_record）阶段性决议      | accepted | work-record | 2026-07-08 | [docs/adr/0004-work-record-schema-public-vs-work-record.md](adr/0004-work-record-schema-public-vs-work-record.md) |
-| 工作记录模板设计器采用 @formily/core，禁用 Antd/Fusion setters | accepted | work-record | 2026-07-14 | [docs/adr/0005-work-record-designer-formily-core-only.md](adr/0005-work-record-designer-formily-core-only.md)     |
-| portal 测试栈选型（vitest browser + Playwright e2e）           | accepted | work-record | 2026-07-08 | [docs/adr/0006-portal-vitest-browser-and-playwright-e2e.md](adr/0006-portal-vitest-browser-and-playwright-e2e.md) |
-| Portal 采用面向路由的源码分层                                  | accepted | phase-21    | 2026-07-14 | [docs/adr/0007-portal-route-oriented-source-layout.md](adr/0007-portal-route-oriented-source-layout.md)           |
+| Title | Status | Phase | Updated | Path |
+|---|---|---|---|---|
+| aiops-agent（Python LangGraph 运行时）的边界与可见性 | accepted | global | 2026-06-30 | [docs/adr/0003-aiops-agent-boundary.md](adr/0003-aiops-agent-boundary.md) |
+| 工作记录表 schema 命名（public vs work_record）阶段性决议 | accepted | work-record | 2026-07-08 | [docs/adr/0004-work-record-schema-public-vs-work-record.md](adr/0004-work-record-schema-public-vs-work-record.md) |
+| 工作记录模板设计器采用 @formily/core，禁用 Antd/Fusion setters | accepted | work-record | 2026-07-14 | [docs/adr/0005-work-record-designer-formily-core-only.md](adr/0005-work-record-designer-formily-core-only.md) |
+| portal 测试栈选型（vitest browser + Playwright e2e） | accepted | work-record | 2026-07-08 | [docs/adr/0006-portal-vitest-browser-and-playwright-e2e.md](adr/0006-portal-vitest-browser-and-playwright-e2e.md) |
+| Portal 采用面向路由的源码分层 | accepted | phase-21 | 2026-07-14 | [docs/adr/0007-portal-route-oriented-source-layout.md](adr/0007-portal-route-oriented-source-layout.md) |
 
 ## ai
 
-| Title             | Status   | Phase  | Updated    | Path                                          |
-| ----------------- | -------- | ------ | ---------- | --------------------------------------------- |
-| AI Agent Design   | accepted | global | 2026-06-30 | [docs/ai-agent-design.md](ai-agent-design.md) |
-| RCA Engine Design | accepted | global | 2026-06-30 | [docs/rca-design.md](rca-design.md)           |
+| Title | Status | Phase | Updated | Path |
+|---|---|---|---|---|
+| AI Agent Design | accepted | global | 2026-06-30 | [docs/ai-agent-design.md](ai-agent-design.md) |
+| RCA Engine Design | accepted | global | 2026-06-30 | [docs/rca-design.md](rca-design.md) |
 
 ## api
 
-| Title                            | Status   | Phase          | Updated    | Path                                                                |
-| -------------------------------- | -------- | -------------- | ---------- | ------------------------------------------------------------------- |
-| 当前账户 API                     | accepted | phase-21       | 2026-07-14 | [docs/api/account.md](api/account.md)                               |
-| 资源中心 API                     | accepted | phase-1        | 2026-07-16 | [docs/api/assets.md](api/assets.md)                                 |
-| 多来源可观测与变更接入 API       | accepted | phase-1        | 2026-07-18 | [docs/api/operations-ingestion.md](api/operations-ingestion.md)     |
-| 平台用户与权限管理 API           | accepted | work-record-20 | 2026-07-14 | [docs/api/platform-iam.md](api/platform-iam.md)                     |
-| 工作记录 Phase 20 异步与协作 API | accepted | work-record-20 | 2026-07-14 | [docs/api/work-record-phase20.md](api/work-record-phase20.md)       |
-| 工作记录模板 API                 | accepted | phase-21       | 2026-07-15 | [docs/api/work-record-templates.md](api/work-record-templates.md)   |
-| 工作记录 API 契约                | draft    | work-record    | 2026-07-09 | [docs/record/api-contract.md](record/api-contract.md)               |
-| 工作记录权限契约                 | draft    | work-record    | 2026-07-09 | [docs/record/permission-contract.md](record/permission-contract.md) |
+| Title | Status | Phase | Updated | Path |
+|---|---|---|---|---|
+| 当前账户 API | accepted | phase-21 | 2026-07-14 | [docs/api/account.md](api/account.md) |
+| 资源中心 API | accepted | phase-1 | 2026-07-16 | [docs/api/assets.md](api/assets.md) |
+| 数据源 API | accepted | phase-1 | 2026-07-18 | [docs/api/datasources.md](api/datasources.md) |
+| 多来源可观测与变更接入 API | accepted | phase-1 | 2026-07-18 | [docs/api/operations-ingestion.md](api/operations-ingestion.md) |
+| 平台用户与权限管理 API | accepted | work-record-20 | 2026-07-18 | [docs/api/platform-iam.md](api/platform-iam.md) |
+| 工作记录 Phase 20 异步与协作 API | accepted | work-record-20 | 2026-07-18 | [docs/api/work-record-phase20.md](api/work-record-phase20.md) |
+| 工作记录模板 API | accepted | phase-21 | 2026-07-15 | [docs/api/work-record-templates.md](api/work-record-templates.md) |
+| 工作记录 API 契约 | draft | work-record | 2026-07-09 | [docs/record/api-contract.md](record/api-contract.md) |
+| 工作记录权限契约 | draft | work-record | 2026-07-09 | [docs/record/permission-contract.md](record/permission-contract.md) |
 
 ## architecture
 
-| Title                                   | Status     | Phase  | Updated    | Path                                                                                          |
-| --------------------------------------- | ---------- | ------ | ---------- | --------------------------------------------------------------------------------------------- |
-| Architecture Overview                   | accepted   | global | 2026-06-30 | [docs/architecture.md](architecture.md)                                                       |
-| Phase Z0 Module Boundaries (Historical) | deprecated | z0     | 2026-06-30 | [docs/architecture/phase-z0-module-boundaries.md](architecture/phase-z0-module-boundaries.md) |
+| Title | Status | Phase | Updated | Path |
+|---|---|---|---|---|
+| Architecture Overview | accepted | global | 2026-06-30 | [docs/architecture.md](architecture.md) |
+| Phase Z0 Module Boundaries (Historical) | deprecated | z0 | 2026-06-30 | [docs/architecture/phase-z0-module-boundaries.md](architecture/phase-z0-module-boundaries.md) |
 
 ## database
 
-| Title                | Status   | Phase       | Updated    | Path                                                        |
-| -------------------- | -------- | ----------- | ---------- | ----------------------------------------------------------- |
-| Core Domain Models   | accepted | global      | 2026-07-17 | [docs/data-model.md](data-model.md)                         |
-| 工作记录 Schema 契约 | draft    | work-record | 2026-07-09 | [docs/record/schema-contract.md](record/schema-contract.md) |
+| Title | Status | Phase | Updated | Path |
+|---|---|---|---|---|
+| Core Domain Models | accepted | global | 2026-07-17 | [docs/data-model.md](data-model.md) |
+| 工作记录 Schema 契约 | draft | work-record | 2026-07-09 | [docs/record/schema-contract.md](record/schema-contract.md) |
 
 ## design
 
-| Title                                                            | Status     | Phase       | Updated    | Path                                                                                                                                                                                    |
-| ---------------------------------------------------------------- | ---------- | ----------- | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| AegisOps Offline Package                                         | accepted   | global      | 2026-06-30 | [docs/deployment/offline-package.md](deployment/offline-package.md)                                                                                                                     |
-| AegisOps Private Deployment                                      | accepted   | global      | 2026-06-30 | [docs/deployment/private-deployment.md](deployment/private-deployment.md)                                                                                                               |
-| Production Security Checklist                                    | accepted   | global      | 2026-06-30 | [docs/deployment/production-security-checklist.md](deployment/production-security-checklist.md)                                                                                         |
-| 统一资源来源与实体解析实施计划                                   | accepted   | phase-1     | 2026-07-16 | [docs/designs/phase-1/2026-07-16-resource-source-and-entity-resolution-implementation-plan.md](designs/phase-1/2026-07-16-resource-source-and-entity-resolution-implementation-plan.md) |
-| 多来源资源与证据后续实施计划                                     | accepted   | phase-1     | 2026-07-17 | [docs/designs/phase-1/2026-07-17-resource-intelligence-followups.md](designs/phase-1/2026-07-17-resource-intelligence-followups.md)                                                     |
-| Portal 源码归位与工作记录闭环实施计划                            | accepted   | phase-21    | 2026-07-14 | [docs/designs/phase-21/2026-07-14-portal-source-layout-and-work-record-completion.md](designs/phase-21/2026-07-14-portal-source-layout-and-work-record-completion.md)                   |
-| Zabbix Webhook Integration                                       | accepted   | global      | 2026-06-30 | [docs/integrations/zabbix-webhook.md](integrations/zabbix-webhook.md)                                                                                                                   |
-| Phase2：Incident 聚合与事故中心                                  | accepted   | global      | 2026-06-30 | [docs/mvp/design/phase2.md](mvp/design/phase2.md)                                                                                                                                       |
-| Phase3：RCA 规则引擎与证据链                                     | accepted   | global      | 2026-06-30 | [docs/mvp/design/phase3.md](mvp/design/phase3.md)                                                                                                                                       |
-| Phase4.1：Agent Context Contract & Safety Boundary               | accepted   | global      | 2026-06-30 | [docs/mvp/design/phase4.1.md](mvp/design/phase4.1.md)                                                                                                                                   |
-| Phase4.2：LangGraph Agent 可选真实 LLM Provider                  | accepted   | global      | 2026-06-30 | [docs/mvp/design/phase4.2.md](mvp/design/phase4.2.md)                                                                                                                                   |
-| Phase4.3：Evidence Tools 接入 Metrics / Logs / Changes           | accepted   | global      | 2026-06-30 | [docs/mvp/design/phase4.3.md](mvp/design/phase4.3.md)                                                                                                                                   |
-| Phase4.4：Agent Run Trace + Eval 可观测层                        | accepted   | global      | 2026-06-30 | [docs/mvp/design/phase4.4.md](mvp/design/phase4.4.md)                                                                                                                                   |
-| Phase4.5：jOOQ 持久层改造                                        | accepted   | global      | 2026-06-30 | [docs/mvp/design/phase4.5.md](mvp/design/phase4.5.md)                                                                                                                                   |
-| Phase4.6 jOOQ Codegen                                            | accepted   | global      | 2026-06-30 | [docs/mvp/design/phase4.6-jooq-codegen.md](mvp/design/phase4.6-jooq-codegen.md)                                                                                                         |
-| Phase4.6：jOOQ Codegen 正式化                                    | accepted   | global      | 2026-06-30 | [docs/mvp/design/phase4.6.md](mvp/design/phase4.6.md)                                                                                                                                   |
-| Phase4.7 Generated Repository Migration                          | accepted   | global      | 2026-06-30 | [docs/mvp/design/phase4.7-generated-repository-migration.md](mvp/design/phase4.7-generated-repository-migration.md)                                                                     |
-| Phase4.7：迁移 AI / RCA Repository 到 generated Tables           | accepted   | global      | 2026-06-30 | [docs/mvp/design/phase4.7.md](mvp/design/phase4.7.md)                                                                                                                                   |
-| Phase4.8 Persistence Cleanup                                     | accepted   | global      | 2026-06-30 | [docs/mvp/design/phase4.8-persistence-cleanup.md](mvp/design/phase4.8-persistence-cleanup.md)                                                                                           |
-| Phase4.8：持久层收口与 Repository 命名治理                       | accepted   | global      | 2026-06-30 | [docs/mvp/design/phase4.8.md](mvp/design/phase4.8.md)                                                                                                                                   |
-| Phase4：Python LangGraph OSS Diagnosis Agent + Java Agent Client | accepted   | global      | 2026-06-30 | [docs/mvp/design/phase4.md](mvp/design/phase4.md)                                                                                                                                       |
-| Phase5.0 Runbook Recommendation and AutomationPlan               | accepted   | global      | 2026-06-30 | [docs/mvp/design/phase5.0-runbook-automation-plan.md](mvp/design/phase5.0-runbook-automation-plan.md)                                                                                   |
-| Phase5.1 Automation Approval                                     | accepted   | global      | 2026-06-30 | [docs/mvp/design/phase5.1-automation-approval.md](mvp/design/phase5.1-automation-approval.md)                                                                                           |
-| Phase5.2 Execution Runner                                        | accepted   | global      | 2026-06-30 | [docs/mvp/design/phase5.2-execution-runner.md](mvp/design/phase5.2-execution-runner.md)                                                                                                 |
-| Phase5.3：Runner Lease / Heartbeat / Timeout / Retry / Artifact  | accepted   | global      | 2026-06-30 | [docs/mvp/design/phase5.3.md](mvp/design/phase5.3.md)                                                                                                                                   |
-| Phase5.4 Webhook Adapter                                         | accepted   | global      | 2026-06-30 | [docs/mvp/design/phase5.4-webhook-adapter.md](mvp/design/phase5.4-webhook-adapter.md)                                                                                                   |
-| Phase5.4：Webhook Adapter                                        | accepted   | global      | 2026-06-30 | [docs/mvp/design/phase5.4.md](mvp/design/phase5.4.md)                                                                                                                                   |
-| Phase5.5 Ansible Adapter                                         | accepted   | global      | 2026-06-30 | [docs/mvp/design/phase5.5-ansible-adapter.md](mvp/design/phase5.5-ansible-adapter.md)                                                                                                   |
-| Phase5.6 Ansible Sandbox Execution                               | accepted   | global      | 2026-06-30 | [docs/mvp/design/phase5.6-ansible-sandbox-execution.md](mvp/design/phase5.6-ansible-sandbox-execution.md)                                                                               |
-| Phase5.7：Ansible Live Execution with Approval Guard             | accepted   | global      | 2026-06-30 | [docs/mvp/design/phase5.7.md](mvp/design/phase5.7.md)                                                                                                                                   |
-| Phase5.8：Rollback Plan                                          | accepted   | global      | 2026-06-30 | [docs/mvp/design/phase5.9.md](mvp/design/phase5.9.md)                                                                                                                                   |
-| Phase7.0 Agent Graph Modularization                              | accepted   | global      | 2026-06-30 | [docs/mvp/design/phase7.0-agent-graph-modularization.md](mvp/design/phase7.0-agent-graph-modularization.md)                                                                             |
-| Phase7.2 Multi-Agent Collaboration                               | accepted   | global      | 2026-06-30 | [docs/mvp/design/phase7.2-multi-agent-collaboration.md](mvp/design/phase7.2-multi-agent-collaboration.md)                                                                               |
-| Phase7.3 Agent Memory                                            | accepted   | global      | 2026-06-30 | [docs/mvp/design/phase7.3-agent-memory.md](mvp/design/phase7.3-agent-memory.md)                                                                                                         |
-| Phase8.0 SaaS Multi-tenant Hardening                             | accepted   | global      | 2026-06-30 | [docs/mvp/design/phase8.0-saas-multi-tenant-hardening.md](mvp/design/phase8.0-saas-multi-tenant-hardening.md)                                                                           |
-| Phase5.8 Rollback Plan 实现说明                                  | accepted   | global      | 2026-06-30 | [docs/mvp/phase5.8-rollback-plan.md](mvp/phase5.8-rollback-plan.md)                                                                                                                     |
-| Phase5.8：Execution Report & Audit                               | accepted   | global      | 2026-06-30 | [docs/mvp/phase5.8.md](mvp/phase5.8.md)                                                                                                                                                 |
-| Phase6.0：Postmortem Report                                      | accepted   | global      | 2026-06-30 | [docs/mvp/phase6.0.md](mvp/phase6.0.md)                                                                                                                                                 |
-| Phase6.1：Incident Case Library                                  | accepted   | global      | 2026-06-30 | [docs/mvp/phase6.1.md](mvp/phase6.1.md)                                                                                                                                                 |
-| Phase6.2：Knowledge Base & Vector Retrieval                      | accepted   | global      | 2026-06-30 | [docs/mvp/phase6.2.md](mvp/phase6.2.md)                                                                                                                                                 |
-| Phase6.3：Agent Eval & Prompt Regression                         | accepted   | global      | 2026-06-30 | [docs/mvp/phase6.3.md](mvp/phase6.3.md)                                                                                                                                                 |
-| Phase7.2：Multi-Agent Collaboration                              | accepted   | global      | 2026-06-30 | [docs/mvp/phase7.2.md](mvp/phase7.2.md)                                                                                                                                                 |
-| Phase7.3：Agent Memory                                           | accepted   | global      | 2026-06-30 | [docs/mvp/phase7.3.md](mvp/phase7.3.md)                                                                                                                                                 |
-| Phase7.0：Agent Graph Modularization                             | accepted   | global      | 2026-06-30 | [docs/mvp/phase7.md](mvp/phase7.md)                                                                                                                                                     |
-| Phase8.1：Plugin System                                          | accepted   | global      | 2026-06-30 | [docs/mvp/phase8.1.md](mvp/phase8.1.md)                                                                                                                                                 |
-| Phase8.2：Private Deployment / Helm / Offline Package            | accepted   | global      | 2026-06-30 | [docs/mvp/phase8.2.md](mvp/phase8.2.md)                                                                                                                                                 |
-| AegisOps Observability                                           | accepted   | global      | 2026-06-30 | [docs/operations/observability.md](operations/observability.md)                                                                                                                         |
-| AegisOps Production Runbook                                      | accepted   | global      | 2026-06-30 | [docs/operations/runbook.md](operations/runbook.md)                                                                                                                                     |
-| Phase8.0：SaaS Multi-tenant Hardening                            | accepted   | global      | 2026-06-30 | [docs/phase8.md](phase8.md)                                                                                                                                                             |
-| Phase Z3: Zabbix Alert Aggregation Strategy                      | accepted   | global      | 2026-06-30 | [docs/scenarios/phase-z3-zabbix-incident-aggregation.md](scenarios/phase-z3-zabbix-incident-aggregation.md)                                                                             |
-| Phase Z4: Zabbix Evidence Collector                              | accepted   | global      | 2026-06-30 | [docs/scenarios/phase-z4-zabbix-evidence-collector.md](scenarios/phase-z4-zabbix-evidence-collector.md)                                                                                 |
-| Phase Z5: Evidence-aware RCA Rules                               | accepted   | global      | 2026-06-30 | [docs/scenarios/phase-z5-rca-evidence-rules.md](scenarios/phase-z5-rca-evidence-rules.md)                                                                                               |
-| Phase Z6: Evidence-based AI Diagnosis                            | accepted   | global      | 2026-06-30 | [docs/scenarios/phase-z6-ai-diagnosis-evidence.md](scenarios/phase-z6-ai-diagnosis-evidence.md)                                                                                         |
-| Phase Z7: Markdown Incident Report                               | accepted   | global      | 2026-06-30 | [docs/scenarios/phase-z7-markdown-incident-report.md](scenarios/phase-z7-markdown-incident-report.md)                                                                                   |
-| Phase Z9：Zabbix MVP 端到端验收                                  | accepted   | global      | 2026-07-17 | [docs/scenarios/phase-z9-zabbix-mvp-acceptance.md](scenarios/phase-z9-zabbix-mvp-acceptance.md)                                                                                         |
-| Scenario 01 - Zabbix Host & Service Incident Diagnosis           | accepted   | z0          | 2026-06-21 | [docs/scenarios/zabbix-host-service-incident.md](scenarios/zabbix-host-service-incident.md)                                                                                             |
-| 工作记录表单设计器详细设计（@formily/core only）                 | review     | work-record | 2026-07-08 | [docs/record/designer-design.md](record/designer-design.md)                                                                                                                             |
-| 可配置工作记录模块（终版设计 · portal-first）                    | review     | work-record | 2026-07-08 | [docs/record/index.md](record/index.md)                                                                                                                                                 |
-| 工作记录 Phase 00 产品边界与总体契约                             | review     | work-record | 2026-07-08 | [docs/record/phase-00-baseline-and-contract.md](record/phase-00-baseline-and-contract.md)                                                                                               |
-| 工作记录 Phase 01 Portal 壳、导航与国际化                        | review     | work-record | 2026-07-08 | [docs/record/phase-01-portal-i18n-and-shell.md](record/phase-01-portal-i18n-and-shell.md)                                                                                               |
-| 工作记录 Phase 02 平台字典完整设计                               | review     | work-record | 2026-07-08 | [docs/record/phase-02-platform-dictionary.md](record/phase-02-platform-dictionary.md)                                                                                                   |
-| 工作记录 Phase 02A 平台工作日历                                  | review     | work-record | 2026-07-08 | [docs/record/phase-02a-platform-calendar.md](record/phase-02a-platform-calendar.md)                                                                                                     |
-| 工作记录 Phase 03 模板与字段契约                                 | review     | work-record | 2026-07-08 | [docs/record/phase-03-work-record-template.md](record/phase-03-work-record-template.md)                                                                                                 |
-| 工作记录 Phase 04 Portal 原生模板设计器                          | review     | work-record | 2026-07-08 | [docs/record/phase-04-formily-designer.md](record/phase-04-formily-designer.md)                                                                                                         |
-| 工作记录 Phase 05 动态表单运行态                                 | review     | work-record | 2026-07-08 | [docs/record/phase-05-record-runtime.md](record/phase-05-record-runtime.md)                                                                                                             |
-| 工作记录 Phase 06 列表筛选与导出                                 | review     | work-record | 2026-07-08 | [docs/record/phase-06-record-list-export.md](record/phase-06-record-list-export.md)                                                                                                     |
-| 工作记录 Phase 07 权限审计与交付收口                             | review     | work-record | 2026-07-08 | [docs/record/phase-07-role-permission-hardening.md](record/phase-07-role-permission-hardening.md)                                                                                       |
-| AI-Ops Portal 基础重构：基线与实施总览                           | draft      | work-record | 2026-07-14 | [docs/record/formily/00-readme-基线与实施总览.md](record/formily/00-readme-基线与实施总览.md)                                                                                           |
-| Portal 清理、路由与导航完整代码                                  | draft      | work-record | 2026-07-14 | [docs/record/formily/01-portal清理与导航代码.md](record/formily/01-portal清理与导航代码.md)                                                                                             |
-| IAM 数据库、用户与 RBAC 后端完整代码                             | draft      | work-record | 2026-07-14 | [docs/record/formily/02-iam数据库后端完整代码.md](record/formily/02-iam数据库后端完整代码.md)                                                                                           |
-| 用户管理与角色权限 Portal 完整代码                               | draft      | work-record | 2026-07-14 | [docs/record/formily/03-用户与角色portal完整代码.md](record/formily/03-用户与角色portal完整代码.md)                                                                                     |
-| Formily 与 Shadcn 统一运行时完整代码                             | draft      | work-record | 2026-07-14 | [docs/record/formily/04-formily-shadcn统一运行时完整代码.md](record/formily/04-formily-shadcn统一运行时完整代码.md)                                                                     |
-| DesignerDocument、编译器与设计器 V2 完整代码                     | draft      | work-record | 2026-07-14 | [docs/record/formily/05-designer-document与设计器v2完整代码.md](record/formily/05-designer-document与设计器v2完整代码.md)                                                               |
-| Designer 后端编译、旧版本兼容与迁移代码                          | draft      | work-record | 2026-07-14 | [docs/record/formily/06-designer后端编译兼容与迁移代码.md](record/formily/06-designer后端编译兼容与迁移代码.md)                                                                         |
-| 可配置工作记录模块（终版设计 · pre-portal · 已废弃）             | deprecated | work-record | 2026-07-07 | [docs/record/2026-07-06-record-index-pre-portal.md](record/2026-07-06-record-index-pre-portal.md)                                                                                       |
-| 工作记录模块 Phase 设计与代码包（已废弃）                        | deprecated | work-record | 2026-07-07 | [docs/record/work-record-phases-design-code.md](record/work-record-phases-design-code.md)                                                                                               |
+| Title | Status | Phase | Updated | Path |
+|---|---|---|---|---|
+| AegisOps Offline Package | accepted | global | 2026-06-30 | [docs/deployment/offline-package.md](deployment/offline-package.md) |
+| AegisOps Private Deployment | accepted | global | 2026-06-30 | [docs/deployment/private-deployment.md](deployment/private-deployment.md) |
+| Production Security Checklist | accepted | global | 2026-06-30 | [docs/deployment/production-security-checklist.md](deployment/production-security-checklist.md) |
+| 统一资源来源与实体解析实施计划 | accepted | phase-1 | 2026-07-16 | [docs/designs/phase-1/2026-07-16-resource-source-and-entity-resolution-implementation-plan.md](designs/phase-1/2026-07-16-resource-source-and-entity-resolution-implementation-plan.md) |
+| 多来源资源与证据后续实施计划 | accepted | phase-1 | 2026-07-17 | [docs/designs/phase-1/2026-07-17-resource-intelligence-followups.md](designs/phase-1/2026-07-17-resource-intelligence-followups.md) |
+| Portal 源码归位与工作记录闭环实施计划 | accepted | phase-21 | 2026-07-14 | [docs/designs/phase-21/2026-07-14-portal-source-layout-and-work-record-completion.md](designs/phase-21/2026-07-14-portal-source-layout-and-work-record-completion.md) |
+| Zabbix Webhook Integration | accepted | global | 2026-06-30 | [docs/integrations/zabbix-webhook.md](integrations/zabbix-webhook.md) |
+| Phase2：Incident 聚合与事故中心 | accepted | global | 2026-06-30 | [docs/mvp/design/phase2.md](mvp/design/phase2.md) |
+| Phase3：RCA 规则引擎与证据链 | accepted | global | 2026-06-30 | [docs/mvp/design/phase3.md](mvp/design/phase3.md) |
+| Phase4.1：Agent Context Contract & Safety Boundary | accepted | global | 2026-06-30 | [docs/mvp/design/phase4.1.md](mvp/design/phase4.1.md) |
+| Phase4.2：LangGraph Agent 可选真实 LLM Provider | accepted | global | 2026-06-30 | [docs/mvp/design/phase4.2.md](mvp/design/phase4.2.md) |
+| Phase4.3：Evidence Tools 接入 Metrics / Logs / Changes | accepted | global | 2026-06-30 | [docs/mvp/design/phase4.3.md](mvp/design/phase4.3.md) |
+| Phase4.4：Agent Run Trace + Eval 可观测层 | accepted | global | 2026-06-30 | [docs/mvp/design/phase4.4.md](mvp/design/phase4.4.md) |
+| Phase4.5：jOOQ 持久层改造 | accepted | global | 2026-06-30 | [docs/mvp/design/phase4.5.md](mvp/design/phase4.5.md) |
+| Phase4.6 jOOQ Codegen | accepted | global | 2026-06-30 | [docs/mvp/design/phase4.6-jooq-codegen.md](mvp/design/phase4.6-jooq-codegen.md) |
+| Phase4.6：jOOQ Codegen 正式化 | accepted | global | 2026-06-30 | [docs/mvp/design/phase4.6.md](mvp/design/phase4.6.md) |
+| Phase4.7 Generated Repository Migration | accepted | global | 2026-06-30 | [docs/mvp/design/phase4.7-generated-repository-migration.md](mvp/design/phase4.7-generated-repository-migration.md) |
+| Phase4.7：迁移 AI / RCA Repository 到 generated Tables | accepted | global | 2026-06-30 | [docs/mvp/design/phase4.7.md](mvp/design/phase4.7.md) |
+| Phase4.8 Persistence Cleanup | accepted | global | 2026-06-30 | [docs/mvp/design/phase4.8-persistence-cleanup.md](mvp/design/phase4.8-persistence-cleanup.md) |
+| Phase4.8：持久层收口与 Repository 命名治理 | accepted | global | 2026-06-30 | [docs/mvp/design/phase4.8.md](mvp/design/phase4.8.md) |
+| Phase4：Python LangGraph OSS Diagnosis Agent + Java Agent Client | accepted | global | 2026-06-30 | [docs/mvp/design/phase4.md](mvp/design/phase4.md) |
+| Phase5.0 Runbook Recommendation and AutomationPlan | accepted | global | 2026-06-30 | [docs/mvp/design/phase5.0-runbook-automation-plan.md](mvp/design/phase5.0-runbook-automation-plan.md) |
+| Phase5.1 Automation Approval | accepted | global | 2026-06-30 | [docs/mvp/design/phase5.1-automation-approval.md](mvp/design/phase5.1-automation-approval.md) |
+| Phase5.2 Execution Runner | accepted | global | 2026-06-30 | [docs/mvp/design/phase5.2-execution-runner.md](mvp/design/phase5.2-execution-runner.md) |
+| Phase5.3：Runner Lease / Heartbeat / Timeout / Retry / Artifact | accepted | global | 2026-06-30 | [docs/mvp/design/phase5.3.md](mvp/design/phase5.3.md) |
+| Phase5.4 Webhook Adapter | accepted | global | 2026-06-30 | [docs/mvp/design/phase5.4-webhook-adapter.md](mvp/design/phase5.4-webhook-adapter.md) |
+| Phase5.4：Webhook Adapter | accepted | global | 2026-06-30 | [docs/mvp/design/phase5.4.md](mvp/design/phase5.4.md) |
+| Phase5.5 Ansible Adapter | accepted | global | 2026-06-30 | [docs/mvp/design/phase5.5-ansible-adapter.md](mvp/design/phase5.5-ansible-adapter.md) |
+| Phase5.6 Ansible Sandbox Execution | accepted | global | 2026-06-30 | [docs/mvp/design/phase5.6-ansible-sandbox-execution.md](mvp/design/phase5.6-ansible-sandbox-execution.md) |
+| Phase5.7：Ansible Live Execution with Approval Guard | accepted | global | 2026-06-30 | [docs/mvp/design/phase5.7.md](mvp/design/phase5.7.md) |
+| Phase5.8：Rollback Plan | accepted | global | 2026-06-30 | [docs/mvp/design/phase5.9.md](mvp/design/phase5.9.md) |
+| Phase7.0 Agent Graph Modularization | accepted | global | 2026-06-30 | [docs/mvp/design/phase7.0-agent-graph-modularization.md](mvp/design/phase7.0-agent-graph-modularization.md) |
+| Phase7.2 Multi-Agent Collaboration | accepted | global | 2026-06-30 | [docs/mvp/design/phase7.2-multi-agent-collaboration.md](mvp/design/phase7.2-multi-agent-collaboration.md) |
+| Phase7.3 Agent Memory | accepted | global | 2026-06-30 | [docs/mvp/design/phase7.3-agent-memory.md](mvp/design/phase7.3-agent-memory.md) |
+| Phase8.0 SaaS Multi-tenant Hardening | accepted | global | 2026-06-30 | [docs/mvp/design/phase8.0-saas-multi-tenant-hardening.md](mvp/design/phase8.0-saas-multi-tenant-hardening.md) |
+| Phase5.8 Rollback Plan 实现说明 | accepted | global | 2026-06-30 | [docs/mvp/phase5.8-rollback-plan.md](mvp/phase5.8-rollback-plan.md) |
+| Phase5.8：Execution Report & Audit | accepted | global | 2026-06-30 | [docs/mvp/phase5.8.md](mvp/phase5.8.md) |
+| Phase6.0：Postmortem Report | accepted | global | 2026-06-30 | [docs/mvp/phase6.0.md](mvp/phase6.0.md) |
+| Phase6.1：Incident Case Library | accepted | global | 2026-06-30 | [docs/mvp/phase6.1.md](mvp/phase6.1.md) |
+| Phase6.2：Knowledge Base & Vector Retrieval | accepted | global | 2026-06-30 | [docs/mvp/phase6.2.md](mvp/phase6.2.md) |
+| Phase6.3：Agent Eval & Prompt Regression | accepted | global | 2026-06-30 | [docs/mvp/phase6.3.md](mvp/phase6.3.md) |
+| Phase7.2：Multi-Agent Collaboration | accepted | global | 2026-06-30 | [docs/mvp/phase7.2.md](mvp/phase7.2.md) |
+| Phase7.3：Agent Memory | accepted | global | 2026-06-30 | [docs/mvp/phase7.3.md](mvp/phase7.3.md) |
+| Phase7.0：Agent Graph Modularization | accepted | global | 2026-06-30 | [docs/mvp/phase7.md](mvp/phase7.md) |
+| Phase8.1：Plugin System | accepted | global | 2026-06-30 | [docs/mvp/phase8.1.md](mvp/phase8.1.md) |
+| Phase8.2：Private Deployment / Helm / Offline Package | accepted | global | 2026-06-30 | [docs/mvp/phase8.2.md](mvp/phase8.2.md) |
+| AegisOps Observability | accepted | global | 2026-06-30 | [docs/operations/observability.md](operations/observability.md) |
+| AegisOps Production Runbook | accepted | global | 2026-06-30 | [docs/operations/runbook.md](operations/runbook.md) |
+| Phase8.0：SaaS Multi-tenant Hardening | accepted | global | 2026-06-30 | [docs/phase8.md](phase8.md) |
+| Phase Z3: Zabbix Alert Aggregation Strategy | accepted | global | 2026-06-30 | [docs/scenarios/phase-z3-zabbix-incident-aggregation.md](scenarios/phase-z3-zabbix-incident-aggregation.md) |
+| Phase Z4: Zabbix Evidence Collector | accepted | global | 2026-06-30 | [docs/scenarios/phase-z4-zabbix-evidence-collector.md](scenarios/phase-z4-zabbix-evidence-collector.md) |
+| Phase Z5: Evidence-aware RCA Rules | accepted | global | 2026-06-30 | [docs/scenarios/phase-z5-rca-evidence-rules.md](scenarios/phase-z5-rca-evidence-rules.md) |
+| Phase Z6: Evidence-based AI Diagnosis | accepted | global | 2026-06-30 | [docs/scenarios/phase-z6-ai-diagnosis-evidence.md](scenarios/phase-z6-ai-diagnosis-evidence.md) |
+| Phase Z7: Markdown Incident Report | accepted | global | 2026-06-30 | [docs/scenarios/phase-z7-markdown-incident-report.md](scenarios/phase-z7-markdown-incident-report.md) |
+| Phase Z9：Zabbix MVP 端到端验收 | accepted | global | 2026-07-17 | [docs/scenarios/phase-z9-zabbix-mvp-acceptance.md](scenarios/phase-z9-zabbix-mvp-acceptance.md) |
+| Scenario 01 - Zabbix Host & Service Incident Diagnosis | accepted | z0 | 2026-06-21 | [docs/scenarios/zabbix-host-service-incident.md](scenarios/zabbix-host-service-incident.md) |
+| 工作记录表单设计器详细设计（@formily/core only） | review | work-record | 2026-07-08 | [docs/record/designer-design.md](record/designer-design.md) |
+| 可配置工作记录模块（终版设计 · portal-first） | review | work-record | 2026-07-08 | [docs/record/index.md](record/index.md) |
+| 工作记录 Phase 00 产品边界与总体契约 | review | work-record | 2026-07-08 | [docs/record/phase-00-baseline-and-contract.md](record/phase-00-baseline-and-contract.md) |
+| 工作记录 Phase 01 Portal 壳、导航与国际化 | review | work-record | 2026-07-08 | [docs/record/phase-01-portal-i18n-and-shell.md](record/phase-01-portal-i18n-and-shell.md) |
+| 工作记录 Phase 02 平台字典完整设计 | review | work-record | 2026-07-08 | [docs/record/phase-02-platform-dictionary.md](record/phase-02-platform-dictionary.md) |
+| 工作记录 Phase 02A 平台工作日历 | review | work-record | 2026-07-08 | [docs/record/phase-02a-platform-calendar.md](record/phase-02a-platform-calendar.md) |
+| 工作记录 Phase 03 模板与字段契约 | review | work-record | 2026-07-08 | [docs/record/phase-03-work-record-template.md](record/phase-03-work-record-template.md) |
+| 工作记录 Phase 04 Portal 原生模板设计器 | review | work-record | 2026-07-08 | [docs/record/phase-04-formily-designer.md](record/phase-04-formily-designer.md) |
+| 工作记录 Phase 05 动态表单运行态 | review | work-record | 2026-07-08 | [docs/record/phase-05-record-runtime.md](record/phase-05-record-runtime.md) |
+| 工作记录 Phase 06 列表筛选与导出 | review | work-record | 2026-07-08 | [docs/record/phase-06-record-list-export.md](record/phase-06-record-list-export.md) |
+| 工作记录 Phase 07 权限审计与交付收口 | review | work-record | 2026-07-08 | [docs/record/phase-07-role-permission-hardening.md](record/phase-07-role-permission-hardening.md) |
+| 基于身份的产品体验设计 | draft | phase-21 | 2026-07-18 | [docs/designs/phase-21/2026-07-18-role-based-product-experience.md](designs/phase-21/2026-07-18-role-based-product-experience.md) |
+| AI-Ops Portal 基础重构：基线与实施总览 | draft | work-record | 2026-07-14 | [docs/record/formily/00-readme-基线与实施总览.md](record/formily/00-readme-基线与实施总览.md) |
+| Portal 清理、路由与导航完整代码 | draft | work-record | 2026-07-14 | [docs/record/formily/01-portal清理与导航代码.md](record/formily/01-portal清理与导航代码.md) |
+| IAM 数据库、用户与 RBAC 后端完整代码 | draft | work-record | 2026-07-14 | [docs/record/formily/02-iam数据库后端完整代码.md](record/formily/02-iam数据库后端完整代码.md) |
+| 用户管理与角色权限 Portal 完整代码 | draft | work-record | 2026-07-14 | [docs/record/formily/03-用户与角色portal完整代码.md](record/formily/03-用户与角色portal完整代码.md) |
+| Formily 与 Shadcn 统一运行时完整代码 | draft | work-record | 2026-07-14 | [docs/record/formily/04-formily-shadcn统一运行时完整代码.md](record/formily/04-formily-shadcn统一运行时完整代码.md) |
+| DesignerDocument、编译器与设计器 V2 完整代码 | draft | work-record | 2026-07-14 | [docs/record/formily/05-designer-document与设计器v2完整代码.md](record/formily/05-designer-document与设计器v2完整代码.md) |
+| Designer 后端编译、旧版本兼容与迁移代码 | draft | work-record | 2026-07-14 | [docs/record/formily/06-designer后端编译兼容与迁移代码.md](record/formily/06-designer后端编译兼容与迁移代码.md) |
+| 可配置工作记录模块（终版设计 · pre-portal · 已废弃） | deprecated | work-record | 2026-07-07 | [docs/record/2026-07-06-record-index-pre-portal.md](record/2026-07-06-record-index-pre-portal.md) |
+| 工作记录模块 Phase 设计与代码包（已废弃） | deprecated | work-record | 2026-07-07 | [docs/record/work-record-phases-design-code.md](record/work-record-phases-design-code.md) |
 
 ## fix
 
-| Title                                  | Status   | Phase    | Updated    | Path                                                                                                                        |
-| -------------------------------------- | -------- | -------- | ---------- | --------------------------------------------------------------------------------------------------------------------------- |
-| 工作记录模板与表单体验修复计划         | accepted | phase-21 | 2026-07-15 | [docs/fixes/phase-21/2026-07-15-work-record-template-form-ux.md](fixes/phase-21/2026-07-15-work-record-template-form-ux.md) |
-| PR2 - RuntimePhase + health phase 标签 | accepted | phase-5  | 2026-06-30 | [docs/fixes/phase-5/2026-06-30-runtime-phase.md](fixes/phase-5/2026-06-30-runtime-phase.md)                                 |
-| 第二轮回盘问题修复总记录               | draft    | phase-5  | 2026-06-30 | [docs/fixes/phase-5/2026-06-29-second-review-remediation.md](fixes/phase-5/2026-06-29-second-review-remediation.md)         |
+| Title | Status | Phase | Updated | Path |
+|---|---|---|---|---|
+| 工作记录模板与表单体验修复计划 | accepted | phase-21 | 2026-07-15 | [docs/fixes/phase-21/2026-07-15-work-record-template-form-ux.md](fixes/phase-21/2026-07-15-work-record-template-form-ux.md) |
+| PR2 - RuntimePhase + health phase 标签 | accepted | phase-5 | 2026-06-30 | [docs/fixes/phase-5/2026-06-30-runtime-phase.md](fixes/phase-5/2026-06-30-runtime-phase.md) |
+| 第二轮回盘问题修复总记录 | draft | phase-5 | 2026-06-30 | [docs/fixes/phase-5/2026-06-29-second-review-remediation.md](fixes/phase-5/2026-06-29-second-review-remediation.md) |
 
 ## phase
 
-| Title                                               | Status     | Phase          | Updated    | Path                                                                                                                                        |
-| --------------------------------------------------- | ---------- | -------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| MVP Roadmap                                         | accepted   | global         | 2026-06-30 | [docs/mvp-roadmap.md](mvp-roadmap.md)                                                                                                       |
-| 多来源资源中心验收记录                              | accepted   | phase-1        | 2026-07-16 | [docs/phases/phase-1/asset-source-acceptance.md](phases/phase-1/asset-source-acceptance.md)                                                 |
-| Phase 20 执行基线                                   | accepted   | work-record-20 | 2026-07-14 | [docs/record/phase/20/00-phase-20-execution-baseline.md](record/phase/20/00-phase-20-execution-baseline.md)                                 |
-| 完整测试、CI 与企业验收                             | draft      | work-record    | 2026-07-14 | [docs/record/formily/07-测试ci与企业验收.md](record/formily/07-测试ci与企业验收.md)                                                         |
-| Phase 1 工程基线重建                                | draft      | work-record    | 2026-07-14 | [docs/record/phase-01-engineering-baseline.md](record/phase-01-engineering-baseline.md)                                                     |
-| Phase 3 数据库模型重做                              | draft      | work-record    | 2026-07-09 | [docs/record/phase-03-database-model.md](record/phase-03-database-model.md)                                                                 |
-| Phase 2 平台基础能力完善                            | draft      | work-record-2  | 2026-07-14 | [docs/record/phase/02.md](record/phase/02.md)                                                                                               |
-| Phase 3 数据库模型重做                              | draft      | work-record-3  | 2026-07-14 | [docs/record/phase/03.md](record/phase/03.md)                                                                                               |
-| Phase 4 后端领域模型重做                            | draft      | work-record-4  | 2026-07-14 | [docs/record/phase/04.md](record/phase/04.md)                                                                                               |
-| Phase 5 模板与 Schema 契约重做                      | draft      | work-record-5  | 2026-07-14 | [docs/record/phase/05.md](record/phase/05.md)                                                                                               |
-| Phase 6 模板管理 API                                | draft      | work-record-6  | 2026-07-14 | [docs/record/phase/06.md](record/phase/06.md)                                                                                               |
-| Phase 7 Portal 表单设计器重做                       | draft      | work-record-7  | 2026-07-14 | [docs/record/phase/07.md](record/phase/07.md)                                                                                               |
-| Phase 8 记录运行态重做                              | draft      | work-record-8  | 2026-07-14 | [docs/record/phase/08.md](record/phase/08.md)                                                                                               |
-| Phase 9 动态字段后端校验重做                        | draft      | work-record-9  | 2026-07-14 | [docs/record/phase/09.md](record/phase/09.md)                                                                                               |
-| Phase 10 记录列表重做                               | draft      | work-record-10 | 2026-07-14 | [docs/record/phase/10.md](record/phase/10.md)                                                                                               |
-| Phase 11 动态查询安全重做                           | draft      | work-record-11 | 2026-07-14 | [docs/record/phase/11.md](record/phase/11.md)                                                                                               |
-| Phase 12 导出能力重做                               | draft      | work-record-12 | 2026-07-14 | [docs/record/phase/12.md](record/phase/12.md)                                                                                               |
-| Phase 13 权限体系企业级加固                         | draft      | work-record-13 | 2026-07-14 | [docs/record/phase/13.md](record/phase/13.md)                                                                                               |
-| Phase 14 审计与变更追踪                             | draft      | work-record-14 | 2026-07-14 | [docs/record/phase/14.md](record/phase/14.md)                                                                                               |
-| Phase 15 工作日历接入工作记录                       | draft      | work-record-15 | 2026-07-14 | [docs/record/phase/15.md](record/phase/15.md)                                                                                               |
-| Phase 16 前端体验完善                               | draft      | work-record-16 | 2026-07-14 | [docs/record/phase/16.md](record/phase/16.md)                                                                                               |
-| Phase 17 测试体系补齐                               | draft      | work-record-17 | 2026-07-14 | [docs/record/phase/17.md](record/phase/17.md)                                                                                               |
-| Phase 18 企业级验收场景                             | draft      | work-record-18 | 2026-07-14 | [docs/record/phase/18.md](record/phase/18.md)                                                                                               |
-| Phase 19 生产化加固                                 | draft      | work-record-19 | 2026-07-14 | [docs/record/phase/19.md](record/phase/19.md)                                                                                               |
-| Phase 20.0–20.1 共享底座、Outbox、异步任务与 MinIO  | draft      | work-record-20 | 2026-07-14 | [docs/record/phase/20/01-phase-20-0-20-1-shared-foundation.md](record/phase/20/01-phase-20-0-20-1-shared-foundation.md)                     |
-| Phase 20.2 Excel 导入与异步导出                     | draft      | work-record-20 | 2026-07-14 | [docs/record/phase/20/02-phase-20-2-excel-import-async-export.md](record/phase/20/02-phase-20-2-excel-import-async-export.md)               |
-| Phase 20.3 评论时间线、附件与关联对象               | draft      | work-record-20 | 2026-07-14 | [docs/record/phase/20/03-phase-20-3-comments-attachments-relations.md](record/phase/20/03-phase-20-3-comments-attachments-relations.md)     |
-| Phase 20.4 统计报表、工作量分析、缺失提醒与值班交接 | draft      | work-record-20 | 2026-07-14 | [docs/record/phase/20/04-phase-20-4-analytics-reminders-handover.md](record/phase/20/04-phase-20-4-analytics-reminders-handover.md)         |
-| Phase 20.5 AI 自动总结与 AI 月报                    | draft      | work-record-20 | 2026-07-14 | [docs/record/phase/20/05-phase-20-5-ai-summary-monthly-report.md](record/phase/20/05-phase-20-5-ai-summary-monthly-report.md)               |
-| Phase 20.6 模板市场与字段级权限                     | draft      | work-record-20 | 2026-07-14 | [docs/record/phase/20/06-phase-20-6-template-market-field-permission.md](record/phase/20/06-phase-20-6-template-market-field-permission.md) |
-| Phase 20.7 审批流与 SLA                             | draft      | work-record-20 | 2026-07-14 | [docs/record/phase/20/07-phase-20-7-approval-sla.md](record/phase/20/07-phase-20-7-approval-sla.md)                                         |
-| Phase 20.8 Portal、权限初始化、测试与企业验收       | draft      | work-record-20 | 2026-07-14 | [docs/record/phase/20/08-phase-20-8-portal-tests-acceptance.md](record/phase/20/08-phase-20-8-portal-tests-acceptance.md)                   |
-| MVP Roadmap (Historical Draft)                      | deprecated | global         | 2026-06-30 | [docs/mvp/roadmap.md](mvp/roadmap.md)                                                                                                       |
-| MVP Roadmap 2 (Historical Draft)                    | deprecated | global         | 2026-06-30 | [docs/mvp/roadmap2.md](mvp/roadmap2.md)                                                                                                     |
-| MVP Roadmap 3 (Historical Draft)                    | deprecated | global         | 2026-06-30 | [docs/mvp/roadmap3.md](mvp/roadmap3.md)                                                                                                     |
-| AegisOps Phase 20 后续增强详细设计与完整代码方案    | deprecated | work-record-20 | 2026-07-14 | [docs/record/phase/ai-ops-phase-20-design-code.md](record/phase/ai-ops-phase-20-design-code.md)                                             |
+| Title | Status | Phase | Updated | Path |
+|---|---|---|---|---|
+| MVP Roadmap | accepted | global | 2026-06-30 | [docs/mvp-roadmap.md](mvp-roadmap.md) |
+| 多来源资源中心验收记录 | accepted | phase-1 | 2026-07-16 | [docs/phases/phase-1/asset-source-acceptance.md](phases/phase-1/asset-source-acceptance.md) |
+| Phase 20 执行基线 | accepted | work-record-20 | 2026-07-14 | [docs/record/phase/20/00-phase-20-execution-baseline.md](record/phase/20/00-phase-20-execution-baseline.md) |
+| 完整测试、CI 与企业验收 | draft | work-record | 2026-07-14 | [docs/record/formily/07-测试ci与企业验收.md](record/formily/07-测试ci与企业验收.md) |
+| Phase 1 工程基线重建 | draft | work-record | 2026-07-14 | [docs/record/phase-01-engineering-baseline.md](record/phase-01-engineering-baseline.md) |
+| Phase 3 数据库模型重做 | draft | work-record | 2026-07-09 | [docs/record/phase-03-database-model.md](record/phase-03-database-model.md) |
+| Phase 2 平台基础能力完善 | draft | work-record-2 | 2026-07-14 | [docs/record/phase/02.md](record/phase/02.md) |
+| Phase 3 数据库模型重做 | draft | work-record-3 | 2026-07-14 | [docs/record/phase/03.md](record/phase/03.md) |
+| Phase 4 后端领域模型重做 | draft | work-record-4 | 2026-07-14 | [docs/record/phase/04.md](record/phase/04.md) |
+| Phase 5 模板与 Schema 契约重做 | draft | work-record-5 | 2026-07-14 | [docs/record/phase/05.md](record/phase/05.md) |
+| Phase 6 模板管理 API | draft | work-record-6 | 2026-07-14 | [docs/record/phase/06.md](record/phase/06.md) |
+| Phase 7 Portal 表单设计器重做 | draft | work-record-7 | 2026-07-14 | [docs/record/phase/07.md](record/phase/07.md) |
+| Phase 8 记录运行态重做 | draft | work-record-8 | 2026-07-14 | [docs/record/phase/08.md](record/phase/08.md) |
+| Phase 9 动态字段后端校验重做 | draft | work-record-9 | 2026-07-14 | [docs/record/phase/09.md](record/phase/09.md) |
+| Phase 10 记录列表重做 | draft | work-record-10 | 2026-07-14 | [docs/record/phase/10.md](record/phase/10.md) |
+| Phase 11 动态查询安全重做 | draft | work-record-11 | 2026-07-14 | [docs/record/phase/11.md](record/phase/11.md) |
+| Phase 12 导出能力重做 | draft | work-record-12 | 2026-07-14 | [docs/record/phase/12.md](record/phase/12.md) |
+| Phase 13 权限体系企业级加固 | draft | work-record-13 | 2026-07-14 | [docs/record/phase/13.md](record/phase/13.md) |
+| Phase 14 审计与变更追踪 | draft | work-record-14 | 2026-07-14 | [docs/record/phase/14.md](record/phase/14.md) |
+| Phase 15 工作日历接入工作记录 | draft | work-record-15 | 2026-07-14 | [docs/record/phase/15.md](record/phase/15.md) |
+| Phase 16 前端体验完善 | draft | work-record-16 | 2026-07-14 | [docs/record/phase/16.md](record/phase/16.md) |
+| Phase 17 测试体系补齐 | draft | work-record-17 | 2026-07-14 | [docs/record/phase/17.md](record/phase/17.md) |
+| Phase 18 企业级验收场景 | draft | work-record-18 | 2026-07-14 | [docs/record/phase/18.md](record/phase/18.md) |
+| Phase 19 生产化加固 | draft | work-record-19 | 2026-07-14 | [docs/record/phase/19.md](record/phase/19.md) |
+| Phase 20.0–20.1 共享底座、Outbox、异步任务与 MinIO | draft | work-record-20 | 2026-07-14 | [docs/record/phase/20/01-phase-20-0-20-1-shared-foundation.md](record/phase/20/01-phase-20-0-20-1-shared-foundation.md) |
+| Phase 20.2 Excel 导入与异步导出 | draft | work-record-20 | 2026-07-14 | [docs/record/phase/20/02-phase-20-2-excel-import-async-export.md](record/phase/20/02-phase-20-2-excel-import-async-export.md) |
+| Phase 20.3 评论时间线、附件与关联对象 | draft | work-record-20 | 2026-07-14 | [docs/record/phase/20/03-phase-20-3-comments-attachments-relations.md](record/phase/20/03-phase-20-3-comments-attachments-relations.md) |
+| Phase 20.4 统计报表、工作量分析、缺失提醒与值班交接 | draft | work-record-20 | 2026-07-14 | [docs/record/phase/20/04-phase-20-4-analytics-reminders-handover.md](record/phase/20/04-phase-20-4-analytics-reminders-handover.md) |
+| Phase 20.5 AI 自动总结与 AI 月报 | draft | work-record-20 | 2026-07-14 | [docs/record/phase/20/05-phase-20-5-ai-summary-monthly-report.md](record/phase/20/05-phase-20-5-ai-summary-monthly-report.md) |
+| Phase 20.6 模板市场与字段级权限 | draft | work-record-20 | 2026-07-14 | [docs/record/phase/20/06-phase-20-6-template-market-field-permission.md](record/phase/20/06-phase-20-6-template-market-field-permission.md) |
+| Phase 20.7 审批流与 SLA | draft | work-record-20 | 2026-07-14 | [docs/record/phase/20/07-phase-20-7-approval-sla.md](record/phase/20/07-phase-20-7-approval-sla.md) |
+| Phase 20.8 Portal、权限初始化、测试与企业验收 | draft | work-record-20 | 2026-07-14 | [docs/record/phase/20/08-phase-20-8-portal-tests-acceptance.md](record/phase/20/08-phase-20-8-portal-tests-acceptance.md) |
+| MVP Roadmap (Historical Draft) | deprecated | global | 2026-06-30 | [docs/mvp/roadmap.md](mvp/roadmap.md) |
+| MVP Roadmap 2 (Historical Draft) | deprecated | global | 2026-06-30 | [docs/mvp/roadmap2.md](mvp/roadmap2.md) |
+| MVP Roadmap 3 (Historical Draft) | deprecated | global | 2026-06-30 | [docs/mvp/roadmap3.md](mvp/roadmap3.md) |
+| AegisOps Phase 20 后续增强详细设计与完整代码方案 | deprecated | work-record-20 | 2026-07-14 | [docs/record/phase/ai-ops-phase-20-design-code.md](record/phase/ai-ops-phase-20-design-code.md) |
 
 ## research
 
-| Title                                 | Status | Phase       | Updated    | Path                                                                  |
-| ------------------------------------- | ------ | ----------- | ---------- | --------------------------------------------------------------------- |
-| 工作记录企业级验收清单                | draft  | work-record | 2026-07-09 | [docs/record/acceptance-checklist.md](record/acceptance-checklist.md) |
-| 工作记录企业级重做路线图              | draft  | work-record | 2026-07-09 | [docs/record/enterprise-roadmap.md](record/enterprise-roadmap.md)     |
-| 工作记录 Phase 0 详细设计（对话记录） | draft  | work-record | 2026-07-09 | [docs/record/phase/00.md](record/phase/00.md)                         |
-| 工作记录阶段对话记录                  | draft  |             | 2026-07-14 | [docs/record/phase/step.md](record/phase/step.md)                     |
+| Title | Status | Phase | Updated | Path |
+|---|---|---|---|---|
+| 工作记录企业级验收清单 | draft | work-record | 2026-07-09 | [docs/record/acceptance-checklist.md](record/acceptance-checklist.md) |
+| 工作记录企业级重做路线图 | draft | work-record | 2026-07-09 | [docs/record/enterprise-roadmap.md](record/enterprise-roadmap.md) |
+| 工作记录 Phase 0 详细设计（对话记录） | draft | work-record | 2026-07-09 | [docs/record/phase/00.md](record/phase/00.md) |
+| 工作记录阶段对话记录 | draft |  | 2026-07-14 | [docs/record/phase/step.md](record/phase/step.md) |
 
 ## review
 
-| Title                                   | Status   | Phase       | Updated    | Path                                                                                                                                                                  |
-| --------------------------------------- | -------- | ----------- | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Title | Status | Phase | Updated | Path |
+|---|---|---|---|---|
 | 工作记录模块（Phase 01–07）实现审查报告 | accepted | work-record | 2026-07-09 | [docs/reviews/work-record/2026-07-08-work-record-phase01-07-implementation-review.md](reviews/work-record/2026-07-08-work-record-phase01-07-implementation-review.md) |
-| 当前项目质量与架构审查                  | draft    | phase-8     | 2026-07-01 | [docs/reviews/phase-8/2026-07-01-current-project-quality-architecture.md](reviews/phase-8/2026-07-01-current-project-quality-architecture.md)                         |
-| 工作记录模块当前实现审查                | draft    | work-record | 2026-07-06 | [docs/reviews/work-record/2026-07-06-work-record-implementation-review.md](reviews/work-record/2026-07-06-work-record-implementation-review.md)                       |
-| 工作记录模块最终实现审查                | draft    | work-record | 2026-07-07 | [docs/reviews/work-record/2026-07-07-work-record-final-review.md](reviews/work-record/2026-07-07-work-record-final-review.md)                                         |
-| 工作记录模块规则沉淀后实现审查          | draft    | work-record | 2026-07-07 | [docs/reviews/work-record/2026-07-07-work-record-rule-based-review.md](reviews/work-record/2026-07-07-work-record-rule-based-review.md)                               |
+| 当前项目质量与架构审查 | draft | phase-8 | 2026-07-01 | [docs/reviews/phase-8/2026-07-01-current-project-quality-architecture.md](reviews/phase-8/2026-07-01-current-project-quality-architecture.md) |
+| 工作记录模块当前实现审查 | draft | work-record | 2026-07-06 | [docs/reviews/work-record/2026-07-06-work-record-implementation-review.md](reviews/work-record/2026-07-06-work-record-implementation-review.md) |
+| 工作记录模块最终实现审查 | draft | work-record | 2026-07-07 | [docs/reviews/work-record/2026-07-07-work-record-final-review.md](reviews/work-record/2026-07-07-work-record-final-review.md) |
+| 工作记录模块规则沉淀后实现审查 | draft | work-record | 2026-07-07 | [docs/reviews/work-record/2026-07-07-work-record-rule-based-review.md](reviews/work-record/2026-07-07-work-record-rule-based-review.md) |
