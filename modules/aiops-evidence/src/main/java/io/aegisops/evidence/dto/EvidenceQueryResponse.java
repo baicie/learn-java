@@ -7,4 +7,5 @@ public record EvidenceQueryResponse(
     String traceId,
     MetricEvidence metrics,
     LogEvidence logs,
-    ChangeEvidence changes) {}
+    ChangeEvidence changes,
+    MultiSourceEvidence multiSource) {}

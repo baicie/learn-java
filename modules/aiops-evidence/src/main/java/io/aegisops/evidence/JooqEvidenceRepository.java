@@ -8,8 +8,14 @@ import io.aegisops.evidence.dto.ChangeEvidenceEvent;
 import io.aegisops.evidence.dto.EvidenceQueryRequest;
 import io.aegisops.evidence.dto.LogEvidence;
 import io.aegisops.evidence.dto.LogPattern;
+import io.aegisops.evidence.dto.MultiSourceEvidence;
+import io.aegisops.evidence.dto.SourceEvidenceItem;
+import io.aegisops.evidence.dto.WebVitalSummary;
+import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import org.jooq.Condition;
 import org.jooq.DSLContext;
 import org.jooq.Field;
@@ -86,6 +92,130 @@ public class JooqEvidenceRepository implements EvidenceRepository {
     return new ChangeEvidence(true, "", events);
   }
 
+  @Override
+  public MultiSourceEvidence queryMultiSource(EvidenceQueryRequest request, int maxItems) {
+    Condition entity = dynamicEntityCondition(request);
+    List<SourceEvidenceItem> items = new java.util.ArrayList<>();
+    items.addAll(queryTraceItems(request, entity, maxItems));
+    items.addAll(queryMetricItems(request, entity, maxItems));
+    Condition rumEntity = dynamicRumEntityCondition(request);
+    items.addAll(queryRumItems(request, rumEntity, maxItems));
+    long sessions = countDistinctRumField(request, rumEntity, "session_id", true);
+    long pages = countDistinctRumField(request, rumEntity, "page", false);
+    Map<String, WebVitalSummary> webVitals = queryWebVitals(request, rumEntity);
+    items.sort(java.util.Comparator.comparing(SourceEvidenceItem::occurredAt).reversed());
+    return items.isEmpty()
+        ? MultiSourceEvidence.unavailable("No trace, metric, or RUM evidence found.")
+        : new MultiSourceEvidence(
+            true, "", items.stream().limit(maxItems).toList(), sessions, pages, webVitals);
+  }
+
+  private List<SourceEvidenceItem> queryTraceItems(
+      EvidenceQueryRequest request, Condition entity, int maxItems) {
+    return dsl.select(
+            DSL.val("trace"), DSL.field("source_event_id", String.class),
+            DSL.field("asset_id", String.class), DSL.field("service_name", String.class),
+            DSL.field("trace_id", String.class), DSL.val("span"),
+            DSL.val((BigDecimal) null), DSL.field("occurred_at", OffsetDateTime.class))
+        .from(DSL.table("trace_event"))
+        .where(dynamicBase(request).and(entity))
+        .limit(maxItems)
+        .fetch(JooqEvidenceRepository::toSourceEvidenceItem);
+  }
+
+  private List<SourceEvidenceItem> queryMetricItems(
+      EvidenceQueryRequest request, Condition entity, int maxItems) {
+    return dsl.select(
+            DSL.val("metric"),
+            DSL.field("source_event_id", String.class),
+            DSL.field("asset_id", String.class),
+            DSL.field("service_name", String.class),
+            DSL.val((String) null),
+            DSL.field("metric_name", String.class),
+            DSL.field("metric_value", BigDecimal.class),
+            DSL.field("occurred_at", OffsetDateTime.class))
+        .from(DSL.table("telemetry_metric"))
+        .where(dynamicBase(request).and(entity))
+        .limit(maxItems)
+        .fetch(JooqEvidenceRepository::toSourceEvidenceItem);
+  }
+
+  private List<SourceEvidenceItem> queryRumItems(
+      EvidenceQueryRequest request, Condition entity, int maxItems) {
+    return dsl.select(
+            DSL.val("rum"),
+            DSL.field("source_event_id", String.class),
+            DSL.field("asset_id", String.class),
+            DSL.val((String) null),
+            DSL.field("trace_id", String.class),
+            DSL.field("event_type", String.class),
+            DSL.field("vital_value", BigDecimal.class),
+            DSL.field("occurred_at", OffsetDateTime.class))
+        .from(DSL.table("rum_event"))
+        .where(dynamicBase(request).and(entity))
+        .limit(maxItems)
+        .fetch(JooqEvidenceRepository::toSourceEvidenceItem);
+  }
+
+  private long countDistinctRumField(
+      EvidenceQueryRequest request, Condition entity, String fieldName, boolean requireNonNull) {
+    Field<String> field = DSL.field(fieldName, String.class);
+    Condition condition = dynamicBase(request).and(entity);
+    if (requireNonNull) {
+      condition = condition.and(field.isNotNull());
+    }
+    return dsl.select(field).from(DSL.table("rum_event")).where(condition).fetchSet(field).size();
+  }
+
+  private Map<String, WebVitalSummary> queryWebVitals(
+      EvidenceQueryRequest request, Condition entity) {
+    Map<String, WebVitalSummary> webVitals = new LinkedHashMap<>();
+    var vitalName = DSL.field("vital_name", String.class);
+    var vitalValue = DSL.field("vital_value", BigDecimal.class);
+    dsl.select(
+            vitalName, DSL.min(vitalValue), DSL.max(vitalValue), DSL.avg(vitalValue), DSL.count())
+        .from(DSL.table("rum_event"))
+        .where(dynamicBase(request).and(entity).and(vitalName.isNotNull()))
+        .groupBy(vitalName)
+        .fetch()
+        .forEach(
+            row -> {
+              String name = row.value1();
+              webVitals.put(
+                  name,
+                  new WebVitalSummary(
+                      name, row.value2(), row.value3(), row.value4(), row.value5().longValue()));
+            });
+    return webVitals;
+  }
+
+  private Condition dynamicBase(EvidenceQueryRequest request) {
+    return DSL.field("tenant_id", String.class)
+        .eq(request.tenantId())
+        .and(DSL.field("occurred_at", OffsetDateTime.class).ge(request.startedAt()))
+        .and(DSL.field("occurred_at", OffsetDateTime.class).le(request.lastSeenAt()));
+  }
+
+  private Condition dynamicEntityCondition(EvidenceQueryRequest request) {
+    Condition condition = DSL.falseCondition();
+    if (!isBlank(request.primaryAssetId()))
+      condition = condition.or(DSL.field("asset_id", String.class).eq(request.primaryAssetId()));
+    if (!request.normalizedServiceNames().isEmpty())
+      condition =
+          condition.or(
+              DSL.field("service_name", String.class).in(request.normalizedServiceNames()));
+    return condition;
+  }
+
+  private Condition dynamicRumEntityCondition(EvidenceQueryRequest request) {
+    Condition condition = DSL.falseCondition();
+    if (!isBlank(request.primaryAssetId()))
+      condition = condition.or(DSL.field("asset_id", String.class).eq(request.primaryAssetId()));
+    if (!isBlank(request.traceId()))
+      condition = condition.or(DSL.field("trace_id", String.class).eq(request.traceId()));
+    return condition;
+  }
+
   private static LogPattern toLogPattern(
       Record5<String, String, Integer, OffsetDateTime, OffsetDateTime> record) {
     return new LogPattern(
@@ -94,6 +224,20 @@ public class JooqEvidenceRepository implements EvidenceRepository {
         numberAsLong(record.value3()),
         record.value4(),
         record.value5());
+  }
+
+  private static SourceEvidenceItem toSourceEvidenceItem(
+      org.jooq.Record8<String, String, String, String, String, String, BigDecimal, OffsetDateTime>
+          record) {
+    return new SourceEvidenceItem(
+        record.value1(),
+        record.value2(),
+        record.value3(),
+        record.value4(),
+        record.value5(),
+        record.value6(),
+        record.value7(),
+        record.value8());
   }
 
   private static ChangeEvidenceEvent toChangeEvent(

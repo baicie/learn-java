@@ -19,6 +19,9 @@
     <module>modules/aiops-user</module>
     <module>modules/aiops-security</module>
     <module>modules/aiops-zabbix-adapter</module>
+    <module>modules/aiops-kubernetes-adapter</module>
+    <module>modules/aiops-otel-adapter</module>
+    <module>modules/aiops-rum-adapter</module>
     <module>modules/aiops-datasource</module>
     <module>modules/aiops-integration</module>
     <module>modules/aiops-asset</module>

@@ -3,7 +3,16 @@ import { z } from 'zod'
 export const datasourceSchema = z.object({
   id: z.string(),
   tenantId: z.string(),
-  type: z.literal('zabbix'),
+  type: z.enum([
+    'zabbix',
+    'kubernetes',
+    'opentelemetry',
+    'rum',
+    'github',
+    'gitlab',
+    'jenkins',
+    'webhook',
+  ]),
   name: z.string(),
   endpoint: z.string().nullish(),
   status: z.string(),

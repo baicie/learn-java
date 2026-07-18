@@ -111,10 +111,19 @@ export const assetTypeLabels: Record<string, string> = {
   k8s_node: 'K8s 节点',
   k8s_namespace: 'K8s 命名空间',
   k8s_workload: 'K8s 工作负载',
+  k8s_pod: 'K8s Pod',
+  page: '页面',
 }
 
 export const sourceLabels: Record<string, string> = {
   manual: '手工',
   csv: 'CSV',
   zabbix: 'Zabbix',
+  kubernetes: 'Kubernetes',
+  opentelemetry: 'OpenTelemetry',
+  rum: 'RUM',
+  github: 'GitHub Actions',
+  gitlab: 'GitLab',
+  jenkins: 'Jenkins',
+  webhook: 'Webhook',
 }

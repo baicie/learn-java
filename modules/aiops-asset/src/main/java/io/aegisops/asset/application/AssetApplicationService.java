@@ -129,6 +129,20 @@ public class AssetApplicationService {
     return repository.findById(tenantId, assetId).isPresent();
   }
 
+  @Transactional
+  public void upsertSourceRelation(
+      String tenantId, String fromAssetId, String toAssetId, String relationType, String source) {
+    if (fromAssetId.equals(toAssetId)) {
+      return;
+    }
+    if (repository.findById(tenantId, fromAssetId).isEmpty()
+        || repository.findById(tenantId, toAssetId).isEmpty()) {
+      throw new IllegalArgumentException("relation assets must exist in the same tenant");
+    }
+    repository.upsertSourceRelation(
+        tenantId, fromAssetId, toAssetId, relationType, source, OffsetDateTime.now(ZoneOffset.UTC));
+  }
+
   private String actionLabel(AssetIdentityResolver.Action action) {
     return switch (action) {
       case CREATE -> "created";

@@ -4,9 +4,17 @@ import { apiResponseSchema } from '@/lib/api-response'
 import { datasourceSchema, syncRunSchema } from '@/lib/datasources/datasource'
 
 export type CreateDatasourceInput = {
-  type: 'zabbix'
+  type:
+    | 'zabbix'
+    | 'kubernetes'
+    | 'opentelemetry'
+    | 'rum'
+    | 'github'
+    | 'gitlab'
+    | 'jenkins'
+    | 'webhook'
   name: string
-  zabbix: {
+  zabbix?: {
     endpoint: string
     username?: string
     password?: string
@@ -14,6 +22,12 @@ export type CreateDatasourceInput = {
     connectTimeoutSeconds?: number
     readTimeoutSeconds?: number
   }
+  kubernetes?: {
+    endpoint: string
+    apiToken: string
+    timeoutSeconds?: number
+  }
+  passive?: { endpoint?: string }
 }
 
 export async function listDatasources() {

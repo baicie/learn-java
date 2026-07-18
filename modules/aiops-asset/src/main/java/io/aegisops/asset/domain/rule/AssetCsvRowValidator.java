@@ -19,7 +19,8 @@ public class AssetCsvRowValidator {
           "k8s_cluster",
           "k8s_node",
           "k8s_namespace",
-          "k8s_workload");
+          "k8s_workload",
+          "k8s_pod");
 
   public List<String> validate(AssetCsvRow row) {
     List<String> errors = new ArrayList<>();

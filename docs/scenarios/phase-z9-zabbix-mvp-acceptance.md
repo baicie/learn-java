@@ -5,14 +5,19 @@ status: accepted
 phase: global
 owner: ai
 created: 2026-06-30
-updated: 2026-06-30
-related: []
+updated: 2026-07-17
+related:
+  - docs/api/operations-ingestion.md
+  - apps/aiops-server/src/test/java/io/aegisops/server/acceptance/MultiSourceIncidentAcceptanceIT.java
 ---
+
 # Phase Z9：Zabbix MVP 端到端验收
 
 ## 目标
 
 Phase Z9 固化 Zabbix 主机与服务异常诊断 MVP 的完整链路。
+
+2026-07-17 在不改变原 Zabbix MVP 安全边界的前提下，增加 Kubernetes、OpenTelemetry、RUM 和变更事件作为同一 Incident 证据链的扩展来源。
 
 ```
 Zabbix Webhook
@@ -22,6 +27,17 @@ Zabbix Webhook
   -> RCA
   -> AI Diagnosis
   -> Markdown Report
+```
+
+多来源扩展链路：
+
+```text
+Kubernetes Inventory ─┐
+OTLP Trace/Log/Metric ├─> Asset / Evidence ─> 确定性跨源 RCA
+RUM Error/Web Vitals ─┤
+Git/CI Change ────────┘
+                              ↓
+                 AI 建议 → 人工审批 → Runner → Postmortem
 ```
 
 ## 验收范围
@@ -106,6 +122,9 @@ Generate Markdown Report:
 | `PhaseZ9RcaEvidenceRulesTest.java`        | RCA 规则回归测试           |
 | `test_phase_z9_mock_diagnosis.py`         | Python Agent Mock 诊断测试 |
 | `PhaseZ9ConsoleSmoke.test.tsx`            | 前端 Smoke 测试            |
+| `MultiSourceIncidentAcceptanceIT.java`    | 多来源 PostgreSQL 验收     |
+
+多来源验收额外断言：重复摄取幂等、跨租户 DataSource 不可用、Kubernetes 资源关系稳定、RUM 用户只存 hash、Trace/Log/Metric/RUM/Change 均可按 Incident 时间窗回查。AI 仍不能直接调用 Runner，审批和审计沿用原 Z9 执行链测试。
 
 ## 最终 MVP 定义
 

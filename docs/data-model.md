@@ -5,7 +5,7 @@ status: accepted
 phase: global
 owner: ai
 created: 2026-06-30
-updated: 2026-07-16
+updated: 2026-07-17
 related:
   - .agents/skills/aegisops/SKILL.md
   - docs/architecture.md
@@ -103,3 +103,19 @@ SourceLink 精确命中
 ```
 
 CSV 预检使用内容 SHA-256 保证同一租户、同一来源实例下的幂等性；确认阶段统一调用 Asset Upsert，不建立第二套写入逻辑。
+
+## 7. 多来源证据与服务目录（Phase 1）
+
+`V0040__init_service_catalog_and_ingestion.sql` 增加以下租户化模型：
+
+| 表                 | 用途                                         | 幂等或查询键                          |
+| ------------------ | -------------------------------------------- | ------------------------------------- |
+| `trace_event`      | OTel Trace 证据索引                          | tenant + datasource + source_event_id |
+| `telemetry_metric` | 指标证据索引；启用时同步转发 VictoriaMetrics | tenant + datasource + source_event_id |
+| `rum_event`        | 页面错误、Web Vitals、Trace 关联             | tenant + datasource + source_event_id |
+| `service_catalog`  | service asset 的 owner/repository/runbook    | tenant + asset_id                     |
+| `change_event`     | Git/CI/Deployment/Helm 变更                  | tenant + source + source_event_id     |
+
+Kubernetes Cluster、Node、Namespace、Workload、Pod、Service 与 Ingress 都映射为 Asset，外部 UID 使用 `k8s_uid` 强身份。Cluster 是每个 Kubernetes DataSource 的合成根资源；API owner reference 转为 `contains` 关系，无可解析 owner 的顶层资源直接挂到 Cluster。
+
+RUM Page URL 是弱身份，只在同一 RUM DataSource 的 SourceLink 中保证幂等，不跨来源自动合并。原始用户标识不存储，`user_hash` 为不可逆 SHA-256。

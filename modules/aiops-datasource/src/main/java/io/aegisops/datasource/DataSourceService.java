@@ -6,12 +6,15 @@ import io.aegisops.common.exception.AppException;
 import io.aegisops.common.outbox.OutboxMessage;
 import io.aegisops.common.outbox.OutboxWriter;
 import io.aegisops.datasource.api.dto.StartSyncResponse;
+import io.aegisops.kubernetes.application.KubernetesInventoryClientFactory;
+import io.aegisops.kubernetes.domain.model.KubernetesConfig;
 import io.aegisops.zabbix.ZabbixClient;
 import io.aegisops.zabbix.ZabbixClientFactory;
 import io.aegisops.zabbix.ZabbixConfig;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -21,27 +24,33 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class DataSourceService {
   private static final String SOURCE_ZABBIX = "zabbix";
+  private static final String SOURCE_KUBERNETES = "kubernetes";
+  private static final Set<String> PASSIVE_SOURCES =
+      Set.of("opentelemetry", "rum", "github", "gitlab", "jenkins", "webhook");
 
   private final JdbcTemplate jdbc;
   private final ObjectMapper objectMapper;
   private final ZabbixClientFactory zabbixClientFactory;
+  private final KubernetesInventoryClientFactory kubernetesClientFactory;
   private final OutboxWriter outboxWriter;
 
   public DataSourceService(
       JdbcTemplate jdbc,
       ObjectMapper objectMapper,
       ZabbixClientFactory zabbixClientFactory,
+      KubernetesInventoryClientFactory kubernetesClientFactory,
       OutboxWriter outboxWriter) {
     this.jdbc = jdbc;
     this.objectMapper = objectMapper;
     this.zabbixClientFactory = zabbixClientFactory;
+    this.kubernetesClientFactory = kubernetesClientFactory;
     this.outboxWriter = outboxWriter;
   }
 
   @Transactional
   public StartSyncResponse startSync(String tenantId, String id) {
     DataSourceEntity entity = getEntity(tenantId, id);
-    ensureZabbix(entity);
+    String jobName = syncJobName(entity);
     String runId = newId("sync");
     jdbc.update(
         """
@@ -56,9 +65,9 @@ public class DataSourceService {
         new OutboxMessage(
             tenantId,
             "worker",
-            "zabbix-sync",
+            jobName,
             payload,
-            "zabbix-sync:" + tenantId + ":" + id + ":" + runId,
+            jobName + ":" + tenantId + ":" + id + ":" + runId,
             3,
             null));
     return new StartSyncResponse(runId, "pending");
@@ -87,12 +96,7 @@ public class DataSourceService {
 
   public DataSourceRecord create(String tenantId, CreateDataSourceRequest request) {
     String type = normalizeType(request.type());
-    if (!SOURCE_ZABBIX.equals(type)) {
-      throw new AppException(
-          "UNSUPPORTED_DATASOURCE", "Only zabbix datasource is supported in Phase1");
-    }
-
-    ZabbixConfig config = toZabbixConfig(request.zabbix());
+    Object config = toConfig(type, request);
     String id = newId("ds");
     String configJson = writeJson(config);
 
@@ -111,14 +115,13 @@ public class DataSourceService {
 
   public TestDataSourceResponse test(String tenantId, String id) {
     DataSourceEntity entity = getEntity(tenantId, id);
-    ensureZabbix(entity);
     try {
-      String version = zabbixClient(entity).testConnection();
+      String version = testConnection(entity);
       jdbc.update(
           "update datasource set status = 'active', updated_at = now() where tenant_id = ? and id = ?",
           tenantId,
           id);
-      return new TestDataSourceResponse(true, "Zabbix connection succeeded", version);
+      return new TestDataSourceResponse(true, testSuccessMessage(entity), version);
     } catch (RuntimeException ex) {
       jdbc.update(
           "update datasource set status = 'error', updated_at = now() where tenant_id = ? and id = ?",
@@ -210,11 +213,59 @@ public class DataSourceService {
     }
   }
 
+  private String syncJobName(DataSourceEntity entity) {
+    return switch (entity.type()) {
+      case SOURCE_ZABBIX -> "zabbix-sync";
+      case SOURCE_KUBERNETES -> "kubernetes-sync";
+      default -> throw new AppException("UNSUPPORTED_DATASOURCE", "Datasource cannot be synced");
+    };
+  }
+
+  private String testConnection(DataSourceEntity entity) {
+    if (SOURCE_ZABBIX.equals(entity.type())) {
+      return zabbixClient(entity).testConnection();
+    }
+    if (SOURCE_KUBERNETES.equals(entity.type())) {
+      return kubernetesClientFactory.create(readKubernetesConfig(entity.configJson())).version();
+    }
+    if (PASSIVE_SOURCES.contains(entity.type())) {
+      return "push";
+    }
+    throw new AppException("UNSUPPORTED_DATASOURCE", "Datasource cannot be tested");
+  }
+
+  private String testSuccessMessage(DataSourceEntity entity) {
+    return PASSIVE_SOURCES.contains(entity.type())
+        ? "Passive ingestion datasource is ready"
+        : entity.type() + " connection succeeded";
+  }
+
+  private Object toConfig(String type, CreateDataSourceRequest request) {
+    if (SOURCE_ZABBIX.equals(type)) {
+      return toZabbixConfig(request.zabbix());
+    }
+    if (SOURCE_KUBERNETES.equals(type)) {
+      return toKubernetesConfig(request.kubernetes());
+    }
+    if (!PASSIVE_SOURCES.contains(type)) {
+      throw new AppException("UNSUPPORTED_DATASOURCE", "Unsupported datasource type");
+    }
+    return Map.of("endpoint", passiveEndpoint(request.passive()));
+  }
+
+  private String passiveEndpoint(PassiveDataSourceConfigRequest request) {
+    String endpoint = request == null ? null : trimToNull(request.endpoint());
+    return endpoint == null ? "" : endpoint;
+  }
+
   private ZabbixClient zabbixClient(DataSourceEntity entity) {
     return zabbixClientFactory.create(readZabbixConfig(entity.configJson()));
   }
 
   private ZabbixConfig toZabbixConfig(ZabbixConfigRequest request) {
+    if (request == null) {
+      throw new AppException("DATASOURCE_CONFIG_INVALID", "Zabbix config is required");
+    }
     ZabbixConfig config =
         new ZabbixConfig(
             trimToNull(request.endpoint()),
@@ -226,6 +277,38 @@ public class DataSourceService {
 
     validateZabbixConfig(config);
     return config;
+  }
+
+  private KubernetesConfig toKubernetesConfig(KubernetesConfigRequest request) {
+    if (request == null) {
+      throw new AppException("DATASOURCE_CONFIG_INVALID", "Kubernetes config is required");
+    }
+    KubernetesConfig config =
+        new KubernetesConfig(
+            trimToNull(request.endpoint()),
+            trimToNull(request.apiToken()),
+            request.timeoutSeconds());
+    validateKubernetesConfig(config);
+    return config;
+  }
+
+  private void validateKubernetesConfig(KubernetesConfig config) {
+    if (config.endpoint() == null || config.apiToken() == null) {
+      throw new AppException(
+          "DATASOURCE_CONFIG_INVALID", "Kubernetes endpoint and apiToken are required");
+    }
+  }
+
+  private KubernetesConfig readKubernetesConfig(String configJson) {
+    try {
+      KubernetesConfig config = objectMapper.readValue(configJson, KubernetesConfig.class);
+      validateKubernetesConfig(config);
+      return config;
+    } catch (AppException exception) {
+      throw exception;
+    } catch (Exception exception) {
+      throw new AppException("DATASOURCE_CONFIG_INVALID", "Datasource config is invalid");
+    }
   }
 
   private void validateZabbixConfig(ZabbixConfig config) {

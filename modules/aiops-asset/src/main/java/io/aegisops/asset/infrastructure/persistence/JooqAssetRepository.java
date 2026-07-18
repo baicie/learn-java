@@ -158,6 +158,38 @@ public class JooqAssetRepository implements AssetStore {
   }
 
   @Override
+  public void upsertSourceRelation(
+      String tenantId,
+      String fromAssetId,
+      String toAssetId,
+      String relationType,
+      String source,
+      OffsetDateTime now) {
+    boolean exists =
+        dsl.fetchExists(
+            ASSET_RELATION,
+            ASSET_RELATION
+                .TENANT_ID
+                .eq(tenantId)
+                .and(ASSET_RELATION.FROM_ASSET_ID.eq(fromAssetId))
+                .and(ASSET_RELATION.TO_ASSET_ID.eq(toAssetId))
+                .and(ASSET_RELATION.RELATION_TYPE.eq(normalized(relationType)))
+                .and(ASSET_RELATION.SOURCE.eq(normalized(source))));
+    if (!exists) {
+      dsl.insertInto(ASSET_RELATION)
+          .set(ASSET_RELATION.ID, "arel_" + Ids.newId())
+          .set(ASSET_RELATION.TENANT_ID, tenantId)
+          .set(ASSET_RELATION.FROM_ASSET_ID, fromAssetId)
+          .set(ASSET_RELATION.TO_ASSET_ID, toAssetId)
+          .set(ASSET_RELATION.RELATION_TYPE, normalized(relationType))
+          .set(ASSET_RELATION.CONFIDENCE, BigDecimal.ONE)
+          .set(ASSET_RELATION.SOURCE, normalized(source))
+          .set(ASSET_RELATION.CREATED_AT, now)
+          .execute();
+    }
+  }
+
+  @Override
   public boolean deleteRelation(String tenantId, String assetId, String relationId) {
     return dsl.deleteFrom(ASSET_RELATION)
             .where(ASSET_RELATION.TENANT_ID.eq(tenantId))
