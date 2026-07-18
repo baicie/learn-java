@@ -1,5 +1,5 @@
 import type { ColumnDef } from '@tanstack/react-table'
-import { RefreshCw, TestTube2, Webhook } from 'lucide-react'
+import { Pencil, RefreshCw, TestTube2, Webhook } from 'lucide-react'
 import type { Datasource } from '@/lib/datasources/datasource'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -20,11 +20,13 @@ const typeLabels: Record<Datasource['type'], string> = {
 export function datasourceColumns({
   onTest,
   onSync,
+  onEdit,
   onWebhook,
   pending,
 }: {
   onTest: (id: string) => void
   onSync: (id: string) => void
+  onEdit: (datasource: Datasource) => void
   onWebhook: (datasource: Datasource) => void
   pending: boolean
 }): ColumnDef<Datasource>[] {
@@ -80,6 +82,15 @@ export function datasourceColumns({
       cell: ({ row }) => (
         <PermissionGate any={['datasource:write']}>
           <div className='flex justify-end gap-1'>
+            <Button
+              size='sm'
+              variant='ghost'
+              disabled={pending}
+              onClick={() => onEdit(row.original)}
+            >
+              <Pencil data-icon='inline-start' />
+              编辑
+            </Button>
             {['zabbix', 'kubernetes'].includes(row.original.type) && (
               <Button
                 size='sm'

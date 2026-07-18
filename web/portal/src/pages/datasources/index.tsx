@@ -25,6 +25,7 @@ import { ThemeSwitch } from '@/components/theme-switch'
 
 export function DatasourcesPage() {
   const [open, setOpen] = useState(false)
+  const [editing, setEditing] = useState<Datasource | null>(null)
   const [webhookDatasource, setWebhookDatasource] = useState<Datasource | null>(
     null
   )
@@ -66,7 +67,12 @@ export function DatasourcesPage() {
             </p>
           </div>
           <PermissionGate any={['datasource:write']}>
-            <Button onClick={() => setOpen(true)}>
+            <Button
+              onClick={() => {
+                setEditing(null)
+                setOpen(true)
+              }}
+            >
               <Plus />
               添加数据源
             </Button>
@@ -86,7 +92,14 @@ export function DatasourcesPage() {
             icon={<DatabaseZap className='size-6' />}
             action={
               <PermissionGate any={['datasource:write']}>
-                <Button onClick={() => setOpen(true)}>添加数据源</Button>
+                <Button
+                  onClick={() => {
+                    setEditing(null)
+                    setOpen(true)
+                  }}
+                >
+                  添加数据源
+                </Button>
               </PermissionGate>
             }
           />
@@ -95,12 +108,23 @@ export function DatasourcesPage() {
             items={sources.data}
             onTest={testConnection}
             onSync={startSync}
+            onEdit={(datasource) => {
+              setEditing(datasource)
+              setOpen(true)
+            }}
             onWebhook={setWebhookDatasource}
             pending={test.isPending || sync.isPending}
           />
         )}
       </Main>
-      <DatasourceFormDialog open={open} onOpenChange={setOpen} />
+      <DatasourceFormDialog
+        open={open}
+        datasource={editing}
+        onOpenChange={(nextOpen) => {
+          setOpen(nextOpen)
+          if (!nextOpen) setEditing(null)
+        }}
+      />
       {webhookDatasource ? (
         <ZabbixWebhookDialog
           datasource={webhookDatasource}

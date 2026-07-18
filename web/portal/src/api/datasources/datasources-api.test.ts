@@ -4,10 +4,11 @@ import {
   listDatasources,
   syncDatasource,
   testDatasource,
+  updateDatasource,
 } from './datasources-api'
 
 vi.mock('@/lib/api-client', () => ({
-  apiClient: { get: vi.fn(), post: vi.fn() },
+  apiClient: { get: vi.fn(), post: vi.fn(), put: vi.fn() },
 }))
 
 describe('datasource api', () => {
@@ -65,6 +66,39 @@ describe('datasource api', () => {
       ok: true,
       message: 'zabbix connection succeeded',
       version: '6.0.47',
+    })
+  })
+
+  it('updates a datasource without requiring a replacement secret', async () => {
+    vi.mocked(apiClient.put).mockResolvedValue({
+      data: {
+        success: true,
+        data: {
+          id: 'ds-1',
+          tenantId: 'tenant-1',
+          type: 'zabbix',
+          name: '新名称',
+          endpoint: 'https://new.example/api_jsonrpc.php',
+          status: 'inactive',
+          createdAt: '2026-07-16T00:00:00Z',
+          updatedAt: '2026-07-18T00:00:00Z',
+        },
+      },
+    })
+
+    await expect(
+      updateDatasource('ds-1', {
+        name: '新名称',
+        zabbix: {
+          endpoint: 'https://new.example/api_jsonrpc.php',
+        },
+      })
+    ).resolves.toMatchObject({ id: 'ds-1', name: '新名称' })
+    expect(apiClient.put).toHaveBeenCalledWith('/api/datasources/ds-1', {
+      name: '新名称',
+      zabbix: {
+        endpoint: 'https://new.example/api_jsonrpc.php',
+      },
     })
   })
 })

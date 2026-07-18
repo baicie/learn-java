@@ -6,7 +6,9 @@ import {
   listSyncRuns,
   syncDatasource,
   testDatasource,
+  updateDatasource,
   type CreateDatasourceInput,
+  type UpdateDatasourceInput,
 } from '@/api/datasources/datasources-api'
 import { datasourceKeys } from '@/api/datasources/query-keys'
 
@@ -44,6 +46,16 @@ export function useCreateDatasource() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (input: CreateDatasourceInput) => createDatasource(input),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: datasourceKeys.all }),
+  })
+}
+
+export function useUpdateDatasource() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: UpdateDatasourceInput }) =>
+      updateDatasource(id, input),
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: datasourceKeys.all }),
   })

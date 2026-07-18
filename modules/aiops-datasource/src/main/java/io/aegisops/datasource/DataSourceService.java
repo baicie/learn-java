@@ -113,6 +113,23 @@ public class DataSourceService {
     return getRecord(tenantId, id);
   }
 
+  public DataSourceRecord update(
+      String tenantId, String id, UpdateDataSourceRequest request) {
+    DataSourceEntity existing = getEntity(tenantId, id);
+    Object config = mergeConfig(existing, request);
+    jdbc.update(
+        """
+        update datasource
+        set config_json = ?::jsonb, name = ?, status = 'inactive', updated_at = now()
+        where tenant_id = ? and id = ?
+        """,
+        writeJson(config),
+        request.name().trim(),
+        tenantId,
+        id);
+    return getRecord(tenantId, id);
+  }
+
   public TestDataSourceResponse test(String tenantId, String id) {
     DataSourceEntity entity = getEntity(tenantId, id);
     try {
@@ -251,6 +268,66 @@ public class DataSourceService {
       throw new AppException("UNSUPPORTED_DATASOURCE", "Unsupported datasource type");
     }
     return Map.of("endpoint", passiveEndpoint(request.passive()));
+  }
+
+  private Object mergeConfig(DataSourceEntity existing, UpdateDataSourceRequest request) {
+    return switch (existing.type()) {
+      case SOURCE_ZABBIX -> mergeZabbixConfig(existing.configJson(), request.zabbix());
+      case SOURCE_KUBERNETES ->
+          mergeKubernetesConfig(existing.configJson(), request.kubernetes());
+      default -> {
+        if (!PASSIVE_SOURCES.contains(existing.type())) {
+          throw new AppException("UNSUPPORTED_DATASOURCE", "Unsupported datasource type");
+        }
+        String endpoint =
+            request.passive() == null ? null : trimToNull(request.passive().endpoint());
+        yield Map.of("endpoint", endpoint == null ? "" : endpoint);
+      }
+    };
+  }
+
+  private ZabbixConfig mergeZabbixConfig(
+      String configJson, UpdateDataSourceRequest.ZabbixConfig request) {
+    ZabbixConfig existing = readZabbixConfig(configJson);
+    if (request == null) {
+      return existing;
+    }
+    ZabbixConfig merged =
+        new ZabbixConfig(
+            trimToNull(request.endpoint()),
+            valueOrExisting(request.username(), existing.username()),
+            valueOrExisting(request.password(), existing.password()),
+            valueOrExisting(request.apiToken(), existing.apiToken()),
+            request.connectTimeoutSeconds() == null
+                ? existing.connectTimeoutSeconds()
+                : request.connectTimeoutSeconds(),
+            request.readTimeoutSeconds() == null
+                ? existing.readTimeoutSeconds()
+                : request.readTimeoutSeconds());
+    validateZabbixConfig(merged);
+    return merged;
+  }
+
+  private KubernetesConfig mergeKubernetesConfig(
+      String configJson, UpdateDataSourceRequest.KubernetesConfig request) {
+    KubernetesConfig existing = readKubernetesConfig(configJson);
+    if (request == null) {
+      return existing;
+    }
+    KubernetesConfig merged =
+        new KubernetesConfig(
+            trimToNull(request.endpoint()),
+            valueOrExisting(request.apiToken(), existing.apiToken()),
+            request.timeoutSeconds() == null
+                ? existing.timeoutSeconds()
+                : request.timeoutSeconds());
+    validateKubernetesConfig(merged);
+    return merged;
+  }
+
+  private String valueOrExisting(String value, String existing) {
+    String normalized = trimToNull(value);
+    return normalized == null ? existing : normalized;
   }
 
   private String passiveEndpoint(PassiveDataSourceConfigRequest request) {
