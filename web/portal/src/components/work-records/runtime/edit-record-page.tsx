@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate, useParams } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
+import { fetchRecordUserOptions } from '@/api/work-records/list'
 import {
   getWorkRecord,
   listPublishedTemplates,
@@ -67,6 +68,11 @@ export function EditRecordPage() {
   const templatesQuery = useQuery({
     queryKey: ['work-record-runtime-templates'],
     queryFn: listPublishedTemplates,
+  })
+
+  const userOptionsQuery = useQuery({
+    queryKey: ['work-record-user-options'],
+    queryFn: fetchRecordUserOptions,
   })
 
   useEffect(() => {
@@ -169,6 +175,7 @@ export function EditRecordPage() {
     recordQuery.isLoading ||
     fieldsQuery.isLoading ||
     templatesQuery.isLoading ||
+    userOptionsQuery.isLoading ||
     dictionaries.loading
   ) {
     return <PageLoadingState />
@@ -189,6 +196,7 @@ export function EditRecordPage() {
     recordQuery.error ||
     fieldsQuery.error ||
     templatesQuery.error ||
+    userOptionsQuery.error ||
     dictionaries.error
   ) {
     return (
@@ -198,6 +206,7 @@ export function EditRecordPage() {
             recordQuery.error ??
             fieldsQuery.error ??
             templatesQuery.error ??
+            userOptionsQuery.error ??
             dictionaries.error
           }
           onRetry={() => {
@@ -205,6 +214,7 @@ export function EditRecordPage() {
               recordQuery.refetch(),
               fieldsQuery.refetch(),
               templatesQuery.refetch(),
+              userOptionsQuery.refetch(),
               dictionaries.refetch(),
             ])
           }}
@@ -242,6 +252,7 @@ export function EditRecordPage() {
       templates={[syntheticTemplate]}
       fields={fields}
       dictOptions={dictionaries.items}
+      userOptions={userOptionsQuery.data ?? []}
       value={value}
       errors={errors}
       dirty={dirty}

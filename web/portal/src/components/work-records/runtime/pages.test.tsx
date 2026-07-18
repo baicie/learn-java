@@ -130,6 +130,30 @@ vi.mock('@/api/dictionaries', () => ({
   listDictTypes: async () => [],
 }))
 
+vi.mock('@/api/work-records/list', () => ({
+  fetchRecordUserNames: async () => ({ u1: '张三' }),
+  fetchRecordUserOptions: async () => [{ id: 'u1', label: '张三' }],
+}))
+
+vi.mock('@/api/work-records/templates', () => ({
+  listTemplates: async () => [
+    {
+      id: 'tpl1',
+      tenantId: 't1',
+      code: 'daily',
+      name: '日报模板',
+      status: 'published',
+      enabled: true,
+      currentVersionId: 'v1',
+      draftSchemaJson: '{}',
+      draftDesignerJson: '{}',
+      createdBy: 'u1',
+      createdAt: '2026-01-01T00:00:00Z',
+      updatedAt: '2026-01-01T00:00:00Z',
+    },
+  ],
+}))
+
 function renderWithClient(node: React.ReactNode) {
   return render(
     <QueryClientProvider client={new QueryClient()}>
@@ -145,6 +169,8 @@ describe('record runtime pages', () => {
     const screen = await renderWithClient(<NewRecordPage />)
     await expect.element(screen.getByText('新建记录')).toBeVisible()
     await expect.element(screen.getByText('日报模板')).toBeVisible()
+    await screen.getByRole('combobox', { name: '负责人' }).click()
+    await expect.element(screen.getByText('张三')).toBeVisible()
   })
 
   it('edit record page renders form with current title', async () => {
@@ -161,7 +187,15 @@ describe('record runtime pages', () => {
 
   it('detail record page renders readonly view', async () => {
     const screen = await renderWithClient(<DetailRecordPage />)
-    await expect.element(screen.getByText('日报')).toBeVisible()
+    await expect
+      .element(screen.getByRole('heading', { name: '日报' }))
+      .toBeVisible()
     await expect.element(screen.getByText('工作内容')).toBeVisible()
+    await expect
+      .element(screen.getByText('日报模板', { exact: true }))
+      .toBeVisible()
+    await expect.element(screen.getByText('张三').first()).toBeVisible()
+    await expect.element(screen.getByText('tpl1')).not.toBeInTheDocument()
+    await expect.element(screen.getByText('u1')).not.toBeInTheDocument()
   })
 })

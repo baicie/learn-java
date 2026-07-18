@@ -15,21 +15,28 @@ export function FormilyDictSelect({
   const source = runtime.dictionaryOptions[dictCode] ?? []
   const currentValue = field.value == null ? '' : String(field.value)
 
-  const options = source.map((item) => {
-    const isCurrent = item.value === currentValue
-    const enabledInMode =
-      item.enabled ||
-      (runtime.mode === 'edit' && isCurrent) ||
-      runtime.mode === 'readonly'
+  const options = source
+    .filter(
+      (item) =>
+        item.enabled ||
+        runtime.mode === 'readonly' ||
+        (runtime.mode === 'edit' && item.value === currentValue)
+    )
+    .map((item) => {
+      const isCurrent = item.value === currentValue
+      const enabledInMode =
+        item.enabled ||
+        (runtime.mode === 'edit' && isCurrent) ||
+        runtime.mode === 'readonly'
 
-    return {
-      value: item.value,
-      label: item.enabled
-        ? item.label
-        : `${item.label}${runtime.disabledSuffix}`,
-      disabled: !enabledInMode,
-    }
-  })
+      return {
+        value: item.value,
+        label: item.enabled
+          ? item.label
+          : `${item.label}${runtime.disabledSuffix}`,
+        disabled: !enabledInMode,
+      }
+    })
 
   return (
     <FormilySelectImpl

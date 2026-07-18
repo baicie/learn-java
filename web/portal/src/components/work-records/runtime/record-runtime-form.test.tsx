@@ -70,7 +70,7 @@ describe('RecordRuntimeForm', () => {
       .toBeVisible()
   })
 
-  it('renders dict options including disabled items', async () => {
+  it('hides disabled dictionary items when creating a record', async () => {
     const dictOptions: RuntimeDictOptions = {
       record_priority: [
         {
@@ -95,7 +95,7 @@ describe('RecordRuntimeForm', () => {
           },
         ]}
         dictOptions={dictOptions}
-        value={value({ priority: 'P1' })}
+        value={value({})}
         errors={{}}
         dirty={false}
         onChange={vi.fn()}
@@ -106,9 +106,32 @@ describe('RecordRuntimeForm', () => {
     )
 
     await screen.getByRole('combobox', { name: 'priority' }).click()
-    const options = screen.getByRole('option', { name: 'P1（已禁用）' })
-    await expect.element(options).toBeInTheDocument()
-    await expect.element(options).toBeDisabled()
+    await expect
+      .element(screen.getByRole('option', { name: 'P1（已禁用）' }))
+      .not.toBeInTheDocument()
+  })
+
+  it('does not expose the select placeholder as an option', async () => {
+    const screen = await withProviders(
+      <RecordRuntimeForm
+        mode='create'
+        templates={[template()]}
+        fields={[field('priority', 'select', false)]}
+        dictOptions={{}}
+        value={value({})}
+        errors={{}}
+        dirty={false}
+        onChange={vi.fn()}
+        onSaveDraft={vi.fn()}
+        onSubmitDone={vi.fn()}
+        onCancel={vi.fn()}
+      />
+    )
+
+    await screen.getByRole('combobox', { name: 'priority' }).click()
+    await expect
+      .element(screen.getByRole('option', { name: '请选择' }))
+      .not.toBeInTheDocument()
   })
 
   it('separately enables save draft and submit done', async () => {

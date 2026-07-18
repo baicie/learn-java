@@ -22,6 +22,7 @@ type DynamicFieldControlProps = {
   field: WorkRecordField
   value: unknown
   dictOptions: RuntimeDictOptions
+  mode?: 'create' | 'edit'
   readonly?: boolean
   controlProps?: ControlProps
   onChange: (value: unknown) => void
@@ -31,6 +32,7 @@ export function DynamicFieldControl({
   field,
   value,
   dictOptions,
+  mode,
   readonly,
   controlProps,
   onChange,
@@ -120,18 +122,18 @@ export function DynamicFieldControl({
   }
 
   if (field.fieldType === 'select') {
+    const selectOptions = editableOptions(field, dictOptions, value, mode)
     return (
       <Select
-        value={typeof value === 'string' && value ? value : 'none'}
-        onValueChange={(next) => onChange(next === 'none' ? '' : next)}
+        value={typeof value === 'string' && value ? value : undefined}
+        onValueChange={onChange}
       >
         <SelectTrigger {...controlProps} className='w-full'>
-          <SelectValue />
+          <SelectValue placeholder={t('workRecords.form.select')} />
         </SelectTrigger>
         <SelectContent>
           <SelectGroup>
-            <SelectItem value='none'>{t('workRecords.form.select')}</SelectItem>
-            {options(field, dictOptions).map((item) => (
+            {selectOptions.map((item) => (
               <SelectItem
                 key={item.itemValue}
                 value={item.itemValue}
@@ -150,9 +152,10 @@ export function DynamicFieldControl({
 
   if (field.fieldType === 'multi_select') {
     const values = Array.isArray(value) ? value.map(String) : []
+    const selectOptions = editableOptions(field, dictOptions, values, mode)
     return (
       <div {...controlProps} className='grid gap-2 rounded-md border p-3'>
-        {options(field, dictOptions).map((item) => (
+        {selectOptions.map((item) => (
           <label
             key={item.itemValue}
             className='flex items-center gap-2 text-sm'
@@ -243,6 +246,20 @@ function options(field: WorkRecordField, dictOptions: RuntimeDictOptions) {
   } catch {
     return []
   }
+}
+
+function editableOptions(
+  field: WorkRecordField,
+  dictOptions: RuntimeDictOptions,
+  value: unknown,
+  mode?: 'create' | 'edit'
+) {
+  const current = new Set(
+    Array.isArray(value) ? value.map(String) : [String(value ?? '')]
+  )
+  return options(field, dictOptions).filter(
+    (item) => item.enabled || (mode === 'edit' && current.has(item.itemValue))
+  )
 }
 
 function label(

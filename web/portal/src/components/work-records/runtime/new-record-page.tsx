@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
+import { fetchRecordUserOptions } from '@/api/work-records/list'
 import {
   createWorkRecord,
   listPublishedTemplates,
@@ -41,6 +42,11 @@ export function NewRecordPage() {
   const templatesQuery = useQuery({
     queryKey: ['work-record-runtime-templates'],
     queryFn: listPublishedTemplates,
+  })
+
+  const userOptionsQuery = useQuery({
+    queryKey: ['work-record-user-options'],
+    queryFn: fetchRecordUserOptions,
   })
 
   const fieldsQuery = useQuery({
@@ -161,6 +167,7 @@ export function NewRecordPage() {
 
   if (
     templatesQuery.isLoading ||
+    userOptionsQuery.isLoading ||
     fieldsQuery.isLoading ||
     dictionaries.loading
   ) {
@@ -168,7 +175,10 @@ export function NewRecordPage() {
   }
 
   const pageError =
-    templatesQuery.error ?? fieldsQuery.error ?? dictionaries.error
+    templatesQuery.error ??
+    fieldsQuery.error ??
+    dictionaries.error ??
+    userOptionsQuery.error
 
   if (pageError) {
     return (
@@ -178,6 +188,7 @@ export function NewRecordPage() {
           onRetry={() => {
             void Promise.all([
               templatesQuery.refetch(),
+              userOptionsQuery.refetch(),
               fieldsQuery.refetch(),
               dictionaries.refetch(),
             ])
@@ -204,6 +215,7 @@ export function NewRecordPage() {
       templates={templatesQuery.data}
       fields={fields}
       dictOptions={dictionaries.items}
+      userOptions={userOptionsQuery.data ?? []}
       value={value}
       errors={errors}
       dirty={dirty}
