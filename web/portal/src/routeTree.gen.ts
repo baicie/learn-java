@@ -22,6 +22,7 @@ import { Route as AuthenticatedAssetsIndexRouteImport } from './routes/_authenti
 import { Route as AuthenticatedAssetsAssetIdRouteImport } from './routes/_authenticated/assets/$assetId'
 import { Route as AuthenticatedDatasourcesIndexRouteImport } from './routes/_authenticated/datasources/index'
 import { Route as AuthenticatedErrorsErrorRouteImport } from './routes/_authenticated/errors/$error'
+import { Route as AuthenticatedPlatformAiModelsRouteImport } from './routes/_authenticated/platform/ai-models'
 import { Route as AuthenticatedPlatformCalendarsRouteImport } from './routes/_authenticated/platform/calendars'
 import { Route as AuthenticatedPlatformDictionariesRouteImport } from './routes/_authenticated/platform/dictionaries'
 import { Route as AuthenticatedPlatformRolesRouteImport } from './routes/_authenticated/platform/roles'
@@ -107,6 +108,12 @@ const AuthenticatedErrorsErrorRoute =
   AuthenticatedErrorsErrorRouteImport.update({
     id: '/errors/$error',
     path: '/errors/$error',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedPlatformAiModelsRoute =
+  AuthenticatedPlatformAiModelsRouteImport.update({
+    id: '/platform/ai-models',
+    path: '/platform/ai-models',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedPlatformCalendarsRoute =
@@ -223,6 +230,7 @@ export interface FileRoutesByFullPath {
   '/503': typeof errors503Route
   '/assets/$assetId': typeof AuthenticatedAssetsAssetIdRoute
   '/errors/$error': typeof AuthenticatedErrorsErrorRoute
+  '/platform/ai-models': typeof AuthenticatedPlatformAiModelsRoute
   '/platform/calendars': typeof AuthenticatedPlatformCalendarsRoute
   '/platform/dictionaries': typeof AuthenticatedPlatformDictionariesRoute
   '/platform/roles': typeof AuthenticatedPlatformRolesRoute
@@ -253,6 +261,7 @@ export interface FileRoutesByTo {
   '/': typeof AuthenticatedIndexRoute
   '/assets/$assetId': typeof AuthenticatedAssetsAssetIdRoute
   '/errors/$error': typeof AuthenticatedErrorsErrorRoute
+  '/platform/ai-models': typeof AuthenticatedPlatformAiModelsRoute
   '/platform/calendars': typeof AuthenticatedPlatformCalendarsRoute
   '/platform/dictionaries': typeof AuthenticatedPlatformDictionariesRoute
   '/platform/roles': typeof AuthenticatedPlatformRolesRoute
@@ -285,6 +294,7 @@ export interface FileRoutesById {
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/assets/$assetId': typeof AuthenticatedAssetsAssetIdRoute
   '/_authenticated/errors/$error': typeof AuthenticatedErrorsErrorRoute
+  '/_authenticated/platform/ai-models': typeof AuthenticatedPlatformAiModelsRoute
   '/_authenticated/platform/calendars': typeof AuthenticatedPlatformCalendarsRoute
   '/_authenticated/platform/dictionaries': typeof AuthenticatedPlatformDictionariesRoute
   '/_authenticated/platform/roles': typeof AuthenticatedPlatformRolesRoute
@@ -318,6 +328,7 @@ export interface FileRouteTypes {
     | '/503'
     | '/assets/$assetId'
     | '/errors/$error'
+    | '/platform/ai-models'
     | '/platform/calendars'
     | '/platform/dictionaries'
     | '/platform/roles'
@@ -348,6 +359,7 @@ export interface FileRouteTypes {
     | '/'
     | '/assets/$assetId'
     | '/errors/$error'
+    | '/platform/ai-models'
     | '/platform/calendars'
     | '/platform/dictionaries'
     | '/platform/roles'
@@ -379,6 +391,7 @@ export interface FileRouteTypes {
     | '/_authenticated/'
     | '/_authenticated/assets/$assetId'
     | '/_authenticated/errors/$error'
+    | '/_authenticated/platform/ai-models'
     | '/_authenticated/platform/calendars'
     | '/_authenticated/platform/dictionaries'
     | '/_authenticated/platform/roles'
@@ -501,6 +514,13 @@ declare module '@tanstack/react-router' {
       path: '/errors/$error'
       fullPath: '/errors/$error'
       preLoaderRoute: typeof AuthenticatedErrorsErrorRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/platform/ai-models': {
+      id: '/_authenticated/platform/ai-models'
+      path: '/platform/ai-models'
+      fullPath: '/platform/ai-models'
+      preLoaderRoute: typeof AuthenticatedPlatformAiModelsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/platform/calendars': {
@@ -686,6 +706,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedAssetsAssetIdRoute: typeof AuthenticatedAssetsAssetIdRoute
   AuthenticatedErrorsErrorRoute: typeof AuthenticatedErrorsErrorRoute
+  AuthenticatedPlatformAiModelsRoute: typeof AuthenticatedPlatformAiModelsRoute
   AuthenticatedPlatformCalendarsRoute: typeof AuthenticatedPlatformCalendarsRoute
   AuthenticatedPlatformDictionariesRoute: typeof AuthenticatedPlatformDictionariesRoute
   AuthenticatedPlatformRolesRoute: typeof AuthenticatedPlatformRolesRoute
@@ -704,6 +725,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedAssetsAssetIdRoute: AuthenticatedAssetsAssetIdRoute,
   AuthenticatedErrorsErrorRoute: AuthenticatedErrorsErrorRoute,
+  AuthenticatedPlatformAiModelsRoute: AuthenticatedPlatformAiModelsRoute,
   AuthenticatedPlatformCalendarsRoute: AuthenticatedPlatformCalendarsRoute,
   AuthenticatedPlatformDictionariesRoute:
     AuthenticatedPlatformDictionariesRoute,

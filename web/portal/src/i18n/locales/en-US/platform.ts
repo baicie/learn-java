@@ -9,6 +9,7 @@ export const platform = {
   'nav.workRecords.tasks': 'Import / Export Tasks',
   'nav.workRecords.operations': 'Operations',
   'nav.platform.group': 'Platform',
+  'nav.platform.aiModels': 'AI Models',
   'nav.platform.users': 'Users',
   'nav.platform.roles': 'Roles & Permissions',
   'nav.platform.dictionaries': 'Dictionaries',
