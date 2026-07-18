@@ -46,6 +46,7 @@ describe('DatasourcesTable', () => {
           items={[datasource]}
           onTest={vi.fn()}
           onSync={vi.fn()}
+          onEdit={vi.fn()}
           onWebhook={onWebhook}
           pending={false}
         />
@@ -64,6 +65,7 @@ describe('DatasourcesTable', () => {
           items={[{ ...datasource, type: 'kubernetes' }]}
           onTest={vi.fn()}
           onSync={vi.fn()}
+          onEdit={vi.fn()}
           onWebhook={vi.fn()}
           pending={false}
         />
@@ -71,5 +73,25 @@ describe('DatasourcesTable', () => {
     )
 
     expect(screen.getByRole('button', { name: 'Webhook' }).query()).toBeNull()
+  })
+
+  it('opens editing for the selected datasource', async () => {
+    grantDatasourceWritePermission()
+    const onEdit = vi.fn()
+    const screen = await render(
+      <QueryClientProvider client={new QueryClient()}>
+        <DatasourcesTable
+          items={[datasource]}
+          onTest={vi.fn()}
+          onSync={vi.fn()}
+          onEdit={onEdit}
+          onWebhook={vi.fn()}
+          pending={false}
+        />
+      </QueryClientProvider>
+    )
+
+    await screen.getByRole('button', { name: '编辑' }).click()
+    expect(onEdit).toHaveBeenCalledWith(datasource)
   })
 })
