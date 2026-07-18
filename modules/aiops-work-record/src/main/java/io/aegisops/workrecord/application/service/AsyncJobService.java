@@ -115,13 +115,11 @@ public class AsyncJobService {
     AsyncJob job =
         get(tenantId, id, principal.id(), principal.hasPermission("work-record:read:all"));
     boolean allowed =
-        switch (job.jobType()) {
-          case EXCEL_IMPORT -> principal.hasPermission("work-record:import");
-          case EXCEL_EXPORT ->
-              principal.hasPermission("work-record:export")
-                  && principal.hasPermission("work-record:export:async");
-          default -> false;
-        };
+        (job.jobType() == AsyncJobType.EXCEL_IMPORT
+                && principal.hasPermission("work-record:import"))
+            || (job.jobType() == AsyncJobType.EXCEL_EXPORT
+                && principal.hasPermission("work-record:export")
+                && principal.hasPermission("work-record:export:async"));
     if (!allowed) {
       throw new AccessDeniedException("async job action permission is required");
     }

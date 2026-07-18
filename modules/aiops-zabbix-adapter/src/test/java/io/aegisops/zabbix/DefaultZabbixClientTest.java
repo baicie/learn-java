@@ -37,22 +37,19 @@ class DefaultZabbixClientTest {
 
   @Test
   void rootEndpointUsesStandardJsonRpcPath() {
-    ZabbixConfig rootConfig =
-        new ZabbixConfig("https://zabbix.test/", null, null, "token", 1, 5);
+    ZabbixConfig rootConfig = new ZabbixConfig("https://zabbix.test/", null, null, "token", 1, 5);
     client = new DefaultZabbixClient(rootConfig, objectMapper, restTemplate);
 
     server
         .expect(requestTo("https://zabbix.test/api_jsonrpc.php"))
         .andRespond(
             withSuccess(
-                "{\"jsonrpc\":\"2.0\",\"result\":\"7.0.0\",\"id\":1}",
-                MediaType.APPLICATION_JSON));
+                "{\"jsonrpc\":\"2.0\",\"result\":\"7.0.0\",\"id\":1}", MediaType.APPLICATION_JSON));
     server
         .expect(requestTo("https://zabbix.test/api_jsonrpc.php"))
         .andRespond(
             withSuccess(
-                "{\"jsonrpc\":\"2.0\",\"result\":[],\"id\":2}",
-                MediaType.APPLICATION_JSON));
+                "{\"jsonrpc\":\"2.0\",\"result\":[],\"id\":2}", MediaType.APPLICATION_JSON));
 
     assertEquals("7.0.0", client.testConnection());
   }

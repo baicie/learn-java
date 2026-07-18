@@ -258,7 +258,9 @@ final class DefaultZabbixClient implements ZabbixClient, JsonRpcCaller {
 
       HttpEntity<String> entity = new HttpEntity<>(objectMapper.writeValueAsString(body), headers);
       String response =
-          restTemplate.exchange(config.apiEndpoint(), HttpMethod.POST, entity, String.class).getBody();
+          restTemplate
+              .exchange(config.apiEndpoint(), HttpMethod.POST, entity, String.class)
+              .getBody();
 
       JsonNode root = objectMapper.readTree(response == null ? "{}" : response);
       if (root.hasNonNull("error")) {
