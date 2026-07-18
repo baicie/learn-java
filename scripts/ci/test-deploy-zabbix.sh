@@ -44,7 +44,7 @@ run_deploy() {
 run_deploy
 grep -Fq 'ZABBIX_DB_PASSWORD=fixed-test-password' "$ENV_FILE"
 grep -Fq 'ZABBIX_WEB_PORT=8083' "$ENV_FILE"
-[ "$(stat -f '%Lp' "$ENV_FILE" 2>/dev/null || stat -c '%a' "$ENV_FILE")" = "600" ]
+[ "$(LC_ALL=C ls -ld "$ENV_FILE" | cut -c 1-10)" = "-rw-------" ]
 cp "$ENV_FILE" "$TMP_ROOT/env.before"
 
 run_deploy
