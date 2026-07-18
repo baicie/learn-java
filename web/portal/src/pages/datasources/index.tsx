@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { DatabaseZap, Plus } from 'lucide-react'
+import type { Datasource } from '@/lib/datasources/datasource'
 import {
   useDatasources,
   useSyncDatasource,
@@ -8,6 +9,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { DatasourceFormDialog } from '@/components/datasources/datasource-form-dialog'
 import { DatasourcesTable } from '@/components/datasources/datasources-table'
+import { ZabbixWebhookDialog } from '@/components/datasources/zabbix-webhook-dialog'
 import { notify } from '@/components/feedback/app-toaster'
 import {
   EmptyState,
@@ -23,6 +25,9 @@ import { ThemeSwitch } from '@/components/theme-switch'
 
 export function DatasourcesPage() {
   const [open, setOpen] = useState(false)
+  const [webhookDatasource, setWebhookDatasource] = useState<Datasource | null>(
+    null
+  )
   const sources = useDatasources()
   const test = useTestDatasource()
   const sync = useSyncDatasource()
@@ -90,11 +95,21 @@ export function DatasourcesPage() {
             items={sources.data}
             onTest={testConnection}
             onSync={startSync}
+            onWebhook={setWebhookDatasource}
             pending={test.isPending || sync.isPending}
           />
         )}
       </Main>
       <DatasourceFormDialog open={open} onOpenChange={setOpen} />
+      {webhookDatasource ? (
+        <ZabbixWebhookDialog
+          datasource={webhookDatasource}
+          open
+          onOpenChange={(next) => {
+            if (!next) setWebhookDatasource(null)
+          }}
+        />
+      ) : null}
     </>
   )
 }

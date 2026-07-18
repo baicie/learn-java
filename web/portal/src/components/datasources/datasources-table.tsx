@@ -19,17 +19,19 @@ export function DatasourcesTable({
   items,
   onTest,
   onSync,
+  onWebhook,
   pending,
 }: {
   items: Datasource[]
   onTest: (id: string) => void
   onSync: (id: string) => void
+  onWebhook: (datasource: Datasource) => void
   pending: boolean
 }) {
   // eslint-disable-next-line react-hooks/incompatible-library -- TanStack Table intentionally exposes a stateful table instance.
   const table = useReactTable({
     data: items,
-    columns: datasourceColumns({ onTest, onSync, pending }),
+    columns: datasourceColumns({ onTest, onSync, onWebhook, pending }),
     getCoreRowModel: getCoreRowModel(),
   })
   return (

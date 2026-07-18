@@ -1,5 +1,5 @@
 import type { ColumnDef } from '@tanstack/react-table'
-import { RefreshCw, TestTube2 } from 'lucide-react'
+import { RefreshCw, TestTube2, Webhook } from 'lucide-react'
 import type { Datasource } from '@/lib/datasources/datasource'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -20,10 +20,12 @@ const typeLabels: Record<Datasource['type'], string> = {
 export function datasourceColumns({
   onTest,
   onSync,
+  onWebhook,
   pending,
 }: {
   onTest: (id: string) => void
   onSync: (id: string) => void
+  onWebhook: (datasource: Datasource) => void
   pending: boolean
 }): ColumnDef<Datasource>[] {
   return [
@@ -87,6 +89,16 @@ export function datasourceColumns({
               >
                 <TestTube2 />
                 测试
+              </Button>
+            )}
+            {row.original.type === 'zabbix' && (
+              <Button
+                size='sm'
+                variant='ghost'
+                onClick={() => onWebhook(row.original)}
+              >
+                <Webhook />
+                Webhook
               </Button>
             )}
             <Button
