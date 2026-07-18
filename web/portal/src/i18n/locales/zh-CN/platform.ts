@@ -9,6 +9,7 @@ export const platform = {
   'nav.workRecords.tasks': '导入导出任务',
   'nav.workRecords.operations': '运营中心',
   'nav.platform.group': '平台管理',
+  'nav.platform.aiModels': 'AI 模型',
   'nav.platform.users': '用户管理',
   'nav.platform.roles': '角色权限',
   'nav.platform.dictionaries': '字典管理',

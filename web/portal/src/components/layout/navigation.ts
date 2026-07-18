@@ -1,5 +1,6 @@
 import {
   CalendarDays,
+  BrainCircuit,
   Boxes,
   ClipboardList,
   LayoutDashboard,
@@ -72,6 +73,12 @@ export const navigation: NavigationItem[] = [
     titleKey: 'nav.platform.group',
     icon: Settings2,
     children: [
+      {
+        titleKey: 'nav.platform.aiModels',
+        to: '/platform/ai-models',
+        icon: BrainCircuit,
+        anyPermissions: ['admin:manage'],
+      },
       {
         titleKey: 'nav.workRecords.designer',
         to: '/work-records/templates',
