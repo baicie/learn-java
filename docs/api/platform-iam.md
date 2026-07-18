@@ -5,7 +5,7 @@ status: accepted
 phase: work-record-20
 owner: ai
 created: 2026-07-14
-updated: 2026-07-14
+updated: 2026-07-18
 related:
   - modules/aiops-platform/src/main/java/io/aegisops/platform/iam/web/PlatformUserController.java
   - modules/aiops-platform/src/main/java/io/aegisops/platform/iam/web/PlatformRoleController.java
@@ -45,7 +45,7 @@ related:
 | DELETE | `/api/platform/roles/{code}`             | `platform:role:write` | 软删除未使用的自定义角色 |
 | GET    | `/api/platform/permissions`              | `platform:role:read`  | 查询分组权限目录         |
 
-内置角色不可删除，外部调用不能创建内置角色；仍有用户引用的角色不可删除。权限和数据范围替换在单事务中完成并写审计日志。
+内置角色不可删除，外部调用不能创建内置角色；仍有用户引用的角色不可删除。权限和数据范围替换在单事务中完成并写审计日志。保存角色权限时会递归补齐权限依赖；任一层依赖缺失或已禁用时拒绝保存，避免形成不可用的半套授权。
 
 ## 主要错误码
 

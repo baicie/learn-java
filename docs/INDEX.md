@@ -4,8 +4,8 @@ type: operation
 status: accepted
 phase: global
 owner: script
-created: 2026-07-17
-updated: 2026-07-17
+created: 2026-07-18
+updated: 2026-07-18
 related: []
 ---
 
@@ -54,7 +54,7 @@ Do not edit it manually.
 | -------------------------------- | -------- | -------------- | ---------- | ------------------------------------------------------------------- |
 | 当前账户 API                     | accepted | phase-21       | 2026-07-14 | [docs/api/account.md](api/account.md)                               |
 | 资源中心 API                     | accepted | phase-1        | 2026-07-16 | [docs/api/assets.md](api/assets.md)                                 |
-| 多来源可观测与变更接入 API       | accepted | phase-1        | 2026-07-17 | [docs/api/operations-ingestion.md](api/operations-ingestion.md)     |
+| 多来源可观测与变更接入 API       | accepted | phase-1        | 2026-07-18 | [docs/api/operations-ingestion.md](api/operations-ingestion.md)     |
 | 平台用户与权限管理 API           | accepted | work-record-20 | 2026-07-14 | [docs/api/platform-iam.md](api/platform-iam.md)                     |
 | 工作记录 Phase 20 异步与协作 API | accepted | work-record-20 | 2026-07-14 | [docs/api/work-record-phase20.md](api/work-record-phase20.md)       |
 | 工作记录模板 API                 | accepted | phase-21       | 2026-07-15 | [docs/api/work-record-templates.md](api/work-record-templates.md)   |

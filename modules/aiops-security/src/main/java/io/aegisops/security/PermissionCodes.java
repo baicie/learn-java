@@ -9,6 +9,7 @@ public final class PermissionCodes {
   // Legacy AIOps permissions
   public static final String DATASOURCE_READ = "datasource:read";
   public static final String DATASOURCE_WRITE = "datasource:write";
+  public static final String DATASOURCE_INGEST = "datasource:ingest";
   public static final String ASSET_READ = "asset:read";
   public static final String ASSET_WRITE = "asset:write";
   public static final String ASSET_IMPORT = "asset:import";
@@ -69,6 +70,7 @@ public final class PermissionCodes {
       Set.of(
           DATASOURCE_READ,
           DATASOURCE_WRITE,
+          DATASOURCE_INGEST,
           ASSET_READ,
           ASSET_WRITE,
           ASSET_IMPORT,

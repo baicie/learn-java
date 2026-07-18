@@ -6,6 +6,7 @@ import io.aegisops.common.exception.ResourceNotFoundException;
 import io.aegisops.common.id.Ids;
 import io.aegisops.common.outbox.OutboxMessage;
 import io.aegisops.common.outbox.OutboxWriter;
+import io.aegisops.security.UserPrincipal;
 import io.aegisops.workrecord.application.command.AsyncJobQuery;
 import io.aegisops.workrecord.application.command.CreateAsyncJobCommand;
 import io.aegisops.workrecord.application.port.AsyncJobRepository;
@@ -16,6 +17,7 @@ import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -106,8 +108,23 @@ public class AsyncJobService {
     return job;
   }
 
-  public AsyncJob cancel(String tenantId, String id, String userId, boolean readAll) {
-    AsyncJob job = get(tenantId, id, userId, readAll);
+  public AsyncJob cancel(String tenantId, String id, UserPrincipal principal) {
+    if (principal == null || !tenantId.equals(principal.tenantId())) {
+      throw new AccessDeniedException("authenticated tenant user is required");
+    }
+    AsyncJob job =
+        get(tenantId, id, principal.id(), principal.hasPermission("work-record:read:all"));
+    boolean allowed =
+        switch (job.jobType()) {
+          case EXCEL_IMPORT -> principal.hasPermission("work-record:import");
+          case EXCEL_EXPORT ->
+              principal.hasPermission("work-record:export")
+                  && principal.hasPermission("work-record:export:async");
+          default -> false;
+        };
+    if (!allowed) {
+      throw new AccessDeniedException("async job action permission is required");
+    }
     if (job.status() != AsyncJobStatus.QUEUED) {
       throw new ConflictException("only queued async jobs can be cancelled");
     }

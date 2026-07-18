@@ -5,9 +5,12 @@ import io.aegisops.platform.iam.domain.PermissionRisk;
 import io.aegisops.platform.iam.error.IamDomainException;
 import io.aegisops.platform.iam.error.IamErrorCode;
 import io.aegisops.platform.iam.repository.PermissionDefinitionRepository;
+import java.util.ArrayDeque;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
+import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Component;
 
@@ -39,7 +42,10 @@ public class PermissionNormalizer {
       return new NormalizedPermissionSet(Set.of(), Set.of(), Set.of());
     }
     Set<String> requestedCodes = new LinkedHashSet<>(safeInput);
-    Set<PermissionDefinition> definitions = loadDefinitions(requestedCodes);
+    Map<String, PermissionDefinition> directory =
+        repository.listAll().stream()
+            .collect(Collectors.toMap(PermissionDefinition::code, Function.identity()));
+    Set<PermissionDefinition> definitions = resolveDefinitions(requestedCodes, directory);
 
     Set<String> foundCodes = new HashSet<>();
     for (PermissionDefinition def : definitions) {
@@ -72,10 +78,33 @@ public class PermissionNormalizer {
     return new NormalizedPermissionSet(finalSet, requestedCodes, Set.copyOf(criticalCodes));
   }
 
-  private Set<PermissionDefinition> loadDefinitions(Set<String> requested) {
-    return repository.listAll().stream()
-        .filter(def -> requested.contains(def.code()))
-        .collect(Collectors.toCollection(LinkedHashSet::new));
+  private Set<PermissionDefinition> resolveDefinitions(
+      Set<String> requested, Map<String, PermissionDefinition> directory) {
+    Set<PermissionDefinition> resolved = new LinkedHashSet<>();
+    Set<String> visited = new HashSet<>();
+    var pending = new ArrayDeque<>(requested);
+    while (!pending.isEmpty()) {
+      String code = pending.removeFirst();
+      if (!visited.add(code)) {
+        continue;
+      }
+      PermissionDefinition definition = directory.get(code);
+      if (definition == null) {
+        throw new IamDomainException(
+            requested.contains(code)
+                ? IamErrorCode.PERMISSION_NOT_FOUND
+                : IamErrorCode.PERMISSION_DIRECTORY_INCOMPLETE,
+            "permission directory missing one or more entries: [" + code + "]");
+      }
+      if (!definition.enabled()) {
+        throw new IamDomainException(
+            IamErrorCode.PERMISSION_DIRECTORY_INCOMPLETE,
+            "permission directory contains disabled dependency: [" + code + "]");
+      }
+      resolved.add(definition);
+      pending.addAll(definition.dependencies());
+    }
+    return resolved;
   }
 
   private Set<String> sanitize(Set<String> raw) {

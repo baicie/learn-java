@@ -66,20 +66,17 @@ public class AsyncJobController {
   }
 
   @PostMapping("/{jobId}/cancel")
-  @PreAuthorize("hasAuthority('work-record:read:all') or hasAuthority('work-record:read:self')")
+  @PreAuthorize(
+      "hasAuthority('work-record:import') or "
+          + "(hasAuthority('work-record:export') and hasAuthority('work-record:export:async'))")
   public ApiResponse<AsyncJobResponse> cancel(
       @PathVariable String jobId, @AuthenticationPrincipal UserPrincipal user) {
     return ApiResponse.ok(
-        AsyncJobResponse.from(
-            service.cancel(
-                TenantContext.requireTenantId(),
-                jobId,
-                user.id(),
-                user.hasPermission("work-record:read:all"))));
+        AsyncJobResponse.from(service.cancel(TenantContext.requireTenantId(), jobId, user)));
   }
 
   @PostMapping("/{jobId}/download")
-  @PreAuthorize("hasAuthority('work-record:read:all') or hasAuthority('work-record:read:self')")
+  @PreAuthorize("hasAuthority('work-record:export') and hasAuthority('work-record:export:async')")
   public ResponseEntity<ApiResponse<AsyncJobDownloadService.Download>> download(
       @PathVariable String jobId, @AuthenticationPrincipal UserPrincipal user) {
     var result = downloads.download(TenantContext.requireTenantId(), jobId, user);

@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -106,6 +107,20 @@ class AsyncJobControllerWebTest {
                 .with(user(principal(Set.of("work-record:read:self")))))
         .andExpect(status().isForbidden());
     verifyNoInteractions(service);
+  }
+
+  @Test
+  void readPermissionCannotCancelOrDownloadJobs() throws Exception {
+    UserPrincipal reader = principal(Set.of("work-record:read:self"));
+
+    mockMvc
+        .perform(post("/api/work-record/async-jobs/job-1/cancel").with(user(reader)).with(csrf()))
+        .andExpect(status().isForbidden());
+    mockMvc
+        .perform(post("/api/work-record/async-jobs/job-1/download").with(user(reader)).with(csrf()))
+        .andExpect(status().isForbidden());
+
+    verifyNoInteractions(service, downloads);
   }
 
   private static UserPrincipal principal(Set<String> permissions) {

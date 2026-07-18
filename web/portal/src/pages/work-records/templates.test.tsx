@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { describe, expect, it, vi } from 'vitest'
 import { render } from 'vitest-browser-react'
+import { useAuthStore } from '@/stores/auth-store'
 import { ConfirmProvider } from '@/components/feedback/confirm-provider'
 import { WorkRecordTemplatesPage } from './templates'
 
@@ -17,10 +18,6 @@ vi.mock('@tanstack/react-router', () => ({
       {children}
     </a>
   ),
-}))
-
-vi.mock('@/auth/permission-gate', () => ({
-  PermissionGate: ({ children }: { children: React.ReactNode }) => children,
 }))
 
 vi.mock('@/api/work-records/templates', () => ({
@@ -53,6 +50,15 @@ vi.mock('@/api/work-records/templates', () => ({
 
 describe('WorkRecordTemplatesPage', () => {
   it('lists templates and exposes management actions', async () => {
+    useAuthStore.getState().auth.setPrincipal({
+      userId: 'writer',
+      tenantId: 'tenant-1',
+      username: 'writer',
+      displayName: 'Writer',
+      roles: [],
+      permissions: ['work-record:template:read', 'work-record:template:write'],
+      dataScopes: {},
+    })
     const screen = await render(
       <QueryClientProvider client={new QueryClient()}>
         <ConfirmProvider>
@@ -87,5 +93,33 @@ describe('WorkRecordTemplatesPage', () => {
     await expect
       .element(designerLink)
       .toHaveAttribute('href', '/work-records/templates/tpl-1/designer')
+  })
+
+  it('hides the designer entry from template readers', async () => {
+    useAuthStore.getState().auth.setPrincipal({
+      userId: 'reader',
+      tenantId: 'tenant-1',
+      username: 'reader',
+      displayName: 'Reader',
+      roles: [],
+      permissions: ['work-record:template:read'],
+      dataScopes: {},
+    })
+
+    const screen = await render(
+      <QueryClientProvider client={new QueryClient()}>
+        <ConfirmProvider>
+          <WorkRecordTemplatesPage />
+        </ConfirmProvider>
+      </QueryClientProvider>
+    )
+
+    await expect.element(screen.getByText('日报模板')).toBeVisible()
+    await expect
+      .element(screen.getByRole('link', { name: '设计' }))
+      .not.toBeInTheDocument()
+    await expect
+      .element(screen.getByRole('button', { name: '版本' }))
+      .toBeVisible()
   })
 })

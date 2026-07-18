@@ -8,6 +8,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.OffsetDateTime;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -30,6 +31,10 @@ public class AsyncJobDownloadService {
   public Download download(String tenantId, String jobId, UserPrincipal principal) {
     if (principal == null || !tenantId.equals(principal.tenantId())) {
       throw new IllegalArgumentException("authenticated tenant user is required");
+    }
+    if (!principal.hasPermission("work-record:export")
+        || !principal.hasPermission("work-record:export:async")) {
+      throw new AccessDeniedException("async export permission is required");
     }
     AsyncJob job =
         jobs.get(tenantId, jobId, principal.id(), principal.hasPermission("work-record:read:all"));

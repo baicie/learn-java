@@ -1,6 +1,7 @@
 package io.aegisops.workrecord.application.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -35,6 +36,20 @@ class AsyncJobDownloadServiceTest {
     assertThat(result.fileName()).isEqualTo("records.csv");
   }
 
+  @Test
+  void rejectsReaderWithoutAsyncExportPermissions() {
+    AsyncJobService jobs = mock(AsyncJobService.class);
+    var service =
+        new AsyncJobDownloadService(
+            jobs,
+            mock(ObjectStorageUrlSigner.class),
+            Clock.fixed(Instant.parse("2026-07-14T10:00:00Z"), ZoneOffset.UTC));
+
+    assertThatThrownBy(
+            () -> service.download("tenant-1", "job-1", principal(Set.of("work-record:read:self"))))
+        .isInstanceOf(org.springframework.security.access.AccessDeniedException.class);
+  }
+
   private static AsyncJob job() {
     OffsetDateTime now = OffsetDateTime.parse("2026-07-14T10:00Z");
     return new AsyncJob(
@@ -65,10 +80,15 @@ class AsyncJobDownloadServiceTest {
   }
 
   private static UserPrincipal principal() {
+    return principal(
+        Set.of("work-record:read:self", "work-record:export", "work-record:export:async"));
+  }
+
+  private static UserPrincipal principal(Set<String> permissions) {
     return new UserPrincipal(
         new UserPrincipal.Identity("user-1", "tenant-1", "alice", "Alice"),
         Set.of(),
-        Set.of("work-record:read:self"),
+        permissions,
         Map.of());
   }
 }
