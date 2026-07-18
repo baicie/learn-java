@@ -1,10 +1,8 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { apiClient } from '@/lib/api-client'
 import { importWorkRecords } from './imports'
 
 describe('importWorkRecords', () => {
-  afterEach(() => vi.restoreAllMocks())
-
   it('uploads xlsx before submitting the asynchronous import job', async () => {
     const post = vi
       .spyOn(apiClient, 'post')
@@ -26,21 +24,26 @@ describe('importWorkRecords', () => {
       .mockResolvedValue(new Response(null, { status: 200 }))
     const file = new File(['xlsx'], 'records.xlsx')
 
-    const jobId = await importWorkRecords(file, {
-      templateId: 'tpl-1',
-      templateVersionId: 'version-1',
-      defaultStatus: 'draft',
-      stopOnError: false,
-    })
+    try {
+      const jobId = await importWorkRecords(file, {
+        templateId: 'tpl-1',
+        templateVersionId: 'version-1',
+        defaultStatus: 'draft',
+        stopOnError: false,
+      })
 
-    expect(jobId).toBe('job-1')
-    expect(upload).toHaveBeenCalledWith(
-      'https://storage.example/upload',
-      expect.objectContaining({ method: 'PUT', body: file })
-    )
-    expect(post).toHaveBeenLastCalledWith(
-      '/api/work-record/imports',
-      expect.objectContaining({ uploadId: 'upload-1', templateId: 'tpl-1' })
-    )
+      expect(jobId).toBe('job-1')
+      expect(upload).toHaveBeenCalledWith(
+        'https://storage.example/upload',
+        expect.objectContaining({ method: 'PUT', body: file })
+      )
+      expect(post).toHaveBeenLastCalledWith(
+        '/api/work-record/imports',
+        expect.objectContaining({ uploadId: 'upload-1', templateId: 'tpl-1' })
+      )
+    } finally {
+      upload.mockRestore()
+      post.mockRestore()
+    }
   })
 })
