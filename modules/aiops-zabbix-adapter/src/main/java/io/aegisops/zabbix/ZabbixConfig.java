@@ -7,6 +7,14 @@ public record ZabbixConfig(
     String apiToken,
     Integer connectTimeoutSeconds,
     Integer readTimeoutSeconds) {
+  public String apiEndpoint() {
+    String value = endpoint.trim();
+    if (value.endsWith("/api_jsonrpc.php")) {
+      return value;
+    }
+    return value.endsWith("/") ? value + "api_jsonrpc.php" : value + "/api_jsonrpc.php";
+  }
+
   public int connectTimeoutMillis() {
     return clampSeconds(connectTimeoutSeconds, 5, 1, 60) * 1000;
   }

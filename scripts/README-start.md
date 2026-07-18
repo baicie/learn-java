@@ -18,6 +18,7 @@ tsx scripts/start.ts <command>
 | 子命令        | 作用                                                                               | 副作用                           |
 | ------------- | ---------------------------------------------------------------------------------- | -------------------------------- |
 | `all`（默认） | infra + build + start 三个后端                                                     | 启动 Docker volumes、Java 子进程 |
+| `dev`         | infra + server + worker + Portal；不启动 runner                                    | 启动本地联调所需进程             |
 | `infra`       | 仅 `docker compose up -d`（PostgreSQL、Redis、ClickHouse、VictoriaMetrics、MinIO） | 启动容器                         |
 | `backend`     | 仅 `mvn package` + 启动三个后端                                                    | 启动 Java 子进程                 |
 | `frontend`    | 仅启动 web/console dev server                                                      | 启动 Vite dev server             |
@@ -28,7 +29,7 @@ tsx scripts/start.ts <command>
 | `logs <app>`  | tail `apps/<app>/logs/console.log`                                                 | 只读                             |
 | `help`        | 打印 usage                                                                         | 只读                             |
 
-`app` 可选值：`server`（port 8080）/ `worker`（port 8081）/ `runner`（port 8082）。
+`app` 可选值：`server`（port 8080）/ `worker`（本地 port 8091）/ `runner`（port 8082）。
 
 ## 启动顺序与超时
 
@@ -56,10 +57,10 @@ tsx scripts/start.ts <command>
 
 ## 故障排查
 
-| 现象                         | 原因                    | 修复                 |
-| ---------------------------- | ----------------------- | -------------------- | -------------- |
-| 容器起不来                   | Docker daemon 未运行    | `docker info`        |
-| Maven 构建失败               | Java 版本不符           | SKILL §4 要求 JDK 21 |
-| 后端起不来                   | 8080/8081/8082 端口被占 | `netstat -ano        | findstr :8080` |
-| `clean` 后 Postgres 数据丢失 | 这是设计行为            | 不在生产环境用 clean |
-| 找不到 tsx                   | 未安装                  | `pnpm install`       |
+| 现象                         | 原因                         | 修复                         |
+| ---------------------------- | ---------------------------- | ---------------------------- |
+| 容器起不来                   | Docker daemon 未运行         | `docker info`                |
+| Maven 构建失败               | Java 版本不符                | SKILL §4 要求 JDK 21         |
+| 后端起不来                   | 8080/8091/8082 端口被占      | `netstat -ano \| findstr :8080` |
+| `clean` 后 Postgres 数据丢失 | 这是设计行为                 | 不在生产环境用 clean         |
+| 找不到 tsx                   | 未安装                       | `pnpm install`               |

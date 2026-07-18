@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   createDatasource,
@@ -17,14 +18,26 @@ export function useDatasources() {
 }
 
 export function useSyncRuns(id: string) {
-  return useQuery({
+  const queryClient = useQueryClient()
+  const query = useQuery({
     queryKey: datasourceKeys.syncRuns(id),
     queryFn: () => listSyncRuns(id),
     refetchInterval: (query) =>
-      query.state.data?.some((run) => run.status === 'pending')
+      query.state.data?.some((run) =>
+        ['pending', 'running'].includes(run.status)
+      )
         ? 2_000
         : 15_000,
   })
+
+  const latestStatus = query.data?.[0]?.status
+  useEffect(() => {
+    if (latestStatus === 'success' || latestStatus === 'failed') {
+      void queryClient.invalidateQueries({ queryKey: datasourceKeys.lists() })
+    }
+  }, [latestStatus, queryClient])
+
+  return query
 }
 
 export function useCreateDatasource() {

@@ -30,11 +30,11 @@ export function DatasourcesPage() {
   const testConnection = (id: string) =>
     test.mutate(id, {
       onSuccess: (result) =>
-        result.success
+        result.ok
           ? notify.success(
               `连接成功${result.version ? ` · ${result.version}` : ''}`
             )
-          : notify.error(result.message),
+          : notify.error(new Error(result.message)),
       onError: (error) => notify.error(error, '连接测试失败'),
     })
   const startSync = (id: string) =>

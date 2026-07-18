@@ -1,10 +1,22 @@
 import assert from 'node:assert/strict'
 import { spawn, spawnSync } from 'node:child_process'
+import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..')
+
+test('dev command starts the worker required by queued datasource syncs', () => {
+  const source = readFileSync(join(repoRoot, 'scripts/start.ts'), 'utf8')
+
+  assert.match(
+    source,
+    /startSelectedBackends\(\[["']server["'], ["']worker["']\]\)/
+  )
+  assert.match(source, /-am clean package/)
+  assert.match(source, /Worker:\s+http:\/\/localhost:8091/)
+})
 
 async function waitForFrontend(
   child: ReturnType<typeof spawn>,

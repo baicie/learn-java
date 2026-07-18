@@ -1,497 +1,500 @@
 #!/usr/bin/env node
 
-import { spawn, execSync, type ChildProcess } from "node:child_process";
+import { spawn, execSync, type ChildProcess } from 'node:child_process'
 import {
   existsSync,
   mkdirSync,
   openSync,
   unlinkSync,
   writeFileSync,
-} from "node:fs";
-import { join, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
+} from 'node:fs'
+import { join, dirname } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 import {
   isManagedAppProcess,
   parseJavaProcessList,
   parseJavaSystemProperties,
-} from "./start-process.ts";
+} from './start-process.ts'
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const root = join(__dirname, "..");
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
+const root = join(__dirname, '..')
 
 const APPS = {
-  server: { name: "aiops-server", port: 8080, dir: "apps/aiops-server" },
-  worker: { name: "aiops-worker", port: 8081, dir: "apps/aiops-worker" },
-  runner: { name: "aiops-runner", port: 8082, dir: "apps/aiops-runner" },
-};
+  server: { name: 'aiops-server', port: 8080, dir: 'apps/aiops-server' },
+  worker: { name: 'aiops-worker', port: 8091, dir: 'apps/aiops-worker' },
+  runner: { name: 'aiops-runner', port: 8082, dir: 'apps/aiops-runner' },
+}
 
-const FRONTEND_DIR = join(root, "web", "portal");
-const INFRA_DIR = join(root, "infra");
-const MIN_JAVA_MAJOR = 21;
+const FRONTEND_DIR = join(root, 'web', 'portal')
+const INFRA_DIR = join(root, 'infra')
+const MIN_JAVA_MAJOR = 21
 
-const isWin = process.platform === "win32";
-const sh = isWin ? "powershell" : "bash";
-const shArg = isWin ? ["-NoProfile", "-Command"] : ["-c"];
-const HEALTH_TIMEOUT_MS = 60_000;
+const isWin = process.platform === 'win32'
+const sh = isWin ? 'powershell' : 'bash'
+const shArg = isWin ? ['-NoProfile', '-Command'] : ['-c']
+const HEALTH_TIMEOUT_MS = 60_000
 
 interface JavaRuntime {
-  home: string | null;
-  major: number;
-  source: string;
+  home: string | null
+  major: number
+  source: string
 }
 
 interface SpawnOptions {
-  cwd?: string;
-  env?: NodeJS.ProcessEnv;
-  stdio?: "pipe" | "inherit" | "ignore";
-  detached?: boolean;
-  shell?: boolean;
+  cwd?: string
+  env?: NodeJS.ProcessEnv
+  stdio?: 'pipe' | 'inherit' | 'ignore'
+  detached?: boolean
+  shell?: boolean
 }
 
 function run(cmd: string, opts: SpawnOptions = {}): Promise<void> {
   return new Promise((resolve, reject) => {
     const child = spawn(sh, [...shArg, cmd], {
       cwd: root,
-      stdio: opts.stdio ?? "inherit",
+      stdio: opts.stdio ?? 'inherit',
       ...opts,
-    });
-    child.on("exit", (code) => {
-      if (code === 0) resolve();
-      else reject(new Error(`Command failed: ${cmd}`));
-    });
-  });
+    })
+    child.on('exit', (code) => {
+      if (code === 0) resolve()
+      else reject(new Error(`Command failed: ${cmd}`))
+    })
+  })
 }
 
 function execOut(cmd: string): string {
   try {
-    return execSync(cmd, { cwd: root, stdio: "pipe" }).toString().trim();
+    return execSync(cmd, { cwd: root, stdio: 'pipe' }).toString().trim()
   } catch {
-    return "";
+    return ''
   }
 }
 
 function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
 function isPidRunning(pid: number): boolean {
   try {
-    process.kill(pid, 0);
-    return true;
+    process.kill(pid, 0)
+    return true
   } catch {
-    return false;
+    return false
   }
 }
 
 function appJarPath(key: keyof typeof APPS): string {
-  const app = APPS[key];
-  return join(root, app.dir, "target", `${app.name}-0.1.0-SNAPSHOT.jar`);
+  const app = APPS[key]
+  return join(root, app.dir, 'target', `${app.name}-0.1.0-SNAPSHOT.jar`)
 }
 
 function parseJavaMajor(output: string): number | null {
   const version =
     output.match(/version "([^"]+)"/)?.[1] ??
-    output.match(/\b(\d+(?:\.\d+){0,2})\b/)?.[1];
-  if (!version) return null;
+    output.match(/\b(\d+(?:\.\d+){0,2})\b/)?.[1]
+  if (!version) return null
 
-  const parts = version.split(".").map((part) => Number.parseInt(part, 10));
-  if (parts.some(Number.isNaN)) return null;
+  const parts = version.split('.').map((part) => Number.parseInt(part, 10))
+  if (parts.some(Number.isNaN)) return null
 
-  return parts[0] === 1 ? (parts[1] ?? null) : (parts[0] ?? null);
+  return parts[0] === 1 ? (parts[1] ?? null) : (parts[0] ?? null)
 }
 
 function findJavaRuntime(): JavaRuntime | null {
-  const currentVersion = execOut("java -version 2>&1");
-  const currentMajor = parseJavaMajor(currentVersion);
+  const currentVersion = execOut('java -version 2>&1')
+  const currentMajor = parseJavaMajor(currentVersion)
   if (currentMajor && currentMajor >= MIN_JAVA_MAJOR) {
     return {
       home: process.env.JAVA_HOME ?? null,
       major: currentMajor,
-      source: "PATH",
-    };
+      source: 'PATH',
+    }
   }
 
   if (!isWin) {
     const javaHome = execOut(
-      `/usr/libexec/java_home -v ${MIN_JAVA_MAJOR}+ 2>/dev/null`,
-    );
+      `/usr/libexec/java_home -v ${MIN_JAVA_MAJOR}+ 2>/dev/null`
+    )
     if (javaHome) {
-      const javaHomeVersion = execOut(`"${javaHome}/bin/java" -version 2>&1`);
-      const javaHomeMajor = parseJavaMajor(javaHomeVersion);
+      const javaHomeVersion = execOut(`"${javaHome}/bin/java" -version 2>&1`)
+      const javaHomeMajor = parseJavaMajor(javaHomeVersion)
       if (javaHomeMajor && javaHomeMajor >= MIN_JAVA_MAJOR) {
         return {
           home: javaHome,
           major: javaHomeMajor,
-          source: "/usr/libexec/java_home",
-        };
+          source: '/usr/libexec/java_home',
+        }
       }
     }
   }
 
-  return null;
+  return null
 }
 
 function javaEnv(): NodeJS.ProcessEnv {
-  const runtime = findJavaRuntime();
-  if (!runtime?.home) return process.env;
+  const runtime = findJavaRuntime()
+  if (!runtime?.home) return process.env
 
   return {
     ...process.env,
     JAVA_HOME: runtime.home,
-    PATH: `${join(runtime.home, "bin")}:${process.env.PATH ?? ""}`,
-  };
+    PATH: `${join(runtime.home, 'bin')}:${process.env.PATH ?? ''}`,
+  }
 }
 
 function assertJavaRuntime(): JavaRuntime {
-  const runtime = findJavaRuntime();
+  const runtime = findJavaRuntime()
   if (!runtime) {
     throw new Error(
-      `Java ${MIN_JAVA_MAJOR}+ not found. Install JDK ${MIN_JAVA_MAJOR}+ or set JAVA_HOME before running this command.`,
-    );
+      `Java ${MIN_JAVA_MAJOR}+ not found. Install JDK ${MIN_JAVA_MAJOR}+ or set JAVA_HOME before running this command.`
+    )
   }
-  return runtime;
+  return runtime
 }
 
 function check(name: string, winCmd: string, unixCmd: string): string {
-  const out = execOut(isWin ? winCmd : unixCmd);
-  return out.length > 0 ? `  \u2713 ${name}` : `  \u2717 ${name} (not found)`;
+  const out = execOut(isWin ? winCmd : unixCmd)
+  return out.length > 0 ? `  \u2713 ${name}` : `  \u2717 ${name} (not found)`
 }
 
 function printHeader(msg: string): void {
-  console.log(`\n${"=".repeat(60)}`);
-  console.log(`  ${msg}`);
-  console.log("=".repeat(60));
+  console.log(`\n${'='.repeat(60)}`)
+  console.log(`  ${msg}`)
+  console.log('='.repeat(60))
 }
 
 function printStatus(): void {
-  printHeader("System Requirements");
-  const runtime = findJavaRuntime();
+  printHeader('System Requirements')
+  const runtime = findJavaRuntime()
   console.log(
     runtime
-      ? `  \u2713 Java ${MIN_JAVA_MAJOR}+ (${runtime.major}, ${runtime.source}${runtime.home ? `: ${runtime.home}` : ""})`
-      : `  \u2717 Java ${MIN_JAVA_MAJOR}+ (not found)`,
-  );
+      ? `  \u2713 Java ${MIN_JAVA_MAJOR}+ (${runtime.major}, ${runtime.source}${runtime.home ? `: ${runtime.home}` : ''})`
+      : `  \u2717 Java ${MIN_JAVA_MAJOR}+ (not found)`
+  )
   console.log(
     check(
-      "Maven",
-      "mvn -version 2>&1 | findstr Maven",
-      "mvn -version 2>&1 | grep Maven",
-    ),
-  );
-  console.log(check("Node.js", "node --version", "node --version"));
+      'Maven',
+      'mvn -version 2>&1 | findstr Maven',
+      'mvn -version 2>&1 | grep Maven'
+    )
+  )
+  console.log(check('Node.js', 'node --version', 'node --version'))
   console.log(
-    check("Docker", "docker --version 2>nul", "docker --version 2>/dev/null"),
-  );
+    check('Docker', 'docker --version 2>nul', 'docker --version 2>/dev/null')
+  )
   console.log(
     check(
-      "Docker Compose",
-      "docker compose version 2>nul || docker-compose --version 2>nul",
-      "docker compose version 2>/dev/null || docker-compose --version 2>/dev/null",
-    ),
-  );
+      'Docker Compose',
+      'docker compose version 2>nul || docker-compose --version 2>nul',
+      'docker compose version 2>/dev/null || docker-compose --version 2>/dev/null'
+    )
+  )
 
-  printHeader("Docker Containers");
+  printHeader('Docker Containers')
   for (const svc of [
-    "postgres",
-    "redis",
-    "clickhouse",
-    "victoriametrics",
-    "minio",
+    'postgres',
+    'redis',
+    'clickhouse',
+    'victoriametrics',
+    'minio',
   ]) {
-    const filter = `name=aegisops-${svc}`;
+    const filter = `name=aegisops-${svc}`
     const running = execOut(
       isWin
         ? `docker ps --filter "${filter}" --format "{{.Names}}" 2>nul`
-        : `docker ps --filter '${filter}' --format '{{.Names}}' 2>/dev/null`,
-    );
+        : `docker ps --filter '${filter}' --format '{{.Names}}' 2>/dev/null`
+    )
     console.log(
-      running ? `  \u2713 ${svc} (running)` : `  \u2717 ${svc} (stopped)`,
-    );
+      running ? `  \u2713 ${svc} (running)` : `  \u2717 ${svc} (stopped)`
+    )
   }
 
-  printHeader("Backend Applications");
+  printHeader('Backend Applications')
   for (const app of Object.values(APPS)) {
-    console.log(`  ${app.name}: http://localhost:${app.port}`);
+    console.log(`  ${app.name}: http://localhost:${app.port}`)
   }
 
-  printHeader("Frontend");
-  console.log("  Portal:  http://localhost:5173");
+  printHeader('Frontend')
+  console.log('  Portal:  http://localhost:5173')
 }
 
 function findJavaRoot(start: string): string | null {
-  const test = join(start, "pom.xml");
-  if (existsSync(test)) return start;
-  const parent = join(start, "..");
-  if (parent === start) return null;
-  return findJavaRoot(parent);
+  const test = join(start, 'pom.xml')
+  if (existsSync(test)) return start
+  const parent = join(start, '..')
+  if (parent === start) return null
+  return findJavaRoot(parent)
 }
 
 async function startInfra(): Promise<void> {
-  printHeader("Starting Infrastructure (Docker Compose)");
-  if (!existsSync(join(INFRA_DIR, "docker-compose.yml"))) {
-    console.error("  infra/docker-compose.yml not found");
-    return;
+  printHeader('Starting Infrastructure (Docker Compose)')
+  if (!existsSync(join(INFRA_DIR, 'docker-compose.yml'))) {
+    console.error('  infra/docker-compose.yml not found')
+    return
   }
   const composeFile = isWin
     ? `"${INFRA_DIR}\\docker-compose.yml"`
-    : `"${INFRA_DIR}/docker-compose.yml"`;
-  await run(`docker compose -f ${composeFile} up -d`);
-  console.log("\n  Waiting for PostgreSQL to be ready...");
+    : `"${INFRA_DIR}/docker-compose.yml"`
+  await run(`docker compose -f ${composeFile} up -d`)
+  console.log('\n  Waiting for PostgreSQL to be ready...')
   await run(
     isWin
       ? `docker compose -f ${composeFile} exec -T postgres pg_isready -U aegisops -d aegisops`
-      : `docker compose -f ${composeFile} exec -T postgres pg_isready -U aegisops -d aegisops`,
-  );
-  console.log("  \u2713 Infrastructure is up");
+      : `docker compose -f ${composeFile} exec -T postgres pg_isready -U aegisops -d aegisops`
+  )
+  console.log('  \u2713 Infrastructure is up')
 }
 
 async function stopInfra(): Promise<void> {
-  printHeader("Stopping Infrastructure");
+  printHeader('Stopping Infrastructure')
   const composeFile = isWin
     ? `"${INFRA_DIR}\\docker-compose.yml"`
-    : `"${INFRA_DIR}/docker-compose.yml"`;
-  await run(`docker compose -f ${composeFile} down`);
-  console.log("  \u2713 Infrastructure stopped");
+    : `"${INFRA_DIR}/docker-compose.yml"`
+  await run(`docker compose -f ${composeFile} down`)
+  console.log('  \u2713 Infrastructure stopped')
 }
 
 async function cleanInfra(): Promise<void> {
-  printHeader("Cleaning Infrastructure (stop + remove volumes)");
+  printHeader('Cleaning Infrastructure (stop + remove volumes)')
   const composeFile = isWin
     ? `"${INFRA_DIR}\\docker-compose.yml"`
-    : `"${INFRA_DIR}/docker-compose.yml"`;
-  await run(`docker compose -f ${composeFile} down -v --remove-orphans`);
-  console.log("  \u2713 Volumes removed");
+    : `"${INFRA_DIR}/docker-compose.yml"`
+  await run(`docker compose -f ${composeFile} down -v --remove-orphans`)
+  console.log('  \u2713 Volumes removed')
 }
 
 async function buildBackend(): Promise<void> {
-  await prepareBackendBuild(Object.keys(APPS) as (keyof typeof APPS)[]);
-  printHeader("Building Backend (Maven)");
-  const runtime = assertJavaRuntime();
+  await prepareBackendBuild(Object.keys(APPS) as (keyof typeof APPS)[])
+  printHeader('Building Backend (Maven)')
+  const runtime = assertJavaRuntime()
   console.log(
-    `  Using Java ${runtime.major}${runtime.home ? `: ${runtime.home}` : ""}`,
-  );
-  const javaRoot = findJavaRoot(root);
+    `  Using Java ${runtime.major}${runtime.home ? `: ${runtime.home}` : ''}`
+  )
+  const javaRoot = findJavaRoot(root)
   if (!javaRoot) {
-    console.error("  Could not find pom.xml");
-    return;
+    console.error('  Could not find pom.xml')
+    return
   }
   const mvnCmd = isWin
-    ? "mvn.cmd clean install -DskipTests"
-    : "mvn clean install -DskipTests";
-  await run(mvnCmd, { env: javaEnv() });
-  console.log("  \u2713 Backend built");
+    ? 'mvn.cmd clean install -DskipTests'
+    : 'mvn clean install -DskipTests'
+  await run(mvnCmd, { env: javaEnv() })
+  console.log('  \u2713 Backend built')
 }
 
 async function startApp(key: keyof typeof APPS): Promise<number | null> {
-  const app = APPS[key];
-  const javaRoot = findJavaRoot(root);
-  if (!javaRoot) return null;
+  const app = APPS[key]
+  const javaRoot = findJavaRoot(root)
+  if (!javaRoot) return null
 
-  const jar = appJarPath(key);
+  const jar = appJarPath(key)
   if (!existsSync(jar)) {
-    console.error(`  ${app.name}: JAR not found`);
-    console.error(`  Run 'tsx scripts/start.ts backend' to build first.`);
-    return null;
+    console.error(`  ${app.name}: JAR not found`)
+    console.error(`  Run 'tsx scripts/start.ts backend' to build first.`)
+    return null
   }
 
-  const pidFile = join(root, `.pid-${key}`);
-  const logDir = join(root, "logs");
-  mkdirSync(logDir, { recursive: true });
-  const outLog = openSync(join(logDir, `${app.name}.log`), "a");
-  const errLog = openSync(join(logDir, `${app.name}.err.log`), "a");
+  const pidFile = join(root, `.pid-${key}`)
+  const logDir = join(root, 'logs')
+  mkdirSync(logDir, { recursive: true })
+  const outLog = openSync(join(logDir, `${app.name}.log`), 'a')
+  const errLog = openSync(join(logDir, `${app.name}.err.log`), 'a')
   const env: NodeJS.ProcessEnv = {
     ...javaEnv(),
-    AIOPS_DB_URL: "jdbc:postgresql://localhost:5432/aegisops",
-    AIOPS_DB_USERNAME: "aegisops",
-    AIOPS_DB_PASSWORD: "aegisops",
-    SPRING_PROFILES_ACTIVE: "default",
-  };
+    AIOPS_DB_URL: 'jdbc:postgresql://localhost:5432/aegisops',
+    AIOPS_DB_USERNAME: 'aegisops',
+    AIOPS_DB_PASSWORD: 'aegisops',
+    SPRING_PROFILES_ACTIVE: 'default',
+  }
 
-  if (key === "server") env.AIOPS_SERVER_PORT = "8080";
-  if (key === "worker") env.AIOPS_WORKER_PORT = "8081";
-  if (key === "runner") env.AIOPS_RUNNER_PORT = "8082";
+  if (key === 'server') env.AIOPS_SERVER_PORT = '8080'
+  if (key === 'worker') env.AIOPS_WORKER_PORT = '8091'
+  if (key === 'runner') env.AIOPS_RUNNER_PORT = '8082'
 
-  const javaBin = isWin ? "java.exe" : "java";
+  const javaBin = isWin ? 'java.exe' : 'java'
   const args = [
-    "-jar",
+    '-jar',
     jar,
     `--spring.application.name=${app.name}`,
     `--server.port=${app.port}`,
-  ];
+  ]
 
   const pid = spawn(javaBin, args, {
     cwd: join(javaRoot, app.dir),
     env,
     detached: true,
-    stdio: ["ignore", outLog, errLog],
-  });
+    stdio: ['ignore', outLog, errLog],
+  })
 
-  writeFileSync(pidFile, String(pid.pid));
-  pid.unref();
+  writeFileSync(pidFile, String(pid.pid))
+  pid.unref()
 
   console.log(
-    `  \u25b6 ${app.name} started (PID: ${pid.pid}) -> http://localhost:${app.port}`,
-  );
-  return pid.pid ?? null;
+    `  \u25b6 ${app.name} started (PID: ${pid.pid}) -> http://localhost:${app.port}`
+  )
+  return pid.pid ?? null
 }
 
 async function waitForAppHealth(
   key: keyof typeof APPS,
   pid: number | null,
-  timeoutMs = HEALTH_TIMEOUT_MS,
+  timeoutMs = HEALTH_TIMEOUT_MS
 ): Promise<void> {
-  const app = APPS[key];
-  const url = `http://localhost:${app.port}/actuator/health`;
-  const started = Date.now();
+  const app = APPS[key]
+  const url = `http://localhost:${app.port}/actuator/health`
+  const started = Date.now()
 
   while (Date.now() - started < timeoutMs) {
     if (pid && !isPidRunning(pid)) {
       throw new Error(
-        `${app.name} exited before it became healthy. See logs/${app.name}.log and logs/${app.name}.err.log`,
-      );
+        `${app.name} exited before it became healthy. See logs/${app.name}.log and logs/${app.name}.err.log`
+      )
     }
 
     try {
-      const response = await fetch(url);
+      const response = await fetch(url)
       if (response.ok) {
-        console.log(`  \u2713 ${app.name} is healthy (${url})`);
-        return;
+        console.log(`  \u2713 ${app.name} is healthy (${url})`)
+        return
       }
     } catch {
       // Keep polling until the app binds the port or exits.
     }
 
-    await sleep(1_000);
+    await sleep(1_000)
   }
 
   throw new Error(
-    `${app.name} did not become healthy within ${Math.round(timeoutMs / 1000)}s. See logs/${app.name}.log and logs/${app.name}.err.log`,
-  );
+    `${app.name} did not become healthy within ${Math.round(timeoutMs / 1000)}s. See logs/${app.name}.log and logs/${app.name}.err.log`
+  )
 }
 
 async function startBackend(): Promise<void> {
-  await buildBackend();
+  await buildBackend()
   for (const key of Object.keys(APPS) as (keyof typeof APPS)[]) {
-    await startApp(key);
+    await startApp(key)
   }
 }
 
-async function startBackendOnly(): Promise<void> {
-  await prepareBackendBuild(["server"]);
-  printHeader("Building Server Only (Maven)");
-  const runtime = assertJavaRuntime();
+async function startSelectedBackends(
+  keys: (keyof typeof APPS)[]
+): Promise<void> {
+  await prepareBackendBuild(keys)
+  printHeader('Building Selected Backends (Maven)')
+  const runtime = assertJavaRuntime()
   console.log(
-    `  Using Java ${runtime.major}${runtime.home ? `: ${runtime.home}` : ""}`,
-  );
-  const javaRoot = findJavaRoot(root);
+    `  Using Java ${runtime.major}${runtime.home ? `: ${runtime.home}` : ''}`
+  )
+  const javaRoot = findJavaRoot(root)
   if (!javaRoot) {
-    console.error("  Could not find pom.xml");
-    return;
+    console.error('  Could not find pom.xml')
+    return
   }
+  const projects = keys.map((key) => APPS[key].dir).join(',')
   const mvnCmd = isWin
-    ? "mvn.cmd -B -ntp -DskipTests -pl apps/aiops-server -am package"
-    : "mvn -B -ntp -DskipTests -pl apps/aiops-server -am package";
-  await run(mvnCmd, { env: javaEnv() });
-  console.log("  \u2713 Server built");
-  const pid = await startApp("server");
-  await waitForAppHealth("server", pid);
+    ? `mvn.cmd -B -ntp -DskipTests -pl ${projects} -am clean package`
+    : `mvn -B -ntp -DskipTests -pl ${projects} -am clean package`
+  await run(mvnCmd, { env: javaEnv() })
+  console.log('  \u2713 Selected backends built')
+  for (const key of keys) {
+    const pid = await startApp(key)
+    await waitForAppHealth(key, pid)
+  }
 }
 
 async function waitForFrontendHealth(
   child: ChildProcess,
-  timeoutMs = HEALTH_TIMEOUT_MS,
+  timeoutMs = HEALTH_TIMEOUT_MS
 ): Promise<void> {
-  const url = "http://127.0.0.1:5173";
-  const started = Date.now();
+  const url = 'http://127.0.0.1:5173'
+  const started = Date.now()
 
   while (Date.now() - started < timeoutMs) {
     if (child.exitCode !== null) {
       throw new Error(
-        `Frontend exited before it became ready (code=${child.exitCode}).`,
-      );
+        `Frontend exited before it became ready (code=${child.exitCode}).`
+      )
     }
     try {
-      const response = await fetch(url);
+      const response = await fetch(url)
       if (response.ok) {
-        console.log(`  \u2713 Frontend is ready (${url})`);
-        return;
+        console.log(`  \u2713 Frontend is ready (${url})`)
+        return
       }
     } catch {
       // Keep polling until Vite binds the port or exits.
     }
-    await sleep(200);
+    await sleep(200)
   }
 
-  child.kill();
-  throw new Error("Frontend did not become ready within 60 seconds.");
+  child.kill()
+  throw new Error('Frontend did not become ready within 60 seconds.')
 }
 
 function waitForProcess(child: ChildProcess): Promise<void> {
   return new Promise((resolve, reject) => {
-    child.once("error", reject);
-    child.once("exit", (code, signal) => {
-      if (code === 0 || signal === "SIGINT" || signal === "SIGTERM") resolve();
+    child.once('error', reject)
+    child.once('exit', (code, signal) => {
+      if (code === 0 || signal === 'SIGINT' || signal === 'SIGTERM') resolve()
       else
-        reject(
-          new Error(`Frontend exited with code=${code} signal=${signal}.`),
-        );
-    });
-  });
+        reject(new Error(`Frontend exited with code=${code} signal=${signal}.`))
+    })
+  })
 }
 
 async function startFrontend(onReady?: () => void): Promise<void> {
   if (!existsSync(FRONTEND_DIR)) {
-    console.error("  Frontend not found at web/portal/");
-    return;
+    console.error('  Frontend not found at web/portal/')
+    return
   }
-  const FRONTEND_PORT = 5173;
-  const occupant = await findPortOccupant(FRONTEND_PORT);
+  const FRONTEND_PORT = 5173
+  const occupant = await findPortOccupant(FRONTEND_PORT)
   if (occupant) {
     throw new Error(
-      `Port ${FRONTEND_PORT} is already in use by ${occupant.name} (PID=${occupant.pid}). Stop it before running pnpm dev.`,
-    );
+      `Port ${FRONTEND_PORT} is already in use by ${occupant.name} (PID=${occupant.pid}). Stop it before running pnpm dev.`
+    )
   }
-  console.log(`\n  Frontend dev server: http://localhost:${FRONTEND_PORT}`);
+  console.log(`\n  Frontend dev server: http://localhost:${FRONTEND_PORT}`)
   console.log(
-    "  (Frontend starts independently via its own package manager scripts)",
-  );
-  const pkgCmd = isWin ? "pnpm.cmd" : "pnpm";
+    '  (Frontend starts independently via its own package manager scripts)'
+  )
+  const pkgCmd = isWin ? 'pnpm.cmd' : 'pnpm'
   const child = spawn(
     pkgCmd,
-    ["run", "dev", "--host", "127.0.0.1", "--port", "5173", "--strictPort"],
+    ['run', 'dev', '--host', '127.0.0.1', '--port', '5173', '--strictPort'],
     {
       cwd: FRONTEND_DIR,
-      stdio: "inherit",
+      stdio: 'inherit',
       shell: isWin,
-    },
-  );
-  const exited = waitForProcess(child);
-  await waitForFrontendHealth(child);
-  onReady?.();
-  await exited;
+    }
+  )
+  const exited = waitForProcess(child)
+  await waitForFrontendHealth(child)
+  onReady?.()
+  await exited
 }
 
 async function findPortOccupant(
-  port: number,
+  port: number
 ): Promise<{ pid: number; name: string } | null> {
   const psCmd = isWin
     ? `Get-NetTCPConnection -State Listen -LocalPort ${port} -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty OwningProcess`
-    : `lsof -iTCP:${port} -sTCP:LISTEN -t 2>/dev/null | head -n 1`;
+    : `lsof -iTCP:${port} -sTCP:LISTEN -t 2>/dev/null | head -n 1`
   try {
-    const stdout = await runCapture(psCmd);
-    const pidText = stdout.trim().split(/\s+/)[0];
-    if (!pidText || !/^\d+$/.test(pidText)) return null;
-    const pid = Number(pidText);
-    if (pid <= 0) return null;
+    const stdout = await runCapture(psCmd)
+    const pidText = stdout.trim().split(/\s+/)[0]
+    if (!pidText || !/^\d+$/.test(pidText)) return null
+    const pid = Number(pidText)
+    if (pid <= 0) return null
     const nameCmd = isWin
       ? `(Get-Process -Id ${pid} -ErrorAction SilentlyContinue).ProcessName`
-      : `ps -p ${pid} -o comm= 2>/dev/null | tr -d '\\n'`;
-    const name = (await runCapture(nameCmd)).trim() || "unknown";
-    return { pid, name };
+      : `ps -p ${pid} -o comm= 2>/dev/null | tr -d '\\n'`
+    const name = (await runCapture(nameCmd)).trim() || 'unknown'
+    return { pid, name }
   } catch {
-    return null;
+    return null
   }
 }
 
@@ -499,88 +502,88 @@ function runCapture(cmd: string): Promise<string> {
   return new Promise((resolve) => {
     const child = spawn(sh, [...shArg, cmd], {
       cwd: root,
-      stdio: ["ignore", "pipe", "pipe"],
-    });
-    let out = "";
-    child.stdout.on("data", (chunk: Buffer) => {
-      out += chunk.toString("utf8");
-    });
-    child.on("error", () => resolve(""));
-    child.on("close", () => resolve(out));
-  });
+      stdio: ['ignore', 'pipe', 'pipe'],
+    })
+    let out = ''
+    child.stdout.on('data', (chunk: Buffer) => {
+      out += chunk.toString('utf8')
+    })
+    child.on('error', () => resolve(''))
+    child.on('close', () => resolve(out))
+  })
 }
 
 async function findManagedAppProcesses(
-  key: keyof typeof APPS,
+  key: keyof typeof APPS
 ): Promise<number[]> {
-  const javaProcesses = parseJavaProcessList(await runCapture("jcmd -l"));
-  const expectedJar = appJarPath(key);
-  const jarName = `${APPS[key].name}-0.1.0-SNAPSHOT.jar`.toLowerCase();
-  const matches: number[] = [];
+  const javaProcesses = parseJavaProcessList(await runCapture('jcmd -l'))
+  const expectedJar = appJarPath(key)
+  const jarName = `${APPS[key].name}-0.1.0-SNAPSHOT.jar`.toLowerCase()
+  const matches: number[] = []
 
   for (const [pid, command] of javaProcesses) {
-    if (!command.toLowerCase().includes(jarName)) continue;
+    if (!command.toLowerCase().includes(jarName)) continue
 
     const properties = parseJavaSystemProperties(
-      await runCapture(`jcmd ${pid} VM.system_properties`),
-    );
-    const workingDirectory = properties.get("user.dir");
+      await runCapture(`jcmd ${pid} VM.system_properties`)
+    )
+    const workingDirectory = properties.get('user.dir')
     if (
       workingDirectory &&
       isManagedAppProcess(command, workingDirectory, expectedJar)
     ) {
-      matches.push(pid);
+      matches.push(pid)
     }
   }
 
-  return matches;
+  return matches
 }
 
 async function terminateProcess(pid: number): Promise<void> {
-  if (!isPidRunning(pid)) return;
+  if (!isPidRunning(pid)) return
 
-  process.kill(pid);
-  const deadline = Date.now() + 10_000;
+  process.kill(pid)
+  const deadline = Date.now() + 10_000
   while (isPidRunning(pid) && Date.now() < deadline) {
-    await sleep(100);
+    await sleep(100)
   }
   if (isPidRunning(pid)) {
-    throw new Error(`Process ${pid} did not stop within 10 seconds.`);
+    throw new Error(`Process ${pid} did not stop within 10 seconds.`)
   }
 }
 
 async function stopApp(key: keyof typeof APPS): Promise<void> {
-  const pidFile = join(root, `.pid-${key}`);
-  const managedPids = new Set(await findManagedAppProcesses(key));
+  const pidFile = join(root, `.pid-${key}`)
+  const managedPids = new Set(await findManagedAppProcesses(key))
 
   for (const pid of managedPids) {
-    await terminateProcess(pid);
-    console.log(`  \u2713 ${APPS[key].name} stopped (PID: ${pid})`);
+    await terminateProcess(pid)
+    console.log(`  \u2713 ${APPS[key].name} stopped (PID: ${pid})`)
   }
 
-  if (existsSync(pidFile)) unlinkSync(pidFile);
+  if (existsSync(pidFile)) unlinkSync(pidFile)
 }
 
 async function prepareBackendBuild(keys: (keyof typeof APPS)[]): Promise<void> {
   for (const key of keys) {
-    await stopApp(key);
-    const occupant = await findPortOccupant(APPS[key].port);
+    await stopApp(key)
+    const occupant = await findPortOccupant(APPS[key].port)
     if (occupant) {
       throw new Error(
-        `Port ${APPS[key].port} is already in use by ${occupant.name} (PID=${occupant.pid}) and is not a ${APPS[key].name} process from this workspace. Stop it before starting AegisOps.`,
-      );
+        `Port ${APPS[key].port} is already in use by ${occupant.name} (PID=${occupant.pid}) and is not a ${APPS[key].name} process from this workspace. Stop it before starting AegisOps.`
+      )
     }
   }
 }
 
 async function stopAll(): Promise<void> {
-  printHeader("Stopping All Applications");
+  printHeader('Stopping All Applications')
   for (const key of Object.keys(APPS) as (keyof typeof APPS)[]) {
-    await stopApp(key);
+    await stopApp(key)
   }
   console.log(
-    '  (Docker containers still running — use "tsx scripts/start.ts infra-stop" to stop infra)',
-  );
+    '  (Docker containers still running — use "tsx scripts/start.ts infra-stop" to stop infra)'
+  )
 }
 
 function printHelp(): void {
@@ -591,7 +594,7 @@ Usage:
   tsx scripts/start.ts [command]
 
 Commands:
-  dev        Start infra + aiops-server + frontend (recommended for local UI dev)
+  dev        Start infra + aiops-server + aiops-worker + frontend (recommended for local UI dev)
   server     Build & start only the aiops-server module
   infra      Start Docker Compose (PostgreSQL, Redis, ClickHouse, VictoriaMetrics, MinIO)
   backend    Build Maven project and start all three backend apps (server + worker + runner)
@@ -605,7 +608,7 @@ Commands:
   help       Show this help
 
 Examples:
-  pnpm dev                          # one-command local dev (infra + server + frontend)
+  pnpm dev                          # one-command local dev (infra + server + worker + frontend)
   pnpm dev:server                   # only aiops-server, no worker/runner
   pnpm dev:frontend                 # only the frontend dev server
   tsx scripts/start.ts status
@@ -613,121 +616,122 @@ Examples:
   tsx scripts/start.ts infra
   tsx scripts/start.ts logs server
   tsx scripts/start.ts clean
-`);
+`)
 }
 
 async function main(): Promise<void> {
-  const [command] = process.argv.slice(2);
+  const [command] = process.argv.slice(2)
 
   switch (command) {
     case undefined:
-    case "all":
-      printStatus();
-      printHeader("Startup Sequence");
-      console.log("  1. Starting infrastructure (Docker Compose)...");
-      await startInfra();
-      console.log("\n  2. Building backend (Maven)...");
-      await buildBackend();
-      console.log("\n  3. Starting backend applications...");
+    case 'all':
+      printStatus()
+      printHeader('Startup Sequence')
+      console.log('  1. Starting infrastructure (Docker Compose)...')
+      await startInfra()
+      console.log('\n  2. Building backend (Maven)...')
+      await buildBackend()
+      console.log('\n  3. Starting backend applications...')
       for (const key of Object.keys(APPS) as (keyof typeof APPS)[]) {
-        await startApp(key);
+        await startApp(key)
       }
-      printHeader("All Services Started");
-      console.log("  Frontend (manual):");
-      console.log(`    cd web/portal && npm install && npm run dev`);
-      console.log();
-      console.log("  URLs:");
-      console.log("    Server:  http://localhost:8080");
-      console.log("    Worker:  http://localhost:8081/actuator/health");
-      console.log("    Runner:  http://localhost:8082/actuator/health");
-      console.log("    Swagger: http://localhost:8080/swagger-ui.html");
-      console.log("    Minio:   http://localhost:9001 (minioadmin/minioadmin)");
-      console.log();
-      console.log("  To stop: tsx scripts/start.ts stop");
-      break;
+      printHeader('All Services Started')
+      console.log('  Frontend (manual):')
+      console.log(`    cd web/portal && npm install && npm run dev`)
+      console.log()
+      console.log('  URLs:')
+      console.log('    Server:  http://localhost:8080')
+      console.log('    Worker:  http://localhost:8091/actuator/health')
+      console.log('    Runner:  http://localhost:8082/actuator/health')
+      console.log('    Swagger: http://localhost:8080/swagger-ui.html')
+      console.log('    Minio:   http://localhost:9001 (minioadmin/minioadmin)')
+      console.log()
+      console.log('  To stop: tsx scripts/start.ts stop')
+      break
 
-    case "infra":
-      await startInfra();
-      break;
+    case 'infra':
+      await startInfra()
+      break
 
-    case "backend":
-      await startBackend();
-      break;
+    case 'backend':
+      await startBackend()
+      break
 
-    case "server":
-      await startBackendOnly();
-      break;
+    case 'server':
+      await startSelectedBackends(['server'])
+      break
 
-    case "frontend":
-      await startFrontend();
-      break;
+    case 'frontend':
+      await startFrontend()
+      break
 
-    case "dev":
-      printStatus();
-      printHeader("Dev Startup Sequence (server + frontend)");
-      console.log("  1. Starting infrastructure (Docker Compose)...");
-      await startInfra();
-      console.log("\n  2. Building & starting aiops-server...");
-      await startBackendOnly();
-      console.log("\n  3. Starting frontend dev server...");
+    case 'dev':
+      printStatus()
+      printHeader('Dev Startup Sequence (server + worker + frontend)')
+      console.log('  1. Starting infrastructure (Docker Compose)...')
+      await startInfra()
+      console.log('\n  2. Building & starting aiops-server and aiops-worker...')
+      await startSelectedBackends(['server', 'worker'])
+      console.log('\n  3. Starting frontend dev server...')
       await startFrontend(() => {
-        printHeader("Dev Stack Ready");
-        console.log("  Server:    http://localhost:8080");
-        console.log("  Swagger:   http://localhost:8080/swagger-ui.html");
-        console.log("  Frontend:  http://localhost:5173 (Portal)");
-        console.log();
-        console.log("  Press Ctrl+C to stop the frontend dev server.");
-        console.log("  Run pnpm stop separately to stop aiops-server.");
-      });
-      break;
+        printHeader('Dev Stack Ready')
+        console.log('  Server:    http://localhost:8080')
+        console.log('  Worker:    http://localhost:8091/actuator/health')
+        console.log('  Swagger:   http://localhost:8080/swagger-ui.html')
+        console.log('  Frontend:  http://localhost:5173 (Portal)')
+        console.log()
+        console.log('  Press Ctrl+C to stop the frontend dev server.')
+        console.log('  Run pnpm stop separately to stop backend applications.')
+      })
+      break
 
-    case "stop":
-      await stopAll();
-      break;
+    case 'stop':
+      await stopAll()
+      break
 
-    case "infra-stop":
-      await stopInfra();
-      break;
+    case 'infra-stop':
+      await stopInfra()
+      break
 
-    case "clean":
-      await stopAll();
-      await cleanInfra();
-      break;
+    case 'clean':
+      await stopAll()
+      await cleanInfra()
+      break
 
-    case "status":
-      printStatus();
-      break;
+    case 'status':
+      printStatus()
+      break
 
-    case "logs": {
-      const app = process.argv[3];
-      const target = app || "server";
+    case 'logs': {
+      const app = process.argv[3]
+      const target = app || 'server'
       if (!APPS[target as keyof typeof APPS]) {
         console.error(
-          `Unknown app: ${app}. Use: ${Object.keys(APPS).join(" | ")}`,
-        );
-        return;
+          `Unknown app: ${app}. Use: ${Object.keys(APPS).join(' | ')}`
+        )
+        return
       }
-      const appInfo = APPS[target as keyof typeof APPS];
+      const appInfo = APPS[target as keyof typeof APPS]
       const logCmd = isWin
         ? `Get-Content "logs\\${appInfo.name}.log" -Wait -Tail 50`
-        : `tail -f logs/${appInfo.name}.log`;
-      spawn(sh, [...shArg, logCmd], { cwd: root, stdio: "inherit" });
-      break;
+        : `tail -f logs/${appInfo.name}.log`
+      spawn(sh, [...shArg, logCmd], { cwd: root, stdio: 'inherit' })
+      break
     }
 
-    case "help":
-    case "--help":
-    case "-h":
-      printHelp();
-      break;
+    case 'help':
+    case '--help':
+    case '-h':
+      printHelp()
+      break
 
     default:
-      console.error(`Unknown command: ${command}`);
-      printHelp();
+      console.error(`Unknown command: ${command}`)
+      printHelp()
   }
 }
 
 main().catch((err) => {
-  console.error("Error:", err.message);
-  process.exit(1);
-});
+  console.error('Error:', err.message)
+  process.exit(1)
+})
