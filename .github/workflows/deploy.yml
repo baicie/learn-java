@@ -35,7 +35,7 @@ jobs:
 
     steps:
       - name: Checkout exact release commit
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
         with:
           ref: ${{ env.RELEASE_REF }}
           fetch-depth: 2
@@ -87,7 +87,7 @@ jobs:
 
     steps:
       - name: Checkout exact release commit
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
         with:
           ref: ${{ env.RELEASE_REF }}
 
@@ -147,7 +147,7 @@ jobs:
 
     steps:
       - name: Checkout exact release commit
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
         with:
           ref: ${{ env.RELEASE_REF }}
 
@@ -185,7 +185,7 @@ jobs:
 
     steps:
       - name: Checkout exact release commit
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
         with:
           ref: ${{ env.RELEASE_REF }}
 

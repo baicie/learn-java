@@ -42,7 +42,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Install shellcheck
         run: |
@@ -77,7 +77,7 @@ jobs:
       POSTGRES_CONTAINER: aegisops-postgres-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Prepare Docker
         run: bash scripts/ci/prepare-docker.sh
