@@ -48,13 +48,16 @@ grep -Fq 'Main-Class: org.springframework.boot.loader.launch.JarLauncher' \
 
 echo "==> Validate deployment shell"
 bash -n deploy/scripts/deploy-app.sh
+bash -n deploy/scripts/deploy-zabbix.sh
 bash -n deploy/scripts/configure-docker-mirror.sh
 bash -n scripts/ci/test-deploy-app.sh
+bash -n scripts/ci/test-deploy-zabbix.sh
 bash -n scripts/ci/test-configure-docker-mirror.sh
 bash -n scripts/ci/prepare-docker.sh
 bash -n scripts/ci/test-prepare-docker.sh
 bash -n scripts/ci/test-workflow-resource-policy.sh
 bash scripts/ci/test-deploy-app.sh
+bash scripts/ci/test-deploy-zabbix.sh
 bash scripts/ci/test-configure-docker-mirror.sh
 bash scripts/ci/test-prepare-docker.sh
 bash scripts/ci/test-workflow-resource-policy.sh
@@ -89,6 +92,11 @@ grep -Fq 'name: Compose runtime smoke' .github/workflows/release-verify.yml
 grep -Fq 'needs.preflight.outputs.release_required' .github/workflows/release-verify.yml
 grep -Fq 'group: ops-scripts-${{ github.workflow }}-${{ github.ref }}' \
   .github/workflows/ops-scripts.yml
+grep -Fq 'type: choice' .github/workflows/deploy-component.yml
+grep -Fq -- '- zabbix' .github/workflows/deploy-component.yml
+grep -Fq "if: inputs.component == 'zabbix'" .github/workflows/deploy-component.yml
+grep -Fq 'group: deploy-aegisops-mvp' .github/workflows/deploy-component.yml
+grep -Fq 'deploy/scripts/deploy-zabbix.sh' .github/workflows/deploy-component.yml
 if sed -n '/^  pull_request:/,/^  workflow_run:/p' \
   .github/workflows/release-verify.yml | grep -Fq '    paths:'; then
   echo "Release Verify preflight must run on every pull request to mvp." >&2
@@ -122,6 +130,8 @@ AIOPS_AGENT_IMAGE=example.invalid/aegisops/aiops-agent:test \
 AIOPS_WORKER_IMAGE=example.invalid/aegisops/aiops-worker:test \
 AIOPS_RUNNER_IMAGE=example.invalid/aegisops/aiops-runner:test \
   docker compose -f deploy/docker-compose.app.yml config --quiet
+ZABBIX_DB_PASSWORD=preflight-only \
+  docker compose -f deploy/docker-compose.zabbix.yml config --quiet
 
 if grep -R -nE 'DOCKERHUB_USERNAME_REPLACE_ME|SHA_REPLACE_ME' deploy; then
   echo "Deployment files still contain unresolved image placeholders." >&2

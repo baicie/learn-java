@@ -1,0 +1,76 @@
+name: Deploy Component
+
+on:
+  workflow_dispatch:
+    inputs:
+      component:
+        description: 选择要部署到 AegisOps 服务器的组件
+        required: true
+        type: choice
+        options:
+          - zabbix
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-aegisops-mvp
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy ${{ inputs.component }} to Tencent Cloud VM
+    if: inputs.component == 'zabbix'
+    runs-on: [self-hosted, linux, x64, aegisops-cn]
+    timeout-minutes: 25
+    environment:
+      name: aegisops-prod
+
+    steps:
+      - name: Checkout deployment descriptors
+        uses: actions/checkout@v5
+
+      - name: Validate Zabbix deployment descriptors
+        env:
+          ZABBIX_DB_PASSWORD: preflight-only
+        run: |
+          bash -n deploy/scripts/deploy-zabbix.sh
+          docker compose -f deploy/docker-compose.zabbix.yml config --quiet
+
+      - name: Copy deployment descriptors
+        uses: appleboy/scp-action@v1
+        with:
+          host: ${{ secrets.PERF_VM_HOST }}
+          username: ${{ secrets.PERF_VM_USER }}
+          key: ${{ secrets.PERF_VM_KEY }}
+          password: ${{ secrets.PERF_VM_PASSWORD }}
+          port: ${{ secrets.PERF_VM_SSH_PORT || '22' }}
+          source: "deploy/docker-compose.zabbix.yml,deploy/scripts/deploy-zabbix.sh,deploy/scripts/configure-docker-mirror.sh"
+          target: "~/workspace/aegisops"
+          overwrite: true
+          timeout: 10m
+          command_timeout: 10m
+
+      - name: Deploy Zabbix
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.PERF_VM_HOST }}
+          username: ${{ secrets.PERF_VM_USER }}
+          key: ${{ secrets.PERF_VM_KEY }}
+          password: ${{ secrets.PERF_VM_PASSWORD }}
+          port: ${{ secrets.PERF_VM_SSH_PORT || '22' }}
+          timeout: 10m
+          command_timeout: 20m
+          script: |
+            bash -lc '
+              set -Eeuo pipefail
+              APP_DIR="$HOME/workspace/aegisops"
+              MIRROR_SCRIPT="$APP_DIR/deploy/scripts/configure-docker-mirror.sh"
+              DEPLOY_SCRIPT="$APP_DIR/deploy/scripts/deploy-zabbix.sh"
+              test -f "$MIRROR_SCRIPT"
+              test -f "$DEPLOY_SCRIPT"
+              chmod +x "$MIRROR_SCRIPT" "$DEPLOY_SCRIPT"
+              bash "$MIRROR_SCRIPT"
+              export APP_DIR
+              exec bash "$DEPLOY_SCRIPT"
+            '
