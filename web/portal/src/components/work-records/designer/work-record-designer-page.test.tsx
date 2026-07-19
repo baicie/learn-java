@@ -1,10 +1,18 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { describe, expect, it, vi } from 'vitest'
 import { render } from 'vitest-browser-react'
+import { notify } from '@/components/feedback/app-toaster'
 import { ConfirmProvider } from '@/components/feedback/confirm-provider'
 import { WorkRecordDesignerPage } from './work-record-designer-page'
 
 const calls: string[] = []
+
+vi.mock('@/components/feedback/app-toaster', () => ({
+  notify: {
+    success: vi.fn(),
+    error: vi.fn(),
+  },
+}))
 
 vi.mock('@/api/work-records/templates', () => ({
   listTemplates: async () => [
@@ -181,6 +189,7 @@ describe('WorkRecordDesignerPage', () => {
 
     await vi.waitFor(() => {
       expect(calls).toEqual(['save', 'validate', 'publish'])
+      expect(notify.success).toHaveBeenCalledWith('模板发布成功')
     })
   })
 })

@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Download, Pencil, Plus, Upload } from 'lucide-react'
+import { Download, Pencil, Plus, Trash2, Upload } from 'lucide-react'
 import {
   createDictItem,
   createDictType,
-  disableDictItem,
+  deleteDictItem,
   disableDictType,
   listDictItems,
   listDictTypes,
@@ -19,7 +19,17 @@ import {
   type DictionaryTransferFormat,
 } from '@/lib/dictionaries/dictionary-transfer'
 import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Dialog,
@@ -61,6 +71,7 @@ export function DictionariesPage() {
   const [selectedCode, setSelectedCode] = useState('')
   const [typeEditor, setTypeEditor] = useState<TypeEditor | null>(null)
   const [itemEditor, setItemEditor] = useState<ItemEditor | null>(null)
+  const [pendingDelete, setPendingDelete] = useState<DictItem | null>(null)
   const [transferMode, setTransferMode] = useState<'import' | 'export' | null>(
     null
   )
@@ -159,6 +170,21 @@ export function DictionariesPage() {
       await refresh()
     },
     onError: (error) => notify.error(error, '保存字典项失败'),
+  })
+
+  const deleteItem = useMutation({
+    mutationFn: async () => {
+      if (!selectedType || !pendingDelete) {
+        throw new Error('请选择要删除的字典项')
+      }
+      return deleteDictItem(selectedType.dictCode, pendingDelete.id)
+    },
+    onSuccess: async () => {
+      setPendingDelete(null)
+      notify.success('字典项已删除，历史记录仍可识别原值')
+      await refresh()
+    },
+    onError: (error) => notify.error(error, '删除字典项失败'),
   })
 
   const importItems = useMutation({
@@ -335,16 +361,30 @@ export function DictionariesPage() {
                   导出
                 </Button>
                 <PermissionGate any={[WRITE_PERMISSION]}>
-                  {!selectedType.systemBuiltin && selectedType.enabled ? (
-                    <Button
-                      size='sm'
-                      variant='outline'
-                      onClick={() =>
-                        disableDictType(selectedType.dictCode).then(refresh)
-                      }
-                    >
-                      禁用字典
-                    </Button>
+                  {!selectedType.systemBuiltin ? (
+                    selectedType.enabled ? (
+                      <Button
+                        size='sm'
+                        variant='outline'
+                        onClick={() =>
+                          disableDictType(selectedType.dictCode).then(refresh)
+                        }
+                      >
+                        禁用字典
+                      </Button>
+                    ) : (
+                      <Button
+                        size='sm'
+                        variant='outline'
+                        onClick={() =>
+                          updateDictType(selectedType.dictCode, {
+                            enabled: true,
+                          }).then(refresh)
+                        }
+                      >
+                        启用字典
+                      </Button>
+                    )
                   ) : null}
                   <Button size='sm' onClick={() => openItemEditor('create')}>
                     <Plus data-icon='inline-start' />
@@ -388,25 +428,31 @@ export function DictionariesPage() {
                               <Pencil data-icon='inline-start' />
                               编辑
                             </Button>
-                            <Button
-                              size='sm'
-                              variant='outline'
-                              onClick={() =>
-                                selectedType &&
-                                (item.enabled
-                                  ? disableDictItem(
-                                      selectedType.dictCode,
-                                      item.id
-                                    ).then(refresh)
-                                  : updateDictItem(
-                                      selectedType.dictCode,
-                                      item.id,
-                                      { enabled: true }
-                                    ).then(refresh))
-                              }
-                            >
-                              {item.enabled ? '禁用' : '启用'}
-                            </Button>
+                            {item.enabled ? (
+                              <Button
+                                size='icon'
+                                variant='ghost'
+                                aria-label={`删除 ${item.itemLabel}`}
+                                onClick={() => setPendingDelete(item)}
+                              >
+                                <Trash2 />
+                              </Button>
+                            ) : (
+                              <Button
+                                size='sm'
+                                variant='outline'
+                                onClick={() =>
+                                  selectedType &&
+                                  updateDictItem(
+                                    selectedType.dictCode,
+                                    item.id,
+                                    { enabled: true }
+                                  ).then(refresh)
+                                }
+                              >
+                                启用
+                              </Button>
+                            )}
                           </div>
                         </PermissionGate>
                       </TableCell>
@@ -495,6 +541,31 @@ export function DictionariesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog
+        open={Boolean(pendingDelete)}
+        onOpenChange={(open) => !open && setPendingDelete(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>删除字典项？</AlertDialogTitle>
+            <AlertDialogDescription>
+              “{pendingDelete?.itemLabel}”将停止用于新记录。系统采用软删除，
+              历史记录中的原值和显示名称会继续保留。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogAction
+              className={buttonVariants({ variant: 'destructive' })}
+              disabled={deleteItem.isPending}
+              onClick={() => deleteItem.mutate()}
+            >
+              确认删除
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Dialog
         open={Boolean(itemEditor)}

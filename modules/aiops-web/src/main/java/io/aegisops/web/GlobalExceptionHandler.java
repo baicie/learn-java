@@ -22,6 +22,7 @@ import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -120,6 +121,11 @@ public class GlobalExceptionHandler {
         ErrorCode.UNSUPPORTED_MEDIA_TYPE.httpStatus(),
         ErrorCode.UNSUPPORTED_MEDIA_TYPE.name(),
         "content type is not supported");
+  }
+
+  @ExceptionHandler(NoResourceFoundException.class)
+  public ResponseEntity<ApiResponse<Void>> handleNotFound(NoResourceFoundException ex) {
+    return response(HttpStatus.NOT_FOUND.value(), ErrorCode.NOT_FOUND.name(), "resource not found");
   }
 
   @ExceptionHandler(Exception.class)

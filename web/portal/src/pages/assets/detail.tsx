@@ -9,6 +9,7 @@ import {
   Tags,
 } from 'lucide-react'
 import { assetTypeLabels, sourceLabels } from '@/lib/assets/asset'
+import { formatDateTime } from '@/lib/date-format'
 import { useArchiveAsset, useAssetDetail } from '@/hooks/assets/use-assets'
 import {
   Accordion,
@@ -159,14 +160,12 @@ export function AssetDetailPage({ assetId }: { assetId: string }) {
                 <Value
                   label='最近发现'
                   value={
-                    asset.lastSeenAt
-                      ? new Date(asset.lastSeenAt).toLocaleString()
-                      : null
+                    asset.lastSeenAt ? formatDateTime(asset.lastSeenAt) : null
                   }
                 />
                 <Value
                   label='最近更新'
-                  value={new Date(asset.updatedAt).toLocaleString()}
+                  value={formatDateTime(asset.updatedAt)}
                 />
               </CardContent>
             </Card>
@@ -259,8 +258,7 @@ export function AssetDetailPage({ assetId }: { assetId: string }) {
                             {source.externalId}
                           </p>
                           <p className='text-xs text-muted-foreground'>
-                            最近发现{' '}
-                            {new Date(source.lastSeenAt).toLocaleString()}
+                            最近发现 {formatDateTime(source.lastSeenAt)}
                           </p>
                         </AccordionContent>
                       </AccordionItem>

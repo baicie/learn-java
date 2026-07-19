@@ -2,6 +2,8 @@ package io.aegisops.platform.dictionary;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -44,8 +46,12 @@ public class DefaultDictionaryInitializer {
 
   private int seedForTenant(String tenantId) {
     int created = 0;
+    Set<String> existingCodes =
+        service.listTypes(tenantId, true).stream()
+            .map(DictTypeRecord::dictCode)
+            .collect(Collectors.toSet());
     for (DefaultDictType type : DefaultDictType.values()) {
-      if (service.listTypes(tenantId).stream().anyMatch(t -> t.dictCode().equals(type.code()))) {
+      if (existingCodes.contains(type.code())) {
         continue;
       }
       service.createType(
@@ -62,7 +68,7 @@ public class DefaultDictionaryInitializer {
     Map<String, List<DefaultDictItem>> itemsByType = DefaultDictItems.itemsByType();
     for (Map.Entry<String, List<DefaultDictItem>> entry : itemsByType.entrySet()) {
       String dictCode = entry.getKey();
-      List<DictItemRecord> existing = service.listItems(tenantId, dictCode);
+      List<DictItemRecord> existing = service.listItems(tenantId, dictCode, true);
       for (DefaultDictItem item : entry.getValue()) {
         if (existing.stream().anyMatch(i -> i.itemValue().equals(item.value()))) {
           continue;

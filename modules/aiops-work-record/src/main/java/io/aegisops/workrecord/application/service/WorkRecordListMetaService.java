@@ -137,6 +137,7 @@ public class WorkRecordListMetaService {
 
   private List<RecordListColumn> builtinColumns() {
     return List.of(
+        builtin("id", "记录 ID", "text", true, false, true, 0),
         builtin("title", "标题", "text", true, true, true, 10),
         builtin("status", "状态", "select", true, true, true, 20),
         builtin("templateId", "模板", "text", true, false, true, 30),

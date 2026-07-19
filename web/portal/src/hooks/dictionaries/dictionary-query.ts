@@ -1,5 +1,5 @@
-import { useQueries } from '@tanstack/react-query'
-import { listDictItems, type DictItem } from '@/api/dictionaries'
+import { useQueries, useQuery } from '@tanstack/react-query'
+import { listDictItems, listDictTypes, type DictItem } from '@/api/dictionaries'
 
 type DictionaryOption = {
   value: string
@@ -17,9 +17,23 @@ const DICT_GC_TIME = 24 * 60 * 60 * 1000
 export const dictionaryKeys = {
   all: ['platform-dictionaries'] as const,
 
+  types(includeDisabled: boolean) {
+    return [...dictionaryKeys.all, 'types', includeDisabled] as const
+  },
+
   items(dictCode: string, includeDisabled: boolean) {
     return [...dictionaryKeys.all, 'items', dictCode, includeDisabled] as const
   },
+}
+
+export function dictionaryTypesQueryOptions(includeDisabled = true) {
+  return {
+    queryKey: dictionaryKeys.types(includeDisabled),
+    queryFn: () => listDictTypes(includeDisabled),
+    staleTime: DICT_STALE_TIME,
+    gcTime: DICT_GC_TIME,
+    refetchOnWindowFocus: false,
+  }
 }
 
 export function dictionaryItemsQueryOptions(
@@ -53,14 +67,25 @@ function useRawDictionaryQueries(
     ),
   })
 
-  return { codes, queries }
+  const typesQuery = useQuery({
+    ...dictionaryTypesQueryOptions(true),
+    enabled: codes.length > 0,
+  })
+
+  return { codes, queries, typesQuery }
 }
 
 export function useDictionaryOptions(
   dictCodes: string[],
   includeDisabled = true
 ) {
-  const { codes, queries } = useRawDictionaryQueries(dictCodes, includeDisabled)
+  const { codes, queries, typesQuery } = useRawDictionaryQueries(
+    dictCodes,
+    includeDisabled
+  )
+  const typeEnabled = new Map(
+    typesQuery.data?.map((type) => [type.dictCode, type.enabled]) ?? []
+  )
 
   const options: DictionaryOptionMap = {}
 
@@ -69,16 +94,22 @@ export function useDictionaryOptions(
       queries[index]?.data?.map((item) => ({
         value: item.itemValue,
         label: item.itemLabel,
-        enabled: item.enabled,
+        enabled: item.enabled && typeEnabled.get(dictCode) === true,
       })) ?? []
   })
 
   return {
     options,
-    loading: queries.some((query) => query.isLoading),
-    fetching: queries.some((query) => query.isFetching),
-    error: queries.find((query) => query.error)?.error ?? null,
-    refetch: () => Promise.all(queries.map((query) => query.refetch())),
+    loading: typesQuery.isLoading || queries.some((query) => query.isLoading),
+    fetching:
+      typesQuery.isFetching || queries.some((query) => query.isFetching),
+    error:
+      typesQuery.error ?? queries.find((query) => query.error)?.error ?? null,
+    refetch: () =>
+      Promise.all([
+        typesQuery.refetch(),
+        ...queries.map((query) => query.refetch()),
+      ]),
   }
 }
 
@@ -86,20 +117,36 @@ export function useDictionaryItemsMap(
   dictCodes: string[],
   includeDisabled = true
 ) {
-  const { codes, queries } = useRawDictionaryQueries(dictCodes, includeDisabled)
+  const { codes, queries, typesQuery } = useRawDictionaryQueries(
+    dictCodes,
+    includeDisabled
+  )
+  const typeEnabled = new Map(
+    typesQuery.data?.map((type) => [type.dictCode, type.enabled]) ?? []
+  )
 
   const items: DictionaryItemsMap = {}
 
   codes.forEach((dictCode, index) => {
-    items[dictCode] = queries[index]?.data ?? []
+    items[dictCode] =
+      queries[index]?.data?.map((item) => ({
+        ...item,
+        enabled: item.enabled && typeEnabled.get(dictCode) === true,
+      })) ?? []
   })
 
   return {
     items,
-    loading: queries.some((query) => query.isLoading),
-    fetching: queries.some((query) => query.isFetching),
-    error: queries.find((query) => query.error)?.error ?? null,
-    refetch: () => Promise.all(queries.map((query) => query.refetch())),
+    loading: typesQuery.isLoading || queries.some((query) => query.isLoading),
+    fetching:
+      typesQuery.isFetching || queries.some((query) => query.isFetching),
+    error:
+      typesQuery.error ?? queries.find((query) => query.error)?.error ?? null,
+    refetch: () =>
+      Promise.all([
+        typesQuery.refetch(),
+        ...queries.map((query) => query.refetch()),
+      ]),
   }
 }
 

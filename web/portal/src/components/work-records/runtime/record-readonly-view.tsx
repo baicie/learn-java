@@ -1,14 +1,13 @@
 import { useTranslation } from 'react-i18next'
+import { formatDateTime } from '@/lib/date-format'
 import { Button } from '@/components/ui/button'
 import {
   DetailPageLayout,
   DetailSection,
 } from '@/components/layout/detail-page-layout'
 import { DynamicFieldControl } from './dynamic-field-control'
-import { RecordHistoryCard } from './record-history-card'
 import { statusLabel } from './schema'
 import type {
-  AuditEvent,
   RuntimeDictOptions,
   WorkRecord,
   WorkRecordField,
@@ -23,9 +22,6 @@ type RecordReadonlyViewProps = {
   dictOptions: RuntimeDictOptions
   customData: Record<string, unknown>
   canEdit?: boolean
-  history?: AuditEvent[]
-  historyLoading?: boolean
-  historyError?: Error | null
   onBack: () => void
   onEdit: () => void
 }
@@ -38,9 +34,6 @@ export function RecordReadonlyView({
   dictOptions,
   customData,
   canEdit = true,
-  history = [],
-  historyLoading = false,
-  historyError = null,
   onBack,
   onEdit,
 }: RecordReadonlyViewProps) {
@@ -81,12 +74,13 @@ export function RecordReadonlyView({
         description={t('workRecords.designer.emptyHint')}
       >
         <div className='grid gap-3 text-sm md:grid-cols-2'>
+          <Info label={t('workRecords.field.recordId')} value={record.id} />
           <Info
             label={t('workRecords.field.template')}
             value={template?.name ?? record.templateId}
           />
           <Info
-            label={t('workRecords.field.template')}
+            label={t('workRecords.field.templateVersion')}
             value={record.templateVersionId}
           />
           <Info
@@ -144,12 +138,6 @@ export function RecordReadonlyView({
           </div>
         )}
       </DetailSection>
-
-      <RecordHistoryCard
-        events={history}
-        loading={historyLoading}
-        error={historyError}
-      />
     </DetailPageLayout>
   )
 }
@@ -161,10 +149,4 @@ function Info({ label, value }: { label: string; value: string }) {
       <div className='mt-1 break-all'>{value}</div>
     </div>
   )
-}
-
-function formatDateTime(value: string) {
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return value
-  return date.toLocaleString()
 }

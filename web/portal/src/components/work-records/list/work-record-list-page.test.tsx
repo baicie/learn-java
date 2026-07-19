@@ -21,6 +21,12 @@ vi.mock('@tanstack/react-router', () => ({
 }))
 
 vi.mock('@/api/dictionaries', () => ({
+  listDictTypes: async () => [
+    {
+      dictCode: 'record_priority',
+      enabled: true,
+    },
+  ],
   listDictItems: async () => [],
 }))
 

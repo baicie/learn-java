@@ -108,22 +108,3 @@ export type WorkRecordRuntimeFormValue = {
   recordTime: string
   customData: Record<string, unknown>
 }
-
-export type AuditChange = {
-  path: string
-  beforeValue: unknown
-  afterValue: unknown
-}
-
-export type AuditEvent = {
-  id: string
-  tenantId: string
-  actorId: string
-  action: string
-  resourceType: string
-  resourceId: string
-  beforeJson: string
-  afterJson: string
-  detailJson: string
-  createdAt: string
-}

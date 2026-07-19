@@ -6,6 +6,7 @@ import {
   actOnApprovalTask,
   requestMonthlyAiReport,
 } from '@/api/work-records/extensions'
+import { formatDateTime } from '@/lib/date-format'
 import { useWorkRecordOperations } from '@/hooks/work-records/use-work-record-operations'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -298,7 +299,7 @@ export function WorkRecordOperationsPage() {
                   </p>
                   <p className='mt-1 text-xs text-muted-foreground'>
                     {task.dueAt
-                      ? `截止 ${new Date(task.dueAt).toLocaleString()}`
+                      ? `截止 ${formatDateTime(task.dueAt)}`
                       : '无截止时间'}
                   </p>
                 </div>

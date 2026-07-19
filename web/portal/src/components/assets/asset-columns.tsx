@@ -1,6 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import type { ColumnDef } from '@tanstack/react-table'
 import { assetTypeLabels, type Asset } from '@/lib/assets/asset'
+import { formatDateTime } from '@/lib/date-format'
 import { Badge } from '@/components/ui/badge'
 
 export const assetColumns: ColumnDef<Asset>[] = [
@@ -71,6 +72,6 @@ export const assetColumns: ColumnDef<Asset>[] = [
   {
     accessorKey: 'updatedAt',
     header: '最近更新',
-    cell: ({ row }) => new Date(row.original.updatedAt).toLocaleString(),
+    cell: ({ row }) => formatDateTime(row.original.updatedAt),
   },
 ]

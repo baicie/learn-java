@@ -36,6 +36,17 @@ const secretColumn: RecordListColumn = {
   exportable: false,
 }
 
+const dictionaryColumn: RecordListColumn = {
+  ...titleColumn,
+  key: 'custom.priority',
+  title: '优先级',
+  source: 'custom',
+  fieldCode: 'priority',
+  fieldType: 'select',
+  optionSource: 'dict',
+  dictCode: 'record_priority',
+}
+
 const meta: RecordListMeta = {
   templates: [],
   columns: [titleColumn, secretColumn],
@@ -92,6 +103,33 @@ describe('WorkRecordExportDialog', () => {
     await expect.element(screen.getByText('标题')).toBeVisible()
 
     await expect.element(screen.getByText('秘密字段')).not.toBeInTheDocument()
+  })
+
+  it('explains how dictionary fields are exported', async () => {
+    const screen = await render(
+      <WorkRecordExportDialog
+        open
+        onOpenChange={vi.fn()}
+        query={query}
+        meta={{
+          ...meta,
+          columns: [...meta.columns, dictionaryColumn],
+          exportColumns: [...meta.exportColumns, dictionaryColumn],
+          dictCodes: ['record_priority'],
+        }}
+        currentColumns={[titleColumn, dictionaryColumn]}
+        total={1}
+      />
+    )
+
+    await expect.element(screen.getByText('字典说明')).toBeVisible()
+    await expect
+      .element(
+        screen.getByText(
+          '字典字段导出显示名称；历史禁用项标记为“已禁用”；无法识别的值保留原始编码；多选值使用分号分隔。'
+        )
+      )
+      .toBeVisible()
   })
 
   it('exports confirmed selected columns', async () => {

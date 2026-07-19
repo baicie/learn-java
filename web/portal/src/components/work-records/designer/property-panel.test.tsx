@@ -2,6 +2,7 @@ import { i18n } from '@/i18n'
 import { I18nextProvider } from 'react-i18next'
 import { describe, expect, it, vi } from 'vitest'
 import { render } from 'vitest-browser-react'
+import { userEvent } from 'vitest/browser'
 import { PropertyPanel } from './property-panel'
 import type { DesignerField } from './types'
 
@@ -146,5 +147,42 @@ describe('PropertyPanel', () => {
     expect(onChange).toHaveBeenCalledWith('field-1', {
       staticOptions: ['P0', 'P1'],
     })
+  })
+
+  it('shows select as a placeholder instead of a dictionary option', async () => {
+    const screen = await render(
+      <I18nextProvider i18n={i18n} defaultNS='translation'>
+        <PropertyPanel
+          field={{ ...field, dictCode: '' }}
+          dictTypes={[
+            {
+              id: 'dict-1',
+              dictCode: 'record_priority',
+              dictName: '处理优先级',
+              enabled: true,
+            },
+          ]}
+          onChange={vi.fn()}
+        />
+      </I18nextProvider>
+    )
+
+    const dictionary = screen
+      .getByText('字典编码')
+      .element()
+      .closest('label')
+      ?.querySelector<HTMLElement>('[role="combobox"]')
+    expect(dictionary?.textContent).toContain('请选择')
+    await userEvent.click(dictionary!)
+    await expect
+      .element(screen.getByRole('option', { name: '请选择' }))
+      .not.toBeInTheDocument()
+    await expect
+      .element(
+        screen.getByRole('option', {
+          name: '处理优先级 / record_priority',
+        })
+      )
+      .toBeVisible()
   })
 })

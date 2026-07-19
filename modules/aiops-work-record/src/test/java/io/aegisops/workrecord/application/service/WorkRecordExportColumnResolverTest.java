@@ -98,6 +98,23 @@ class WorkRecordExportColumnResolverTest {
   }
 
   @Test
+  void shouldAllowColumnWhenHistoricalRecordsHaveNoFieldMetadata() {
+    RecordListColumn col = column("custom.change_id", "变更 ID", "custom", "change_id", "text", true);
+    WorkRecord record = record("r1", "v1");
+    when(fieldRepository.listByVersions("t1", List.of("v1"))).thenReturn(List.of());
+
+    List<ResolvedExportColumn> result = resolver.resolve("t1", List.of(col), List.of(record));
+
+    assertThat(result)
+        .singleElement()
+        .satisfies(
+            column -> {
+              assertThat(column.key()).isEqualTo("custom.change_id");
+              assertThat(column.fieldForVersion("v1")).isNull();
+            });
+  }
+
+  @Test
   void shouldCollectAllVersionIdsFromRecords() {
     RecordListColumn col = column("custom.priority", "优先级", "custom", "priority", "select", true);
 

@@ -170,6 +170,72 @@ class WorkRecordExportServiceTest {
   }
 
   @Test
+  void shouldExportHistoricalRawValueWhenFieldMetadataIsMissing() {
+    RecordQuery query = query();
+    RecordListColumn changeId =
+        column("custom.change_id", "变更 ID", "custom", "change_id", "text", "static", null, true);
+    WorkRecord historical =
+        new WorkRecord(
+            "r1",
+            "t1",
+            "tpl1",
+            "v1",
+            "日报",
+            RecordStatus.DONE,
+            "u1",
+            "u1",
+            OffsetDateTime.parse("2026-07-10T15:00:00+08:00"),
+            "{}",
+            "{\"change_id\":\"CHG-20260710-001\"}",
+            1,
+            OffsetDateTime.parse("2026-07-10T15:00:00+08:00"),
+            OffsetDateTime.parse("2026-07-10T15:00:00+08:00"),
+            null);
+
+    when(queryService.prepareEffectiveQuery("t1", query, user())).thenReturn(query);
+    when(metaService.meta("t1", "tpl1"))
+        .thenReturn(
+            new RecordListMeta(
+                List.of(),
+                List.of(changeId),
+                List.of(changeId),
+                List.of(),
+                Set.of(),
+                5000,
+                List.of("all")));
+    when(repository.listForExport("t1", query, 5001)).thenReturn(List.of(historical));
+    when(fieldRepository.listByVersions("t1", List.of("v1"))).thenReturn(List.of());
+    when(userPort.displayNames(eq("t1"), anyCollection())).thenReturn(Map.of());
+
+    var result = service.export("t1", query, List.of("custom.change_id"), user());
+
+    assertThat(new String(result.content(), StandardCharsets.UTF_8))
+        .contains("\"变更 ID\"")
+        .contains("\"CHG-20260710-001\"");
+  }
+
+  @Test
+  void shouldExportRecordIdAsBuiltinColumn() {
+    RecordQuery query = query();
+    RecordListColumn id = column("id", "记录 ID", "builtin", null, "text", null, null, true);
+
+    when(queryService.prepareEffectiveQuery("t1", query, user())).thenReturn(query);
+    when(metaService.meta("t1", "tpl1"))
+        .thenReturn(
+            new RecordListMeta(
+                List.of(), List.of(id), List.of(id), List.of(), Set.of(), 5000, List.of("all")));
+    when(repository.listForExport("t1", query, 5001)).thenReturn(List.of(record()));
+    when(fieldRepository.listByVersions("t1", List.of("v1"))).thenReturn(List.of());
+    when(userPort.displayNames(eq("t1"), anyCollection())).thenReturn(Map.of());
+
+    var result = service.export("t1", query, List.of("id"), user());
+
+    assertThat(new String(result.content(), StandardCharsets.UTF_8))
+        .contains("\"记录 ID\"")
+        .contains("\"r1\"");
+  }
+
+  @Test
   void shouldStreamAsyncExportByPages() throws Exception {
     RecordQuery query = query();
     when(queryService.prepareEffectiveQuery("t1", query, user())).thenReturn(query);

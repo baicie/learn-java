@@ -32,6 +32,10 @@ describe('error pages', () => {
   it('renders the forbidden page in the active language', async () => {
     const screen = await renderErrorPage(ForbiddenError)
 
+    const status = screen.getByRole('heading', { name: '403' })
+    await expect.element(status).toBeVisible()
+    expect(status.element().className).toContain('text-[7rem]')
+    expect(screen.container.querySelector('svg')).toBeNull()
     await expect
       .element(screen.getByRole('heading', { name: '无权访问' }))
       .toBeVisible()

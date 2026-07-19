@@ -1,5 +1,6 @@
 import { CalendarDays } from 'lucide-react'
 import { apiErrorCode, apiErrorMessage } from '@/lib/api-error'
+import { formatDate } from '@/lib/date-format'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import type { RecordWorkdaySummary } from './types'
@@ -49,7 +50,7 @@ export function WorkdaySummaryCard({ summary, loading, error }: Props) {
       <CardHeader className='pb-2'>
         <CardTitle className='flex items-center gap-2 text-base'>
           <CalendarDays className='size-4' />
-          {summary.month} 工作月
+          {summary.month.replace('-', '/')} 工作月
         </CardTitle>
       </CardHeader>
 
@@ -58,10 +59,10 @@ export function WorkdaySummaryCard({ summary, loading, error }: Props) {
 
         <Metric
           label='统计区间'
-          value={`${summary.periodStart} 至 ${summary.periodEnd}`}
+          value={`${formatDate(summary.periodStart)} 至 ${formatDate(summary.periodEnd)}`}
         />
 
-        <Metric label='首个工作日' value={summary.firstWorkday ?? '-'} />
+        <Metric label='首个工作日' value={formatDate(summary.firstWorkday)} />
 
         <Metric label='默认日历' value={summary.calendarName} />
       </CardContent>

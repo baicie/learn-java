@@ -110,7 +110,6 @@ vi.mock('@/api/work-records/records', () => ({
     updatedAt: '2026-01-01T00:00:00Z',
     deletedAt: null,
   }),
-  listWorkRecordHistory: async () => [],
   parseCustomData: (record?: { customDataJson?: string }) => {
     if (!record?.customDataJson) return {}
     try {
@@ -169,7 +168,9 @@ describe('record runtime pages', () => {
   it('new record page renders form', async () => {
     const screen = await renderWithClient(<NewRecordPage />)
     await expect.element(screen.getByText('新建记录')).toBeVisible()
-    await expect.element(screen.getByText('日报模板')).toBeVisible()
+    await expect
+      .element(screen.getByText('日报模板', { exact: true }))
+      .toBeVisible()
     await screen.getByRole('combobox', { name: '负责人' }).click()
     await expect.element(screen.getByText('张三')).toBeVisible()
   })
@@ -182,7 +183,9 @@ describe('record runtime pages', () => {
       const node = titleLocator.element() as HTMLInputElement
       expect(node.value).toBe('日报')
     })
-    await expect.element(screen.getByText('日报模板')).toBeVisible()
+    await expect
+      .element(screen.getByText('日报模板', { exact: true }))
+      .toBeVisible()
     await expect.element(screen.getByText('tpl1')).not.toBeInTheDocument()
   })
 
@@ -207,6 +210,7 @@ describe('record runtime pages', () => {
     await expect.element(screen.getByText('张三').first()).toBeVisible()
     await expect.element(screen.getByText('tpl1')).not.toBeInTheDocument()
     await expect.element(screen.getByText('u1')).not.toBeInTheDocument()
+    await expect.element(screen.getByText('变更历史')).not.toBeInTheDocument()
     await expect
       .element(screen.getByRole('button', { name: '编辑' }))
       .not.toBeInTheDocument()

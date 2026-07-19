@@ -51,6 +51,36 @@ class ExcelImportParserTest {
   }
 
   @Test
+  void parsesReadableHeadersByStableFieldCode() throws Exception {
+    byte[] content;
+    try (var workbook = new XSSFWorkbook();
+        var output = new ByteArrayOutputStream()) {
+      var sheet = workbook.createSheet("records");
+      var header = sheet.createRow(0);
+      header.createCell(0).setCellValue("标题 [title]");
+      header.createCell(1).setCellValue("记录时间 [recordTime]");
+      header.createCell(2).setCellValue("工时 [hours]");
+      var row = sheet.createRow(1);
+      row.createCell(0).setCellValue("完成发布");
+      row.createCell(1).setCellValue("2026-07-11T10:00:00+08:00");
+      row.createCell(2).setCellValue(2.5);
+      workbook.write(output);
+      content = output.toByteArray();
+    }
+
+    var rows =
+        parser.parse(
+            new ByteArrayInputStream(content),
+            List.of(field("hours", FieldType.NUMBER)),
+            new ExcelImportParser.ImportDefaults("draft", null, null));
+
+    assertThat(rows).hasSize(1);
+    assertThat(rows.getFirst().title()).isEqualTo("完成发布");
+    assertThat(rows.getFirst().customData())
+        .containsEntry("hours", new java.math.BigDecimal("2.5"));
+  }
+
+  @Test
   void rejectsUnknownAndDuplicateColumns() throws Exception {
     assertThatThrownBy(() -> parseHeaders("title", "unknown_field"))
         .isInstanceOf(IllegalArgumentException.class)

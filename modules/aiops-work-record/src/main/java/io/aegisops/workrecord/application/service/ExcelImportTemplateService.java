@@ -75,7 +75,7 @@ public class ExcelImportTemplateService {
       var header = records.createRow(0);
       for (int index = 0; index < columns.size(); index++) {
         var cell = header.createCell(index);
-        cell.setCellValue(columns.get(index).code());
+        cell.setCellValue(columns.get(index).header());
         cell.setCellStyle(headerStyle);
         records.setColumnWidth(index, 20 * 256);
       }
@@ -158,5 +158,9 @@ public class ExcelImportTemplateService {
   }
 
   private record ImportColumn(
-      String code, String name, String type, boolean required, String description) {}
+      String code, String name, String type, boolean required, String description) {
+    String header() {
+      return name + " [" + code + "]";
+    }
+  }
 }

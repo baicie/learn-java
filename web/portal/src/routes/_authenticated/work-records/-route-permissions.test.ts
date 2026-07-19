@@ -1,8 +1,9 @@
 import { isRedirect } from '@tanstack/react-router'
+import '@/routeTree.gen'
 import { describe, expect, it } from 'vitest'
 import { useAuthStore } from '@/stores/auth-store'
 import { Route as DetailRoute } from './$recordId'
-import { Route as EditRoute } from './$recordId.edit'
+import { Route as EditRoute } from './$recordId_.edit'
 import { Route as NewRoute } from './new'
 import { Route as DesignerRoute } from './templates.$templateId.designer'
 
@@ -23,6 +24,10 @@ async function callBeforeLoad(route: typeof DetailRoute) {
 }
 
 describe('work record route permissions', () => {
+  it('keeps the edit route outside the detail route component', () => {
+    expect(EditRoute.options.getParentRoute?.()).not.toBe(DetailRoute)
+  })
+
   it('requires read permission for the detail route', async () => {
     principal(['work-record:write'])
 

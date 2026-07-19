@@ -22,6 +22,7 @@ import {
   uploadAttachment,
 } from '@/api/work-records/extensions'
 import { useAuthStore } from '@/stores/auth-store'
+import { formatDateTime } from '@/lib/date-format'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -162,8 +163,7 @@ export function RecordExtensionPanel({ recordId }: { recordId: string }) {
                 <div key={item.id} className='rounded-md border p-3'>
                   <p className='text-sm whitespace-pre-wrap'>{item.content}</p>
                   <p className='mt-2 text-xs text-muted-foreground'>
-                    {item.createdBy} ·{' '}
-                    {new Date(item.createdAt).toLocaleString()}
+                    {item.createdBy} · {formatDateTime(item.createdAt)}
                   </p>
                 </div>
               ))}
@@ -361,8 +361,8 @@ export function RecordExtensionPanel({ recordId }: { recordId: string }) {
                   </div>
                 </div>
                 <p className='mt-2 text-xs text-muted-foreground'>
-                  {new Date(item.startedAt).toLocaleString()} →{' '}
-                  {new Date(item.dueAt).toLocaleString()}
+                  {formatDateTime(item.startedAt)} →{' '}
+                  {formatDateTime(item.dueAt)}
                 </p>
               </div>
             ))}

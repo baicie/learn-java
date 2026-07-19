@@ -94,10 +94,6 @@ public class WorkRecordExportColumnResolver {
         versionFields.put(versionId, field);
       }
 
-      if (!records.isEmpty() && versionFields.isEmpty()) {
-        throw new IllegalArgumentException("export field metadata not found: " + fieldCode);
-      }
-
       result.add(new ResolvedExportColumn(candidate, Map.copyOf(versionFields)));
     }
 

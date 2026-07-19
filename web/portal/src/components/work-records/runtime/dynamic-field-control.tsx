@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import { formatDate, formatDateTime } from '@/lib/date-format'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import {
@@ -217,6 +218,10 @@ function ReadonlyValue({
       value === true
         ? t('workRecords.form.booleanYes')
         : t('workRecords.form.booleanNo')
+  } else if (field.fieldType === 'date' && typeof value === 'string') {
+    text = formatDate(value)
+  } else if (field.fieldType === 'datetime' && typeof value === 'string') {
+    text = formatDateTime(value)
   } else if (Array.isArray(value)) {
     text = value.join('、')
   } else if (value !== undefined && value !== null && String(value) !== '') {

@@ -215,6 +215,47 @@ class DictionaryServiceTest {
   }
 
   @Test
+  void listItems_byDefault_shouldReturnNoItemsWhenDictionaryTypeIsDisabled() {
+    DictTypeRecord disabledType =
+        new DictTypeRecord(
+            "dt1",
+            "t1",
+            "record_priority",
+            "Priority",
+            null,
+            false,
+            false,
+            10,
+            "u1",
+            OffsetDateTime.now(),
+            OffsetDateTime.now());
+    DictItemRecord enabledItem =
+        new DictItemRecord(
+            "di1",
+            "t1",
+            "dt1",
+            "High",
+            "P1",
+            null,
+            null,
+            null,
+            false,
+            true,
+            10,
+            "{}",
+            "u1",
+            OffsetDateTime.now(),
+            OffsetDateTime.now());
+    when(repository.findType("t1", "record_priority"))
+        .thenReturn(java.util.Optional.of(disabledType));
+    when(repository.listItems("t1", "record_priority", false)).thenReturn(List.of(enabledItem));
+
+    var items = service.listItems("t1", "record_priority");
+
+    assertThat(items).isEmpty();
+  }
+
+  @Test
   void updateItemShouldAuditBeforeAndAfter() {
     DictItemRecord before =
         new DictItemRecord(

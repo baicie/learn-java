@@ -4,7 +4,6 @@ import { apiResponseSchema } from '@/lib/api-response'
 import {
   WORK_RECORD_FIELD_TYPES,
   WORK_RECORD_STATUSES,
-  type AuditEvent,
   type WorkRecord,
   type WorkRecordField,
   type WorkRecordRuntimeFormValue,
@@ -70,19 +69,6 @@ const recordFieldSchema = z.object({
   updatedAt: z.string(),
 })
 
-const auditEventSchema = z.object({
-  id: z.string(),
-  tenantId: z.string(),
-  actorId: z.string(),
-  action: z.string(),
-  resourceType: z.string(),
-  resourceId: z.string(),
-  beforeJson: z.string(),
-  afterJson: z.string(),
-  detailJson: z.string(),
-  createdAt: z.string(),
-})
-
 const recordSchema = z.object({
   id: z.string(),
   tenantId: z.string(),
@@ -127,15 +113,6 @@ export async function listTemplateVersionFields(
 export async function getWorkRecord(recordId: string): Promise<WorkRecord> {
   const { data } = await apiClient.get(`/api/work-record/records/${recordId}`)
   return apiResponseSchema(recordSchema).parse(data).data
-}
-
-export async function listWorkRecordHistory(
-  recordId: string
-): Promise<AuditEvent[]> {
-  const { data } = await apiClient.get(
-    `/api/work-record/records/${recordId}/history`
-  )
-  return apiResponseSchema(z.array(auditEventSchema)).parse(data).data
 }
 
 export async function createWorkRecord(

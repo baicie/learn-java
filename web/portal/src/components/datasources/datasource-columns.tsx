@@ -1,6 +1,7 @@
 import type { ColumnDef } from '@tanstack/react-table'
 import { Pencil, RefreshCw, TestTube2, Webhook } from 'lucide-react'
 import type { Datasource } from '@/lib/datasources/datasource'
+import { formatDateTime } from '@/lib/date-format'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { PermissionGate } from '@/components/permission-gate'
@@ -68,7 +69,7 @@ export function datasourceColumns({
       header: '最近同步',
       cell: ({ row }) =>
         row.original.lastSyncAt
-          ? new Date(row.original.lastSyncAt).toLocaleString()
+          ? formatDateTime(row.original.lastSyncAt)
           : '尚未同步',
     },
     {

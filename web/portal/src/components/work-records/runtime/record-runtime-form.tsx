@@ -78,6 +78,8 @@ export function RecordRuntimeForm({
     name: template.name,
     disabled: !template.enabled || !template.currentVersionId,
   }))
+  const selectedTemplateName =
+    templates.find((template) => template.id === value.templateId)?.name ?? '-'
 
   const enabledFields = fields
     .filter((field) => field.enabled)
@@ -274,8 +276,7 @@ export function RecordRuntimeForm({
               {t('workRecords.field.status')}：{statusLabel(value.status)}
             </div>
             <div>
-              {t('workRecords.field.template')}：
-              {value.templateVersionId || '-'}
+              {t('workRecords.field.template')}：{selectedTemplateName}
             </div>
             <div>
               {t('workRecords.field.creator')}：

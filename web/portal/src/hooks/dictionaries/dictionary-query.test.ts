@@ -1,12 +1,21 @@
-import { QueryClient } from '@tanstack/react-query'
+import { createElement } from 'react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { renderHook } from 'vitest-browser-react'
 import {
   dictionaryItemsQueryOptions,
   dictionaryKeys,
   dictionaryLabel,
+  useDictionaryItemsMap,
 } from './dictionary-query'
 
 vi.mock('@/api/dictionaries', () => ({
+  listDictTypes: vi.fn(async () => [
+    {
+      dictCode: 'priority',
+      enabled: false,
+    },
+  ]),
   listDictItems: vi.fn(async () => [
     {
       itemValue: 'P1',
@@ -73,5 +82,18 @@ describe('dictionary query', () => {
     const second = client.getQueryData(dictionaryKeys.items('priority', true))
 
     expect(second).toBeDefined()
+  })
+
+  it('marks items unavailable when their dictionary is disabled', async () => {
+    const { result } = await renderHook(
+      () => useDictionaryItemsMap(['priority'], true),
+      {
+        wrapper: ({ children }) =>
+          createElement(QueryClientProvider, { client }, children),
+      }
+    )
+
+    await expect.poll(() => result.current.loading).toBe(false)
+    expect(result.current.items.priority?.[0]?.enabled).toBe(false)
   })
 })

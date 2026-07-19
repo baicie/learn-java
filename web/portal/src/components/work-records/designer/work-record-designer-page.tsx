@@ -67,6 +67,11 @@ export function WorkRecordDesignerPage({ templateId }: { templateId: string }) {
     }
   }
 
+  const publishTemplate = async () => {
+    await designer.publish()
+    notify.success(t('workRecords.designer.publishSuccess'))
+  }
+
   if (designer.queryError) {
     return (
       <main className='p-4 md:p-6'>
@@ -150,7 +155,7 @@ export function WorkRecordDesignerPage({ templateId }: { templateId: string }) {
           <Button
             type='button'
             disabled={designer.publishing}
-            onClick={() => designer.publish()}
+            onClick={() => void publishTemplate()}
           >
             <Rocket className='mr-2 size-4' />
             {t('workRecords.designer.toolbar.publish')}
