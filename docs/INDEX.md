@@ -4,8 +4,8 @@ type: operation
 status: accepted
 phase: global
 owner: script
-created: 2026-07-18
-updated: 2026-07-18
+created: 2026-07-19
+updated: 2026-07-19
 related: []
 ---
 
@@ -53,6 +53,7 @@ Do not edit it manually.
 | Title | Status | Phase | Updated | Path |
 |---|---|---|---|---|
 | 当前账户 API | accepted | phase-21 | 2026-07-14 | [docs/api/account.md](api/account.md) |
+| AI 模型管理 API | accepted | phase-4 | 2026-07-18 | [docs/api/ai-models.md](api/ai-models.md) |
 | 资源中心 API | accepted | phase-1 | 2026-07-16 | [docs/api/assets.md](api/assets.md) |
 | 数据源 API | accepted | phase-1 | 2026-07-18 | [docs/api/datasources.md](api/datasources.md) |
 | 多来源可观测与变更接入 API | accepted | phase-1 | 2026-07-18 | [docs/api/operations-ingestion.md](api/operations-ingestion.md) |
@@ -86,6 +87,7 @@ Do not edit it manually.
 | 统一资源来源与实体解析实施计划 | accepted | phase-1 | 2026-07-16 | [docs/designs/phase-1/2026-07-16-resource-source-and-entity-resolution-implementation-plan.md](designs/phase-1/2026-07-16-resource-source-and-entity-resolution-implementation-plan.md) |
 | 多来源资源与证据后续实施计划 | accepted | phase-1 | 2026-07-17 | [docs/designs/phase-1/2026-07-17-resource-intelligence-followups.md](designs/phase-1/2026-07-17-resource-intelligence-followups.md) |
 | Portal 源码归位与工作记录闭环实施计划 | accepted | phase-21 | 2026-07-14 | [docs/designs/phase-21/2026-07-14-portal-source-layout-and-work-record-completion.md](designs/phase-21/2026-07-14-portal-source-layout-and-work-record-completion.md) |
+| DeepSeek 模型管理页面设计 | accepted | phase-4 | 2026-07-18 | [docs/designs/phase-4/2026-07-18-deepseek-model-management.md](designs/phase-4/2026-07-18-deepseek-model-management.md) |
 | Zabbix Webhook Integration | accepted | global | 2026-06-30 | [docs/integrations/zabbix-webhook.md](integrations/zabbix-webhook.md) |
 | Phase2：Incident 聚合与事故中心 | accepted | global | 2026-06-30 | [docs/mvp/design/phase2.md](mvp/design/phase2.md) |
 | Phase3：RCA 规则引擎与证据链 | accepted | global | 2026-06-30 | [docs/mvp/design/phase3.md](mvp/design/phase3.md) |

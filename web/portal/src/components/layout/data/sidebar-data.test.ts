@@ -45,4 +45,24 @@ describe('getNavGroups', () => {
       '/work-records/templates'
     )
   })
+
+  it('shows AI model management only to platform administrators', () => {
+    useAuthStore.getState().auth.setPrincipal({
+      userId: 'admin',
+      tenantId: 'tenant-1',
+      username: 'admin',
+      displayName: 'Admin',
+      roles: ['system_admin'],
+      permissions: ['admin:manage'],
+      dataScopes: {},
+    })
+
+    const platform = getNavGroups((key) => key).find(
+      (group) => group.title === 'nav.platform.group'
+    )
+
+    expect(platform?.items.map((item) => item.url)).toContain(
+      '/platform/ai-models'
+    )
+  })
 })
