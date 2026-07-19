@@ -1,5 +1,6 @@
 package io.aegisops.ai.model.api;
 
+import io.aegisops.ai.model.ServerSideAiModelManagement;
 import io.aegisops.ai.model.application.AiModelService;
 import io.aegisops.common.api.ApiResponse;
 import io.aegisops.common.tenant.TenantContext;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@ServerSideAiModelManagement
 @RequestMapping("/api/ai/models")
 @PreAuthorize("hasAuthority('admin:manage')")
 public class AiModelController {

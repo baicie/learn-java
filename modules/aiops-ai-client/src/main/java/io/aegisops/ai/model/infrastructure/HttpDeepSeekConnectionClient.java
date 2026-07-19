@@ -1,5 +1,6 @@
 package io.aegisops.ai.model.infrastructure;
 
+import io.aegisops.ai.model.ServerSideAiModelManagement;
 import io.aegisops.ai.model.domain.DeepSeekConnectionResult;
 import io.aegisops.ai.model.port.DeepSeekConnectionClient;
 import org.springframework.http.HttpHeaders;
@@ -8,6 +9,7 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 
 @Component
+@ServerSideAiModelManagement
 public class HttpDeepSeekConnectionClient implements DeepSeekConnectionClient {
   @Override
   public DeepSeekConnectionResult test(String baseUrl, String apiKey, String modelName) {

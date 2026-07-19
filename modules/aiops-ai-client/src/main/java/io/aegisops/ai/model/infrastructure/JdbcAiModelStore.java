@@ -1,5 +1,6 @@
 package io.aegisops.ai.model.infrastructure;
 
+import io.aegisops.ai.model.ServerSideAiModelManagement;
 import io.aegisops.ai.model.domain.AiModelConfig;
 import io.aegisops.ai.model.port.AiModelStore;
 import java.sql.ResultSet;
@@ -11,6 +12,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 @Repository
+@ServerSideAiModelManagement
 public class JdbcAiModelStore implements AiModelStore {
   private static final String COLUMNS =
       "id, tenant_id, provider, name, model_name, base_url, encrypted_api_key, enabled, "
