@@ -21,6 +21,7 @@ describe('PasswordInput', () => {
     const showPasswordButton = getByRole('button', { name: /show password/i })
 
     await expect.element(passwordInput).toBeInTheDocument()
+    await expect.element(passwordInput).toHaveAttribute('data-slot', 'input')
     await expect.element(passwordInput).toHaveAttribute('type', 'password')
     await expect.element(showPasswordButton).toBeVisible()
   })
