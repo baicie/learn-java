@@ -23,6 +23,26 @@ export const common = {
   'common.yes': 'Yes',
   'common.no': 'No',
   'common.unknownField': 'Unknown field',
+  'errors.status': 'Error code {{status}}',
+  'errors.actions.back': 'Go back',
+  'errors.actions.home': 'Back to home',
+  'errors.actions.signIn': 'Go to sign in',
+  'errors.actions.reload': 'Reload',
+  'errors.401.title': 'Sign in required',
+  'errors.401.description':
+    'Your session is invalid or has expired. Sign in again to continue.',
+  'errors.403.title': 'Access forbidden',
+  'errors.403.description':
+    'Your account does not have permission to view this resource. Contact an administrator to confirm your access.',
+  'errors.404.title': 'Page not found',
+  'errors.404.description':
+    'The page may have moved, been removed, or the address may be incorrect.',
+  'errors.500.title': 'Service temporarily unavailable',
+  'errors.500.description':
+    'An unexpected error occurred while processing your request. Try again later or contact an administrator if it continues.',
+  'errors.503.title': 'Service under maintenance',
+  'errors.503.description':
+    'The system is temporarily unavailable and will return after maintenance. Reload this page in a moment.',
   'command.searchPlaceholder': 'Type a command or search…',
   'command.empty': 'No results found.',
 
