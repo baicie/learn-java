@@ -1,6 +1,6 @@
 package io.aegisops.persistence;
 
-import org.springframework.boot.autoconfigure.jooq.DefaultConfigurationCustomizer;
+import org.springframework.boot.jooq.autoconfigure.DefaultConfigurationCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 

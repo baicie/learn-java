@@ -1,8 +1,8 @@
 package io.aegisops.observability;
 
 import io.micrometer.core.instrument.MeterRegistry;
-import org.springframework.boot.actuate.health.HealthIndicator;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.boot.health.contributor.HealthIndicator;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

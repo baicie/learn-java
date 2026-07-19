@@ -30,8 +30,7 @@ public class ZabbixSyncJob implements OutboxJob {
       if (!tenantId.equals(row.getTenantId())) {
         return JobResult.failure("TENANT_MISMATCH");
       }
-      service.execute(
-          tenantId, required(payload, "datasourceId"), required(payload, "runId"));
+      service.execute(tenantId, required(payload, "datasourceId"), required(payload, "runId"));
       return JobResult.success();
     } catch (Exception exception) {
       return JobResult.failure(exception.getClass().getSimpleName());

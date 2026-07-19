@@ -30,9 +30,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.stubbing.Answer;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -40,6 +39,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
@@ -85,9 +85,9 @@ class PhaseZ9ZabbixMvpFlowTest {
   @Autowired private JdbcTemplate jdbc;
   @Autowired private ObjectMapper objectMapper;
 
-  @MockBean private ZabbixWebhookTokenVerifier tokenVerifier;
-  @MockBean private ZabbixClientFactory zabbixClientFactory;
-  @MockBean private AiAgentClient aiAgentClient;
+  @MockitoBean private ZabbixWebhookTokenVerifier tokenVerifier;
+  @MockitoBean private ZabbixClientFactory zabbixClientFactory;
+  @MockitoBean private AiAgentClient aiAgentClient;
 
   @BeforeEach
   void setUp() {
