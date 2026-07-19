@@ -9,6 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { EmptyState } from '@/components/feedback/async-state'
 import type { DictOptionMap, RecordListColumn, WorkRecord } from './types'
 
 type Props = {
@@ -35,11 +36,7 @@ export function RecordTable({
   const { t } = useTranslation()
 
   if (!records.length) {
-    return (
-      <div className='rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground'>
-        {t('workRecords.list.noRecords')}
-      </div>
-    )
+    return <EmptyState compact title={t('workRecords.list.noRecords')} />
   }
 
   return (

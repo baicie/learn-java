@@ -71,6 +71,23 @@ function renderTable(columns: RecordListColumn[], onSort = vi.fn()) {
 }
 
 describe('RecordTable', () => {
+  it('uses the shared empty state when no records exist', async () => {
+    const screen = await render(
+      <I18nextProvider i18n={i18n} defaultNS='translation'>
+        <RecordTable
+          records={[]}
+          columns={[]}
+          sortBy='recordTime'
+          sortDir='desc'
+          onSort={vi.fn()}
+        />
+      </I18nextProvider>
+    )
+
+    await expect.element(screen.getByText('暂无记录')).toBeVisible()
+    expect(document.querySelector('[data-slot="empty-state"]')).not.toBeNull()
+  })
+
   it('renders disabled dictionary label', async () => {
     const screen = await renderTable([column('priority', '优先级')])
 

@@ -7,6 +7,12 @@ import type { PlatformUserQuery } from '@/lib/iam/platform-user'
 import { usePlatformUsers } from '@/hooks/iam/use-platform-users'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import {
+  EmptyState,
+  ErrorState,
+  QueryStateBoundary,
+  TableLoadingState,
+} from '@/components/feedback/async-state'
 import { PlatformUserCreateDialog } from './platform-user-create-dialog'
 import { PlatformUserTable } from './platform-user-table'
 import { PlatformUserToolbar } from './platform-user-toolbar'
@@ -67,37 +73,35 @@ export function PlatformUsersPage() {
           }
         />
 
-        {usersQuery.isPending ? (
-          <div className='rounded-md border bg-card/50 p-8 text-center text-sm text-muted-foreground'>
-            加载中…
-          </div>
-        ) : null}
-
-        {usersQuery.isError ? (
-          <div className='rounded-md border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive'>
-            加载失败，请稍后重试。
-          </div>
-        ) : null}
-
-        {usersQuery.data && usersQuery.data.total === 0 ? (
-          <div className='rounded-md border bg-card/40 p-10 text-center'>
-            <h3 className='text-base font-semibold'>
-              {t('platform.users.empty.title')}
-            </h3>
-            <p className='mt-2 text-sm text-muted-foreground'>
-              {t('platform.users.empty.description')}
-            </p>
-          </div>
-        ) : null}
-
-        {usersQuery.data && usersQuery.data.total > 0 ? (
-          <PlatformUserTable
-            page={usersQuery.data}
-            onQueryChange={(next) =>
-              navigate({ search: (previous) => ({ ...previous, ...next }) })
-            }
-          />
-        ) : null}
+        <QueryStateBoundary
+          loading={usersQuery.isPending}
+          error={usersQuery.isError ? usersQuery.error : null}
+          empty={usersQuery.data?.total === 0}
+          loadingFallback={<TableLoadingState rows={6} columns={5} />}
+          errorFallback={
+            <ErrorState
+              compact
+              error={usersQuery.error}
+              onRetry={() => void usersQuery.refetch()}
+            />
+          }
+          emptyFallback={
+            <EmptyState
+              compact
+              title={t('platform.users.empty.title')}
+              description={t('platform.users.empty.description')}
+            />
+          }
+        >
+          {usersQuery.data && usersQuery.data.total > 0 ? (
+            <PlatformUserTable
+              page={usersQuery.data}
+              onQueryChange={(next) =>
+                navigate({ search: (previous) => ({ ...previous, ...next }) })
+              }
+            />
+          ) : null}
+        </QueryStateBoundary>
 
         <span className='sr-only' data-testid='user-status-pill'>
           <Badge variant='outline'>platform-user-page</Badge>

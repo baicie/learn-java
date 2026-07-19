@@ -26,7 +26,7 @@ Portal 已经较完整地复用了 shadcn/ui。扫描的 123 个生产 TSX 文�
 2. 工作记录设计器手写 Badge、Alert 和状态色，未复用已有原语。
 3. 少数页面自行表达加载、错误和空态，未复用项目 `AsyncState` 组件。
 
-本次审计不修改生产代码。高价值整改项拆为独立 Issue，以便分别走 TDD、视觉回归和可访问性验证。
+高价值整改项先拆为独立 Issue 明确验收边界，随后按用户要求在同一 PR #54 中分别走 TDD、视觉回归和可访问性验证。
 
 ## 2. 扫描范围
 
@@ -78,7 +78,7 @@ Portal 已经较完整地复用了 shadcn/ui。扫描的 123 个生产 TSX 文�
 
 ## 5. 后续任务
 
-按风险与职责拆分为三个任务：
+按风险与职责拆分为三个任务，并由 PR #54 一并实现：
 
 1. [#51 PasswordInput 复用项目 Input](https://github.com/baicie/ai-ops/issues/51)，保留既有表单行为。
 2. [#52 工作记录设计器复用语义组件](https://github.com/baicie/ai-ops/issues/52)，统一 Badge、Alert、表单语义并修正字段选择交互。
@@ -86,7 +86,15 @@ Portal 已经较完整地复用了 shadcn/ui。扫描的 123 个生产 TSX 文�
 
 每个任务都应先补或调整浏览器测试，观察测试因缺失行为而失败后再修改生产代码。
 
-## 6. 可复现扫描
+## 6. 实施结果
+
+- #51：`PasswordInput` 已组合项目 `Input`，不再复制生成组件样式；4 个密码输入测试通过。
+- #52：字段画布已使用独立选择 Button 和 Badge，Schema 校验已使用 Alert，预览表单已移除嵌套 label；新增 3 个语义测试。
+- #53：公共异步状态增加稳定 `data-slot`，用户页、记录表和历史卡片已复用 TableLoadingState、ErrorState、EmptyState、Skeleton 与 Alert；相关 19 个测试通过。
+
+三个整改分别保留为独立 commit，方便评审和必要时单独回退。
+
+## 7. 可复现扫描
 
 ```powershell
 rg -n --glob '*.tsx' `

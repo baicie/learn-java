@@ -15,9 +15,9 @@ related:
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use `executing-plans` to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 审计 Portal 中应复用 shadcn/ui 或项目业务组件却仍采用手写实现的位置，并形成可独立执行的整改任务。
+**Goal:** 审计 Portal 中应复用 shadcn/ui 或项目业务组件却仍采用手写实现的位置，并在同一 PR 内完成三组可独立验证的整改。
 
-**Architecture:** 只扫描 `web/portal/src/auth`、`pages`、`components` 下的生产 TSX，排除测试 mock 与 `components/ui` 生成文件。先用静态模式定位候选，再阅读上下文区分应整改、合理例外和暂缓项；本轮不修改生产行为。
+**Architecture:** 只扫描 `web/portal/src/auth`、`pages`、`components` 下的生产 TSX，排除测试 mock 与 `components/ui` 生成文件。先用静态模式定位候选，再阅读上下文区分应整改、合理例外和暂缓项；实现按 Input 复用、设计器语义、异步状态三个 TDD commit 交付。
 
 **Tech Stack:** React 19、TypeScript、shadcn/ui（Radix）、Tailwind CSS v4、ripgrep、GitHub Issues。
 
@@ -92,7 +92,31 @@ related:
 
   将新 Issue 编号写入审计文档的“后续任务”章节。
 
-### Task 4: 验证并交付
+### Task 4: 实施三组整改
+
+**Files:**
+
+- Modify: `web/portal/src/components/password-input.tsx`
+- Modify: `web/portal/src/components/work-records/designer/`
+- Modify: `web/portal/src/components/feedback/async-state.tsx`
+- Modify: `web/portal/src/components/iam/platform-users-page.tsx`
+- Modify: `web/portal/src/components/work-records/list/record-table.tsx`
+- Modify: `web/portal/src/components/work-records/runtime/record-history-card.tsx`
+- Test: 与上述组件同目录的浏览器测试
+
+- [x] **Step 1: PasswordInput 复用 shadcn Input**
+
+  先用 `data-slot="input"` 断言观察 RED，再组合项目 `Input` 并保持密码显隐、disabled、ref 与 react-hook-form 行为。
+
+- [x] **Step 2: 统一设计器语义组件**
+
+  先验证选择按钮、Badge、Alert 和 label 结构缺失，再实现独立字段选择按钮、可访问图标按钮、Badge/Alert 与合法 label 结构。
+
+- [x] **Step 3: 统一异步状态**
+
+  先验证公共状态 `data-slot`、Skeleton、Alert 和 EmptyState 缺失，再让用户页、记录表与历史卡片复用公共状态组件。
+
+### Task 5: 验证并交付
 
 **Files:**
 
@@ -115,4 +139,4 @@ related:
 
   Commit: `docs(portal): 完成 shadcn 组件使用审计`
 
-  PR 必须关联并关闭 Issue #49，说明本轮仅做审计、未修改生产行为。
+  PR 必须关联并关闭 Issue #49、#51、#52、#53，说明审计与三组整改均在同一 PR 完成。
