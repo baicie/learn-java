@@ -31,6 +31,12 @@ export const workRecords = {
     '上传 .xlsx 文件，首行使用 title、status、ownerId、recordTime 或模板字段编码。文件不得超过 20 MiB。',
   'workRecords.import.template': '目标模板',
   'workRecords.import.templatePlaceholder': '选择已发布模板',
+  'workRecords.import.downloadTemplate': '下载所选模板',
+  'workRecords.import.downloadingTemplate': '模板下载中…',
+  'workRecords.import.templateDownloaded': '导入模板已下载',
+  'workRecords.import.templateDownloadFailed': '导入模板下载失败',
+  'workRecords.import.templateHint':
+    '模板字段来自所选表单的当前发布版本，请先下载再填写。',
   'workRecords.import.file': 'Excel 文件',
   'workRecords.import.invalidFile': '请选择不超过 20 MiB 的 .xlsx 文件',
   'workRecords.import.defaultStatus': '缺省状态',

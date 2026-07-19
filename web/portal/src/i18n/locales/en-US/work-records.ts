@@ -28,6 +28,13 @@ export const workRecords = {
     'Upload an .xlsx file whose first row uses title, status, ownerId, recordTime, or template field codes. Maximum file size: 20 MiB.',
   'workRecords.import.template': 'Target template',
   'workRecords.import.templatePlaceholder': 'Select a published template',
+  'workRecords.import.downloadTemplate': 'Download selected template',
+  'workRecords.import.downloadingTemplate': 'Downloading template…',
+  'workRecords.import.templateDownloaded': 'Import template downloaded',
+  'workRecords.import.templateDownloadFailed':
+    'Failed to download import template',
+  'workRecords.import.templateHint':
+    'Fields come from the current published version of the selected form template.',
   'workRecords.import.file': 'Excel file',
   'workRecords.import.invalidFile':
     'Select an .xlsx file no larger than 20 MiB',

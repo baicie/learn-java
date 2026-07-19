@@ -5,7 +5,7 @@ status: accepted
 phase: work-record-20
 owner: ai
 created: 2026-07-14
-updated: 2026-07-18
+updated: 2026-07-19
 related:
   - modules/aiops-work-record/src/main/java/io/aegisops/workrecord/api
   - apps/aiops-server/src/main/resources/db/migration/V0030__init_phase20_async_foundation.sql
@@ -20,17 +20,20 @@ related:
 
 ## Excel 导入与异步导出
 
-| 方法 | 路径                                           | 权限                                                        | 用途                             |
-| ---- | ---------------------------------------------- | ----------------------------------------------------------- | -------------------------------- |
-| POST | `/api/work-record/imports/uploads`             | `work-record:import`                                        | 创建一次性 Excel 直传会话        |
-| POST | `/api/work-record/imports`                     | `work-record:import`                                        | 消费上传会话并创建导入任务       |
-| GET  | `/api/work-record/users/display-names`         | 工作记录读取权限                                            | 按 ids 批量解析创建人/负责人名称 |
-| GET  | `/api/work-record/users/options`               | 工作记录读取权限                                            | 查询当前租户活跃负责人选项       |
-| POST | `/api/work-record/async-exports`               | `work-record:export`、`work-record:export:async`            | 创建异步导出任务                 |
-| GET  | `/api/work-record/async-jobs`                  | 工作记录读取权限                                            | 查询当前用户的任务列表           |
-| GET  | `/api/work-record/async-jobs/{jobId}`          | 工作记录读取权限                                            | 查询任务详情与逐行结果           |
-| POST | `/api/work-record/async-jobs/{jobId}/cancel`   | 导入任务要求 `work-record:import`；导出任务要求两项导出权限 | 取消尚未结束的本人任务           |
-| POST | `/api/work-record/async-jobs/{jobId}/download` | `work-record:export`、`work-record:export:async`            | 获取短时效、禁止缓存的下载地址   |
+| 方法 | 路径                                           | 权限                                                        | 用途                              |
+| ---- | ---------------------------------------------- | ----------------------------------------------------------- | --------------------------------- |
+| GET  | `/api/work-record/imports/template`            | `work-record:import`                                        | 下载所选模板版本的 Excel 导入模板 |
+| POST | `/api/work-record/imports/uploads`             | `work-record:import`                                        | 创建一次性 Excel 直传会话         |
+| POST | `/api/work-record/imports`                     | `work-record:import`                                        | 消费上传会话并创建导入任务        |
+| GET  | `/api/work-record/users/display-names`         | 工作记录读取权限                                            | 按 ids 批量解析创建人/负责人名称  |
+| GET  | `/api/work-record/users/options`               | 工作记录读取权限                                            | 查询当前租户活跃负责人选项        |
+| POST | `/api/work-record/async-exports`               | `work-record:export`、`work-record:export:async`            | 创建异步导出任务                  |
+| GET  | `/api/work-record/async-jobs`                  | 工作记录读取权限                                            | 查询当前用户的任务列表            |
+| GET  | `/api/work-record/async-jobs/{jobId}`          | 工作记录读取权限                                            | 查询任务详情与逐行结果            |
+| POST | `/api/work-record/async-jobs/{jobId}/cancel`   | 导入任务要求 `work-record:import`；导出任务要求两项导出权限 | 取消尚未结束的本人任务            |
+| POST | `/api/work-record/async-jobs/{jobId}/download` | `work-record:export`、`work-record:export:async`            | 获取短时效、禁止缓存的下载地址    |
+
+下载导入模板时必须同时传递 `templateId` 与 `templateVersionId`。后端按当前租户校验版本归属；工作簿的 `records` 首行包含固定字段 `title`、`status`、`ownerId`、`recordTime`，随后按模板字段顺序追加该版本的全部启用字段编码。`字段说明` 工作表展示字段名称、编码、类型、必填性与填写格式，因此模板字段以用户在 Portal 中选择的表单模板当前发布版本为准。
 
 上传会话只能由创建者消费一次。Excel 公式不执行，逐行结果具有幂等键；导出文件由 worker 流式生成并写入对象存储。普通用户默认不再获得缺少基础导出依赖的 `work-record:export:async` 权限。
 

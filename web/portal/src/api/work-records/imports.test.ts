@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from 'vitest'
 import { apiClient } from '@/lib/api-client'
-import { importWorkRecords } from './imports'
+import {
+  downloadImportTemplate,
+  downloadWorkRecordImportTemplate,
+  importWorkRecords,
+} from './imports'
 
 describe('importWorkRecords', () => {
   it('uploads xlsx before submitting the asynchronous import job', async () => {
@@ -44,6 +48,61 @@ describe('importWorkRecords', () => {
     } finally {
       upload.mockRestore()
       post.mockRestore()
+    }
+  })
+
+  it('downloads the template for the selected form version', async () => {
+    const blob = new Blob(['xlsx'])
+    const get = vi.spyOn(apiClient, 'get').mockResolvedValue({
+      data: blob,
+      headers: {
+        'content-disposition':
+          "attachment; filename*=UTF-8''daily-record-v3.xlsx",
+      },
+    })
+
+    try {
+      const result = await downloadWorkRecordImportTemplate(
+        'template-1',
+        'version-3'
+      )
+
+      expect(get).toHaveBeenCalledWith('/api/work-record/imports/template', {
+        params: {
+          templateId: 'template-1',
+          templateVersionId: 'version-3',
+        },
+        responseType: 'blob',
+      })
+      expect(result).toEqual({ blob, fileName: 'daily-record-v3.xlsx' })
+    } finally {
+      get.mockRestore()
+    }
+  })
+
+  it('saves a downloaded template with the server file name', () => {
+    const createObjectUrl = vi
+      .spyOn(URL, 'createObjectURL')
+      .mockReturnValue('blob:template')
+    const revokeObjectUrl = vi
+      .spyOn(URL, 'revokeObjectURL')
+      .mockImplementation(() => undefined)
+    const click = vi
+      .spyOn(HTMLAnchorElement.prototype, 'click')
+      .mockImplementation(() => undefined)
+
+    try {
+      downloadImportTemplate({
+        blob: new Blob(['xlsx']),
+        fileName: 'daily-record-v3.xlsx',
+      })
+
+      expect(click).toHaveBeenCalledOnce()
+      expect(revokeObjectUrl).toHaveBeenCalledWith('blob:template')
+    } finally {
+      click.mockRestore()
+      revokeObjectUrl.mockRestore()
+      createObjectUrl.mockRestore()
     }
   })
 })

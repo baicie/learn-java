@@ -1,6 +1,10 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { importWorkRecords } from '@/api/work-records/imports'
+import {
+  downloadImportTemplate,
+  downloadWorkRecordImportTemplate,
+  importWorkRecords,
+} from '@/api/work-records/imports'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
@@ -34,6 +38,7 @@ export function WorkRecordImportDialog({ open, onOpenChange, meta }: Props) {
   const [templateId, setTemplateId] = useState('')
   const [defaultStatus, setDefaultStatus] = useState<'draft' | 'done'>('draft')
   const [stopOnError, setStopOnError] = useState(false)
+  const [downloadingTemplate, setDownloadingTemplate] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
   const selected = meta?.templates.find((item) => item.id === templateId)
@@ -71,6 +76,23 @@ export function WorkRecordImportDialog({ open, onOpenChange, meta }: Props) {
     }
   }
 
+  const downloadTemplate = async () => {
+    if (!selected?.currentVersionId) return
+    setDownloadingTemplate(true)
+    try {
+      const download = await downloadWorkRecordImportTemplate(
+        selected.id,
+        selected.currentVersionId
+      )
+      downloadImportTemplate(download)
+      notify.success(t('workRecords.import.templateDownloaded'))
+    } catch (error) {
+      notify.error(error, t('workRecords.import.templateDownloadFailed'))
+    } finally {
+      setDownloadingTemplate(false)
+    }
+  }
+
   return (
     <Dialog open={open} onOpenChange={changeOpen}>
       <DialogContent>
@@ -103,6 +125,21 @@ export function WorkRecordImportDialog({ open, onOpenChange, meta }: Props) {
               </SelectContent>
             </Select>
           </label>
+          <div className='grid gap-2'>
+            <Button
+              variant='outline'
+              className='justify-self-start'
+              disabled={!selected?.currentVersionId || downloadingTemplate}
+              onClick={() => void downloadTemplate()}
+            >
+              {downloadingTemplate
+                ? t('workRecords.import.downloadingTemplate')
+                : t('workRecords.import.downloadTemplate')}
+            </Button>
+            <p className='text-xs text-muted-foreground'>
+              {t('workRecords.import.templateHint')}
+            </p>
+          </div>
           <label className='grid gap-2 text-sm'>
             <span>{t('workRecords.import.file')}</span>
             <Input

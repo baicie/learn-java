@@ -18,6 +18,41 @@ export type SubmitImportOptions = {
   stopOnError: boolean
 }
 
+export type ImportTemplateDownload = {
+  blob: Blob
+  fileName: string
+}
+
+export async function downloadWorkRecordImportTemplate(
+  templateId: string,
+  templateVersionId: string
+): Promise<ImportTemplateDownload> {
+  const response = await apiClient.get('/api/work-record/imports/template', {
+    params: { templateId, templateVersionId },
+    responseType: 'blob',
+  })
+
+  return {
+    blob:
+      response.data instanceof Blob
+        ? response.data
+        : new Blob([response.data], { type: XLSX_CONTENT_TYPE }),
+    fileName: parseFileName(response.headers['content-disposition']),
+  }
+}
+
+export function downloadImportTemplate(download: ImportTemplateDownload) {
+  const url = URL.createObjectURL(download.blob)
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = download.fileName
+  anchor.style.display = 'none'
+  document.body.appendChild(anchor)
+  anchor.click()
+  anchor.remove()
+  URL.revokeObjectURL(url)
+}
+
 export async function importWorkRecords(
   file: File,
   options: SubmitImportOptions
@@ -52,4 +87,20 @@ export async function importWorkRecords(
   return apiResponseSchema(z.object({ jobId: z.string() })).parse(
     submitted.data
   ).data.jobId
+}
+
+function parseFileName(contentDisposition?: string) {
+  if (!contentDisposition) return 'work-record-import-template.xlsx'
+
+  const encoded = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i)
+  if (encoded?.[1]) {
+    try {
+      return decodeURIComponent(encoded[1].replace(/^"|"$/g, ''))
+    } catch {
+      return 'work-record-import-template.xlsx'
+    }
+  }
+
+  const normal = contentDisposition.match(/filename="?([^";]+)"?/i)
+  return normal?.[1] ?? 'work-record-import-template.xlsx'
 }
