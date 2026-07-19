@@ -6,6 +6,8 @@ import {
   MoveUp,
   Trash2,
 } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import type { DesignerField } from './types'
@@ -42,36 +44,30 @@ export function FormCanvas({
         {fields.map((field, index) => (
           <div
             key={field.id}
-            role='button'
-            tabIndex={0}
-            className={`rounded-lg border p-3 text-left transition ${
-              selectedFieldId === field.id ? 'border-primary bg-muted' : ''
-            } ${field.enabled ? '' : 'opacity-55'} cursor-pointer`}
-            onClick={() => onSelect(field.id)}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter' || event.key === ' ') {
-                event.preventDefault()
-                onSelect(field.id)
-              }
-            }}
+            className={cn(
+              'relative rounded-lg border p-3 text-left transition',
+              selectedFieldId === field.id && 'border-primary bg-muted',
+              !field.enabled && 'opacity-55'
+            )}
           >
-            <div className='flex items-start gap-3'>
+            <Button
+              type='button'
+              variant='ghost'
+              className='absolute inset-0 z-0 h-auto w-auto rounded-lg'
+              aria-label={`选择字段 ${field.fieldName}`}
+              onClick={() => onSelect(field.id)}
+            />
+            <div className='pointer-events-none relative z-10 flex items-start gap-3'>
               <GripVertical className='mt-1 size-4 text-muted-foreground' />
               <div className='min-w-0 flex-1'>
                 <div className='flex items-center gap-2'>
                   <span className='font-medium'>{field.fieldName}</span>
-                  <span className='rounded bg-muted px-1.5 py-0.5 text-xs'>
-                    {field.fieldType}
-                  </span>
+                  <Badge variant='outline'>{field.fieldType}</Badge>
                   {field.locked ? (
-                    <span className='rounded bg-amber-100 px-1.5 py-0.5 text-xs text-amber-800'>
-                      编码锁定
-                    </span>
+                    <Badge variant='outline'>编码锁定</Badge>
                   ) : null}
                   {!field.enabled ? (
-                    <span className='rounded bg-slate-100 px-1.5 py-0.5 text-xs'>
-                      已禁用
-                    </span>
+                    <Badge variant='secondary'>已禁用</Badge>
                   ) : null}
                 </div>
                 <div className='mt-1 text-xs text-muted-foreground'>
@@ -79,12 +75,13 @@ export function FormCanvas({
                 </div>
               </div>
 
-              <div className='flex gap-1'>
+              <div className='pointer-events-auto flex gap-1'>
                 <Button
                   type='button'
                   size='icon'
                   variant='ghost'
                   disabled={index === 0}
+                  aria-label={`上移字段 ${field.fieldName}`}
                   onClick={(event) => {
                     event.stopPropagation()
                     onMove(field.id, 'up')
@@ -97,6 +94,7 @@ export function FormCanvas({
                   size='icon'
                   variant='ghost'
                   disabled={index === fields.length - 1}
+                  aria-label={`下移字段 ${field.fieldName}`}
                   onClick={(event) => {
                     event.stopPropagation()
                     onMove(field.id, 'down')
@@ -108,6 +106,7 @@ export function FormCanvas({
                   type='button'
                   size='icon'
                   variant='ghost'
+                  aria-label={`复制字段 ${field.fieldName}`}
                   onClick={(event) => {
                     event.stopPropagation()
                     onDuplicate(field.id)
@@ -119,6 +118,7 @@ export function FormCanvas({
                   type='button'
                   size='icon'
                   variant='ghost'
+                  aria-label={`${field.locked || field.referenced ? '禁用' : '删除'}字段 ${field.fieldName}`}
                   onClick={(event) => {
                     event.stopPropagation()
                     onRemoveOrDisable(field.id)
