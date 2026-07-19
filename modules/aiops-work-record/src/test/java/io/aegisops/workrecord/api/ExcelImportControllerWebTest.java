@@ -1,12 +1,16 @@
 package io.aegisops.workrecord.api;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -14,6 +18,7 @@ import io.aegisops.common.tenant.TenantContext;
 import io.aegisops.security.UserPrincipal;
 import io.aegisops.web.GlobalExceptionHandler;
 import io.aegisops.workrecord.application.service.ExcelImportSubmissionService;
+import io.aegisops.workrecord.application.service.ExcelImportTemplateService;
 import io.aegisops.workrecord.application.service.UploadSessionService;
 import java.time.OffsetDateTime;
 import java.util.Map;
@@ -24,6 +29,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.test.context.ContextConfiguration;
@@ -40,6 +46,7 @@ import org.springframework.test.web.servlet.MockMvc;
 class ExcelImportControllerWebTest {
   @MockitoBean private UploadSessionService uploads;
   @MockitoBean private ExcelImportSubmissionService submissions;
+  @MockitoBean private ExcelImportTemplateService importTemplates;
   @Autowired private MockMvc mockMvc;
 
   @BeforeEach
@@ -89,6 +96,45 @@ class ExcelImportControllerWebTest {
         .andExpect(status().isForbidden());
 
     verifyNoInteractions(uploads, submissions);
+  }
+
+  @Test
+  void downloadsTemplateForSelectedTemplateVersion() throws Exception {
+    byte[] workbook = {1, 2, 3};
+    when(importTemplates.generate("tenant-1", "template-1", "version-1"))
+        .thenReturn(
+            new ExcelImportTemplateService.ExcelImportTemplate(
+                workbook, "work-record-import-template-1-v1.xlsx"));
+
+    mockMvc
+        .perform(
+            get("/api/work-record/imports/template")
+                .param("templateId", "template-1")
+                .param("templateVersionId", "version-1")
+                .with(user(principal(Set.of("work-record:import")))))
+        .andExpect(status().isOk())
+        .andExpect(
+            content()
+                .contentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+        .andExpect(
+            header()
+                .string(
+                    HttpHeaders.CONTENT_DISPOSITION,
+                    containsString("work-record-import-template-1-v1.xlsx")))
+        .andExpect(content().bytes(workbook));
+  }
+
+  @Test
+  void importPermissionIsRequiredToDownloadTemplate() throws Exception {
+    mockMvc
+        .perform(
+            get("/api/work-record/imports/template")
+                .param("templateId", "template-1")
+                .param("templateVersionId", "version-1")
+                .with(user(principal(Set.of("work-record:write")))))
+        .andExpect(status().isForbidden());
+
+    verifyNoInteractions(importTemplates);
   }
 
   private static UserPrincipal principal(Set<String> permissions) {

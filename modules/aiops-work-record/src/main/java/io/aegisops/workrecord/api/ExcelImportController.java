@@ -5,17 +5,24 @@ import io.aegisops.common.tenant.TenantContext;
 import io.aegisops.security.UserPrincipal;
 import io.aegisops.workrecord.application.command.SubmitExcelImportCommand;
 import io.aegisops.workrecord.application.service.ExcelImportSubmissionService;
+import io.aegisops.workrecord.application.service.ExcelImportTemplateService;
 import io.aegisops.workrecord.application.service.UploadSessionService;
+import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
 import java.util.Map;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.CacheControl;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -26,13 +33,38 @@ import org.springframework.web.bind.annotation.RestController;
     havingValue = "server",
     matchIfMissing = true)
 public class ExcelImportController {
+  private static final MediaType XLSX_MEDIA_TYPE =
+      MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+
   private final UploadSessionService uploads;
   private final ExcelImportSubmissionService submissions;
+  private final ExcelImportTemplateService importTemplates;
 
   public ExcelImportController(
-      UploadSessionService uploads, ExcelImportSubmissionService submissions) {
+      UploadSessionService uploads,
+      ExcelImportSubmissionService submissions,
+      ExcelImportTemplateService importTemplates) {
     this.uploads = uploads;
     this.submissions = submissions;
+    this.importTemplates = importTemplates;
+  }
+
+  @GetMapping("/template")
+  @PreAuthorize("hasAuthority('work-record:import')")
+  public ResponseEntity<byte[]> downloadTemplate(
+      @RequestParam String templateId, @RequestParam String templateVersionId) {
+    var template =
+        importTemplates.generate(TenantContext.requireTenantId(), templateId, templateVersionId);
+    String disposition =
+        ContentDisposition.attachment()
+            .filename(template.fileName(), StandardCharsets.UTF_8)
+            .build()
+            .toString();
+    return ResponseEntity.ok()
+        .cacheControl(CacheControl.noStore())
+        .contentType(XLSX_MEDIA_TYPE)
+        .header(HttpHeaders.CONTENT_DISPOSITION, disposition)
+        .body(template.content());
   }
 
   @PostMapping("/uploads")
