@@ -30,6 +30,8 @@ export type CreateDatasourceInput = {
   passive?: { endpoint?: string }
 }
 
+export type UpdateDatasourceInput = Omit<CreateDatasourceInput, 'type'>
+
 export async function listDatasources() {
   const { data } = await apiClient.get('/api/datasources')
   return apiResponseSchema(z.array(datasourceSchema)).parse(data).data
@@ -37,6 +39,14 @@ export async function listDatasources() {
 
 export async function createDatasource(input: CreateDatasourceInput) {
   const { data } = await apiClient.post('/api/datasources', input)
+  return apiResponseSchema(datasourceSchema).parse(data).data
+}
+
+export async function updateDatasource(
+  id: string,
+  input: UpdateDatasourceInput
+) {
+  const { data } = await apiClient.put(`/api/datasources/${id}`, input)
   return apiResponseSchema(datasourceSchema).parse(data).data
 }
 
