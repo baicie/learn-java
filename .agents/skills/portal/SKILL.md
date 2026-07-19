@@ -247,6 +247,8 @@ view-options              列显隐切换
 
 ## 7. 组件使用速查
 
+设计新交互、比较相近组件或准备安装新的 shadcn/ui 组件时，先阅读 `references/shadcn-component-selection.md`。该文件记录本项目的选择流程和组件边界，不要依赖模型记忆中的全量组件清单。
+
 ```text
 Button    variant="default | outline | ghost | destructive | secondary | link"
 Input/Textarea:  必须 <Field> + <FieldLabel> + <FieldDescription> 包起来
@@ -350,4 +352,5 @@ portal 已接入 AegisOps 登录、IAM、平台能力和工作记录。新增真
 2026-07-07: Radix UI 路线 (与 console 的 base-ui 路线相反), 不要再讨论迁移
 2026-07-07: AegisOps 后端接入后, Clerk 保留但实际鉴权走后端, 通过 ADR 决策是否下线 Clerk
 2026-07-14: ADR 0007 删除 src/features, 改为 pages/api/auth/components/hooks/lib 分层
+2026-07-19: shadcn/ui 组件选择资料放入 references, 按本地已安装组件与官方最新文档动态判断
 ```
