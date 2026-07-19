@@ -10,6 +10,7 @@ import {
 import { listCalendars } from '@/api/calendars'
 import { fetchRecordList, fetchWorkdaySummary } from '@/api/work-records/list'
 import { listTemplates } from '@/api/work-records/templates'
+import { formatDateTime } from '@/lib/date-format'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -176,7 +177,7 @@ export function Dashboard() {
                         </Badge>
                       </TableCell>
                       <TableCell className='text-muted-foreground'>
-                        {formatDate(record.recordTime)}
+                        {formatDateTime(record.recordTime)}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -293,11 +294,4 @@ function QuickLink({
 function currentMonth() {
   const now = new Date()
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
-}
-
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat('zh-CN', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(new Date(value))
 }

@@ -3,6 +3,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { PermissionGate } from '@/auth/permission-gate'
 import { useTranslation } from 'react-i18next'
 import { platformUserKeys } from '@/api/iam/query-keys'
+import { formatDateTime } from '@/lib/date-format'
 import { toIamRequestError } from '@/lib/iam/errors/iam-api-error'
 import type { PlatformUser, PlatformUserPage } from '@/lib/iam/platform-user'
 import { useChangeUserStatus } from '@/hooks/iam/use-platform-users'
@@ -152,7 +153,7 @@ function Row({
           </div>
         </TableCell>
         <TableCell className='text-xs text-muted-foreground'>
-          {user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleString() : '—'}
+          {user.lastLoginAt ? formatDateTime(user.lastLoginAt) : '—'}
         </TableCell>
         <TableCell className='text-right'>
           <div className='flex justify-end gap-2'>

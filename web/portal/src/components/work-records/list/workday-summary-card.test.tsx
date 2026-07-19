@@ -21,12 +21,18 @@ describe('WorkdaySummaryCard', () => {
       />
     )
 
-    await expect.element(screen.getByText('2026-07 工作月')).toBeVisible()
+    await expect.element(screen.getByText('2026/07 工作月')).toBeVisible()
 
     await expect.element(screen.getByText('23 天')).toBeVisible()
 
     await expect
       .element(screen.getByText('中国大陆 2026 工作日历'))
+      .toBeVisible()
+    await expect
+      .element(screen.getByText('2026/07/01 至 2026/07/31'))
+      .toBeVisible()
+    await expect
+      .element(screen.getByText('2026/07/01', { exact: true }))
       .toBeVisible()
   })
 

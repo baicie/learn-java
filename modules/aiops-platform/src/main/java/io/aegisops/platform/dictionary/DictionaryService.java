@@ -118,6 +118,11 @@ public class DictionaryService {
   public List<DictItemRecord> listItems(String tenantId, String dictCode, boolean includeDisabled) {
     requireText(dictCode, "dictCode");
 
+    if (!includeDisabled
+        && repository.findType(tenantId, dictCode).filter(type -> !type.enabled()).isPresent()) {
+      return List.of();
+    }
+
     return repository.listItems(tenantId, dictCode, includeDisabled);
   }
 

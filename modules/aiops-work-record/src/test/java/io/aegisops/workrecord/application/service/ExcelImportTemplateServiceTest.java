@@ -50,7 +50,13 @@ class ExcelImportTemplateServiceTest {
                   records.getRow(0).getCell(3).getStringCellValue(),
                   records.getRow(0).getCell(4).getStringCellValue(),
                   records.getRow(0).getCell(5).getStringCellValue()))
-          .containsExactly("title", "status", "ownerId", "recordTime", "hours", "result");
+          .containsExactly(
+              "标题 [title]",
+              "状态 [status]",
+              "负责人 [ownerId]",
+              "记录时间 [recordTime]",
+              "工时 [hours]",
+              "处理结果 [result]");
 
       var instructions = workbook.getSheet("字段说明");
       assertThat(instructions).isNotNull();

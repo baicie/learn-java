@@ -37,7 +37,7 @@ import { Route as AuthenticatedWorkRecordsNewRouteImport } from './routes/_authe
 import { Route as AuthenticatedWorkRecordsOperationsRouteImport } from './routes/_authenticated/work-records/operations'
 import { Route as AuthenticatedWorkRecordsTemplatesRouteImport } from './routes/_authenticated/work-records/templates'
 import { Route as AuthenticatedPlatformUsersIndexRouteImport } from './routes/_authenticated/platform/users/index'
-import { Route as AuthenticatedWorkRecordsRecordIdEditRouteImport } from './routes/_authenticated/work-records/$recordId.edit'
+import { Route as AuthenticatedWorkRecordsRecordIdEditRouteImport } from './routes/_authenticated/work-records/$recordId_.edit'
 import { Route as AuthenticatedWorkRecordsTemplatesIndexRouteImport } from './routes/_authenticated/work-records/templates.index'
 import { Route as AuthenticatedWorkRecordsTemplatesTemplateIdDesignerRouteImport } from './routes/_authenticated/work-records/templates.$templateId.designer'
 
@@ -202,9 +202,9 @@ const AuthenticatedPlatformUsersIndexRoute =
   } as any)
 const AuthenticatedWorkRecordsRecordIdEditRoute =
   AuthenticatedWorkRecordsRecordIdEditRouteImport.update({
-    id: '/edit',
-    path: '/edit',
-    getParentRoute: () => AuthenticatedWorkRecordsRecordIdRoute,
+    id: '/work-records/$recordId_/edit',
+    path: '/work-records/$recordId/edit',
+    getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedWorkRecordsTemplatesIndexRoute =
   AuthenticatedWorkRecordsTemplatesIndexRouteImport.update({
@@ -238,7 +238,7 @@ export interface FileRoutesByFullPath {
   '/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
   '/settings/display': typeof AuthenticatedSettingsDisplayRoute
   '/settings/notifications': typeof AuthenticatedSettingsNotificationsRoute
-  '/work-records/$recordId': typeof AuthenticatedWorkRecordsRecordIdRouteWithChildren
+  '/work-records/$recordId': typeof AuthenticatedWorkRecordsRecordIdRoute
   '/work-records/new': typeof AuthenticatedWorkRecordsNewRoute
   '/work-records/operations': typeof AuthenticatedWorkRecordsOperationsRoute
   '/work-records/templates': typeof AuthenticatedWorkRecordsTemplatesRouteWithChildren
@@ -269,7 +269,7 @@ export interface FileRoutesByTo {
   '/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
   '/settings/display': typeof AuthenticatedSettingsDisplayRoute
   '/settings/notifications': typeof AuthenticatedSettingsNotificationsRoute
-  '/work-records/$recordId': typeof AuthenticatedWorkRecordsRecordIdRouteWithChildren
+  '/work-records/$recordId': typeof AuthenticatedWorkRecordsRecordIdRoute
   '/work-records/new': typeof AuthenticatedWorkRecordsNewRoute
   '/work-records/operations': typeof AuthenticatedWorkRecordsOperationsRoute
   '/assets': typeof AuthenticatedAssetsIndexRoute
@@ -302,7 +302,7 @@ export interface FileRoutesById {
   '/_authenticated/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
   '/_authenticated/settings/display': typeof AuthenticatedSettingsDisplayRoute
   '/_authenticated/settings/notifications': typeof AuthenticatedSettingsNotificationsRoute
-  '/_authenticated/work-records/$recordId': typeof AuthenticatedWorkRecordsRecordIdRouteWithChildren
+  '/_authenticated/work-records/$recordId': typeof AuthenticatedWorkRecordsRecordIdRoute
   '/_authenticated/work-records/new': typeof AuthenticatedWorkRecordsNewRoute
   '/_authenticated/work-records/operations': typeof AuthenticatedWorkRecordsOperationsRoute
   '/_authenticated/work-records/templates': typeof AuthenticatedWorkRecordsTemplatesRouteWithChildren
@@ -310,7 +310,7 @@ export interface FileRoutesById {
   '/_authenticated/datasources/': typeof AuthenticatedDatasourcesIndexRoute
   '/_authenticated/settings/': typeof AuthenticatedSettingsIndexRoute
   '/_authenticated/work-records/': typeof AuthenticatedWorkRecordsIndexRoute
-  '/_authenticated/work-records/$recordId/edit': typeof AuthenticatedWorkRecordsRecordIdEditRoute
+  '/_authenticated/work-records/$recordId_/edit': typeof AuthenticatedWorkRecordsRecordIdEditRoute
   '/_authenticated/platform/users/': typeof AuthenticatedPlatformUsersIndexRoute
   '/_authenticated/work-records/templates/': typeof AuthenticatedWorkRecordsTemplatesIndexRoute
   '/_authenticated/work-records/templates/$templateId/designer': typeof AuthenticatedWorkRecordsTemplatesTemplateIdDesignerRoute
@@ -407,7 +407,7 @@ export interface FileRouteTypes {
     | '/_authenticated/datasources/'
     | '/_authenticated/settings/'
     | '/_authenticated/work-records/'
-    | '/_authenticated/work-records/$recordId/edit'
+    | '/_authenticated/work-records/$recordId_/edit'
     | '/_authenticated/platform/users/'
     | '/_authenticated/work-records/templates/'
     | '/_authenticated/work-records/templates/$templateId/designer'
@@ -621,12 +621,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPlatformUsersIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/work-records/$recordId/edit': {
-      id: '/_authenticated/work-records/$recordId/edit'
-      path: '/edit'
+    '/_authenticated/work-records/$recordId_/edit': {
+      id: '/_authenticated/work-records/$recordId_/edit'
+      path: '/work-records/$recordId/edit'
       fullPath: '/work-records/$recordId/edit'
       preLoaderRoute: typeof AuthenticatedWorkRecordsRecordIdEditRouteImport
-      parentRoute: typeof AuthenticatedWorkRecordsRecordIdRoute
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/work-records/templates/': {
       id: '/_authenticated/work-records/templates/'
@@ -668,21 +668,6 @@ const AuthenticatedSettingsRouteRouteWithChildren =
     AuthenticatedSettingsRouteRouteChildren,
   )
 
-interface AuthenticatedWorkRecordsRecordIdRouteChildren {
-  AuthenticatedWorkRecordsRecordIdEditRoute: typeof AuthenticatedWorkRecordsRecordIdEditRoute
-}
-
-const AuthenticatedWorkRecordsRecordIdRouteChildren: AuthenticatedWorkRecordsRecordIdRouteChildren =
-  {
-    AuthenticatedWorkRecordsRecordIdEditRoute:
-      AuthenticatedWorkRecordsRecordIdEditRoute,
-  }
-
-const AuthenticatedWorkRecordsRecordIdRouteWithChildren =
-  AuthenticatedWorkRecordsRecordIdRoute._addFileChildren(
-    AuthenticatedWorkRecordsRecordIdRouteChildren,
-  )
-
 interface AuthenticatedWorkRecordsTemplatesRouteChildren {
   AuthenticatedWorkRecordsTemplatesIndexRoute: typeof AuthenticatedWorkRecordsTemplatesIndexRoute
   AuthenticatedWorkRecordsTemplatesTemplateIdDesignerRoute: typeof AuthenticatedWorkRecordsTemplatesTemplateIdDesignerRoute
@@ -710,13 +695,14 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedPlatformCalendarsRoute: typeof AuthenticatedPlatformCalendarsRoute
   AuthenticatedPlatformDictionariesRoute: typeof AuthenticatedPlatformDictionariesRoute
   AuthenticatedPlatformRolesRoute: typeof AuthenticatedPlatformRolesRoute
-  AuthenticatedWorkRecordsRecordIdRoute: typeof AuthenticatedWorkRecordsRecordIdRouteWithChildren
+  AuthenticatedWorkRecordsRecordIdRoute: typeof AuthenticatedWorkRecordsRecordIdRoute
   AuthenticatedWorkRecordsNewRoute: typeof AuthenticatedWorkRecordsNewRoute
   AuthenticatedWorkRecordsOperationsRoute: typeof AuthenticatedWorkRecordsOperationsRoute
   AuthenticatedWorkRecordsTemplatesRoute: typeof AuthenticatedWorkRecordsTemplatesRouteWithChildren
   AuthenticatedAssetsIndexRoute: typeof AuthenticatedAssetsIndexRoute
   AuthenticatedDatasourcesIndexRoute: typeof AuthenticatedDatasourcesIndexRoute
   AuthenticatedWorkRecordsIndexRoute: typeof AuthenticatedWorkRecordsIndexRoute
+  AuthenticatedWorkRecordsRecordIdEditRoute: typeof AuthenticatedWorkRecordsRecordIdEditRoute
   AuthenticatedPlatformUsersIndexRoute: typeof AuthenticatedPlatformUsersIndexRoute
 }
 
@@ -730,8 +716,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedPlatformDictionariesRoute:
     AuthenticatedPlatformDictionariesRoute,
   AuthenticatedPlatformRolesRoute: AuthenticatedPlatformRolesRoute,
-  AuthenticatedWorkRecordsRecordIdRoute:
-    AuthenticatedWorkRecordsRecordIdRouteWithChildren,
+  AuthenticatedWorkRecordsRecordIdRoute: AuthenticatedWorkRecordsRecordIdRoute,
   AuthenticatedWorkRecordsNewRoute: AuthenticatedWorkRecordsNewRoute,
   AuthenticatedWorkRecordsOperationsRoute:
     AuthenticatedWorkRecordsOperationsRoute,
@@ -740,6 +725,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAssetsIndexRoute: AuthenticatedAssetsIndexRoute,
   AuthenticatedDatasourcesIndexRoute: AuthenticatedDatasourcesIndexRoute,
   AuthenticatedWorkRecordsIndexRoute: AuthenticatedWorkRecordsIndexRoute,
+  AuthenticatedWorkRecordsRecordIdEditRoute:
+    AuthenticatedWorkRecordsRecordIdEditRoute,
   AuthenticatedPlatformUsersIndexRoute: AuthenticatedPlatformUsersIndexRoute,
 }
 

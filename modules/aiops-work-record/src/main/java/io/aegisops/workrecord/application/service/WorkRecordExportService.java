@@ -404,14 +404,7 @@ public class WorkRecordExportService {
     WorkRecordField field = resolved.fieldForVersion(parsed.record().templateVersionId());
 
     if (field == null) {
-      if (value != null && !value.isNull()) {
-        throw new IllegalStateException(
-            "record contains field without version metadata: "
-                + parsed.record().id()
-                + "/"
-                + fieldCode);
-      }
-      return "";
+      return formatRawValue(value);
     }
 
     return formatDynamic(value, field, resolved.key(), context);
@@ -419,6 +412,7 @@ public class WorkRecordExportService {
 
   private String formatBuiltin(WorkRecord record, String key, LookupContext context) {
     return switch (key) {
+      case "id" -> blank(record.id());
       case "title" -> blank(record.title());
       case "status" -> statusLabel(record.status().value());
       case "templateId" ->
@@ -431,6 +425,21 @@ public class WorkRecordExportService {
       case "templateVersionId" -> blank(record.templateVersionId());
       default -> "";
     };
+  }
+
+  private String formatRawValue(JsonNode value) {
+    if (value == null || value.isNull()) {
+      return "";
+    }
+    if (value.isTextual() || value.isNumber() || value.isBoolean()) {
+      return value.asText();
+    }
+    if (value.isArray()) {
+      List<String> values = new ArrayList<>();
+      value.forEach(item -> values.add(formatRawValue(item)));
+      return String.join("、", values);
+    }
+    return value.toString();
   }
 
   private String formatDynamic(

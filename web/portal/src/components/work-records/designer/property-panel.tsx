@@ -242,19 +242,14 @@ export function PropertyPanel({
               {t('workRecords.designer.property.dictCode')}
             </span>
             <Select
-              value={field.dictCode || 'none'}
-              onValueChange={(value) =>
-                onChange(field.id, { dictCode: value === 'none' ? '' : value })
-              }
+              value={field.dictCode || undefined}
+              onValueChange={(dictCode) => onChange(field.id, { dictCode })}
             >
               <SelectTrigger className='w-full'>
-                <SelectValue />
+                <SelectValue placeholder={t('workRecords.form.select')} />
               </SelectTrigger>
               <SelectContent>
                 <SelectGroup>
-                  <SelectItem value='none'>
-                    {t('workRecords.form.select')}
-                  </SelectItem>
                   {dictTypes
                     .filter((item) => item.enabled)
                     .map((dict) => (

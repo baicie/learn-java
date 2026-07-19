@@ -2,7 +2,6 @@ package io.aegisops.workrecord.api;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.aegisops.audit.AuditEvent;
 import io.aegisops.common.api.ApiResponse;
 import io.aegisops.common.tenant.TenantContext;
 import io.aegisops.security.UserPrincipal;
@@ -16,7 +15,6 @@ import io.aegisops.workrecord.application.command.RecordQuery;
 import io.aegisops.workrecord.application.command.UpdateRecordCommand;
 import io.aegisops.workrecord.application.command.WorkRecordExportResult;
 import io.aegisops.workrecord.application.service.WorkRecordExportService;
-import io.aegisops.workrecord.application.service.WorkRecordHistoryService;
 import io.aegisops.workrecord.application.service.WorkRecordListMetaService;
 import io.aegisops.workrecord.application.service.WorkRecordQueryService;
 import io.aegisops.workrecord.application.service.WorkRecordService;
@@ -40,7 +38,6 @@ public class WorkRecordController {
   private final WorkRecordQueryService queryService;
   private final WorkRecordListMetaService metaService;
   private final WorkRecordExportService exportService;
-  private final WorkRecordHistoryService historyService;
   private final ObjectMapper objectMapper;
 
   public WorkRecordController(
@@ -48,13 +45,11 @@ public class WorkRecordController {
       WorkRecordQueryService queryService,
       WorkRecordListMetaService metaService,
       WorkRecordExportService exportService,
-      WorkRecordHistoryService historyService,
       ObjectMapper objectMapper) {
     this.recordService = recordService;
     this.queryService = queryService;
     this.metaService = metaService;
     this.exportService = exportService;
-    this.historyService = historyService;
     this.objectMapper = objectMapper;
   }
 
@@ -95,19 +90,6 @@ public class WorkRecordController {
   public ApiResponse<WorkRecord> get(
       @PathVariable String recordId, @AuthenticationPrincipal UserPrincipal user) {
     return ApiResponse.ok(queryService.get(TenantContext.requireTenantId(), recordId, user));
-  }
-
-  @GetMapping("/{recordId}/history")
-  @PreAuthorize("hasAuthority('work-record:read:all') or hasAuthority('work-record:read:self')")
-  public ApiResponse<List<AuditEvent>> history(
-      @PathVariable String recordId, @AuthenticationPrincipal UserPrincipal user) {
-    String tenantId = TenantContext.requireTenantId();
-
-    // 必须先做记录级数据范围判断：被授权用户必须能读到该记录才能看到它的历史。
-    WorkRecord record = queryService.get(tenantId, recordId, user);
-
-    return ApiResponse.ok(
-        historyService.list(tenantId, recordId, record.templateVersionId(), user));
   }
 
   @PostMapping

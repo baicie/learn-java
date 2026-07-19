@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Pattern;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.ss.usermodel.DataFormatter;
@@ -27,6 +28,8 @@ import org.springframework.stereotype.Component;
 public class ExcelImportParser {
   static final int MAX_ROWS = 20_000;
   static final int MAX_COLUMNS = 300;
+  private static final Pattern READABLE_HEADER =
+      Pattern.compile(".*\\[([A-Za-z][A-Za-z0-9_]*)]\\s*$");
 
   private final DataFormatter formatter = new DataFormatter(Locale.ROOT);
 
@@ -102,7 +105,7 @@ public class ExcelImportParser {
     Map<Integer, ColumnBinding> bindings = new LinkedHashMap<>();
     Set<String> seen = new java.util.HashSet<>();
     for (int index = 0; index < header.getLastCellNum(); index++) {
-      String name = text(header.getCell(index)).trim();
+      String name = headerCode(text(header.getCell(index)).trim());
       if (name.isEmpty()) {
         continue;
       }
@@ -265,6 +268,11 @@ public class ExcelImportParser {
       case "recordTime" -> ColumnBinding.recordTimeBinding();
       default -> null;
     };
+  }
+
+  private static String headerCode(String header) {
+    var matcher = READABLE_HEADER.matcher(header);
+    return matcher.matches() ? matcher.group(1) : header;
   }
 
   private static String string(Object value) {

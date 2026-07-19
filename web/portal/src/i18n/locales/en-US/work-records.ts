@@ -11,6 +11,7 @@ export const workRecords = {
   'workRecords.list.currentPage': 'Page {{page}}',
   'workRecords.list.refresh': 'Refreshing…',
   'workRecords.list.view': 'View',
+  'workRecords.list.actions': 'Actions',
   'workRecords.list.allStatus': 'All statuses',
   'workRecords.list.searchPlaceholder': 'Search records…',
   'workRecords.list.allTemplates': 'All templates',
@@ -59,6 +60,8 @@ export const workRecords = {
   'workRecords.new.title': 'New record',
   'workRecords.edit.title': 'Edit record',
   'workRecords.detail.title': 'Record details',
+  'workRecords.field.recordId': 'Record ID',
+  'workRecords.field.templateVersion': 'Template version',
   'workRecords.designer.title': 'Form Designer',
   'workRecords.designer.description':
     'Configure work record templates, fields and dictionary bindings.',
@@ -101,6 +104,9 @@ export const workRecords = {
   'workRecords.export.currentColumns': 'Visible columns',
   'workRecords.export.allColumns': 'All exportable columns',
   'workRecords.export.dynamicField': 'Dynamic field',
+  'workRecords.export.dictionaryNoteTitle': 'Dictionary fields',
+  'workRecords.export.dictionaryNote':
+    'Dictionary fields export display labels; historical disabled values are marked as disabled; unknown values keep their raw codes; multi-select values are separated by semicolons.',
   'workRecords.export.auditConfirm':
     'I confirm this export. The action will be recorded in the audit log.',
   'workRecords.export.submitting': 'Exporting…',
@@ -201,6 +207,7 @@ export const workRecords = {
     'Compare the current draft against the published version, showing added / modified / removed fields.',
   'workRecords.designer.saveDraftSuccess': 'Template draft saved',
   'workRecords.designer.saveDraftFailed': 'Failed to save template draft',
+  'workRecords.designer.publishSuccess': 'Template published',
   'workRecords.designer.viewGeneratedSchema': 'View generated schema',
   'workRecords.designer.noTemplates': 'No templates',
   'workRecords.designer.noTemplatesHint':
@@ -242,9 +249,9 @@ export const workRecords = {
   'workRecords.designer.palette.number': 'Number',
   'workRecords.designer.palette.numberDescription': 'Integer or decimal',
   'workRecords.designer.palette.date': 'Date',
-  'workRecords.designer.palette.dateDescription': 'YYYY-MM-DD',
+  'workRecords.designer.palette.dateDescription': 'YYYY/MM/DD',
   'workRecords.designer.palette.datetime': 'Date & time',
-  'workRecords.designer.palette.datetimeDescription': 'YYYY-MM-DD HH:mm:ss',
+  'workRecords.designer.palette.datetimeDescription': 'YYYY/MM/DD HH:mm:ss',
   'workRecords.designer.palette.select': 'Select',
   'workRecords.designer.palette.selectDescription':
     'Static options or dictionary',

@@ -7,7 +7,6 @@ import { fetchRecordUserNames } from '@/api/work-records/list'
 import {
   getWorkRecord,
   listTemplateVersionFields,
-  listWorkRecordHistory,
   parseCustomData,
 } from '@/api/work-records/records'
 import { listTemplates } from '@/api/work-records/templates'
@@ -44,12 +43,6 @@ export function DetailRecordPage() {
     enabled: Boolean(
       recordQuery.data?.templateId && recordQuery.data?.templateVersionId
     ),
-  })
-
-  const historyQuery = useQuery({
-    queryKey: ['work-record-history', recordId],
-    queryFn: () => listWorkRecordHistory(recordId),
-    enabled: Boolean(recordId),
   })
 
   const templatesQuery = useQuery({
@@ -129,8 +122,6 @@ export function DetailRecordPage() {
     )
   }
 
-  const history = historyQuery.data ?? []
-
   return (
     <>
       <RecordReadonlyView
@@ -146,9 +137,6 @@ export function DetailRecordPage() {
           recordQuery.data.status !== 'archived' &&
           Boolean(principal?.permissions.includes('work-record:write'))
         }
-        history={history}
-        historyLoading={historyQuery.isLoading}
-        historyError={historyQuery.error as Error | null}
         onBack={() => navigate({ to: '/work-records' } as never)}
         onEdit={() =>
           navigate({

@@ -13,7 +13,6 @@ import io.aegisops.common.tenant.TenantContext;
 import io.aegisops.web.GlobalExceptionHandler;
 import io.aegisops.workrecord.application.command.WorkRecordExportResult;
 import io.aegisops.workrecord.application.service.WorkRecordExportService;
-import io.aegisops.workrecord.application.service.WorkRecordHistoryService;
 import io.aegisops.workrecord.application.service.WorkRecordListMetaService;
 import io.aegisops.workrecord.application.service.WorkRecordQueryService;
 import io.aegisops.workrecord.application.service.WorkRecordService;
@@ -49,8 +48,6 @@ class WorkRecordControllerWebTest {
   @MockitoBean private WorkRecordQueryService queryService;
   @MockitoBean private WorkRecordListMetaService metaService;
   @MockitoBean private WorkRecordExportService exportService;
-  @MockitoBean private WorkRecordHistoryService historyService;
-
   @Autowired private MockMvc mockMvc;
 
   @BeforeEach
@@ -157,15 +154,11 @@ class WorkRecordControllerWebTest {
 
   @Test
   @WithMockUser(authorities = {"work-record:read:self"})
-  void historyEndpointAlsoRequiresReadPermission() throws Exception {
-    when(queryService.get(eq("tenant-1"), eq("record-1"), any()))
-        .thenThrow(new org.springframework.security.access.AccessDeniedException("denied"));
-
+  void historyEndpointIsNotExposed() throws Exception {
     mockMvc
         .perform(get("/api/work-record/records/{recordId}/history", "record-1"))
-        .andExpect(status().isForbidden());
-
-    verifyNoInteractions(historyService);
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.errorCode").value("NOT_FOUND"));
   }
 
   private String creationPayload() {

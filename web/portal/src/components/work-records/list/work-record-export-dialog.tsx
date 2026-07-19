@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Info } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { downloadExport, exportWorkRecords } from '@/api/work-records/export'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
@@ -41,6 +43,11 @@ export function WorkRecordExportDialog({
   const exportableColumns = useMemo(
     () => (meta?.exportColumns ?? []).filter((column) => column.exportable),
     [meta?.exportColumns]
+  )
+
+  const hasDictionaryColumns = useMemo(
+    () => exportableColumns.some((column) => Boolean(column.dictCode)),
+    [exportableColumns]
   )
 
   const currentExportableKeys = useMemo(
@@ -128,6 +135,18 @@ export function WorkRecordExportDialog({
         </DialogHeader>
 
         <div className='grid gap-4'>
+          {hasDictionaryColumns ? (
+            <Alert>
+              <Info />
+              <AlertTitle>
+                {t('workRecords.export.dictionaryNoteTitle')}
+              </AlertTitle>
+              <AlertDescription>
+                {t('workRecords.export.dictionaryNote')}
+              </AlertDescription>
+            </Alert>
+          ) : null}
+
           <div className='rounded-md border p-3 text-sm'>
             <div>
               {t('workRecords.export.currentFilters')}:

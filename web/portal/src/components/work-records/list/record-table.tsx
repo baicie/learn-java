@@ -1,5 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
+import { formatDate, formatDateTime } from '@/lib/date-format'
 import { Button } from '@/components/ui/button'
 import {
   Table,
@@ -67,7 +68,7 @@ export function RecordTable({
                 </Button>
               </TableHead>
             ))}
-            <TableHead>{t('common.edit')}</TableHead>
+            <TableHead>{t('workRecords.list.actions')}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -119,6 +120,8 @@ function renderCell(
   }
 
   switch (column.key) {
+    case 'id':
+      return <span className='font-mono text-xs'>{record.id}</span>
     case 'title':
       return record.title
     case 'status':
@@ -130,9 +133,9 @@ function renderCell(
     case 'creatorId':
       return userNames[record.creatorId] ?? record.creatorId
     case 'recordTime':
-      return formatDate(record.recordTime)
+      return formatDateTime(record.recordTime)
     case 'createdAt':
-      return formatDate(record.createdAt)
+      return formatDateTime(record.createdAt)
     case 'templateId':
       return templateNames[record.templateId] ?? record.templateId
     default:
@@ -168,6 +171,14 @@ function renderDynamicValue(
     return value === true ? '是' : '否'
   }
 
+  if (column.fieldType === 'date') {
+    return formatDate(String(value))
+  }
+
+  if (column.fieldType === 'datetime') {
+    return formatDateTime(String(value))
+  }
+
   return label(value)
 }
 
@@ -178,11 +189,6 @@ function parseCustom(json: string) {
   } catch {
     return {}
   }
-}
-
-function formatDate(value: string) {
-  const date = new Date(value)
-  return Number.isNaN(date.getTime()) ? value : date.toLocaleString()
 }
 
 function statusLabel(value: string, t: TFunction) {

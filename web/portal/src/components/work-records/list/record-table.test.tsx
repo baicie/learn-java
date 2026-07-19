@@ -71,6 +71,29 @@ function renderTable(columns: RecordListColumn[], onSort = vi.fn()) {
 }
 
 describe('RecordTable', () => {
+  it('renders an explicit record ID header and value', async () => {
+    const screen = await renderTable([
+      {
+        key: 'id',
+        title: '记录 ID',
+        source: 'builtin',
+        fieldCode: null,
+        fieldType: 'text',
+        optionSource: null,
+        dictCode: null,
+        optionsJson: '[]',
+        visibleByDefault: true,
+        sortable: false,
+        exportable: true,
+        sortOrder: 0,
+      },
+    ])
+
+    await expect.element(screen.getByText('记录 ID')).toBeVisible()
+    await expect.element(screen.getByText('record-1')).toBeVisible()
+    await expect.element(screen.getByText('操作')).toBeVisible()
+  })
+
   it('uses the shared empty state when no records exist', async () => {
     const screen = await render(
       <I18nextProvider i18n={i18n} defaultNS='translation'>
@@ -136,5 +159,18 @@ describe('RecordTable', () => {
 
     await expect.element(screen.getByText('张三')).toBeVisible()
     await expect.element(screen.getByText('user-1')).not.toBeInTheDocument()
+  })
+
+  it('renders date columns with the shared slash format', async () => {
+    const screen = await renderTable([
+      {
+        ...column('unused', '记录时间'),
+        key: 'recordTime',
+        source: 'builtin',
+        fieldCode: null,
+      },
+    ])
+
+    await expect.element(screen.getByText('2026/07/11 10:00:00')).toBeVisible()
   })
 })

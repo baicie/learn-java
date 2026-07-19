@@ -132,7 +132,7 @@ export async function updateDictItem(
   return apiResponseSchema(dictItemSchema).parse(data).data
 }
 
-export async function disableDictItem(dictCode: string, itemId: string) {
+export async function deleteDictItem(dictCode: string, itemId: string) {
   const { data } = await apiClient.delete(
     `/api/platform/dictionaries/${dictCode}/items/${itemId}`
   )
