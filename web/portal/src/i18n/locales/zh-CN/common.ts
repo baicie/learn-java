@@ -23,6 +23,24 @@ export const common = {
   'common.yes': '是',
   'common.no': '否',
   'common.unknownField': '未知控件',
+  'errors.status': '错误代码 {{status}}',
+  'errors.actions.back': '返回上一页',
+  'errors.actions.home': '返回首页',
+  'errors.actions.signIn': '前往登录',
+  'errors.actions.reload': '重新加载',
+  'errors.401.title': '需要登录',
+  'errors.401.description': '当前会话无效或已过期，请重新登录后继续访问。',
+  'errors.403.title': '无权访问',
+  'errors.403.description':
+    '当前账号没有查看此资源所需的权限，请联系管理员确认授权范围。',
+  'errors.404.title': '页面不存在',
+  'errors.404.description': '你访问的页面可能已被移动、删除，或链接地址有误。',
+  'errors.500.title': '服务暂时异常',
+  'errors.500.description':
+    '处理请求时发生了意外错误，请稍后重试；若问题持续出现，请联系管理员。',
+  'errors.503.title': '服务维护中',
+  'errors.503.description':
+    '系统当前暂不可用，维护完成后将恢复访问，请稍后重新加载。',
   'command.searchPlaceholder': '输入命令或搜索…',
   'command.empty': '没有找到结果。',
 

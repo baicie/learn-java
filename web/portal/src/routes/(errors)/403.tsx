@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { ForbiddenPage } from '@/pages/errors/forbidden-page'
+import { ForbiddenError } from '@/pages/errors/forbidden'
 
 export const Route = createFileRoute('/(errors)/403')({
-  component: ForbiddenPage,
+  component: ForbiddenError,
 })

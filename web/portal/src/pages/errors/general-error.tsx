@@ -1,6 +1,6 @@
 import { useNavigate, useRouter } from '@tanstack/react-router'
-import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
+import { ArrowLeft, CircleAlert, House } from 'lucide-react'
+import { ErrorPage } from './error-page'
 
 type GeneralErrorProps = React.HTMLAttributes<HTMLDivElement> & {
   minimal?: boolean
@@ -12,25 +12,28 @@ export function GeneralError({
 }: GeneralErrorProps) {
   const navigate = useNavigate()
   const { history } = useRouter()
+
   return (
-    <div className={cn('h-svh w-full', className)}>
-      <div className='m-auto flex h-full w-full flex-col items-center justify-center gap-2'>
-        {!minimal && (
-          <h1 className='text-[7rem] leading-tight font-bold'>500</h1>
-        )}
-        <span className='font-medium'>Oops! Something went wrong {`:')`}</span>
-        <p className='text-center text-muted-foreground'>
-          We apologize for the inconvenience. <br /> Please try again later.
-        </p>
-        {!minimal && (
-          <div className='mt-6 flex gap-4'>
-            <Button variant='outline' onClick={() => history.go(-1)}>
-              Go Back
-            </Button>
-            <Button onClick={() => navigate({ to: '/' })}>Back to Home</Button>
-          </div>
-        )}
-      </div>
-    </div>
+    <ErrorPage
+      className={className}
+      status='500'
+      titleKey='errors.500.title'
+      descriptionKey='errors.500.description'
+      icon={CircleAlert}
+      minimal={minimal}
+      actions={[
+        {
+          labelKey: 'errors.actions.back',
+          icon: ArrowLeft,
+          variant: 'outline',
+          onClick: () => history.go(-1),
+        },
+        {
+          labelKey: 'errors.actions.home',
+          icon: House,
+          onClick: () => navigate({ to: '/' }),
+        },
+      ]}
+    />
   )
 }
