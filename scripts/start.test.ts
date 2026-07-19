@@ -18,6 +18,12 @@ test('dev command starts the worker required by queued datasource syncs', () => 
   assert.match(source, /Worker:\s+http:\/\/localhost:8091/)
 })
 
+test('local backend startup does not inject an AI model key', () => {
+  const source = readFileSync(join(repoRoot, 'scripts/start.ts'), 'utf8')
+
+  assert.doesNotMatch(source, /AIOPS_AI_MODEL_SECRET/)
+})
+
 async function waitForFrontend(
   child: ReturnType<typeof spawn>,
   timeoutMs = 15_000

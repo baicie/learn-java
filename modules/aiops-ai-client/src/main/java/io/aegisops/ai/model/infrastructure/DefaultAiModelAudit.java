@@ -2,6 +2,7 @@ package io.aegisops.ai.model.infrastructure;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.aegisops.ai.model.ServerSideAiModelManagement;
 import io.aegisops.ai.model.api.AiModelResponse;
 import io.aegisops.ai.model.port.AiModelAudit;
 import io.aegisops.audit.AuditRecordCommand;
@@ -9,6 +10,7 @@ import io.aegisops.audit.AuditService;
 import org.springframework.stereotype.Component;
 
 @Component
+@ServerSideAiModelManagement
 public class DefaultAiModelAudit implements AiModelAudit {
   private final AuditService auditService;
   private final ObjectMapper objectMapper;

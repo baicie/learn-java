@@ -1,5 +1,6 @@
 package io.aegisops.ai.model.infrastructure;
 
+import io.aegisops.ai.model.ServerSideAiModelManagement;
 import io.aegisops.ai.model.port.SecretCipher;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -12,6 +13,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 @Component
+@ServerSideAiModelManagement
 public class AesGcmSecretCipher implements SecretCipher {
   private static final int NONCE_BYTES = 12;
   private static final int TAG_BITS = 128;

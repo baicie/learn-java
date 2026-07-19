@@ -68,7 +68,7 @@ aiops:
       max-log-patterns: ${AIOPS_AGENT_EVIDENCE_MAX_LOG_PATTERNS:20}
       max-changes: ${AIOPS_AGENT_EVIDENCE_MAX_CHANGES:20}
   ai:
-    model-secret: ${AIOPS_AI_MODEL_SECRET:${AIOPS_JWT_SECRET:dev-secret-change-me-change-me-change-me}}
+    model-secret: ${AIOPS_JWT_SECRET:dev-secret-change-me-change-me-change-me}
   evidence:
     victoria:
       enabled: ${AIOPS_EVIDENCE_VICTORIA_ENABLED:false}

@@ -1,5 +1,6 @@
 package io.aegisops.ai.model.application;
 
+import io.aegisops.ai.model.ServerSideAiModelManagement;
 import io.aegisops.ai.model.api.AiModelResponse;
 import io.aegisops.ai.model.api.CreateAiModelRequest;
 import io.aegisops.ai.model.api.TestAiModelResponse;
@@ -21,6 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@ServerSideAiModelManagement
 public class AiModelService {
   private final AiModelStore store;
   private final SecretCipher cipher;
