@@ -169,6 +169,24 @@ describe('ConfigDrawer (integration)', () => {
     await vi.waitFor(() => expect(getCookie('sidebar_state')).toBe('false'))
   })
 
+  it('selecting tabs layout enables page tabs without changing legacy layout cookies', async () => {
+    const screen = await renderConfigDrawer({ sidebarDefaultOpen: true })
+    await openDrawer(screen)
+
+    await userEvent.click(
+      screen.getByRole('radio', { name: /select tabs layout/i })
+    )
+
+    await vi.waitFor(() => expect(getCookie('layout_page_tabs')).toBe('true'))
+    expect(getCookie('layout_collapsible')).toBeUndefined()
+    expect(getCookie('sidebar_state')).toBeUndefined()
+
+    await userEvent.click(
+      screen.getByRole('radio', { name: /select default/i })
+    )
+    await vi.waitFor(() => expect(getCookie('layout_page_tabs')).toBe('false'))
+  })
+
   describe('section reset buttons', () => {
     it('resets theme via section control after choosing dark', async () => {
       const screen = await renderConfigDrawer()
@@ -243,6 +261,25 @@ describe('ConfigDrawer (integration)', () => {
       await vi.waitFor(() => expect(getCookie('sidebar_state')).toBe('true'))
       await vi.waitFor(() =>
         expect(getCookie('layout_collapsible')).toBe('icon')
+      )
+    })
+
+    it('resets tabs layout via section control', async () => {
+      const screen = await renderConfigDrawer({ sidebarDefaultOpen: true })
+      await openDrawer(screen)
+
+      await userEvent.click(
+        screen.getByRole('radio', { name: /select tabs layout/i })
+      )
+      await vi.waitFor(() => expect(getCookie('layout_page_tabs')).toBe('true'))
+
+      await userEvent.click(
+        screen.getByRole('button', {
+          name: /reset layout options to default/i,
+        })
+      )
+      await vi.waitFor(() =>
+        expect(getCookie('layout_page_tabs')).toBe('false')
       )
     })
   })

@@ -5,6 +5,7 @@ import { IconDir } from '@/assets/custom/icon-dir'
 import { IconLayoutCompact } from '@/assets/custom/icon-layout-compact'
 import { IconLayoutDefault } from '@/assets/custom/icon-layout-default'
 import { IconLayoutFull } from '@/assets/custom/icon-layout-full'
+import { IconLayoutTabs } from '@/assets/custom/icon-layout-tabs'
 import { IconSidebarFloating } from '@/assets/custom/icon-sidebar-floating'
 import { IconSidebarInset } from '@/assets/custom/icon-sidebar-inset'
 import { IconSidebarSidebar } from '@/assets/custom/icon-sidebar-sidebar'
@@ -262,9 +263,15 @@ function SidebarConfig() {
 
 function LayoutConfig() {
   const { open, setOpen } = useSidebar()
-  const { defaultCollapsible, collapsible, setCollapsible } = useLayout()
+  const {
+    defaultCollapsible,
+    collapsible,
+    setCollapsible,
+    pageTabs,
+    setPageTabs,
+  } = useLayout()
 
-  const radioState = open ? 'default' : collapsible
+  const radioState = pageTabs ? 'tabs' : open ? 'default' : collapsible
 
   return (
     <div className='max-md:hidden'>
@@ -274,12 +281,19 @@ function LayoutConfig() {
         onReset={() => {
           setOpen(true)
           setCollapsible(defaultCollapsible)
+          setPageTabs(false)
         }}
         resetAriaLabel='Reset layout options to default'
       />
       <Radio
         value={radioState}
         onValueChange={(v) => {
+          if (v === 'tabs') {
+            setPageTabs(true)
+            return
+          }
+
+          setPageTabs(false)
           if (v === 'default') {
             setOpen(true)
             return
@@ -287,7 +301,7 @@ function LayoutConfig() {
           setOpen(false)
           setCollapsible(v as Collapsible)
         }}
-        className='grid w-full max-w-md grid-cols-3 gap-4'
+        className='grid w-full max-w-md grid-cols-4 gap-3'
         aria-label='Select layout style'
         aria-describedby='layout-description'
       >
@@ -307,12 +321,18 @@ function LayoutConfig() {
             label: 'Full layout',
             icon: IconLayoutFull,
           },
+          {
+            value: 'tabs',
+            label: 'Tabs layout',
+            icon: IconLayoutTabs,
+          },
         ].map((item) => (
           <RadioGroupItem key={item.value} item={item} />
         ))}
       </Radio>
       <div id='layout-description' className='sr-only'>
-        Choose between default expanded, compact icon-only, or full layout mode
+        Choose between default expanded, compact icon-only, full, or tabs layout
+        mode
       </div>
     </div>
   )

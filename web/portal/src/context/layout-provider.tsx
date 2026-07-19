@@ -7,11 +7,13 @@ type Variant = 'inset' | 'sidebar' | 'floating'
 // Cookie constants following the pattern from sidebar.tsx
 const LAYOUT_COLLAPSIBLE_COOKIE_NAME = 'layout_collapsible'
 const LAYOUT_VARIANT_COOKIE_NAME = 'layout_variant'
+const LAYOUT_PAGE_TABS_COOKIE_NAME = 'layout_page_tabs'
 const LAYOUT_COOKIE_MAX_AGE = 60 * 60 * 24 * 7 // 7 days
 
 // Default values
 const DEFAULT_VARIANT = 'inset'
 const DEFAULT_COLLAPSIBLE = 'icon'
+const DEFAULT_PAGE_TABS = false
 
 type LayoutContextType = {
   resetLayout: () => void
@@ -23,6 +25,10 @@ type LayoutContextType = {
   defaultVariant: Variant
   variant: Variant
   setVariant: (variant: Variant) => void
+
+  defaultPageTabs: boolean
+  pageTabs: boolean
+  setPageTabs: (enabled: boolean) => void
 }
 
 const LayoutContext = createContext<LayoutContextType | null>(null)
@@ -42,6 +48,10 @@ export function LayoutProvider({ children }: LayoutProviderProps) {
     return (saved as Variant) || DEFAULT_VARIANT
   })
 
+  const [pageTabs, _setPageTabs] = useState(
+    () => getCookie(LAYOUT_PAGE_TABS_COOKIE_NAME) === 'true'
+  )
+
   const setCollapsible = (newCollapsible: Collapsible) => {
     _setCollapsible(newCollapsible)
     setCookie(
@@ -56,9 +66,19 @@ export function LayoutProvider({ children }: LayoutProviderProps) {
     setCookie(LAYOUT_VARIANT_COOKIE_NAME, newVariant, LAYOUT_COOKIE_MAX_AGE)
   }
 
+  const setPageTabs = (enabled: boolean) => {
+    _setPageTabs(enabled)
+    setCookie(
+      LAYOUT_PAGE_TABS_COOKIE_NAME,
+      String(enabled),
+      LAYOUT_COOKIE_MAX_AGE
+    )
+  }
+
   const resetLayout = () => {
     setCollapsible(DEFAULT_COLLAPSIBLE)
     setVariant(DEFAULT_VARIANT)
+    setPageTabs(DEFAULT_PAGE_TABS)
   }
 
   const contextValue: LayoutContextType = {
@@ -69,6 +89,9 @@ export function LayoutProvider({ children }: LayoutProviderProps) {
     defaultVariant: DEFAULT_VARIANT,
     variant,
     setVariant,
+    defaultPageTabs: DEFAULT_PAGE_TABS,
+    pageTabs,
+    setPageTabs,
   }
 
   return <LayoutContext value={contextValue}>{children}</LayoutContext>
