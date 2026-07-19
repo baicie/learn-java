@@ -17,12 +17,12 @@
     </dependency>
     <dependency>
       <groupId>io.aegisops</groupId>
-      <artifactId>aiops-incident</artifactId>
+      <artifactId>aiops-datasource</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>io.aegisops</groupId>
-      <artifactId>aiops-datasource</artifactId>
+      <artifactId>aiops-incident</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
@@ -60,7 +60,7 @@
     </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-web</artifactId>
+      <artifactId>spring-boot-starter-webmvc</artifactId>
     </dependency>
     <dependency>
       <groupId>org.postgresql</groupId>

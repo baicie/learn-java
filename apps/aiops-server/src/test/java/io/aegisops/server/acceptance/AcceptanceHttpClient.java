@@ -7,7 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.net.URI;
 import java.util.List;
 import java.util.Map;
-import org.springframework.boot.test.web.client.TestRestTemplate;
+import org.springframework.boot.resttestclient.TestRestTemplate;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -29,13 +29,13 @@ final class AcceptanceHttpClient {
   }
 
   String login(String username, String password) {
-    ResponseEntity<JsonNode> response =
+    ResponseEntity<String> response =
         rest.postForEntity(
-            "/api/auth/login", Map.of("username", username, "password", password), JsonNode.class);
+            "/api/auth/login", Map.of("username", username, "password", password), String.class);
 
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
 
-    JsonNode body = requireBody(response);
+    JsonNode body = parseBody(response.getBody());
     assertThat(body.path("success").asBoolean()).isTrue();
 
     String token = body.path("data").path("token").asText();
@@ -67,13 +67,15 @@ final class AcceptanceHttpClient {
   ResponseEntity<JsonNode> getRaw(String path, String token, MultiValueMap<String, String> query) {
     URI uri = UriComponentsBuilder.fromPath(path).queryParams(query).build().encode().toUri();
 
-    return rest.exchange(uri, HttpMethod.GET, new HttpEntity<>(headers(token)), JsonNode.class);
+    return jsonResponse(
+        rest.exchange(uri, HttpMethod.GET, new HttpEntity<>(headers(token)), String.class));
   }
 
   ResponseEntity<JsonNode> postCsvError(String path, String token, Object body) {
     HttpHeaders headers = headers(token);
     headers.setAccept(List.of(new MediaType("text", "csv"), MediaType.APPLICATION_JSON));
-    return rest.exchange(path, HttpMethod.POST, new HttpEntity<>(body, headers), JsonNode.class);
+    return jsonResponse(
+        rest.exchange(path, HttpMethod.POST, new HttpEntity<>(body, headers), String.class));
   }
 
   ResponseEntity<byte[]> postCsv(String path, String token, Object body) {
@@ -107,7 +109,23 @@ final class AcceptanceHttpClient {
 
   private ResponseEntity<JsonNode> exchangeJson(
       String path, String token, HttpMethod method, Object body) {
-    return rest.exchange(path, method, new HttpEntity<>(body, headers(token)), JsonNode.class);
+    return jsonResponse(
+        rest.exchange(path, method, new HttpEntity<>(body, headers(token)), String.class));
+  }
+
+  private ResponseEntity<JsonNode> jsonResponse(ResponseEntity<String> response) {
+    JsonNode body = response.getBody() == null ? null : parseBody(response.getBody());
+    return ResponseEntity.status(response.getStatusCode())
+        .headers(response.getHeaders())
+        .body(body);
+  }
+
+  private JsonNode parseBody(String body) {
+    try {
+      return objectMapper.readTree(body);
+    } catch (Exception ex) {
+      throw new IllegalStateException("failed to parse acceptance response", ex);
+    }
   }
 
   private JsonNode data(ResponseEntity<JsonNode> response) {

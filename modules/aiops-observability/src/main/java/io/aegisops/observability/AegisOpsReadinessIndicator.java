@@ -1,8 +1,8 @@
 package io.aegisops.observability;
 
 import java.time.OffsetDateTime;
-import org.springframework.boot.actuate.health.Health;
-import org.springframework.boot.actuate.health.HealthIndicator;
+import org.springframework.boot.health.contributor.Health;
+import org.springframework.boot.health.contributor.HealthIndicator;
 
 public class AegisOpsReadinessIndicator implements HealthIndicator {
   private final ObservabilityProperties properties;
