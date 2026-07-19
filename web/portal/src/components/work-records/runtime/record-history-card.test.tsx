@@ -43,12 +43,25 @@ describe('RecordHistoryCard', () => {
     const screen = await render(<RecordHistoryCard events={[]} />)
 
     await expect.element(screen.getByText('暂无变更记录')).toBeVisible()
+    expect(document.querySelector('[data-slot="empty-state"]')).not.toBeNull()
   })
 
   it('renders loading state', async () => {
     const screen = await render(<RecordHistoryCard events={[]} loading />)
 
     await expect.element(screen.getByText('正在加载变更历史...')).toBeVisible()
+    expect(document.querySelector('[data-slot="skeleton"]')).not.toBeNull()
+  })
+
+  it('renders errors with alert semantics', async () => {
+    const screen = await render(
+      <RecordHistoryCard events={[]} error={new Error('network unavailable')} />
+    )
+
+    await expect.element(screen.getByRole('alert')).toBeVisible()
+    await expect
+      .element(screen.getByText('加载失败：network unavailable'))
+      .toBeVisible()
   })
 
   it('surfaces changesTruncated warning when diff exceeds limit', async () => {

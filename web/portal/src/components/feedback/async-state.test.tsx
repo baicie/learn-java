@@ -18,6 +18,7 @@ describe('QueryStateBoundary', () => {
     )
 
     await expect.element(screen.getByText('暂无记录')).toBeVisible()
+    expect(document.querySelector('[data-slot="empty-state"]')).not.toBeNull()
   })
 
   it('renders loading when loading', async () => {
@@ -54,5 +55,6 @@ describe('ErrorState', () => {
     await screen.getByRole('button', { name: '重新加载' }).click()
 
     expect(retried).toBe(true)
+    expect(document.querySelector('[data-slot="error-state"]')).not.toBeNull()
   })
 })

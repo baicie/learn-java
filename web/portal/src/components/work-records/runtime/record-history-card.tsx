@@ -1,4 +1,7 @@
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
+import { EmptyState } from '@/components/feedback/async-state'
 import type { AuditChange, AuditEvent } from './types'
 
 type Props = {
@@ -18,8 +21,15 @@ export function RecordHistoryCard({
         <CardHeader>
           <CardTitle>变更历史</CardTitle>
         </CardHeader>
-        <CardContent className='text-sm text-muted-foreground'>
-          正在加载变更历史...
+        <CardContent
+          className='grid gap-2 text-sm text-muted-foreground'
+          aria-label='变更历史加载中'
+          aria-busy='true'
+        >
+          <div>正在加载变更历史...</div>
+          <Skeleton className='h-4 w-full' />
+          <Skeleton className='h-4 w-4/5' />
+          <Skeleton className='h-4 w-3/5' />
         </CardContent>
       </Card>
     )
@@ -31,8 +41,10 @@ export function RecordHistoryCard({
         <CardHeader>
           <CardTitle>变更历史</CardTitle>
         </CardHeader>
-        <CardContent className='text-sm text-red-600'>
-          加载失败：{error.message}
+        <CardContent>
+          <Alert variant='destructive'>
+            <AlertDescription>加载失败：{error.message}</AlertDescription>
+          </Alert>
         </CardContent>
       </Card>
     )
@@ -45,7 +57,7 @@ export function RecordHistoryCard({
       </CardHeader>
       <CardContent>
         {events.length === 0 ? (
-          <div className='text-sm text-muted-foreground'>暂无变更记录</div>
+          <EmptyState compact title='暂无变更记录' />
         ) : (
           <ol className='relative border-s'>
             {events.map((event) => (

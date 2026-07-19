@@ -7,7 +7,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 
 export function PageLoadingState({ rows = 6 }: { rows?: number }) {
   return (
-    <main className='grid gap-4 p-4 md:p-6'>
+    <main data-slot='page-loading-state' className='grid gap-4 p-4 md:p-6'>
       <div className='grid gap-2'>
         <Skeleton className='h-8 w-48' />
         <Skeleton className='h-4 w-72 max-w-full' />
@@ -33,6 +33,7 @@ export function TableLoadingState({
 }) {
   return (
     <div
+      data-slot='table-loading-state'
       className='grid gap-2 rounded-lg border p-4'
       aria-label='数据加载中'
       aria-busy='true'
@@ -69,6 +70,7 @@ export function EmptyState({
 }) {
   return (
     <div
+      data-slot='empty-state'
       className={cn(
         'flex flex-col items-center justify-center rounded-lg border border-dashed text-center',
         compact ? 'min-h-40 p-6' : 'min-h-72 p-8'
@@ -106,6 +108,7 @@ export function ErrorState({
 }) {
   return (
     <div
+      data-slot='error-state'
       className={cn(
         'flex flex-col items-center justify-center rounded-lg border border-destructive/30 bg-destructive/5 text-center',
         compact ? 'min-h-40 p-6' : 'min-h-72 p-8'

@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import {
   Select,
   SelectContent,
@@ -33,61 +34,84 @@ export function FormPreview({ fields }: FormPreviewProps) {
           </div>
         ) : null}
 
-        {enabledFields.map((field) => (
-          <label key={field.id} className='grid gap-1 text-sm'>
-            <span className='font-medium'>
-              {field.fieldName}
-              {field.required ? <span className='text-red-500'> *</span> : null}
-            </span>
-            <PreviewControl field={field} />
-          </label>
-        ))}
+        {enabledFields.map((field) => {
+          const inputId = `preview-${field.id}`
+          return (
+            <div key={field.id} className='grid gap-1 text-sm'>
+              <Label htmlFor={inputId}>
+                {field.fieldName}
+                {field.required ? (
+                  <span className='text-destructive' aria-hidden='true'>
+                    {' '}
+                    *
+                  </span>
+                ) : null}
+              </Label>
+              <PreviewControl field={field} inputId={inputId} />
+            </div>
+          )
+        })}
       </CardContent>
     </Card>
   )
 }
 
-function PreviewControl({ field }: { field: DesignerField }) {
+function PreviewControl({
+  field,
+  inputId,
+}: {
+  field: DesignerField
+  inputId: string
+}) {
   if (field.fieldType === 'textarea') {
-    return <Textarea placeholder={field.fieldCode} />
+    return <Textarea id={inputId} placeholder={field.fieldCode} />
   }
 
   if (field.fieldType === 'number') {
-    return <Input type='number' placeholder='0' />
+    return <Input id={inputId} type='number' placeholder='0' />
   }
 
   if (field.fieldType === 'date') {
-    return <Input type='date' />
+    return <Input id={inputId} type='date' />
   }
 
   if (field.fieldType === 'datetime') {
-    return <Input type='datetime-local' />
+    return <Input id={inputId} type='datetime-local' />
   }
 
   if (field.fieldType === 'select') {
-    return <PreviewSelect field={field} />
+    return <PreviewSelect field={field} inputId={inputId} />
   }
 
   if (field.fieldType === 'multi_select') {
-    return <PreviewSelect field={field} />
+    return <PreviewSelect field={field} inputId={inputId} />
   }
 
   if (field.fieldType === 'boolean') {
     return (
-      <label className='flex items-center gap-2'>
-        <Checkbox />是 / 否
-      </label>
+      <div className='flex items-center gap-2'>
+        <Checkbox id={inputId} />
+        <Label htmlFor={inputId} className='font-normal'>
+          是 / 否
+        </Label>
+      </div>
     )
   }
 
-  return <Input placeholder={field.fieldCode} />
+  return <Input id={inputId} placeholder={field.fieldCode} />
 }
 
-function PreviewSelect({ field }: { field: DesignerField }) {
+function PreviewSelect({
+  field,
+  inputId,
+}: {
+  field: DesignerField
+  inputId: string
+}) {
   const label = field.optionSource === 'dict' ? field.dictCode : '选项'
   return (
     <Select disabled value='preview'>
-      <SelectTrigger className='w-full'>
+      <SelectTrigger id={inputId} className='w-full'>
         <SelectValue />
       </SelectTrigger>
       <SelectContent>

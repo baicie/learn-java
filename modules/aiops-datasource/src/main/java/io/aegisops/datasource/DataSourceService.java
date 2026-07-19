@@ -113,8 +113,7 @@ public class DataSourceService {
     return getRecord(tenantId, id);
   }
 
-  public DataSourceRecord update(
-      String tenantId, String id, UpdateDataSourceRequest request) {
+  public DataSourceRecord update(String tenantId, String id, UpdateDataSourceRequest request) {
     DataSourceEntity existing = getEntity(tenantId, id);
     Object config = mergeConfig(existing, request);
     jdbc.update(
@@ -273,8 +272,7 @@ public class DataSourceService {
   private Object mergeConfig(DataSourceEntity existing, UpdateDataSourceRequest request) {
     return switch (existing.type()) {
       case SOURCE_ZABBIX -> mergeZabbixConfig(existing.configJson(), request.zabbix());
-      case SOURCE_KUBERNETES ->
-          mergeKubernetesConfig(existing.configJson(), request.kubernetes());
+      case SOURCE_KUBERNETES -> mergeKubernetesConfig(existing.configJson(), request.kubernetes());
       default -> {
         if (!PASSIVE_SOURCES.contains(existing.type())) {
           throw new AppException("UNSUPPORTED_DATASOURCE", "Unsupported datasource type");
