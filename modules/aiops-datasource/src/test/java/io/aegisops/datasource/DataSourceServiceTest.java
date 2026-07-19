@@ -35,15 +35,7 @@ class DataSourceServiceTest {
             null);
     DataSourceRecord updated =
         new DataSourceRecord(
-            "ds-1",
-            "tenant-1",
-            "zabbix",
-            "新名称",
-            "https://new.example",
-            "inactive",
-            now,
-            now,
-            null);
+            "ds-1", "tenant-1", "zabbix", "新名称", "https://new.example", "inactive", now, now, null);
     when(jdbc.queryForObject(anyString(), any(RowMapper.class), any(Object[].class)))
         .thenReturn(entity, updated);
     DataSourceService service =
@@ -68,11 +60,12 @@ class DataSourceServiceTest {
     ArgumentCaptor<String> config = ArgumentCaptor.forClass(String.class);
     verify(jdbc)
         .update(
-            anyString(), config.capture(), org.mockito.ArgumentMatchers.eq("新名称"),
-            org.mockito.ArgumentMatchers.eq("tenant-1"), org.mockito.ArgumentMatchers.eq("ds-1"));
-    assertThat(config.getValue())
-        .contains("https://new.example")
-        .contains("secret-token");
+            anyString(),
+            config.capture(),
+            org.mockito.ArgumentMatchers.eq("新名称"),
+            org.mockito.ArgumentMatchers.eq("tenant-1"),
+            org.mockito.ArgumentMatchers.eq("ds-1"));
+    assertThat(config.getValue()).contains("https://new.example").contains("secret-token");
     assertThat(result).isEqualTo(updated);
   }
 }
