@@ -15,6 +15,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
+    mem_limit: "${ZABBIX_POSTGRES_MEMORY_LIMIT:-256m}"
+    mem_reservation: "${ZABBIX_POSTGRES_MEMORY_RESERVATION:-96m}"
     restart: unless-stopped
 
   zabbix-server:
@@ -28,9 +30,11 @@ services:
       POSTGRES_DB: zabbix
       POSTGRES_USER: zabbix
       POSTGRES_PASSWORD: ${ZABBIX_DB_PASSWORD:?ZABBIX_DB_PASSWORD is required}
-      ZBX_CACHESIZE: 128M
+      ZBX_CACHESIZE: "${ZABBIX_CACHESIZE:-64M}"
     ports:
       - "10051:10051"
+    mem_limit: "${ZABBIX_SERVER_MEMORY_LIMIT:-192m}"
+    mem_reservation: "${ZABBIX_SERVER_MEMORY_RESERVATION:-64m}"
     restart: unless-stopped
 
   zabbix-web:
@@ -56,6 +60,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 30
+    mem_limit: "${ZABBIX_WEB_MEMORY_LIMIT:-192m}"
+    mem_reservation: "${ZABBIX_WEB_MEMORY_RESERVATION:-64m}"
     restart: unless-stopped
 
   zabbix-agent2:
@@ -68,6 +74,8 @@ services:
       ZBX_HOSTNAME: zabbix-agent2
       ZBX_SERVER_HOST: zabbix-server
       ZBX_SERVER_ACTIVE: zabbix-server
+    mem_limit: "${ZABBIX_AGENT_MEMORY_LIMIT:-64m}"
+    mem_reservation: "${ZABBIX_AGENT_MEMORY_RESERVATION:-16m}"
     restart: unless-stopped
 
 volumes:

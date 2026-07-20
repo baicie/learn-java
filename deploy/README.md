@@ -75,6 +75,44 @@ deploy/
 - runner 镜像额外装了 `ansible-playbook` / `sshpass` / `openssh-client` 与 `tini`
 - worker / runner 不依赖 agent（agent 走 canonical workflow 只查 server，不直接调 runner）
 
+## 低内存 VM 配置
+
+`docker-compose.app.yml` 默认按 4 GiB、低并发单机部署约束资源。三个 Java 进程使用独立的
+`-Xmx`、Metaspace、Direct Memory 和 Code Cache 上限，并用 Serial GC 减少小堆场景下的
+GC 线程与本地内存开销。Server、Worker、Runner 仍保持独立进程，不能为了节省内存破坏
+Runner 执行隔离边界。
+
+默认硬限制如下：
+
+| 容器 | 内存限制 | JVM 最大堆 |
+| --- | ---: | ---: |
+| postgres | 384 MiB | - |
+| redis | 128 MiB | - |
+| aiops-server | 640 MiB | 320 MiB |
+| aiops-worker | 576 MiB | 256 MiB |
+| aiops-runner | 512 MiB | 192 MiB |
+| aiops-agent | 256 MiB | - |
+
+所有值均可通过环境变量覆盖，例如：
+
+```bash
+export AIOPS_SERVER_MEMORY_LIMIT=768m
+export AIOPS_SERVER_JAVA_OPTS='-Xms128m -Xmx384m -XX:MaxMetaspaceSize=160m -XX:MaxDirectMemorySize=64m -XX:ReservedCodeCacheSize=96m -XX:+UseSerialGC -XX:+ExitOnOutOfMemoryError'
+```
+
+部署前后使用以下命令核对，不要只根据 Linux `used` 判断是否存在内存压力：
+
+```bash
+free -h
+docker stats --no-stream
+docker inspect -f '{{.Name}} {{.HostConfig.Memory}} {{.HostConfig.MemoryReservation}}' $(docker ps -q)
+```
+
+4 GiB 主机必须避免同时运行无关的 ClickHouse、测试实验栈和其他业务项目。生产主机还应配置
+至少 2 GiB Swap 作为峰值保护；创建 Swap 属于宿主机变更，应通过单独审批和运维窗口执行。
+若诊断、导出或自动化任务出现长时间 GC、容器 OOM，应先按实际指标提高对应单个容器限制，
+不要取消全部限制。
+
 ## 镜像名 / Tag 约束
 
 - 所有镜像统一命名空间：`aegisops/<app-name>:<version>`，前缀由 deploy.yml 注入为 `${DOCKERHUB_USERNAME}/aegisops`

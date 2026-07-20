@@ -15,6 +15,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
+    mem_limit: "${AIOPS_POSTGRES_MEMORY_LIMIT:-384m}"
+    mem_reservation: "${AIOPS_POSTGRES_MEMORY_RESERVATION:-192m}"
     restart: unless-stopped
 
   redis:
@@ -28,12 +30,15 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
+    mem_limit: "${AIOPS_REDIS_MEMORY_LIMIT:-128m}"
+    mem_reservation: "${AIOPS_REDIS_MEMORY_RESERVATION:-32m}"
     restart: unless-stopped
 
   aiops-server:
     image: ${AIOPS_SERVER_IMAGE:?AIOPS_SERVER_IMAGE is required}
     container_name: aegisops-server
     environment:
+      JAVA_OPTS: "${AIOPS_SERVER_JAVA_OPTS:--Xms128m -Xmx320m -XX:MaxMetaspaceSize=160m -XX:MaxDirectMemorySize=64m -XX:ReservedCodeCacheSize=96m -XX:+UseSerialGC -XX:+ExitOnOutOfMemoryError}"
       AIOPS_SERVER_PORT: 8080
       AIOPS_DB_URL: jdbc:postgresql://postgres:5432/aegisops
       AIOPS_DB_USERNAME: aegisops
@@ -45,6 +50,10 @@ services:
       AIOPS_AGENT_INTERNAL_TOKEN: dev-internal-agent-token
       AIOPS_EVIDENCE_VICTORIA_BASE_URL: http://victoriametrics:8428
       AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN: dev-zabbix-webhook-token
+      SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: 6
+      SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE: 2
+      SERVER_TOMCAT_THREADS_MAX: 50
+      SERVER_TOMCAT_THREADS_MIN_SPARE: 4
     ports:
       - "8080:8080"
     depends_on:
@@ -63,6 +72,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 15
+    mem_limit: "${AIOPS_SERVER_MEMORY_LIMIT:-640m}"
+    mem_reservation: "${AIOPS_SERVER_MEMORY_RESERVATION:-384m}"
     restart: unless-stopped
 
   aiops-agent:
@@ -112,6 +123,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
+    mem_limit: "${AIOPS_AGENT_MEMORY_LIMIT:-256m}"
+    mem_reservation: "${AIOPS_AGENT_MEMORY_RESERVATION:-96m}"
     restart: unless-stopped
 
   # Worker: 异步消费 outbox + 跑 Incident 聚合 / RCA / Zabbix sync / 复盘草稿。
@@ -120,6 +133,7 @@ services:
     image: ${AIOPS_WORKER_IMAGE:?AIOPS_WORKER_IMAGE is required}
     container_name: aegisops-worker
     environment:
+      JAVA_OPTS: "${AIOPS_WORKER_JAVA_OPTS:--Xms96m -Xmx256m -XX:MaxMetaspaceSize=160m -XX:MaxDirectMemorySize=64m -XX:ReservedCodeCacheSize=96m -XX:+UseSerialGC -XX:+ExitOnOutOfMemoryError}"
       AIOPS_DB_URL: jdbc:postgresql://postgres:5432/aegisops
       AIOPS_DB_USER: aegisops
       AIOPS_DB_PASSWORD: aegisops
@@ -131,6 +145,10 @@ services:
       AIOPS_OUTBOX_BATCH: 10
       AIOPS_OUTBOX_TARGET_APP: worker
       AIOPS_RUNTIME_PHASE: ${AIOPS_RUNTIME_PHASE:-phase5}
+      SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: 6
+      SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE: 2
+      SERVER_TOMCAT_THREADS_MAX: 24
+      SERVER_TOMCAT_THREADS_MIN_SPARE: 2
     ports:
       - "8081:8081"
     depends_on:
@@ -147,6 +165,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 15
+    mem_limit: "${AIOPS_WORKER_MEMORY_LIMIT:-576m}"
+    mem_reservation: "${AIOPS_WORKER_MEMORY_RESERVATION:-320m}"
     restart: unless-stopped
 
   # Runner: 隔离执行 ansible / webhook 步骤；MVP 阶段跑在同主机，但作为独立进程保证故障隔离。
@@ -155,6 +175,7 @@ services:
     image: ${AIOPS_RUNNER_IMAGE:?AIOPS_RUNNER_IMAGE is required}
     container_name: aegisops-runner
     environment:
+      JAVA_OPTS: "${AIOPS_RUNNER_JAVA_OPTS:--Xms64m -Xmx192m -XX:MaxMetaspaceSize=128m -XX:MaxDirectMemorySize=64m -XX:ReservedCodeCacheSize=96m -XX:+UseSerialGC -XX:+ExitOnOutOfMemoryError}"
       AIOPS_DB_URL: jdbc:postgresql://postgres:5432/aegisops
       AIOPS_DB_USERNAME: aegisops
       AIOPS_DB_PASSWORD: aegisops
@@ -174,6 +195,10 @@ services:
       AIOPS_EXECUTION_STEP_TIMEOUT_SECONDS: 300
       AIOPS_EXECUTION_MAX_RETRY_ATTEMPTS: 3
       AIOPS_RUNTIME_PHASE: ${AIOPS_RUNTIME_PHASE:-phase5}
+      SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: 6
+      SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE: 2
+      SERVER_TOMCAT_THREADS_MAX: 24
+      SERVER_TOMCAT_THREADS_MIN_SPARE: 2
     ports:
       - "8092:8092"
     depends_on:
@@ -191,6 +216,8 @@ services:
     # tmpfs 隔离 ansible workspace，避免宿主机目录权限问题
     tmpfs:
       - /app/.runtime:size=512m,mode=1777
+    mem_limit: "${AIOPS_RUNNER_MEMORY_LIMIT:-512m}"
+    mem_reservation: "${AIOPS_RUNNER_MEMORY_RESERVATION:-256m}"
     restart: unless-stopped
 
 volumes:
