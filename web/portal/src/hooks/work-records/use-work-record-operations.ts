@@ -1,4 +1,4 @@
-import { useQueries } from '@tanstack/react-query'
+import { queryOptions, useQueries } from '@tanstack/react-query'
 import {
   getStatistics,
   getWorkload,
@@ -8,6 +8,7 @@ import {
   listMarketPackages,
 } from '@/api/work-records/extensions'
 import { useAuthStore } from '@/stores/auth-store'
+import { getAiGenerationRefetchInterval } from './ai-generation-polling'
 
 const EMPTY_PERMISSIONS: string[] = []
 
@@ -38,11 +39,13 @@ export function useWorkRecordOperations(from: string, to: string) {
           enabled: canHandover,
         },
         { queryKey: ['work-record-market'], queryFn: listMarketPackages },
-        {
+        queryOptions({
           queryKey: ['work-record-monthly-ai', from.slice(0, 7)],
           queryFn: () => listMonthlyAiGenerations(from),
           enabled: canGenerate,
-        },
+          refetchInterval: (query) =>
+            getAiGenerationRefetchInterval(query.state.data),
+        }),
         {
           queryKey: ['work-record-approval-tasks'],
           queryFn: listPendingApprovalTasks,
