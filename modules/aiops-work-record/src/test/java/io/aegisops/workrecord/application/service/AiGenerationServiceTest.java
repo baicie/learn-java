@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -72,6 +73,42 @@ class AiGenerationServiceTest {
   }
 
   @Test
+  void ignoresTraceIdWhenHashingIdenticalBusinessInput() {
+    AiGenerationRepository repository = mock(AiGenerationRepository.class);
+    AiInputBuilder inputs = mock(AiInputBuilder.class);
+    OutboxWriter outbox = mock(OutboxWriter.class);
+    var service =
+        new AiGenerationService(
+            repository, inputs, mock(WorkRecordQueryService.class), outbox, new ObjectMapper());
+    when(inputs.recordSummary(any(), any(), any(), any()))
+        .thenReturn(generationRequest("record_summary", "trace-1"))
+        .thenReturn(generationRequest("record_summary", "trace-2"));
+    java.util.concurrent.atomic.AtomicReference<String> firstHash =
+        new java.util.concurrent.atomic.AtomicReference<>();
+    when(repository.findReusable(any(), any(), any(), any(), any()))
+        .thenAnswer(
+            invocation -> {
+              String hash = invocation.getArgument(4);
+              if (firstHash.get() == null) {
+                firstHash.set(hash);
+                return Optional.empty();
+              }
+              return firstHash.get().equals(hash)
+                  ? Optional.of(generation("success"))
+                  : Optional.empty();
+            });
+    when(repository.create(any())).thenAnswer(invocation -> generation("queued"));
+
+    UserPrincipal principal = principal(PermissionCodes.WORK_RECORD_AI_GENERATE);
+    service.requestRecordSummary("tenant-1", "record-1", principal);
+    AiGeneration reused = service.requestRecordSummary("tenant-1", "record-1", principal);
+
+    assertThat(reused.status()).isEqualTo("success");
+    verify(repository, times(1)).create(any());
+    verify(outbox, times(1)).enqueue(any());
+  }
+
+  @Test
   void reviewRequiresDedicatedPermission() {
     AiGenerationRepository repository = mock(AiGenerationRepository.class);
     var service =
@@ -115,6 +152,10 @@ class AiGenerationServiceTest {
   }
 
   private static WorkRecordGenerationRequest generationRequest(String type) {
+    return generationRequest(type, "trace-1");
+  }
+
+  private static WorkRecordGenerationRequest generationRequest(String type, String traceId) {
     return new WorkRecordGenerationRequest(
         "work-record-generation.v1",
         type,
@@ -126,7 +167,7 @@ class AiGenerationServiceTest {
         "prompt-v1",
         java.util.List.of(),
         Map.of(),
-        "trace-1");
+        traceId);
   }
 
   private static AiGeneration generation(String status) {
