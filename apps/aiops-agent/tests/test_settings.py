@@ -40,3 +40,46 @@ def test_openai_response_format_enabled_defaults_true():
     settings = Settings()
 
     assert settings.openai_response_format_enabled is True
+
+
+def test_work_record_provider_defaults_to_deterministic():
+    settings = Settings()
+
+    assert settings.normalized_work_record_provider() == "deterministic"
+    assert (
+        settings.dify_work_record_workflow_version
+        == "work-record-2026-07-19.1"
+    )
+
+
+def test_work_record_provider_accepts_dify_configuration(monkeypatch):
+    monkeypatch.setenv("AIOPS_AGENT_WORK_RECORD_PROVIDER", "DIFY")
+    monkeypatch.setenv("AIOPS_AGENT_DIFY_BASE_URL", "https://dify.example.com/v1/")
+    monkeypatch.setenv("AIOPS_AGENT_DIFY_WORK_RECORD_API_KEY", "secret-key")
+    monkeypatch.setenv("AIOPS_AGENT_DIFY_WORK_RECORD_WORKFLOW_ID", "published-42")
+    monkeypatch.setenv(
+        "AIOPS_AGENT_DIFY_WORK_RECORD_WORKFLOW_VERSION",
+        "work-record-2026-07-19.1",
+    )
+    monkeypatch.setenv("AIOPS_AGENT_DIFY_TIMEOUT_SECONDS", "75")
+    monkeypatch.setenv("AIOPS_AGENT_DIFY_MAX_RETRIES", "2")
+    monkeypatch.setenv("AIOPS_AGENT_DIFY_MAX_INPUT_BYTES", "65536")
+    monkeypatch.setenv("AIOPS_AGENT_DIFY_USER_HMAC_SECRET", "hmac-secret")
+
+    settings = Settings()
+
+    assert settings.normalized_work_record_provider() == "dify"
+    assert settings.normalized_dify_base_url() == "https://dify.example.com/v1"
+    assert settings.dify_work_record_api_key == "secret-key"
+    assert settings.dify_work_record_workflow_id == "published-42"
+    assert settings.dify_work_record_workflow_version == "work-record-2026-07-19.1"
+    assert settings.dify_timeout_seconds == 75
+    assert settings.dify_max_retries == 2
+    assert settings.dify_max_input_bytes == 65536
+    assert settings.dify_user_hmac_secret == "hmac-secret"
+
+
+def test_work_record_provider_normalizes_unknown_value():
+    settings = Settings(work_record_provider="unknown")
+
+    assert settings.normalized_work_record_provider() == "deterministic"
