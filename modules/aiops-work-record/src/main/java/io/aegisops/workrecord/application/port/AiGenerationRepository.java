@@ -19,6 +19,8 @@ public interface AiGenerationRepository {
 
   boolean complete(String tenantId, String id, String markdown, String provider, String model);
 
+  boolean markRetrying(String tenantId, String id);
+
   boolean fail(String tenantId, String id);
 
   boolean review(String tenantId, String id, String targetStatus, String reviewerId);

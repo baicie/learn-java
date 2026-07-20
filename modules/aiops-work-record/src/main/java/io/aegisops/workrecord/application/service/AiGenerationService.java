@@ -1,6 +1,7 @@
 package io.aegisops.workrecord.application.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.aegisops.common.id.Ids;
 import io.aegisops.common.outbox.OutboxMessage;
 import io.aegisops.common.outbox.OutboxWriter;
@@ -107,7 +108,7 @@ public class AiGenerationService {
 
   private AiGeneration createOrReuse(GenerationRequest request) {
     String inputJson = write(request.input());
-    String hash = sha256(inputJson);
+    String hash = sha256(write(hashInput(request.input())));
     var reusable =
         generations.findReusable(
             request.tenantId(), request.type(), request.resourceType(), request.resourceId(), hash);
@@ -147,6 +148,14 @@ public class AiGenerationService {
             5,
             OffsetDateTime.now()));
     return created;
+  }
+
+  private Object hashInput(Object input) {
+    var node = objectMapper.valueToTree(input);
+    if (node instanceof ObjectNode object) {
+      object.remove(List.of("traceId", "actorId"));
+    }
+    return node;
   }
 
   private String write(Object input) {

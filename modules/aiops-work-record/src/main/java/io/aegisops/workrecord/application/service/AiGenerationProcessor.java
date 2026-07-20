@@ -19,7 +19,7 @@ public class AiGenerationProcessor {
     this.objectMapper = objectMapper;
   }
 
-  public void process(String tenantId, String id) {
+  public void process(String tenantId, String id, boolean finalAttempt) {
     var generation =
         generations
             .find(tenantId, id)
@@ -36,11 +36,19 @@ public class AiGenerationProcessor {
         throw new IllegalStateException("AI generation state changed");
       }
     } catch (RuntimeException ex) {
-      generations.fail(tenantId, id);
+      markAttemptFailed(tenantId, id, finalAttempt);
       throw ex;
     } catch (Exception ex) {
-      generations.fail(tenantId, id);
+      markAttemptFailed(tenantId, id, finalAttempt);
       throw new IllegalStateException("invalid AI generation input", ex);
+    }
+  }
+
+  private void markAttemptFailed(String tenantId, String id, boolean finalAttempt) {
+    if (finalAttempt) {
+      generations.fail(tenantId, id);
+    } else {
+      generations.markRetrying(tenantId, id);
     }
   }
 }
