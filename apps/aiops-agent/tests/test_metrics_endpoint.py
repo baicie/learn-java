@@ -11,3 +11,12 @@ def test_render_metrics_returns_prometheus_payload():
     assert isinstance(payload, bytes)
     assert b"# HELP" in payload
     assert "text/plain" in metrics_content_type()
+
+
+def test_render_metrics_includes_low_cardinality_dify_metrics():
+    payload = render_metrics()
+
+    assert b"aiops_agent_dify_requests_total" in payload
+    assert b"aiops_agent_dify_request_duration_seconds" in payload
+    assert b"aiops_agent_dify_fallback_total" in payload
+    assert b"aiops_agent_dify_tokens_total" in payload
