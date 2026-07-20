@@ -68,6 +68,70 @@ def test_worker_uses_compose_redis_service():
     assert worker["depends_on"]["redis"]["condition"] == "service_healthy"
 
 
+def test_vm_compose_bounds_core_service_memory():
+    compose_file = ROOT / "deploy/docker-compose.app.yml"
+    compose = yaml.safe_load(compose_file.read_text(encoding="utf-8"))
+    services = compose["services"]
+
+    expected_limits = {
+        "postgres": "${AIOPS_POSTGRES_MEMORY_LIMIT:-384m}",
+        "redis": "${AIOPS_REDIS_MEMORY_LIMIT:-128m}",
+        "aiops-server": "${AIOPS_SERVER_MEMORY_LIMIT:-640m}",
+        "aiops-agent": "${AIOPS_AGENT_MEMORY_LIMIT:-256m}",
+        "aiops-worker": "${AIOPS_WORKER_MEMORY_LIMIT:-576m}",
+        "aiops-runner": "${AIOPS_RUNNER_MEMORY_LIMIT:-512m}",
+    }
+
+    for service_name, expected_limit in expected_limits.items():
+        assert services[service_name]["mem_limit"] == expected_limit
+
+
+def test_vm_compose_uses_per_app_bounded_java_options():
+    compose_file = ROOT / "deploy/docker-compose.app.yml"
+    compose = yaml.safe_load(compose_file.read_text(encoding="utf-8"))
+    services = compose["services"]
+
+    expected_heap_caps = {
+        "aiops-server": "-Xmx320m",
+        "aiops-worker": "-Xmx256m",
+        "aiops-runner": "-Xmx192m",
+    }
+
+    for service_name, heap_cap in expected_heap_caps.items():
+        java_opts = services[service_name]["environment"]["JAVA_OPTS"]
+        assert heap_cap in java_opts
+        assert "MaxRAMPercentage" not in java_opts
+        assert "MaxMetaspaceSize" in java_opts
+        assert "MaxDirectMemorySize" in java_opts
+
+
+def test_vm_compose_bounds_java_database_pools():
+    compose_file = ROOT / "deploy/docker-compose.app.yml"
+    compose = yaml.safe_load(compose_file.read_text(encoding="utf-8"))
+    services = compose["services"]
+
+    for service_name in ("aiops-server", "aiops-worker", "aiops-runner"):
+        environment = services[service_name]["environment"]
+        assert environment["SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE"] == 6
+        assert environment["SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE"] == 2
+
+
+def test_optional_zabbix_compose_has_low_memory_defaults():
+    compose_file = ROOT / "deploy/docker-compose.zabbix.yml"
+    compose = yaml.safe_load(compose_file.read_text(encoding="utf-8"))
+    services = compose["services"]
+
+    for service_name in (
+        "zabbix-postgres",
+        "zabbix-server",
+        "zabbix-web",
+        "zabbix-agent2",
+    ):
+        assert "mem_limit" in services[service_name]
+
+    assert services["zabbix-server"]["environment"]["ZBX_CACHESIZE"] == "${ZABBIX_CACHESIZE:-64M}"
+
+
 def test_package_offline_uses_split_for_volume_packaging():
     script = ROOT / "scripts/deploy/package-offline.sh"
     text = script.read_text(encoding="utf-8")
