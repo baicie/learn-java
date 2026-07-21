@@ -108,6 +108,11 @@ public class JdbcAiGenerationRepository implements AiGenerationRepository {
   }
 
   @Override
+  public boolean markRetrying(String tenantId, String id) {
+    return updateState(new StateChange(tenantId, id, "queued", "running", null, null, null)) == 1;
+  }
+
+  @Override
   public boolean fail(String tenantId, String id) {
     return jdbc.update(
             "update work_record.wr_ai_generation set status='failed', finished_at=now() "
