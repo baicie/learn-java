@@ -57,8 +57,7 @@ class AiInputBuilderTest {
     WorkRecordUserLookupService users = mock(WorkRecordUserLookupService.class);
     when(records.get(any(), any(), any())).thenReturn(record(1, RecordStatus.DONE));
     when(users.displayNames(any(), any())).thenReturn(Map.of("owner-1", "Alice"));
-    var builder =
-        new AiInputBuilder(records, users, new ObjectMapper().findAndRegisterModules());
+    var builder = new AiInputBuilder(records, users, new ObjectMapper().findAndRegisterModules());
 
     var request = builder.recordSummary("tenant-1", "record-1", principal(), "trace-1");
 

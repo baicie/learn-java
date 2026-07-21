@@ -197,8 +197,7 @@ class AiGenerationServiceTest {
             new ObjectMapper(),
             audit);
 
-    service.review(
-        "tenant-1", "ai-1", true, principal(PermissionCodes.WORK_RECORD_AI_REVIEW));
+    service.review("tenant-1", "ai-1", true, principal(PermissionCodes.WORK_RECORD_AI_REVIEW));
 
     verify(audit)
         .record(

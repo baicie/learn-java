@@ -29,5 +29,4 @@ public record AiGeneration(
     String reviewedBy,
     OffsetDateTime reviewedAt,
     OffsetDateTime createdAt,
-    OffsetDateTime finishedAt) {
-}
+    OffsetDateTime finishedAt) {}

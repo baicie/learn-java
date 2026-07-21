@@ -134,9 +134,7 @@ public class AiInputBuilder {
       List<WorkRecordGenerationRequest.RecordItem> items,
       Map<String, Object> statistics) {
     try {
-      return objectMapper.writeValueAsBytes(
-                  request(context, items, statistics))
-              .length
+      return objectMapper.writeValueAsBytes(request(context, items, statistics)).length
           <= MAX_MONTH_INPUT_BYTES;
     } catch (Exception ex) {
       throw new IllegalStateException("failed to size AI input", ex);

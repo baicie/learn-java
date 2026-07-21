@@ -56,7 +56,8 @@ public class AiGenerationProcessor {
               response.fallbackReason()))) {
         throw new IllegalStateException("AI generation state changed");
       }
-      auditOutcome(generation, response.fallbackReason(), response.provider(), response.providerRunId());
+      auditOutcome(
+          generation, response.fallbackReason(), response.provider(), response.providerRunId());
     } catch (RuntimeException ex) {
       markAttemptFailed(generation, finalAttempt, ex);
       throw ex;
