@@ -369,8 +369,11 @@ export function mergePublishedLocks(
     }
   })
 
-  for (const published of currentVersionFields) {
-    if (!merged.some((field) => field.fieldCode === published.fieldCode)) {
+  if (restoreMissingAsEnabled) {
+    for (const published of currentVersionFields) {
+      if (merged.some((field) => field.fieldCode === published.fieldCode)) {
+        continue
+      }
       merged.push({
         id: published.id,
         fieldName: published.fieldName,
@@ -387,7 +390,7 @@ export function mergePublishedLocks(
         exportable: published.exportable,
         statistical: published.statistical,
         sortOrder: published.sortOrder,
-        enabled: restoreMissingAsEnabled && published.enabled,
+        enabled: published.enabled,
         locked: true,
         referenced: referencedRecordCount > 0,
       })

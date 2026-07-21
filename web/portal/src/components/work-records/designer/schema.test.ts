@@ -191,7 +191,7 @@ describe('work record designer schema', () => {
     ])
   })
 
-  it('locks published fields and appends missing published fields as disabled', () => {
+  it('does not restore a published dictionary field removed from the draft', () => {
     const draft: DesignerField[] = [
       {
         ...newDesignerField('textarea', 0),
@@ -201,18 +201,16 @@ describe('work record designer schema', () => {
     ]
 
     const published: WorkRecordVersionField[] = [
-      versionField('priority', 'select'),
+      {
+        ...versionField('priority', 'select'),
+        optionSource: 'dict',
+        dictCode: 'record_priority',
+      },
     ]
 
     const merged = mergePublishedLocks(draft, published, 3)
 
-    expect(merged.some((field) => field.fieldCode === 'priority')).toBe(true)
-    expect(
-      merged.find((field) => field.fieldCode === 'priority')?.enabled
-    ).toBe(false)
-    expect(merged.find((field) => field.fieldCode === 'priority')?.locked).toBe(
-      true
-    )
+    expect(merged.some((field) => field.fieldCode === 'priority')).toBe(false)
   })
 
   it('restores published fields when the draft was never initialized', () => {
