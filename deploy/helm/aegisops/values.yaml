@@ -41,6 +41,17 @@ security:
   publicApiRequestsPerMinute: 600
   internalAgentRequestsPerMinute: 1200
 
+dify:
+  workRecordProvider: deterministic
+  baseUrl: "https://dify.example.com/v1"
+  workRecordApiKey: ""
+  workRecordWorkflowId: ""
+  workRecordWorkflowVersion: "work-record-2026-07-19.1"
+  timeoutSeconds: 75
+  maxRetries: 2
+  maxInputBytes: 65536
+  userHmacSecret: ""
+
 external:
   postgres:
     host: "postgresql.default.svc.cluster.local"
