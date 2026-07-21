@@ -1,19 +1,26 @@
 package io.aegisops.workrecord.application.service;
 
 import io.aegisops.common.exception.ResourceNotFoundException;
+import io.aegisops.workrecord.application.port.WorkRecordDictionaryPort;
 import io.aegisops.workrecord.application.port.WorkRecordFieldIndexRepository;
 import io.aegisops.workrecord.application.port.WorkRecordTemplateVersionRepository;
 import io.aegisops.workrecord.domain.model.FieldType;
+import io.aegisops.workrecord.domain.model.OptionSource;
 import io.aegisops.workrecord.domain.model.WorkRecordField;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.DataValidation;
 import org.apache.poi.ss.usermodel.FillPatternType;
 import org.apache.poi.ss.usermodel.IndexedColors;
 import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.util.CellRangeAddressList;
+import org.apache.poi.ss.util.CellReference;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Service;
 
@@ -28,11 +35,15 @@ public class ExcelImportTemplateService {
 
   private final WorkRecordTemplateVersionRepository versions;
   private final WorkRecordFieldIndexRepository fields;
+  private final WorkRecordDictionaryPort dictionaries;
 
   public ExcelImportTemplateService(
-      WorkRecordTemplateVersionRepository versions, WorkRecordFieldIndexRepository fields) {
+      WorkRecordTemplateVersionRepository versions,
+      WorkRecordFieldIndexRepository fields,
+      WorkRecordDictionaryPort dictionaries) {
     this.versions = versions;
     this.fields = fields;
+    this.dictionaries = dictionaries;
   }
 
   public ExcelImportTemplate generate(
@@ -54,7 +65,10 @@ public class ExcelImportTemplateService {
             .toList();
 
     List<ImportColumn> columns = new ArrayList<>(BUILTIN_COLUMNS);
-    enabledFields.stream().map(ExcelImportTemplateService::toColumn).forEach(columns::add);
+    Map<String, List<String>> dictionaryValues = new HashMap<>();
+    enabledFields.stream()
+        .map(field -> toColumn(tenantId, field, dictionaryValues))
+        .forEach(columns::add);
 
     return new ExcelImportTemplate(
         writeWorkbook(columns),
@@ -80,6 +94,7 @@ public class ExcelImportTemplateService {
         records.setColumnWidth(index, 20 * 256);
       }
       records.createFreezePane(0, 1);
+      addDictionaryDropdowns(workbook, records, columns);
 
       Sheet instructions = workbook.createSheet("字段说明");
       var instructionHeader = instructions.createRow(0);
@@ -112,13 +127,86 @@ public class ExcelImportTemplateService {
     }
   }
 
-  private static ImportColumn toColumn(WorkRecordField field) {
+  private ImportColumn toColumn(
+      String tenantId, WorkRecordField field, Map<String, List<String>> dictionaryValues) {
     return new ImportColumn(
         field.fieldCode(),
         field.fieldName(),
         field.fieldType().value(),
         field.required(),
-        description(field.fieldType()));
+        description(field.fieldType()),
+        dictionaryValues(tenantId, field, dictionaryValues));
+  }
+
+  private List<String> dictionaryValues(
+      String tenantId, WorkRecordField field, Map<String, List<String>> cachedValues) {
+    if ((field.fieldType() != FieldType.SELECT && field.fieldType() != FieldType.MULTI_SELECT)
+        || field.optionSource() != OptionSource.DICT
+        || field.dictCode() == null
+        || field.dictCode().isBlank()) {
+      return List.of();
+    }
+    return cachedValues.computeIfAbsent(
+        field.dictCode(), code -> dictionaries.enabledItemValues(tenantId, code));
+  }
+
+  private static void addDictionaryDropdowns(
+      XSSFWorkbook workbook, Sheet records, List<ImportColumn> columns) {
+    List<Integer> dictionaryColumnIndexes = new ArrayList<>();
+    for (int index = 0; index < columns.size(); index++) {
+      if (!columns.get(index).dictionaryValues().isEmpty()) {
+        dictionaryColumnIndexes.add(index);
+      }
+    }
+    if (dictionaryColumnIndexes.isEmpty()) {
+      return;
+    }
+
+    Sheet dictionarySheet = workbook.createSheet("字典选项");
+    var dictionaryHeader = dictionarySheet.createRow(0);
+    var validationHelper = records.getDataValidationHelper();
+    for (int optionIndex = 0; optionIndex < dictionaryColumnIndexes.size(); optionIndex++) {
+      int recordsColumnIndex = dictionaryColumnIndexes.get(optionIndex);
+      ImportColumn column = columns.get(recordsColumnIndex);
+      dictionaryHeader.createCell(optionIndex).setCellValue(column.header());
+      for (int valueIndex = 0; valueIndex < column.dictionaryValues().size(); valueIndex++) {
+        var row = dictionarySheet.getRow(valueIndex + 1);
+        if (row == null) {
+          row = dictionarySheet.createRow(valueIndex + 1);
+        }
+        row.createCell(optionIndex).setCellValue(column.dictionaryValues().get(valueIndex));
+      }
+
+      String rangeName = "dict_values_" + (optionIndex + 1);
+      String excelColumn = CellReference.convertNumToColString(optionIndex);
+      var name = workbook.createName();
+      name.setNameName(rangeName);
+      name.setRefersToFormula(
+          "'字典选项'!$"
+              + excelColumn
+              + "$2:$"
+              + excelColumn
+              + "$"
+              + (column.dictionaryValues().size() + 1));
+
+      var constraint = validationHelper.createFormulaListConstraint(rangeName);
+      var regions =
+          new CellRangeAddressList(
+              1, ExcelImportParser.MAX_ROWS, recordsColumnIndex, recordsColumnIndex);
+      DataValidation validation = validationHelper.createValidation(constraint, regions);
+      boolean multiSelect = "multi_select".equals(column.type());
+      validation.setEmptyCellAllowed(!column.required());
+      validation.setShowErrorBox(!multiSelect);
+      validation.setErrorStyle(DataValidation.ErrorStyle.STOP);
+      if (multiSelect) {
+        validation.setShowPromptBox(true);
+        validation.createPromptBox("多选字段", "可从列表选择一个值；多个值请使用逗号分隔");
+      } else {
+        validation.createErrorBox("无效选项", "请从下拉列表选择有效的字典值");
+      }
+      records.addValidationData(validation);
+    }
+    workbook.setSheetHidden(workbook.getSheetIndex(dictionarySheet), true);
   }
 
   private static String description(FieldType fieldType) {
@@ -158,7 +246,17 @@ public class ExcelImportTemplateService {
   }
 
   private record ImportColumn(
-      String code, String name, String type, boolean required, String description) {
+      String code,
+      String name,
+      String type,
+      boolean required,
+      String description,
+      List<String> dictionaryValues) {
+    private ImportColumn(
+        String code, String name, String type, boolean required, String description) {
+      this(code, name, type, required, description, List.of());
+    }
+
     String header() {
       return name + " [" + code + "]";
     }

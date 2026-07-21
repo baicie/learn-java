@@ -5,7 +5,7 @@ status: accepted
 phase: work-record-20
 owner: ai
 created: 2026-07-14
-updated: 2026-07-19
+updated: 2026-07-20
 related:
   - modules/aiops-work-record/src/main/java/io/aegisops/workrecord/api
   - apps/aiops-server/src/main/resources/db/migration/V0030__init_phase20_async_foundation.sql
@@ -34,6 +34,8 @@ related:
 | POST | `/api/work-record/async-jobs/{jobId}/download` | `work-record:export`、`work-record:export:async`            | 获取短时效、禁止缓存的下载地址    |
 
 下载导入模板时必须同时传递 `templateId` 与 `templateVersionId`。后端按当前租户校验版本归属；工作簿的 `records` 首行包含固定字段 `title`、`status`、`ownerId`、`recordTime`，随后按模板字段顺序追加该版本的全部启用字段编码。`字段说明` 工作表展示字段名称、编码、类型、必填性与填写格式，因此模板字段以用户在 Portal 中选择的表单模板当前发布版本为准。
+
+当启用的 `select` 或 `multi_select` 字段以 `dict` 为选项来源时，模板会把当前租户字典的启用项 `value` 写入隐藏的 `字典选项` 工作表，并为 `records` 中对应列的 20,000 个数据行添加下拉验证。禁用字典项不进入新下载的模板。原生 `.xlsx` 数据验证不支持无宏多选，因此 `multi_select` 可通过下拉选择一个值；填写多个值时仍按现有导入契约使用逗号分隔。
 
 上传会话只能由创建者消费一次。Excel 公式不执行，逐行结果具有幂等键；导出文件由 worker 流式生成并写入对象存储。普通用户默认不再获得缺少基础导出依赖的 `work-record:export:async` 权限。
 
