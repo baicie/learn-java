@@ -3,10 +3,12 @@ package io.aegisops.workrecord.application.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import io.aegisops.common.exception.ResourceNotFoundException;
+import io.aegisops.workrecord.application.port.WorkRecordDictionaryPort;
 import io.aegisops.workrecord.application.port.WorkRecordFieldIndexRepository;
 import io.aegisops.workrecord.application.port.WorkRecordTemplateVersionRepository;
 import io.aegisops.workrecord.domain.model.FieldType;
@@ -16,6 +18,7 @@ import io.aegisops.workrecord.support.WorkRecordFixtures;
 import java.io.ByteArrayInputStream;
 import java.util.List;
 import java.util.Optional;
+import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.junit.jupiter.api.Test;
 
@@ -23,8 +26,9 @@ class ExcelImportTemplateServiceTest {
   private final WorkRecordTemplateVersionRepository versions =
       mock(WorkRecordTemplateVersionRepository.class);
   private final WorkRecordFieldIndexRepository fields = mock(WorkRecordFieldIndexRepository.class);
+  private final WorkRecordDictionaryPort dictionaries = mock(WorkRecordDictionaryPort.class);
   private final ExcelImportTemplateService service =
-      new ExcelImportTemplateService(versions, fields);
+      new ExcelImportTemplateService(versions, fields, dictionaries);
 
   @Test
   void generatesWorkbookFromEnabledFieldsInTemplateOrder() throws Exception {
@@ -78,6 +82,102 @@ class ExcelImportTemplateServiceTest {
         .isInstanceOf(ResourceNotFoundException.class)
         .hasMessageContaining("template version");
     verifyNoInteractions(fields);
+  }
+
+  @Test
+  void addsTenantDictionaryDropdownsForSelectAndMultiSelectColumns() throws Exception {
+    when(versions.findByTemplateAndVersion("tenant-1", "template-1", "version-1"))
+        .thenReturn(Optional.of(WorkRecordFixtures.version("version-1")));
+    when(fields.listEnabledByVersion("tenant-1", "version-1"))
+        .thenReturn(
+            List.of(
+                dictionaryField("priority", "优先级", FieldType.SELECT, "record_priority", 10),
+                dictionaryField(
+                    "participants", "参与角色", FieldType.MULTI_SELECT, "record_role", 20)));
+    when(dictionaries.enabledItemValues("tenant-1", "record_priority"))
+        .thenReturn(List.of("P1", "P2"));
+    when(dictionaries.enabledItemValues("tenant-1", "record_role"))
+        .thenReturn(List.of("owner", "reviewer"));
+
+    var template = service.generate("tenant-1", "template-1", "version-1");
+
+    try (var workbook = new XSSFWorkbook(new ByteArrayInputStream(template.content()))) {
+      var records = workbook.getSheet("records");
+      assertThat(records.getDataValidations()).hasSize(2);
+      assertValidation(records.getDataValidations().get(0), "dict_values_1", 4, true);
+      assertValidation(records.getDataValidations().get(1), "dict_values_2", 5, false);
+
+      var dictionarySheet = workbook.getSheet("字典选项");
+      assertThat(dictionarySheet).isNotNull();
+      assertThat(workbook.isSheetHidden(workbook.getSheetIndex(dictionarySheet))).isTrue();
+      assertThat(dictionarySheet.getRow(1).getCell(0).getStringCellValue()).isEqualTo("P1");
+      assertThat(dictionarySheet.getRow(2).getCell(0).getStringCellValue()).isEqualTo("P2");
+      assertThat(dictionarySheet.getRow(1).getCell(1).getStringCellValue()).isEqualTo("owner");
+      assertThat(dictionarySheet.getRow(2).getCell(1).getStringCellValue()).isEqualTo("reviewer");
+      assertThat(workbook.getName("dict_values_1").getRefersToFormula())
+          .isEqualTo("'字典选项'!$A$2:$A$3");
+      assertThat(workbook.getName("dict_values_2").getRefersToFormula())
+          .isEqualTo("'字典选项'!$B$2:$B$3");
+    }
+
+    verify(dictionaries).enabledItemValues("tenant-1", "record_priority");
+    verify(dictionaries).enabledItemValues("tenant-1", "record_role");
+  }
+
+  @Test
+  void skipsDropdownWhenDictionaryHasNoEnabledItems() throws Exception {
+    when(versions.findByTemplateAndVersion("tenant-1", "template-1", "version-1"))
+        .thenReturn(Optional.of(WorkRecordFixtures.version("version-1")));
+    when(fields.listEnabledByVersion("tenant-1", "version-1"))
+        .thenReturn(
+            List.of(dictionaryField("priority", "优先级", FieldType.SELECT, "empty_dict", 10)));
+    when(dictionaries.enabledItemValues("tenant-1", "empty_dict")).thenReturn(List.of());
+
+    var template = service.generate("tenant-1", "template-1", "version-1");
+
+    try (var workbook = new XSSFWorkbook(new ByteArrayInputStream(template.content()))) {
+      assertThat(workbook.getSheet("records").getDataValidations()).isEmpty();
+      assertThat(workbook.getSheet("字典选项")).isNull();
+    }
+  }
+
+  private static void assertValidation(
+      org.apache.poi.ss.usermodel.DataValidation validation,
+      String rangeName,
+      int columnIndex,
+      boolean showErrorBox) {
+    assertThat(validation.getValidationConstraint().getFormula1()).isEqualTo(rangeName);
+    assertThat(validation.getRegions().getCellRangeAddresses())
+        .containsExactly(
+            new CellRangeAddress(1, ExcelImportParser.MAX_ROWS, columnIndex, columnIndex));
+    assertThat(validation.getEmptyCellAllowed()).isTrue();
+    assertThat(validation.getShowErrorBox()).isEqualTo(showErrorBox);
+  }
+
+  private static WorkRecordField dictionaryField(
+      String code, String name, FieldType type, String dictCode, int sortOrder) {
+    return new WorkRecordField(
+        "field-" + code,
+        "tenant-1",
+        "template-1",
+        "version-1",
+        name,
+        code,
+        type,
+        false,
+        null,
+        OptionSource.DICT,
+        dictCode,
+        "[]",
+        ".properties." + code,
+        true,
+        true,
+        true,
+        false,
+        sortOrder,
+        true,
+        WorkRecordFixtures.NOW,
+        WorkRecordFixtures.NOW);
   }
 
   private static WorkRecordField field(

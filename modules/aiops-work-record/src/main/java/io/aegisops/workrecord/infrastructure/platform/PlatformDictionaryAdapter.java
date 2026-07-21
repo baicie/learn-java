@@ -3,6 +3,7 @@ package io.aegisops.workrecord.infrastructure.platform;
 import io.aegisops.platform.dictionary.DictionaryService;
 import io.aegisops.workrecord.application.port.WorkRecordDictionaryPort;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import org.springframework.stereotype.Component;
 
@@ -23,6 +24,13 @@ public class PlatformDictionaryAdapter implements WorkRecordDictionaryPort {
       throw new IllegalArgumentException(
           "dict item not found or disabled: " + dictCode + "/" + itemValue);
     }
+  }
+
+  @Override
+  public List<String> enabledItemValues(String tenantId, String dictCode) {
+    return dictionaryService.listItems(tenantId, dictCode).stream()
+        .map(item -> item.itemValue())
+        .toList();
   }
 
   @Override
