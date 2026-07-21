@@ -23,6 +23,7 @@ import {
 } from '@/api/work-records/extensions'
 import { useAuthStore } from '@/stores/auth-store'
 import { formatDateTime } from '@/lib/date-format'
+import { getAiGenerationRefetchInterval } from '@/hooks/work-records/ai-generation-polling'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -71,6 +72,8 @@ export function RecordExtensionPanel({ recordId }: { recordId: string }) {
     queryKey: ['work-record-ai-generations', recordId],
     queryFn: () => listRecordAiGenerations(recordId),
     enabled: permissions.includes('work-record:ai:generate'),
+    refetchInterval: (query) =>
+      getAiGenerationRefetchInterval(query.state.data),
   })
   const sla = useQuery({
     queryKey: ['work-record-sla', recordId],
