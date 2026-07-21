@@ -10,8 +10,7 @@ class WorkRecordAiTraceMigrationContractTest {
   @Test
   void migrationAddsAuditableProviderTraceColumns() throws Exception {
     Path migration =
-        Path.of(
-            "src/main/resources/db/migration/V0044__init_work_record_ai_generation_trace.sql");
+        Path.of("src/main/resources/db/migration/V0044__init_work_record_ai_generation_trace.sql");
 
     assertThat(migration).exists();
     String sql = Files.readString(migration).toLowerCase();
