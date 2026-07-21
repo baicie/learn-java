@@ -129,6 +129,7 @@ AIOPS_SERVER_IMAGE=example.invalid/aegisops:test \
 AIOPS_AGENT_IMAGE=example.invalid/aegisops/aiops-agent:test \
 AIOPS_WORKER_IMAGE=example.invalid/aegisops/aiops-worker:test \
 AIOPS_RUNNER_IMAGE=example.invalid/aegisops/aiops-runner:test \
+AIOPS_AGENT_INTERNAL_TOKEN=preflight-only \
   docker compose -f deploy/docker-compose.app.yml config --quiet
 ZABBIX_DB_PASSWORD=preflight-only \
   docker compose -f deploy/docker-compose.zabbix.yml config --quiet

@@ -24,8 +24,7 @@ public class HttpWorkRecordAiClient implements WorkRecordAiClient {
             .build();
   }
 
-  static SimpleClientHttpRequestFactory createRequestFactory(
-      AgentClientProperties properties) {
+  static SimpleClientHttpRequestFactory createRequestFactory(AgentClientProperties properties) {
     var factory = new SimpleClientHttpRequestFactory();
     factory.setConnectTimeout(properties.normalizedConnectTimeoutMillis());
     factory.setReadTimeout(properties.normalizedReadTimeoutMillis());
