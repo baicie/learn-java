@@ -27,18 +27,21 @@ public class AiGenerationService {
   private final WorkRecordQueryService records;
   private final OutboxWriter outbox;
   private final ObjectMapper objectMapper;
+  private final WorkRecordAuditService audit;
 
   public AiGenerationService(
       AiGenerationRepository generations,
       AiInputBuilder inputs,
       WorkRecordQueryService records,
       OutboxWriter outbox,
-      ObjectMapper objectMapper) {
+      ObjectMapper objectMapper,
+      WorkRecordAuditService audit) {
     this.generations = generations;
     this.inputs = inputs;
     this.records = records;
     this.outbox = outbox;
     this.objectMapper = objectMapper;
+    this.audit = audit;
   }
 
   @Transactional
@@ -103,7 +106,9 @@ public class AiGenerationService {
     if (!generations.review(tenantId, id, accepted ? "accepted" : "rejected", principal.id())) {
       throw new IllegalStateException("AI result cannot be reviewed");
     }
-    return generations.find(tenantId, id).orElseThrow();
+    AiGeneration reviewed = generations.find(tenantId, id).orElseThrow();
+    audit(reviewed, WorkRecordAuditActions.AI_GENERATION_REVIEWED, principal.id());
+    return reviewed;
   }
 
   private AiGeneration createOrReuse(GenerationRequest request) {
@@ -113,7 +118,9 @@ public class AiGenerationService {
         generations.findReusable(
             request.tenantId(), request.type(), request.resourceType(), request.resourceId(), hash);
     if (reusable.isPresent()) {
-      return reusable.get();
+      AiGeneration reused = reusable.get();
+      audit(reused, WorkRecordAuditActions.AI_GENERATION_REUSED, request.requestedBy());
+      return reused;
     }
     String id = Ids.newId();
     AiGeneration created =
@@ -147,7 +154,20 @@ public class AiGenerationService {
             "ai-generation:" + id,
             5,
             OffsetDateTime.now()));
+    audit(created, WorkRecordAuditActions.AI_GENERATION_REQUESTED, request.requestedBy());
     return created;
+  }
+
+  private void audit(AiGeneration generation, String action, String actorId) {
+    audit.record(
+        generation.tenantId(),
+        null,
+        null,
+        "work_record_ai_generation",
+        generation.id(),
+        action,
+        actorId,
+        write(Map.of("status", generation.status())));
   }
 
   private Object hashInput(Object input) {

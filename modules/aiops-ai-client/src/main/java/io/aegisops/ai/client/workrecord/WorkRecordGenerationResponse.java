@@ -10,6 +10,12 @@ public record WorkRecordGenerationResponse(
     String promptVersion,
     String markdown,
     List<String> warnings,
+    String providerRunId,
+    String providerWorkflowId,
+    String providerWorkflowVersion,
+    Long providerDurationMs,
+    Long providerTotalTokens,
+    String fallbackReason,
     Map<String, Object> raw) {
   public WorkRecordGenerationResponse {
     warnings = warnings == null ? List.of() : List.copyOf(warnings);
