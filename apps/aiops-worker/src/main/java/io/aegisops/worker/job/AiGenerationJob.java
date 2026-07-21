@@ -30,7 +30,8 @@ public class AiGenerationJob implements OutboxJob {
       if (!tenantId.equals(row.getTenantId())) {
         return JobResult.failure("TENANT_MISMATCH");
       }
-      processor.process(tenantId, required(payload, "generationId"));
+      boolean finalAttempt = row.getRetryCount() + 1 >= row.getMaxRetries();
+      processor.process(tenantId, required(payload, "generationId"), finalAttempt);
       return JobResult.success();
     } catch (Exception ex) {
       return JobResult.failure(ex.getClass().getSimpleName());

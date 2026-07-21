@@ -50,3 +50,18 @@ data:
   AIOPS_HTTP_METRICS_ENABLED: {{ .Values.observability.metrics.enabled | quote }}
   AIOPS_AGENT_OBSERVABILITY_ENABLED: {{ .Values.observability.enabled | quote }}
   AIOPS_AGENT_LOG_LEVEL: {{ .Values.config.logLevel | quote }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "aegisops.fullname" . }}-agent-dify
+  labels:
+    {{- include "aegisops.labels" . | nindent 4 }}
+data:
+  AIOPS_AGENT_WORK_RECORD_PROVIDER: {{ .Values.dify.workRecordProvider | quote }}
+  AIOPS_AGENT_DIFY_BASE_URL: {{ .Values.dify.baseUrl | quote }}
+  AIOPS_AGENT_DIFY_WORK_RECORD_WORKFLOW_ID: {{ .Values.dify.workRecordWorkflowId | quote }}
+  AIOPS_AGENT_DIFY_WORK_RECORD_WORKFLOW_VERSION: {{ .Values.dify.workRecordWorkflowVersion | quote }}
+  AIOPS_AGENT_DIFY_TIMEOUT_SECONDS: {{ .Values.dify.timeoutSeconds | quote }}
+  AIOPS_AGENT_DIFY_MAX_RETRIES: {{ .Values.dify.maxRetries | quote }}
+  AIOPS_AGENT_DIFY_MAX_INPUT_BYTES: {{ .Values.dify.maxInputBytes | quote }}

@@ -68,6 +68,34 @@ def test_worker_uses_compose_redis_service():
     assert worker["depends_on"]["redis"]["condition"] == "service_healthy"
 
 
+def test_worker_uses_agent_for_ai_generation():
+    compose_file = ROOT / "deploy/docker-compose.app.yml"
+    compose = yaml.safe_load(compose_file.read_text(encoding="utf-8"))
+    worker = compose["services"]["aiops-worker"]
+
+    assert worker["environment"]["AIOPS_AGENT_BASE_URL"] == "http://aiops-agent:9008"
+    assert worker["environment"]["AIOPS_AGENT_INTERNAL_TOKEN"] == "${AIOPS_AGENT_INTERNAL_TOKEN:?AIOPS_AGENT_INTERNAL_TOKEN is required}"
+    assert worker["depends_on"]["aiops-agent"]["condition"] == "service_healthy"
+
+
+def test_compose_dify_secrets_are_only_exposed_to_agent():
+    for relative_path in ("deploy/docker-compose.app.yml", "infra/docker-compose.yml"):
+        compose_file = ROOT / relative_path
+        compose = yaml.safe_load(compose_file.read_text(encoding="utf-8"))
+        services = compose["services"]
+
+        agent_environment = services["aiops-agent"]["environment"]
+        assert "AIOPS_AGENT_DIFY_WORK_RECORD_API_KEY" in agent_environment
+        assert "AIOPS_AGENT_DIFY_USER_HMAC_SECRET" in agent_environment
+
+        for service_name in ("aiops-server", "aiops-worker", "aiops-runner"):
+            if service_name not in services:
+                continue
+            environment = services[service_name]["environment"]
+            assert "AIOPS_AGENT_DIFY_WORK_RECORD_API_KEY" not in environment
+            assert "AIOPS_AGENT_DIFY_USER_HMAC_SECRET" not in environment
+
+
 def test_vm_compose_bounds_core_service_memory():
     compose_file = ROOT / "deploy/docker-compose.app.yml"
     compose = yaml.safe_load(compose_file.read_text(encoding="utf-8"))

@@ -121,3 +121,43 @@ AIOPS_AGENT_WORKFLOW_MEMORY_WRITE_ENABLED=false
 
 Checkpoint continuation uses `POST /v1/diagnose/resume` and requires the same internal
 token and optional contract-version headers as `POST /v1/diagnose`.
+
+## Work-record generation with Dify
+
+Work-record summaries and monthly reports use a capability-specific provider. The default
+remains deterministic and does not require Dify:
+
+```bash
+AIOPS_AGENT_WORK_RECORD_PROVIDER=deterministic
+```
+
+Enable the Dify Workflow provider only on `aiops-agent`:
+
+```bash
+AIOPS_AGENT_WORK_RECORD_PROVIDER=dify
+AIOPS_AGENT_DIFY_BASE_URL=https://dify.example.com/v1
+AIOPS_AGENT_DIFY_WORK_RECORD_API_KEY=agent-only-secret
+AIOPS_AGENT_DIFY_WORK_RECORD_WORKFLOW_ID=published-workflow-id
+AIOPS_AGENT_DIFY_WORK_RECORD_WORKFLOW_VERSION=work-record-2026-07-19.1
+AIOPS_AGENT_DIFY_TIMEOUT_SECONDS=75
+AIOPS_AGENT_DIFY_MAX_RETRIES=2
+AIOPS_AGENT_DIFY_MAX_INPUT_BYTES=65536
+AIOPS_AGENT_DIFY_USER_HMAC_SECRET=agent-only-hmac-secret
+```
+
+`DIFY_WORK_RECORD_WORKFLOW_ID` is optional. When configured, the client calls the fixed
+published workflow endpoint; otherwise it calls the app's current published workflow. The
+workflow must return `markdown`, `warnings`, and the configured `workflow_version` from its
+End node.
+
+The Agent sends a blocking request because the Java work-record flow is already asynchronous.
+It retries only rate limiting, explicit server errors without a known run ID, and connection
+failures. A timeout may have created a remote run, so it is not retried. Invalid output or any
+Dify failure returns the existing deterministic draft with an explicit warning and fallback
+reason.
+
+The serialized Dify context is limited to 64 KiB by default and excludes tenant ID, actor ID,
+and trace ID. The Dify `user` value is an HMAC of tenant and actor identity. Dify API and HMAC
+secrets must never be shared with the Portal, Java apps, Runner, logs, or persisted generation
+metadata. Dify remains a text-generation provider: it has no database, internal API, tool, or
+automation execution access, and every result remains a draft for human review.

@@ -45,6 +45,18 @@ class Settings(BaseSettings):
     # Keep enabled by default for stricter JSON when provider supports it.
     openai_response_format_enabled: bool = True
 
+    # Work-record generation is capability-specific so Incident diagnosis keeps
+    # its existing provider and graph configuration.
+    work_record_provider: str = "deterministic"
+    dify_base_url: str = ""
+    dify_work_record_api_key: str = ""
+    dify_work_record_workflow_id: str = ""
+    dify_work_record_workflow_version: str = "work-record-2026-07-19.1"
+    dify_timeout_seconds: float = Field(default=75.0, gt=0)
+    dify_max_retries: int = Field(default=2, ge=0, le=5)
+    dify_max_input_bytes: int = Field(default=65536, gt=0)
+    dify_user_hmac_secret: str = ""
+
     # Phase4.3 evidence tool. When disabled, the agent uses
     # DisabledEvidenceClient and the raw response shows unavailable markers.
     evidence_enabled: bool = False
@@ -95,6 +107,15 @@ class Settings(BaseSettings):
         while value.endswith("/"):
             value = value[:-1]
         return value
+
+    def normalized_work_record_provider(self) -> str:
+        value = (self.work_record_provider or "deterministic").strip().lower()
+        if value not in {"deterministic", "dify"}:
+            return "deterministic"
+        return value
+
+    def normalized_dify_base_url(self) -> str:
+        return (self.dify_base_url or "").strip().rstrip("/")
 
     def normalized_evidence_base_url(self) -> str:
         value = (self.evidence_base_url or "").strip()

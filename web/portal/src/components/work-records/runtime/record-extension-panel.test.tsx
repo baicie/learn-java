@@ -56,6 +56,8 @@ const api = vi.hoisted(() => ({
       outputMarkdown: '## 自动总结',
       provider: 'deterministic',
       model: 'fallback',
+      warningsJson: '["Dify 服务暂时不可用"]',
+      fallbackReason: 'http_503',
       requestedBy: 'user-1',
       reviewedBy: null,
       createdAt: '2026-07-14T00:00:00Z',
@@ -128,6 +130,8 @@ describe('RecordExtensionPanel', () => {
 
     await screen.getByRole('tab', { name: 'AI 总结' }).click()
     await expect.element(screen.getByText('## 自动总结')).toBeVisible()
+    await expect.element(screen.getByText('Dify 服务暂时不可用')).toBeVisible()
+    await expect.element(screen.getByText('降级原因：http_503')).toBeVisible()
     await screen.getByRole('button', { name: '采纳' }).click()
     expect(api.reviewAiGeneration).toHaveBeenCalledWith('ai-1', true)
 
