@@ -3,6 +3,7 @@ import { i18n } from '@/i18n'
 import { I18nextProvider } from 'react-i18next'
 import { describe, expect, it, vi } from 'vitest'
 import { render } from 'vitest-browser-react'
+import { useAuthStore } from '@/stores/auth-store'
 import { RecordTable } from './record-table'
 import type { RecordListColumn, WorkRecord } from './types'
 
@@ -45,11 +46,15 @@ function column(fieldCode: string, title: string): RecordListColumn {
   }
 }
 
-function renderTable(columns: RecordListColumn[], onSort = vi.fn()) {
+function renderTable(
+  columns: RecordListColumn[],
+  onSort = vi.fn(),
+  records: WorkRecord[] = [record]
+) {
   return render(
     <I18nextProvider i18n={i18n} defaultNS='translation'>
       <RecordTable
-        records={[record]}
+        records={records}
         columns={columns}
         dictOptions={{
           priority: [
@@ -172,5 +177,25 @@ describe('RecordTable', () => {
     ])
 
     await expect.element(screen.getByText('2026/07/11 10:00:00')).toBeVisible()
+  })
+
+  it('shows an edit entry for drafts when the user can write records', async () => {
+    useAuthStore.getState().auth.setPrincipal({
+      userId: 'user-1',
+      tenantId: 'tenant-1',
+      username: 'user-1',
+      displayName: '张三',
+      roles: [],
+      permissions: ['work-record:write'],
+      dataScopes: {},
+    })
+
+    const screen = await renderTable([], vi.fn(), [
+      { ...record, status: 'draft' },
+    ])
+
+    await expect
+      .element(screen.getByRole('link', { name: '编辑' }))
+      .toBeVisible()
   })
 })
