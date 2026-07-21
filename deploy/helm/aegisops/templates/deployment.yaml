@@ -43,9 +43,25 @@ spec:
                 name: {{ include "aegisops.fullname" $root }}-config
             - secretRef:
                 name: {{ include "aegisops.fullname" $root }}-secret
+            {{- if eq $appName "agent" }}
+            - configMapRef:
+                name: {{ include "aegisops.fullname" $root }}-agent-dify
+            {{- end }}
           env:
             - name: AIOPS_APP_NAME
               value: {{ $appName | quote }}
+            {{- if and (eq $appName "agent") (eq $root.Values.dify.workRecordProvider "dify") }}
+            - name: AIOPS_AGENT_DIFY_WORK_RECORD_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "aegisops.fullname" $root }}-agent-dify
+                  key: AIOPS_AGENT_DIFY_WORK_RECORD_API_KEY
+            - name: AIOPS_AGENT_DIFY_USER_HMAC_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "aegisops.fullname" $root }}-agent-dify
+                  key: AIOPS_AGENT_DIFY_USER_HMAC_SECRET
+            {{- end }}
             {{- range $key, $value := $app.env }}
             - name: {{ $key }}
               value: {{ $value | quote }}

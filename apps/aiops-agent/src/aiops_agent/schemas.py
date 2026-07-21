@@ -130,6 +130,7 @@ class WorkRecordGenerateRequest(BaseModel):
     generationType: str
     tenantId: str
     resourceId: str
+    actorId: str | None = None
     periodStart: date | None = None
     periodEnd: date | None = None
     locale: str = "zh-CN"
@@ -146,4 +147,10 @@ class WorkRecordGenerateResponse(BaseModel):
     promptVersion: str
     markdown: str = Field(min_length=1, max_length=100000)
     warnings: list[str] = Field(default_factory=list)
+    providerRunId: str | None = None
+    providerWorkflowId: str | None = None
+    providerWorkflowVersion: str | None = None
+    providerDurationMs: int | None = Field(default=None, ge=0)
+    providerTotalTokens: int | None = Field(default=None, ge=0)
+    fallbackReason: str | None = None
     raw: dict[str, Any] = Field(default_factory=dict)

@@ -5,6 +5,7 @@ import io.aegisops.ai.client.AgentContract;
 import io.aegisops.common.exception.AppException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
@@ -18,8 +19,16 @@ public class HttpWorkRecordAiClient implements WorkRecordAiClient {
     this.restClient =
         builder
             .baseUrl(properties.normalizedBaseUrl())
+            .requestFactory(createRequestFactory(properties))
             .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
             .build();
+  }
+
+  static SimpleClientHttpRequestFactory createRequestFactory(AgentClientProperties properties) {
+    var factory = new SimpleClientHttpRequestFactory();
+    factory.setConnectTimeout(properties.normalizedConnectTimeoutMillis());
+    factory.setReadTimeout(properties.normalizedReadTimeoutMillis());
+    return factory;
   }
 
   @Override

@@ -17,4 +17,11 @@ public final class WorkRecordAuditActions {
   public static final String RECORD_DELETE = "work_record.record.delete";
   public static final String RECORD_EXPORT = "work_record.record.export";
   public static final String RECORD_APPROVAL = "work_record.record.approval";
+
+  public static final String AI_GENERATION_REQUESTED = "work_record.ai_generation.requested";
+  public static final String AI_GENERATION_REUSED = "work_record.ai_generation.reused";
+  public static final String AI_GENERATION_SUCCEEDED = "work_record.ai_generation.succeeded";
+  public static final String AI_GENERATION_FALLBACK = "work_record.ai_generation.fallback";
+  public static final String AI_GENERATION_FAILED = "work_record.ai_generation.failed";
+  public static final String AI_GENERATION_REVIEWED = "work_record.ai_generation.reviewed";
 }

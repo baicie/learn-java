@@ -102,6 +102,8 @@ jobs:
     runs-on: [self-hosted, linux, x64, aegisops-cn]
     timeout-minutes: 45
     needs: preflight
+    env:
+      AIOPS_AGENT_INTERNAL_TOKEN: runtime-smoke-only
     if: >-
       github.event_name != 'pull_request' &&
       needs.preflight.outputs.release_required == 'true'

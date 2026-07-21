@@ -100,11 +100,38 @@ public class JdbcAiGenerationRepository implements AiGenerationRepository {
   }
 
   @Override
-  public boolean complete(
-      String tenantId, String id, String markdown, String provider, String model) {
-    return updateState(
-            new StateChange(tenantId, id, "success", "running", markdown, provider, model))
+  public boolean complete(CompleteGeneration command) {
+    Map<String, Object> p = new HashMap<>();
+    p.put("tenantId", command.tenantId());
+    p.put("id", command.id());
+    p.put("markdown", command.markdown());
+    p.put("provider", command.provider());
+    p.put("model", command.model());
+    p.put("providerRunId", command.providerRunId());
+    p.put("providerWorkflowId", command.providerWorkflowId());
+    p.put("providerWorkflowVersion", command.providerWorkflowVersion());
+    p.put("providerDurationMs", command.providerDurationMs());
+    p.put("providerTotalTokens", command.providerTotalTokens());
+    p.put("warningsJson", command.warningsJson());
+    p.put("fallbackReason", command.fallbackReason());
+    return jdbc.update(
+            """
+            update work_record.wr_ai_generation
+               set status='success', output_markdown=:markdown, provider=:provider, model=:model,
+                   provider_run_id=:providerRunId, provider_workflow_id=:providerWorkflowId,
+                   provider_workflow_version=:providerWorkflowVersion,
+                   provider_duration_ms=:providerDurationMs, provider_total_tokens=:providerTotalTokens,
+                   warnings_json=cast(:warningsJson as jsonb), fallback_reason=:fallbackReason,
+                   finished_at=now()
+             where tenant_id=:tenantId and id=:id and status='running'
+            """,
+            p)
         == 1;
+  }
+
+  @Override
+  public boolean markRetrying(String tenantId, String id) {
+    return updateState(new StateChange(tenantId, id, "queued", "running", null, null, null)) == 1;
   }
 
   @Override
@@ -167,6 +194,13 @@ public class JdbcAiGenerationRepository implements AiGenerationRepository {
         rs.getString("output_markdown"),
         rs.getString("provider"),
         rs.getString("model"),
+        rs.getString("provider_run_id"),
+        rs.getString("provider_workflow_id"),
+        rs.getString("provider_workflow_version"),
+        rs.getObject("provider_duration_ms", Long.class),
+        rs.getObject("provider_total_tokens", Long.class),
+        rs.getString("warnings_json"),
+        rs.getString("fallback_reason"),
         rs.getString("requested_by"),
         rs.getString("reviewed_by"),
         rs.getObject("reviewed_at", OffsetDateTime.class),
@@ -177,6 +211,8 @@ public class JdbcAiGenerationRepository implements AiGenerationRepository {
   private static String select() {
     return "select id,tenant_id,generation_type,resource_type,resource_id,period_start,period_end,"
         + "status,prompt_version,input_hash,input_json::text,output_markdown,provider,model,"
+        + "provider_run_id,provider_workflow_id,provider_workflow_version,provider_duration_ms,"
+        + "provider_total_tokens,warnings_json::text,fallback_reason,"
         + "requested_by,reviewed_by,reviewed_at,created_at,finished_at from work_record.wr_ai_generation";
   }
 }

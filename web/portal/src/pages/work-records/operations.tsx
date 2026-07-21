@@ -30,6 +30,7 @@ import {
 } from '@/components/ui/table'
 import { ErrorState } from '@/components/feedback/async-state'
 import { PermissionGate } from '@/components/permission-gate'
+import { AiGenerationNotice } from '@/components/work-records/runtime/ai-generation-notice'
 
 function defaultDates() {
   const now = new Date()
@@ -271,6 +272,7 @@ export function WorkRecordOperationsPage() {
                     {item.outputMarkdown}
                   </pre>
                 )}
+                <AiGenerationNotice generation={item} />
               </div>
             ))}
             {queries.monthlyReports.data?.length === 0 && (
