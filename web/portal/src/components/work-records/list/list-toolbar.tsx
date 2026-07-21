@@ -139,7 +139,6 @@ export function ListToolbar({ meta, query, userOptions, onChange }: Props) {
               creatorId: '',
               recordTimeFrom: '',
               recordTimeTo: '',
-              dynamicFilters: [],
             })
           }
         >

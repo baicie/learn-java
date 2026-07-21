@@ -299,11 +299,6 @@ export function PropertyPanel({
             onChange={(value) => onChange(field.id, { listVisible: value })}
           />
           <Flag
-            label={t('workRecords.designer.property.filterable')}
-            checked={field.filterable}
-            onChange={(value) => onChange(field.id, { filterable: value })}
-          />
-          <Flag
             label={t('workRecords.designer.property.exportable')}
             checked={field.exportable}
             onChange={(value) => onChange(field.id, { exportable: value })}

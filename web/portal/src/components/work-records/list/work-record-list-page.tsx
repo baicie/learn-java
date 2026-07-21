@@ -21,7 +21,6 @@ import {
 import { ResponsiveTable } from '@/components/layout/responsive-table'
 import { TableToolbar } from '@/components/layout/table-toolbar'
 import { ColumnControl } from './column-control'
-import { DynamicFilterPanel } from './dynamic-filter-panel'
 import { ListToolbar } from './list-toolbar'
 import { QuickViewTabs } from './quick-view-tabs'
 import { RecordTable } from './record-table'
@@ -136,16 +135,6 @@ export function WorkRecordListPage() {
         columns={view.meta?.columns ?? []}
         visible={query.visibleColumns}
         onChange={(visible) => setQuery({ ...query, visibleColumns: visible })}
-      />
-
-      <DynamicFilterPanel
-        fields={(view.meta?.columns ?? []).filter(
-          (column) => column.source === 'custom' && column.filterable
-        )}
-        filters={query.dynamicFilters}
-        onChange={(filters) =>
-          setQuery({ ...query, dynamicFilters: filters, page: 1 })
-        }
       />
 
       {view.workdaySummary ? (

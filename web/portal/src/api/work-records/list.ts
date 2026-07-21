@@ -70,7 +70,6 @@ const metaSchema = z.object({
   templates: z.array(templateSchema),
   columns: z.array(columnSchema),
   exportColumns: z.array(columnSchema),
-  filterFields: z.array(columnSchema),
   dictCodes: z.array(z.string()),
   maxExportRows: z.number(),
   quickViews: z.array(z.string()),
@@ -95,9 +94,6 @@ export async function fetchRecordList(
       recordTimeTo: toOffset(params.recordTimeTo),
       sortBy: params.sortBy,
       sortDir: params.sortDir,
-      dynamicFilters: params.dynamicFilters.length
-        ? JSON.stringify(params.dynamicFilters)
-        : undefined,
     },
   })
 
