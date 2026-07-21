@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -30,9 +31,15 @@ class AiGenerationServiceTest {
     AiGenerationRepository repository = mock(AiGenerationRepository.class);
     AiInputBuilder inputs = mock(AiInputBuilder.class);
     OutboxWriter outbox = mock(OutboxWriter.class);
+    WorkRecordAuditService audit = mock(WorkRecordAuditService.class);
     var service =
         new AiGenerationService(
-            repository, inputs, mock(WorkRecordQueryService.class), outbox, new ObjectMapper());
+            repository,
+            inputs,
+            mock(WorkRecordQueryService.class),
+            outbox,
+            new ObjectMapper(),
+            audit);
     when(inputs.monthlyReport(any(), any(), any(), any()))
         .thenReturn(generationRequest("monthly_report"));
     when(repository.findReusable(any(), any(), any(), any(), any())).thenReturn(Optional.empty());
@@ -47,6 +54,16 @@ class AiGenerationServiceTest {
 
     assertThat(result.status()).isEqualTo("queued");
     verify(outbox).enqueue(any(OutboxMessage.class));
+    verify(audit)
+        .record(
+            "tenant-1",
+            null,
+            null,
+            "work_record_ai_generation",
+            "ai-1",
+            WorkRecordAuditActions.AI_GENERATION_REQUESTED,
+            "user-1",
+            "{\"status\":\"queued\"}");
   }
 
   @Test
@@ -54,9 +71,15 @@ class AiGenerationServiceTest {
     AiGenerationRepository repository = mock(AiGenerationRepository.class);
     AiInputBuilder inputs = mock(AiInputBuilder.class);
     OutboxWriter outbox = mock(OutboxWriter.class);
+    WorkRecordAuditService audit = mock(WorkRecordAuditService.class);
     var service =
         new AiGenerationService(
-            repository, inputs, mock(WorkRecordQueryService.class), outbox, new ObjectMapper());
+            repository,
+            inputs,
+            mock(WorkRecordQueryService.class),
+            outbox,
+            new ObjectMapper(),
+            audit);
     when(inputs.recordSummary(any(), any(), any(), any()))
         .thenReturn(generationRequest("record_summary"));
     when(repository.findReusable(any(), any(), any(), any(), any()))
@@ -69,6 +92,57 @@ class AiGenerationServiceTest {
         .isEqualTo("success");
     verify(repository, never()).create(any());
     verify(outbox, never()).enqueue(any(OutboxMessage.class));
+    verify(audit)
+        .record(
+            "tenant-1",
+            null,
+            null,
+            "work_record_ai_generation",
+            "ai-1",
+            WorkRecordAuditActions.AI_GENERATION_REUSED,
+            "user-1",
+            "{\"status\":\"success\"}");
+  }
+
+  @Test
+  void ignoresTraceIdWhenHashingIdenticalBusinessInput() {
+    AiGenerationRepository repository = mock(AiGenerationRepository.class);
+    AiInputBuilder inputs = mock(AiInputBuilder.class);
+    OutboxWriter outbox = mock(OutboxWriter.class);
+    var service =
+        new AiGenerationService(
+            repository,
+            inputs,
+            mock(WorkRecordQueryService.class),
+            outbox,
+            new ObjectMapper(),
+            mock(WorkRecordAuditService.class));
+    when(inputs.recordSummary(any(), any(), any(), any()))
+        .thenReturn(generationRequest("record_summary", "trace-1"))
+        .thenReturn(generationRequest("record_summary", "trace-2"));
+    java.util.concurrent.atomic.AtomicReference<String> firstHash =
+        new java.util.concurrent.atomic.AtomicReference<>();
+    when(repository.findReusable(any(), any(), any(), any(), any()))
+        .thenAnswer(
+            invocation -> {
+              String hash = invocation.getArgument(4);
+              if (firstHash.get() == null) {
+                firstHash.set(hash);
+                return Optional.empty();
+              }
+              return firstHash.get().equals(hash)
+                  ? Optional.of(generation("success"))
+                  : Optional.empty();
+            });
+    when(repository.create(any())).thenAnswer(invocation -> generation("queued"));
+
+    UserPrincipal principal = principal(PermissionCodes.WORK_RECORD_AI_GENERATE);
+    service.requestRecordSummary("tenant-1", "record-1", principal);
+    AiGeneration reused = service.requestRecordSummary("tenant-1", "record-1", principal);
+
+    assertThat(reused.status()).isEqualTo("success");
+    verify(repository, times(1)).create(any());
+    verify(outbox, times(1)).enqueue(any());
   }
 
   @Test
@@ -80,7 +154,8 @@ class AiGenerationServiceTest {
             mock(AiInputBuilder.class),
             mock(WorkRecordQueryService.class),
             mock(OutboxWriter.class),
-            new ObjectMapper());
+            new ObjectMapper(),
+            mock(WorkRecordAuditService.class));
 
     assertThatThrownBy(
             () -> service.review("tenant-1", "ai-1", true, principal("work-record:read:all")))
@@ -95,7 +170,8 @@ class AiGenerationServiceTest {
             mock(AiInputBuilder.class),
             mock(WorkRecordQueryService.class),
             mock(OutboxWriter.class),
-            new ObjectMapper());
+            new ObjectMapper(),
+            mock(WorkRecordAuditService.class));
 
     assertThatThrownBy(
             () ->
@@ -104,6 +180,35 @@ class AiGenerationServiceTest {
                     LocalDate.of(2026, 7, 1),
                     principal(PermissionCodes.WORK_RECORD_AI_GENERATE)))
         .isInstanceOf(AccessDeniedException.class);
+  }
+
+  @Test
+  void reviewAuditsTheDecisionWithoutGeneratedContent() {
+    AiGenerationRepository repository = mock(AiGenerationRepository.class);
+    WorkRecordAuditService audit = mock(WorkRecordAuditService.class);
+    when(repository.review("tenant-1", "ai-1", "accepted", "user-1")).thenReturn(true);
+    when(repository.find("tenant-1", "ai-1")).thenReturn(Optional.of(generation("accepted")));
+    var service =
+        new AiGenerationService(
+            repository,
+            mock(AiInputBuilder.class),
+            mock(WorkRecordQueryService.class),
+            mock(OutboxWriter.class),
+            new ObjectMapper(),
+            audit);
+
+    service.review("tenant-1", "ai-1", true, principal(PermissionCodes.WORK_RECORD_AI_REVIEW));
+
+    verify(audit)
+        .record(
+            "tenant-1",
+            null,
+            null,
+            "work_record_ai_generation",
+            "ai-1",
+            WorkRecordAuditActions.AI_GENERATION_REVIEWED,
+            "user-1",
+            "{\"status\":\"accepted\"}");
   }
 
   private static UserPrincipal principal(String... permissions) {
@@ -115,6 +220,10 @@ class AiGenerationServiceTest {
   }
 
   private static WorkRecordGenerationRequest generationRequest(String type) {
+    return generationRequest(type, "trace-1");
+  }
+
+  private static WorkRecordGenerationRequest generationRequest(String type, String traceId) {
     return new WorkRecordGenerationRequest(
         "work-record-generation.v1",
         type,
@@ -122,11 +231,12 @@ class AiGenerationServiceTest {
         "resource-1",
         null,
         null,
+        null,
         "zh-CN",
         "prompt-v1",
         java.util.List.of(),
         Map.of(),
-        "trace-1");
+        traceId);
   }
 
   private static AiGeneration generation(String status) {
@@ -144,6 +254,13 @@ class AiGenerationServiceTest {
         "{}",
         null,
         null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        "[]",
         null,
         "user-1",
         null,

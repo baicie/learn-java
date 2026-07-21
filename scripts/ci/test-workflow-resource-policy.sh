@@ -7,6 +7,7 @@ OPS_WORKFLOW="$ROOT_DIR/.github/workflows/ops-scripts.yml"
 RELEASE_WORKFLOW="$ROOT_DIR/.github/workflows/release-verify.yml"
 DEPLOY_WORKFLOW="$ROOT_DIR/.github/workflows/deploy.yml"
 E2E_WORKFLOW="$ROOT_DIR/.github/workflows/work-record-e2e.yml"
+RELEASE_PREFLIGHT="$ROOT_DIR/scripts/ci/release-preflight.sh"
 
 require_text() {
   local file=$1
@@ -43,6 +44,8 @@ reject_text "$RELEASE_WORKFLOW" "cache: maven"
 reject_text "$DEPLOY_WORKFLOW" "cache: maven"
 reject_text "$E2E_WORKFLOW" "cache: maven"
 require_text "$DEPLOY_WORKFLOW" "Reusing \$image from Release Verify"
+require_text "$RELEASE_PREFLIGHT" "AIOPS_AGENT_INTERNAL_TOKEN=preflight-only"
+require_text "$RELEASE_WORKFLOW" "AIOPS_AGENT_INTERNAL_TOKEN: runtime-smoke-only"
 
 release_build_count="$(grep -Ec '^[[:space:]]+docker build \\' "$RELEASE_WORKFLOW")"
 if [ "$release_build_count" -ne 4 ]; then

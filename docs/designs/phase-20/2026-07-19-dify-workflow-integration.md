@@ -5,7 +5,7 @@ status: draft
 phase: phase-20
 owner: ai
 created: 2026-07-19
-updated: 2026-07-19
+updated: 2026-07-21
 related:
   - docs/adr/0003-aiops-agent-boundary.md
   - docs/ai-agent-design.md
@@ -339,7 +339,7 @@ Secret 规则：
 
 ```text
 apps/aiops-server/src/main/resources/db/migration/
-  V0044__extend_work_record_ai_generation_trace.sql
+  V0044__init_work_record_ai_generation_trace.sql
 ```
 
 在 `work_record.wr_ai_generation` 增加：
@@ -401,7 +401,7 @@ work_record.ai_generation.reviewed
 | `modules/aiops-ai-client/src/main/java/io/aegisops/ai/client/workrecord/WorkRecordGenerationResponse.java`           | 结构化 Provider 元数据       |
 | `modules/aiops-work-record/src/main/java/io/aegisops/workrecord/application/service/WorkRecordAuditActions.java`     | AI 生成审计动作常量          |
 | `apps/aiops-worker/src/main/java/io/aegisops/worker/job/AiGenerationJob.java`                                        | Outbox 重试与最终失败编排    |
-| `V0044__extend_work_record_ai_generation_trace.sql`                                                                  | 可追溯字段                   |
+| `V0044__init_work_record_ai_generation_trace.sql`                                                                    | 可追溯字段                   |
 
 ### 9.3 Portal、部署与文档
 
@@ -508,7 +508,7 @@ feat(ai): 接入 Dify 工作记录生成工作流
 
 实施步骤：
 
-- [ ] 新增 `V0044__extend_work_record_ai_generation_trace.sql` migration 测试。
+- [x] 新增 `V0044__init_work_record_ai_generation_trace.sql` migration 测试。
 - [ ] 扩展 `WorkRecordGenerationResponse` 与 `AiGeneration` 元数据字段。
 - [ ] 扩展 Repository create/select/complete SQL 和 RowMapper 测试。
 - [ ] 修改 `AiGenerationProcessor`，持久化 Run ID、版本、耗时、Token、warnings 和降级原因。

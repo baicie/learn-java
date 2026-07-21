@@ -5,13 +5,14 @@ status: accepted
 phase: work-record-20
 owner: ai
 created: 2026-07-14
-updated: 2026-07-20
+updated: 2026-07-21
 related:
   - modules/aiops-work-record/src/main/java/io/aegisops/workrecord/api
   - apps/aiops-server/src/main/resources/db/migration/V0030__init_phase20_async_foundation.sql
   - apps/aiops-server/src/main/resources/db/migration/V0031__init_phase20_import_export.sql
   - apps/aiops-server/src/main/resources/db/migration/V0032__init_phase20_collaboration.sql
   - apps/aiops-server/src/main/resources/db/migration/V0042__init_async_job_permissions.sql
+  - apps/aiops-server/src/main/resources/db/migration/V0044__init_work_record_ai_generation_trace.sql
 ---
 
 # 工作记录 Phase 20 异步与协作 API
@@ -74,3 +75,23 @@ related:
 - `GET /api/work-record/workflow/records/{recordId}/sla`：查询有权限访问记录的 SLA 实例。
 
 动态统计字段、筛选、写入和 AI 输入均执行字段级策略。模板包安装前校验 SHA-256；AI 输出只保存为待人工审核草稿；审批任务与 SLA 扫描使用数据库锁避免并发重复处理。
+
+## AI 生成结果与 Dify 追踪
+
+`POST /api/work-record/ai-generations/records/{recordId}/summary` 和 `POST /api/work-record/ai-generations/monthly` 只创建异步任务。Portal 对 `queued`、`running` 每 2 秒轮询，进入 `success`、`failed`、`accepted` 或 `rejected` 后停止。
+
+AI 生成结果在原有字段之外返回以下可空追踪字段：
+
+| 字段                      | 含义                                               |
+| ------------------------- | -------------------------------------------------- |
+| `providerRunId`           | Dify Workflow Run ID                               |
+| `providerWorkflowId`      | 固定发布的 Workflow ID                             |
+| `providerWorkflowVersion` | AegisOps 配置的 Workflow 版本                      |
+| `providerDurationMs`      | Provider 调用耗时，单位毫秒                        |
+| `providerTotalTokens`     | Dify 返回的总 Token 数                             |
+| `warningsJson`            | JSON 字符串数组；Portal 解析失败时按空数组处理     |
+| `fallbackReason`          | 降级原因，如 `timeout`、`http_503`、`empty_output` |
+
+`status=success` 仅表示草稿已经生成，不表示 Dify 一定成功。当 `fallbackReason` 非空时，结果由确定性模板降级生成，Portal 必须同时显示降级原因和 warnings，仍需具备 `work-record:ai:review` 权限的用户审核。后端不保存 Dify 原始响应、完整 Prompt 或推理过程。
+
+Java 到 Agent 的连接超时由 `AIOPS_AGENT_CONNECT_TIMEOUT` 控制；Worker 的读取超时由 `AIOPS_AGENT_READ_TIMEOUT` 控制，默认 90 秒，高于 Dify 的 75 秒 blocking 调用预算。

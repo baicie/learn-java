@@ -23,6 +23,7 @@ import {
 } from '@/api/work-records/extensions'
 import { useAuthStore } from '@/stores/auth-store'
 import { formatDateTime } from '@/lib/date-format'
+import { getAiGenerationRefetchInterval } from '@/hooks/work-records/ai-generation-polling'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -39,6 +40,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { ErrorState } from '@/components/feedback/async-state'
 import { PermissionGate } from '@/components/permission-gate'
+import { AiGenerationNotice } from './ai-generation-notice'
 
 export function RecordExtensionPanel({ recordId }: { recordId: string }) {
   const client = useQueryClient()
@@ -71,6 +73,8 @@ export function RecordExtensionPanel({ recordId }: { recordId: string }) {
     queryKey: ['work-record-ai-generations', recordId],
     queryFn: () => listRecordAiGenerations(recordId),
     enabled: permissions.includes('work-record:ai:generate'),
+    refetchInterval: (query) =>
+      getAiGenerationRefetchInterval(query.state.data),
   })
   const sla = useQuery({
     queryKey: ['work-record-sla', recordId],
@@ -321,6 +325,7 @@ export function RecordExtensionPanel({ recordId }: { recordId: string }) {
                     {item.outputMarkdown}
                   </pre>
                 )}
+                <AiGenerationNotice generation={item} />
                 {item.status === 'success' && (
                   <PermissionGate any={['work-record:ai:review']}>
                     <div className='flex gap-2'>

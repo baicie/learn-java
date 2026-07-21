@@ -4,6 +4,7 @@ import {
   actOnApprovalTask,
   createComment,
   getStatistics,
+  listRecordAiGenerations,
   listComments,
 } from './extensions'
 
@@ -56,6 +57,45 @@ describe('work-record extension api', () => {
     expect(await createComment('record-1', '已确认')).toEqual(comment)
     expect(await actOnApprovalTask('task-1', true, '同意')).toEqual({
       status: 'approved',
+    })
+  })
+
+  it('parses AI provider trace and fallback metadata', async () => {
+    vi.mocked(apiClient.get).mockResolvedValueOnce(
+      envelope([
+        {
+          id: 'ai-1',
+          generationType: 'record_summary',
+          resourceType: 'record',
+          resourceId: 'record-1',
+          status: 'success',
+          outputMarkdown: '# 总结',
+          provider: 'deterministic',
+          model: 'fallback',
+          providerRunId: 'run-1',
+          providerWorkflowId: 'workflow-1',
+          providerWorkflowVersion: 'version-1',
+          providerDurationMs: 1234,
+          providerTotalTokens: 321,
+          warningsJson: '["Dify 服务暂时不可用"]',
+          fallbackReason: 'http_503',
+          requestedBy: 'user-1',
+          reviewedBy: null,
+          createdAt: '2026-07-14T00:00:00Z',
+          finishedAt: '2026-07-14T00:00:01Z',
+        },
+      ])
+    )
+
+    const [generation] = await listRecordAiGenerations('record-1')
+
+    expect(generation).toMatchObject({
+      providerRunId: 'run-1',
+      providerWorkflowVersion: 'version-1',
+      providerDurationMs: 1234,
+      providerTotalTokens: 321,
+      warningsJson: '["Dify 服务暂时不可用"]',
+      fallbackReason: 'http_503',
     })
   })
 })

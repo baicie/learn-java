@@ -63,6 +63,8 @@ vi.mock('@/hooks/work-records/use-work-record-operations', () => ({
           resourceId: '2026-07',
           status: 'success',
           outputMarkdown: '## 七月月报',
+          warningsJson: '["Dify 月报生成失败，已使用确定性模板"]',
+          fallbackReason: 'timeout',
         },
       ],
     },
@@ -116,6 +118,10 @@ describe('WorkRecordOperationsPage', () => {
     await expect.element(screen.getByText('夜班交接')).toBeVisible()
     await expect.element(screen.getByText('标准日报')).toBeVisible()
     await expect.element(screen.getByText('## 七月月报')).toBeVisible()
+    await expect
+      .element(screen.getByText('Dify 月报生成失败，已使用确定性模板'))
+      .toBeVisible()
+    await expect.element(screen.getByText('降级原因：timeout')).toBeVisible()
     await expect.element(screen.getByText('生产日报')).toBeVisible()
 
     await screen.getByRole('button', { name: '生成月报' }).click()

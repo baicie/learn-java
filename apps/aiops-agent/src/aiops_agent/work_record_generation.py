@@ -3,34 +3,182 @@ from __future__ import annotations
 import json
 from collections import Counter
 
+from aiops_agent.dify_workflow import DifyWorkflowClient, DifyWorkflowError
+from aiops_agent.observability.metrics import DIFY_FALLBACK_COUNT, DIFY_TOKEN_COUNT
 from aiops_agent.schemas import WorkRecordGenerateRequest, WorkRecordGenerateResponse
 from aiops_agent.settings import Settings
 
 
 class WorkRecordGenerationService:
-    def __init__(self, settings: Settings) -> None:
+    def __init__(
+        self,
+        settings: Settings,
+        dify_client: DifyWorkflowClient | None = None,
+    ) -> None:
         self._settings = settings
+        self._dify_client = dify_client or DifyWorkflowClient(settings)
 
     async def generate(
         self, request: WorkRecordGenerateRequest
     ) -> WorkRecordGenerateResponse:
         if request.generationType not in {"record_summary", "monthly_report"}:
             raise ValueError("unsupported work-record generation type")
+        if self._settings.normalized_work_record_provider() == "dify":
+            return await self._generate_with_dify(request)
+        return self._deterministic_response(request)
+
+    async def _generate_with_dify(
+        self,
+        request: WorkRecordGenerateRequest,
+    ) -> WorkRecordGenerateResponse:
+        context_json = self._report_context_json(request)
+        input_bytes = len(context_json.encode("utf-8"))
+        if input_bytes > self._settings.dify_max_input_bytes:
+            return self._fallback_response(
+                request,
+                reason="input_too_large",
+                warning=(
+                    f"Dify 输入超过 {self._settings.dify_max_input_bytes} 字节，"
+                    "已使用确定性模板。"
+                ),
+                input_bytes=input_bytes,
+            )
+
+        try:
+            result = await self._dify_client.run(request, context_json)
+        except DifyWorkflowError as exc:
+            return self._fallback_response(
+                request,
+                reason=exc.reason,
+                warning="Dify 生成失败，已使用确定性模板。",
+                input_bytes=input_bytes,
+            )
+
+        if result.total_tokens is not None:
+            DIFY_TOKEN_COUNT.labels(request.generationType).inc(result.total_tokens)
+        raw = self._base_raw(request, input_bytes)
+        raw.update(
+            {
+                "providerRunId": result.run_id,
+                "providerWorkflowId": result.workflow_id,
+                "providerWorkflowVersion": result.workflow_version,
+                "providerDurationMs": result.elapsed_ms,
+                "providerTotalTokens": result.total_tokens,
+                "fallbackReason": None,
+            }
+        )
+        return WorkRecordGenerateResponse(
+            provider=result.provider,
+            model=result.model,
+            promptVersion=request.promptVersion,
+            markdown=result.markdown,
+            warnings=result.warnings,
+            providerRunId=result.run_id,
+            providerWorkflowId=result.workflow_id,
+            providerWorkflowVersion=result.workflow_version,
+            providerDurationMs=result.elapsed_ms,
+            providerTotalTokens=result.total_tokens,
+            fallbackReason=None,
+            raw=raw,
+        )
+
+    def _deterministic_response(
+        self,
+        request: WorkRecordGenerateRequest,
+        *,
+        warnings: list[str] | None = None,
+        fallback_reason: str | None = None,
+        provider_workflow_id: str | None = None,
+        provider_workflow_version: str | None = None,
+        raw: dict[str, object] | None = None,
+    ) -> WorkRecordGenerateResponse:
         markdown = (
             self._record_summary(request)
             if request.generationType == "record_summary"
             else self._monthly_report(request)
         )
         return WorkRecordGenerateResponse(
-            provider=self._settings.provider,
+            provider="deterministic",
             model=self._settings.model,
             promptVersion=request.promptVersion,
             markdown=markdown,
-            raw={
+            warnings=warnings or [],
+            providerWorkflowId=provider_workflow_id,
+            providerWorkflowVersion=provider_workflow_version,
+            fallbackReason=fallback_reason,
+            raw=raw
+            or {
                 "recordCount": len(request.records),
                 "generationType": request.generationType,
             },
         )
+
+    def _fallback_response(
+        self,
+        request: WorkRecordGenerateRequest,
+        *,
+        reason: str,
+        warning: str,
+        input_bytes: int,
+    ) -> WorkRecordGenerateResponse:
+        DIFY_FALLBACK_COUNT.labels(request.generationType, reason).inc()
+        raw = self._base_raw(request, input_bytes)
+        raw.update(
+            {
+                "requestedProvider": "dify",
+                "providerRunId": None,
+                "providerWorkflowId": (
+                    self._settings.dify_work_record_workflow_id or None
+                ),
+                "providerWorkflowVersion": self._configured_workflow_version(),
+                "providerDurationMs": None,
+                "providerTotalTokens": None,
+                "fallbackReason": reason,
+            }
+        )
+        return self._deterministic_response(
+            request,
+            warnings=[warning],
+            fallback_reason=reason,
+            provider_workflow_id=(
+                self._settings.dify_work_record_workflow_id or None
+            ),
+            provider_workflow_version=self._configured_workflow_version(),
+            raw=raw,
+        )
+
+    def _configured_workflow_version(self) -> str | None:
+        return self._settings.dify_work_record_workflow_version or None
+
+    @staticmethod
+    def _report_context_json(request: WorkRecordGenerateRequest) -> str:
+        context = request.model_dump(
+            mode="json",
+            include={
+                "resourceId",
+                "periodStart",
+                "periodEnd",
+                "records",
+                "statistics",
+            },
+        )
+        return json.dumps(
+            context,
+            ensure_ascii=False,
+            separators=(",", ":"),
+            sort_keys=True,
+        )
+
+    @staticmethod
+    def _base_raw(
+        request: WorkRecordGenerateRequest,
+        input_bytes: int,
+    ) -> dict[str, object]:
+        return {
+            "recordCount": len(request.records),
+            "generationType": request.generationType,
+            "inputBytes": input_bytes,
+        }
 
     def _record_summary(self, request: WorkRecordGenerateRequest) -> str:
         if len(request.records) != 1:
