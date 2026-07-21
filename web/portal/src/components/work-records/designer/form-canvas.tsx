@@ -1,11 +1,4 @@
-import {
-  Copy,
-  EyeOff,
-  GripVertical,
-  MoveDown,
-  MoveUp,
-  Trash2,
-} from 'lucide-react'
+import { Copy, GripVertical, MoveDown, MoveUp, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -118,17 +111,13 @@ export function FormCanvas({
                   type='button'
                   size='icon'
                   variant='ghost'
-                  aria-label={`${field.locked || field.referenced ? '禁用' : '删除'}字段 ${field.fieldName}`}
+                  aria-label={`删除字段 ${field.fieldName}`}
                   onClick={(event) => {
                     event.stopPropagation()
                     onRemoveOrDisable(field.id)
                   }}
                 >
-                  {field.locked || field.referenced ? (
-                    <EyeOff className='size-4' />
-                  ) : (
-                    <Trash2 className='size-4' />
-                  )}
+                  <Trash2 className='size-4' />
                 </Button>
               </div>
             </div>

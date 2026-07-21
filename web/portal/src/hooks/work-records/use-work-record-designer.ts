@@ -210,19 +210,8 @@ export function useWorkRecordDesigner(templateId: string) {
   }
 
   const removeOrDisableField = (fieldId: string) => {
-    const field = fields.find((item) => item.id === fieldId)
-    if (!field) return
-
-    if (field.locked || field.referenced) {
-      markDirty(
-        fields.map((item) =>
-          item.id === fieldId ? { ...item, enabled: false } : item
-        )
-      )
-      return
-    }
-
     const next = fields.filter((item) => item.id !== fieldId)
+    if (next.length === fields.length) return
     markDirty(next)
     setSelectedFieldId(next[0]?.id ?? '')
   }

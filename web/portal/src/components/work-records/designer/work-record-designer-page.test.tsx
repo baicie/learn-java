@@ -24,16 +24,17 @@ vi.mock('@/api/work-records/templates', () => ({
       description: null,
       status: 'draft',
       enabled: true,
-      currentVersionId: null,
+      currentVersionId: 'v1',
       draftSchemaJson: JSON.stringify({
         type: 'object',
         properties: {
-          content: {
-            title: '工作内容',
+          priority: {
+            title: '优先级',
             'x-work-record': {
-              fieldCode: 'content',
-              fieldType: 'textarea',
-              optionSource: 'static',
+              fieldCode: 'priority',
+              fieldType: 'select',
+              optionSource: 'dict',
+              dictCode: 'record_priority',
               listVisible: true,
               filterable: true,
               exportable: true,
@@ -50,7 +51,31 @@ vi.mock('@/api/work-records/templates', () => ({
       deletedAt: null,
     },
   ],
-  listTemplateVersionFields: async () => [],
+  listTemplateVersionFields: async () => [
+    {
+      id: 'field1',
+      tenantId: 't1',
+      templateId: 'tpl1',
+      templateVersionId: 'v1',
+      fieldName: '优先级',
+      fieldCode: 'priority',
+      fieldType: 'select',
+      required: false,
+      defaultValue: null,
+      optionSource: 'dict',
+      dictCode: 'record_priority',
+      optionsJson: '[]',
+      schemaPath: '.properties.priority',
+      listVisible: true,
+      filterable: true,
+      exportable: true,
+      statistical: false,
+      sortOrder: 0,
+      enabled: true,
+      createdAt: '2026-01-01T00:00:00Z',
+      updatedAt: '2026-01-01T00:00:00Z',
+    },
+  ],
   saveTemplateDraft: async (
     _templateId: string,
     input: { schemaJson: string; designerJson: string }
@@ -191,5 +216,22 @@ describe('WorkRecordDesignerPage', () => {
       expect(calls).toEqual(['save', 'validate', 'publish'])
       expect(notify.success).toHaveBeenCalledWith('模板发布成功')
     })
+  })
+
+  it('removes a published dictionary field after confirmation', async () => {
+    const screen = await render(
+      <QueryClientProvider client={new QueryClient()}>
+        <ConfirmProvider>
+          <WorkRecordDesignerPage templateId='tpl1' />
+        </ConfirmProvider>
+      </QueryClientProvider>
+    )
+
+    await screen.getByLabelText('删除字段 优先级').click()
+    await screen.getByText('确认移除字段', { exact: true }).click()
+
+    await expect
+      .element(screen.getByLabelText('选择字段 优先级'))
+      .not.toBeInTheDocument()
   })
 })
