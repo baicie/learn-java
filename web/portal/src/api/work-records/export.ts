@@ -26,7 +26,6 @@ export async function exportWorkRecords(
         ownerId: blank(query.ownerId),
         quickView: query.quickView,
         workdayCount: query.workdayCount,
-        dynamicFilters: query.dynamicFilters,
         sortBy: query.sortBy,
         sortDir: query.sortDir,
         columns,

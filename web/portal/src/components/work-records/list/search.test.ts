@@ -20,19 +20,11 @@ describe('work record list route search', () => {
       workdayCount: 10,
       templateId: 'tpl1',
       statuses: ['done'],
-      dynamicFilters: [
-        {
-          fieldCode: 'priority',
-          operator: 'eq',
-          value: 'P1',
-        },
-      ],
       visibleColumns: ['title', 'custom.priority'],
     })
 
     expect(state.page).toBe(2)
     expect(state.workdayCount).toBe(10)
-    expect(state.dynamicFilters).toHaveLength(1)
     expect(state.visibleColumns).toContain('custom.priority')
 
     expect(toRouteSearch(state)).toEqual(state)
@@ -59,7 +51,6 @@ describe('work record list route search', () => {
       templateId: 'tpl1',
       statuses: ['done', 'draft'],
       keyword: '日报',
-      dynamicFilters: [{ fieldCode: 'priority', operator: 'eq', value: 'P1' }],
       visibleColumns: ['title', 'custom.priority'],
     })
 
@@ -70,12 +61,11 @@ describe('work record list route search', () => {
     expect(parsed.pageSize).toBe(50)
     expect(parsed.quickView).toBe('mine')
     expect(parsed.statuses).toEqual(['done', 'draft'])
-    expect(parsed.dynamicFilters).toHaveLength(1)
     expect(parsed.visibleColumns).toEqual(['title', 'custom.priority'])
   })
 
-  it('ignores invalid dynamic filter json', () => {
+  it('drops legacy dynamic filter params', () => {
     const state = parseListSearch(new URLSearchParams('dynamicFilters=bad'))
-    expect(state.dynamicFilters).toEqual([])
+    expect('dynamicFilters' in state).toBe(false)
   })
 })

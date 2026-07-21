@@ -47,7 +47,6 @@ export function WorkRecordDesignerPage({ templateId }: { templateId: string }) {
         fieldCode: field.fieldCode,
         published: field.locked || field.referenced,
         required: field.required,
-        filterable: field.filterable,
         exportable: field.exportable,
         t,
       })

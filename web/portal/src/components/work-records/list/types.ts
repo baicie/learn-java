@@ -1,24 +1,5 @@
 type WorkRecordStatus = 'draft' | 'processing' | 'done' | 'archived'
 
-type DynamicFilterOperator =
-  | 'eq'
-  | 'in'
-  | 'contains'
-  | 'gte'
-  | 'lte'
-  | 'between'
-  | 'contains_any'
-  | 'contains_all'
-  | 'exists'
-  | 'not_exists'
-
-export type DynamicFilter = {
-  fieldCode: string
-  operator: DynamicFilterOperator
-  value?: string | number | boolean | Array<string | number | boolean>
-  values?: Array<string | number | boolean>
-}
-
 export type WorkRecord = {
   id: string
   tenantId: string
@@ -58,7 +39,6 @@ export type RecordListColumn = {
   visibleByDefault: boolean
   sortable: boolean
   exportable: boolean
-  filterable?: boolean
   sortOrder: number
 }
 
@@ -66,7 +46,6 @@ export type RecordListMeta = {
   templates: WorkRecordTemplate[]
   columns: RecordListColumn[]
   exportColumns: RecordListColumn[]
-  filterFields: RecordListColumn[]
   dictCodes: string[]
   maxExportRows: number
   quickViews: string[]
@@ -119,7 +98,6 @@ export type ListQueryState = {
   recordTimeTo: string
   sortBy: string
   sortDir: 'asc' | 'desc'
-  dynamicFilters: DynamicFilter[]
   visibleColumns: string[]
 }
 
@@ -139,7 +117,6 @@ export function buildEmptyListQuery(): ListQueryState {
     recordTimeTo: '',
     sortBy: 'recordTime',
     sortDir: 'desc',
-    dynamicFilters: [],
     visibleColumns: [],
   }
 }

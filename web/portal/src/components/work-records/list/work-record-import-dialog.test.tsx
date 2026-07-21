@@ -29,7 +29,6 @@ const meta: RecordListMeta = {
   ],
   columns: [],
   exportColumns: [],
-  filterFields: [],
   dictCodes: [],
   maxExportRows: 5000,
   quickViews: ['all'],

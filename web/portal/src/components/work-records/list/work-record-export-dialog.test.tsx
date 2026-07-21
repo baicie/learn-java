@@ -51,7 +51,6 @@ const meta: RecordListMeta = {
   templates: [],
   columns: [titleColumn, secretColumn],
   exportColumns: [titleColumn, secretColumn],
-  filterFields: [],
   dictCodes: [],
   maxExportRows: 5000,
   quickViews: ['all'],
@@ -72,7 +71,6 @@ const query: ListQueryState = {
   recordTimeTo: '',
   sortBy: 'recordTime',
   sortDir: 'desc',
-  dynamicFilters: [],
   visibleColumns: [],
 }
 

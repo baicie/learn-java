@@ -52,11 +52,6 @@ export const workRecords = {
   'workRecords.list.refreshFailedHint':
     '工作记录刷新失败，当前继续显示上一次结果',
   'workRecords.list.columnControl': '列显示控制',
-  'workRecords.list.addFilter': '添加筛选',
-  'workRecords.list.dynamicFilters': '动态筛选',
-  'workRecords.list.dynamicFiltersDescription':
-    '按模板配置的动态字段精确筛选记录。',
-  'workRecords.list.dynamicFilterEmpty': '暂无可筛选动态字段',
   'workRecords.list.emptyTitle': '暂无工作记录',
 
   'workRecords.new.title': '新建记录',
@@ -172,8 +167,6 @@ export const workRecords = {
     '该字段已发布，移除会保留历史数据，但报表 / 导出将不再包含该字段。',
   'workRecords.designer.removeField.requiredHint':
     '该字段当前为必填，移除后依赖该字段的校验规则会失效。',
-  'workRecords.designer.removeField.filterableHint':
-    '该字段当前支持筛选，移除后筛选条件将不再出现。',
   'workRecords.designer.removeField.exportableHint':
     '该字段当前支持导出，移除后导出列会减少。',
   'workRecords.designer.fieldCodeLocked': '字段编码已锁定',
@@ -282,7 +275,6 @@ export const workRecords = {
   'workRecords.designer.property.maximum': '最大值',
   'workRecords.designer.property.indexes': '索引设置',
   'workRecords.designer.property.listVisible': '列表展示',
-  'workRecords.designer.property.filterable': '可筛选',
   'workRecords.designer.property.exportable': '可导出',
   'workRecords.designer.property.statistical': '可统计',
   // Preview

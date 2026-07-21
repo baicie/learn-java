@@ -114,7 +114,6 @@ export function useWorkRecordList(
       patch.templateId !== undefined &&
       patch.templateId !== query.templateId
     ) {
-      next.dynamicFilters = []
       next.visibleColumns = []
     }
 

@@ -6,7 +6,6 @@ type FieldDeleteConfirmInput = {
   fieldCode: string
   published: boolean
   required: boolean
-  filterable: boolean
   exportable: boolean
   t: TFunction
 }
@@ -14,15 +13,7 @@ type FieldDeleteConfirmInput = {
 export function fieldDeleteConfirmOptions(
   input: FieldDeleteConfirmInput
 ): ConfirmOptions {
-  const {
-    fieldName,
-    fieldCode,
-    published,
-    required,
-    filterable,
-    exportable,
-    t,
-  } = input
+  const { fieldName, fieldCode, published, required, exportable, t } = input
 
   const detail: string[] = []
 
@@ -35,9 +26,6 @@ export function fieldDeleteConfirmOptions(
   }
   if (required) {
     detail.push(t('workRecords.designer.removeField.requiredHint'))
-  }
-  if (filterable) {
-    detail.push(t('workRecords.designer.removeField.filterableHint'))
   }
   if (exportable) {
     detail.push(t('workRecords.designer.removeField.exportableHint'))

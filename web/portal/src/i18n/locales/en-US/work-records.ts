@@ -53,8 +53,6 @@ export const workRecords = {
   'workRecords.list.refreshFailedHint':
     'Failed to refresh work records. Showing the last successful result.',
   'workRecords.list.columnControl': 'Column control',
-  'workRecords.list.dynamicFilterEmpty':
-    'No dynamic fields available for filtering',
   'workRecords.list.emptyTitle': 'No work records',
 
   'workRecords.new.title': 'New record',
@@ -79,11 +77,6 @@ export const workRecords = {
   'workRecords.list.edit': 'Edit',
   'workRecords.list.exportStarted': 'Export started',
   'workRecords.list.create': 'New Record',
-  // Dynamic filters
-  'workRecords.list.dynamicFilters': 'Dynamic Filters',
-  'workRecords.list.dynamicFiltersDescription':
-    'Filter records by template dynamic fields',
-  'workRecords.list.addFilter': 'Add filter',
   // Export
   'workRecords.list.export': 'Export',
   'workRecords.export.title': 'Export records',
@@ -179,8 +172,6 @@ export const workRecords = {
     'This field has been published. Historical values are preserved, but reports / exports will no longer include it.',
   'workRecords.designer.removeField.requiredHint':
     'This field is currently required. Removing it will break validation rules that depend on it.',
-  'workRecords.designer.removeField.filterableHint':
-    'This field is currently filterable. Filter options will disappear after removal.',
   'workRecords.designer.removeField.exportableHint':
     'This field is currently exportable. Export columns will decrease after removal.',
   'workRecords.designer.fieldCodeLocked': 'Field code locked',
@@ -294,7 +285,6 @@ export const workRecords = {
   'workRecords.designer.property.maximum': 'Maximum',
   'workRecords.designer.property.indexes': 'Indexes',
   'workRecords.designer.property.listVisible': 'List visible',
-  'workRecords.designer.property.filterable': 'Filterable',
   'workRecords.designer.property.exportable': 'Exportable',
   'workRecords.designer.property.statistical': 'Statistical',
   // Preview

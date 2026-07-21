@@ -71,21 +71,6 @@ vi.mock('@/api/work-records/list', () => {
           sortOrder: 2,
         },
       ],
-      filterFields: [
-        {
-          key: 'custom.priority',
-          title: '优先级',
-          source: 'custom',
-          fieldCode: 'priority',
-          fieldType: 'select',
-          optionSource: 'dict',
-          dictCode: 'record_priority',
-          optionsJson: '[]',
-          visibleByDefault: true,
-          sortable: false,
-          sortOrder: 2,
-        },
-      ],
       dictCodes: ['record_priority'],
       maxExportRows: 5000,
       quickViews: [
@@ -182,7 +167,9 @@ describe('WorkRecordListPage', () => {
       .element(screen.getByRole('cell', { name: '日报' }))
       .toBeVisible()
 
-    expect(screen.getByText('动态筛选', { exact: true }).element()).toBeTruthy()
+    expect(
+      screen.getByText('动态筛选', { exact: true }).query()
+    ).not.toBeInTheDocument()
     expect(
       screen.getByText('列显示控制', { exact: true }).element()
     ).toBeTruthy()
@@ -199,9 +186,6 @@ describe('WorkRecordListPage', () => {
     await owner.click()
     await expect
       .element(screen.getByRole('option', { name: '张三' }))
-      .toBeVisible()
-    await expect
-      .element(screen.getByText('按模板配置的动态字段精确筛选记录。'))
       .toBeVisible()
   })
 
