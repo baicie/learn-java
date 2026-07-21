@@ -81,7 +81,8 @@ public class WorkRecordController {
             normalizeSortBy(request.sortBy()),
             normalizeSortDir(request.sortDir()),
             request.quickView(),
-            request.workdayCount());
+            request.workdayCount(),
+            null);
     return ApiResponse.ok(queryService.page(TenantContext.requireTenantId(), query, user));
   }
 
@@ -161,7 +162,8 @@ public class WorkRecordController {
             normalizeSortBy(request.sortBy()),
             normalizeSortDir(request.sortDir()),
             request.quickView(),
-            request.workdayCount());
+            request.workdayCount(),
+            request.recordIds());
 
     WorkRecordExportResult result =
         exportService.export(TenantContext.requireTenantId(), query, request.columns(), user);

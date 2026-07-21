@@ -49,7 +49,12 @@ function column(fieldCode: string, title: string): RecordListColumn {
 function renderTable(
   columns: RecordListColumn[],
   onSort = vi.fn(),
-  records: WorkRecord[] = [record]
+  records: WorkRecord[] = [record],
+  selection?: {
+    selectedIds?: ReadonlySet<string>
+    onToggleRecord?: (id: string) => void
+    onToggleAll?: (checked: boolean) => void
+  }
 ) {
   return render(
     <I18nextProvider i18n={i18n} defaultNS='translation'>
@@ -70,6 +75,9 @@ function renderTable(
         onSort={onSort}
         templateNames={{ 'template-1': '日报模板' }}
         userNames={{ 'user-1': '张三' }}
+        selectedIds={selection?.selectedIds ?? new Set()}
+        onToggleRecord={selection?.onToggleRecord ?? vi.fn()}
+        onToggleAll={selection?.onToggleAll ?? vi.fn()}
       />
     </I18nextProvider>
   )
@@ -108,6 +116,9 @@ describe('RecordTable', () => {
           sortBy='recordTime'
           sortDir='desc'
           onSort={vi.fn()}
+          selectedIds={new Set()}
+          onToggleRecord={vi.fn()}
+          onToggleAll={vi.fn()}
         />
       </I18nextProvider>
     )
@@ -197,5 +208,58 @@ describe('RecordTable', () => {
     await expect
       .element(screen.getByRole('link', { name: '编辑' }))
       .toBeVisible()
+  })
+
+  it('emits toggle callback when a row checkbox is clicked', async () => {
+    const onToggleRecord = vi.fn()
+    const screen = await renderTable(
+      [column('priority', '优先级')],
+      vi.fn(),
+      [record],
+      { onToggleRecord }
+    )
+
+    await screen.getByRole('checkbox', { name: '选择该行' }).click()
+
+    expect(onToggleRecord).toHaveBeenCalledWith('record-1')
+  })
+
+  it('emits select-all callback from the header checkbox', async () => {
+    const onToggleAll = vi.fn()
+    const screen = await renderTable(
+      [column('priority', '优先级')],
+      vi.fn(),
+      [record],
+      { onToggleAll }
+    )
+
+    await screen.getByRole('checkbox', { name: '全选当前页' }).click()
+
+    expect(onToggleAll).toHaveBeenCalledWith(true)
+  })
+
+  it('marks the header checkbox as indeterminate when part of the page is selected', async () => {
+    const other: WorkRecord = { ...record, id: 'record-2', title: '周报' }
+    const screen = await renderTable(
+      [column('priority', '优先级')],
+      vi.fn(),
+      [record, other],
+      { selectedIds: new Set(['record-1']) }
+    )
+
+    const header = screen.getByRole('checkbox', { name: '全选当前页' })
+    await expect.element(header).toHaveAttribute('data-state', 'indeterminate')
+  })
+
+  it('checks the header checkbox when the whole page is selected', async () => {
+    const screen = await renderTable(
+      [column('priority', '优先级')],
+      vi.fn(),
+      [record],
+      { selectedIds: new Set(['record-1']) }
+    )
+
+    const header = screen.getByRole('checkbox', { name: '全选当前页' })
+    await expect.element(header).toHaveAttribute('data-state', 'checked')
   })
 })

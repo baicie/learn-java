@@ -192,6 +192,37 @@ class JdbcWorkRecordRepositoryPostgresIT {
         .hasMessageContaining("invalid fieldCode");
   }
 
+  @Test
+  void recordIdsFilterMustIntersectWithTenantIsolation() {
+    insert("record-a", "tenant-1", "{}");
+    insert("record-b", "tenant-1", "{}");
+    insert("record-c", "tenant-2", "{}");
+
+    var page = repository.page("tenant-1", queryWithRecordIds(List.of("record-a", "record-c")));
+
+    assertThat(page.items()).extracting(item -> item.id()).containsExactly("record-a");
+    assertThat(page.total()).isEqualTo(1);
+  }
+
+  @Test
+  void emptyRecordIdsMustNotFilter() {
+    insert("record-a", "tenant-1", "{}");
+
+    var page = repository.page("tenant-1", queryWithRecordIds(List.of()));
+
+    assertThat(page.items()).extracting(item -> item.id()).containsExactly("record-a");
+  }
+
+  @Test
+  void listForExportMustApplyRecordIdsFilter() {
+    insert("record-a", "tenant-1", "{}");
+    insert("record-b", "tenant-1", "{}");
+
+    var items = repository.listForExport("tenant-1", queryWithRecordIds(List.of("record-b")), 10);
+
+    assertThat(items).extracting(item -> item.id()).containsExactly("record-b");
+  }
+
   private void insert(String id, String tenantId, String customJson) {
     jdbc.update(
         """
@@ -230,6 +261,29 @@ class JdbcWorkRecordRepositoryPostgresIT {
             "custom", customJson));
   }
 
+  private RecordQuery queryWithRecordIds(List<String> recordIds) {
+    RecordQuery base = query(List.of());
+    return new RecordQuery(
+        base.page(),
+        base.pageSize(),
+        base.templateId(),
+        base.templateVersionId(),
+        base.statuses(),
+        base.keyword(),
+        base.recordTimeFrom(),
+        base.recordTimeTo(),
+        base.creatorId(),
+        base.ownerId(),
+        base.onlySelf(),
+        base.currentUserId(),
+        base.dynamicFilters(),
+        base.sortBy(),
+        base.sortDir(),
+        base.quickView(),
+        base.workdayCount(),
+        recordIds);
+  }
+
   private RecordQuery query(List<RecordDynamicFilter> filters) {
     return new RecordQuery(
         1,
@@ -248,6 +302,7 @@ class JdbcWorkRecordRepositoryPostgresIT {
         "recordTime",
         "asc",
         "all",
+        null,
         null);
   }
 }

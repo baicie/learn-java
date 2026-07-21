@@ -77,6 +77,7 @@ public class AiInputBuilder {
               "recordTime",
               "asc",
               "all",
+              null,
               null);
       var result = records.page(tenantId, query, principal);
       for (WorkRecord record : result.items()) {

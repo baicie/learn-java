@@ -56,5 +56,6 @@ public final class RecordRequests {
       String sortBy,
       String sortDir,
       Integer workdayCount,
-      List<String> columns) {}
+      List<String> columns,
+      List<String> recordIds) {}
 }

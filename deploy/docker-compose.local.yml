@@ -1,0 +1,5 @@
+# 本地覆盖：修复 agent 端口与 compose 端口映射不一致（容器内监听 9008）
+services:
+  aiops-agent:
+    environment:
+      AIOPS_AGENT_PORT: "9008"

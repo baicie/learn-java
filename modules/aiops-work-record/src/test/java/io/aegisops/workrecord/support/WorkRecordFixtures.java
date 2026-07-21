@@ -199,6 +199,7 @@ public final class WorkRecordFixtures {
         "recordTime",
         "desc",
         "all",
+        null,
         null);
   }
 

@@ -162,6 +162,7 @@ class WorkRecordQueryServiceTest {
         "recordTime",
         "desc",
         "all",
+        null,
         null);
   }
 
@@ -183,6 +184,7 @@ class WorkRecordQueryServiceTest {
         "recordTime",
         "desc",
         quickView,
-        workdayCount);
+        workdayCount,
+        null);
   }
 }

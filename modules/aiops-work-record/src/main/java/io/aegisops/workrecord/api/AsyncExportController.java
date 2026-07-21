@@ -52,7 +52,8 @@ public class AsyncExportController {
             normalizeSortBy(request.sortBy()),
             normalizeSortDir(request.sortDir()),
             request.quickView(),
-            request.workdayCount());
+            request.workdayCount(),
+            request.recordIds());
     var job = submissions.submit(TenantContext.requireTenantId(), query, request.columns(), user);
     return ApiResponse.ok(Map.of("jobId", job.id()));
   }

@@ -125,7 +125,8 @@ class WorkRecordQueryServiceQuickViewTest {
         "recordTime",
         "desc",
         quickView,
-        workdayCount);
+        workdayCount,
+        null);
   }
 
   private UserPrincipal cachedAdminUser;

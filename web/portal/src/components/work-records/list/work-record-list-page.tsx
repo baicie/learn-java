@@ -37,10 +37,40 @@ export function WorkRecordListPage() {
   )
   const [importOpen, setImportOpen] = useState(false)
   const [exportOpen, setExportOpen] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<ReadonlySet<string>>(
+    () => new Set()
+  )
   const view = useWorkRecordList(query, setQuery)
 
   const onSort = (sortBy: string, sortDir: 'asc' | 'desc') => {
     setQuery({ ...query, sortBy, sortDir, page: 1 })
+  }
+
+  const onToggleRecord = (id: string) => {
+    setSelectedIds((current) => {
+      const next = new Set(current)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
+      return next
+    })
+  }
+
+  // 表头全选只作用于当前页记录；跨页已勾选的记录保留。
+  const onToggleAll = (checked: boolean) => {
+    setSelectedIds((current) => {
+      const next = new Set(current)
+      for (const record of view.records) {
+        if (checked) {
+          next.add(record.id)
+        } else {
+          next.delete(record.id)
+        }
+      }
+      return next
+    })
   }
 
   if (view.initialLoading) {
@@ -152,6 +182,24 @@ export function WorkRecordListPage() {
             </div>
           ) : null}
 
+          {selectedIds.size > 0 ? (
+            <div className='flex items-center justify-between rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-sm'>
+              <span>
+                {t('workRecords.list.selectedCount', {
+                  count: selectedIds.size,
+                })}
+              </span>
+              <Button
+                type='button'
+                variant='ghost'
+                size='sm'
+                onClick={() => setSelectedIds(new Set())}
+              >
+                {t('workRecords.list.clearSelection')}
+              </Button>
+            </div>
+          ) : null}
+
           {view.tableLoading ? (
             <TableLoadingState columns={view.effectiveColumns.length || 4} />
           ) : view.tableError ? (
@@ -181,6 +229,9 @@ export function WorkRecordListPage() {
                   ])
                 )}
                 userNames={view.userNames}
+                selectedIds={selectedIds}
+                onToggleRecord={onToggleRecord}
+                onToggleAll={onToggleAll}
               />
             </ResponsiveTable>
           )}
@@ -253,6 +304,7 @@ export function WorkRecordListPage() {
         meta={view.meta}
         currentColumns={view.effectiveColumns}
         total={view.total}
+        selectedIds={[...selectedIds]}
       />
     </main>
   )

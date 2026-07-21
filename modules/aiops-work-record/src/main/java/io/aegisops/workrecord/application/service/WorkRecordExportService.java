@@ -98,6 +98,7 @@ public class WorkRecordExportService {
       String tenantId, RecordQuery rawQuery, List<String> requestedColumnKeys, UserPrincipal user) {
 
     permissionService.requireExport(user);
+    validateRecordIds(rawQuery.recordIds(), exportPolicy.maxRows());
 
     try (WorkRecordExportGuard.Permit ignored = exportGuard.acquire(tenantId, user)) {
       WorkRecordExportResult result = doExport(tenantId, rawQuery, requestedColumnKeys, user);
@@ -133,6 +134,7 @@ public class WorkRecordExportService {
     if (maxRows < 1 || maxRows > 100_000) {
       throw new IllegalArgumentException("异步导出行数上限必须在 1 到 100000 之间");
     }
+    validateRecordIds(rawQuery.recordIds(), maxRows);
 
     RecordQuery query = queryService.prepareEffectiveQuery(tenantId, rawQuery, user);
     RecordListMeta meta = metaService.meta(tenantId, query.templateId());
@@ -199,7 +201,8 @@ public class WorkRecordExportService {
         query.sortBy(),
         query.sortDir(),
         query.quickView(),
-        query.workdayCount());
+        query.workdayCount(),
+        query.recordIds());
   }
 
   private WorkRecordExportResult doExport(
@@ -261,6 +264,18 @@ public class WorkRecordExportService {
         user);
 
     return new WorkRecordExportResult(fileName, content, records.size());
+  }
+
+  private void validateRecordIds(List<String> recordIds, int maxRows) {
+    if (recordIds == null) {
+      return;
+    }
+    if (recordIds.isEmpty()) {
+      throw new IllegalArgumentException("未选择要导出的记录");
+    }
+    if (recordIds.size() > maxRows) {
+      throw new IllegalArgumentException("导出结果超过 " + maxRows + " 行，请缩小筛选范围后重试");
+    }
   }
 
   private List<RecordListColumn> resolveColumns(
@@ -632,6 +647,14 @@ public class WorkRecordExportService {
     querySnapshot.put("sortBy", query.sortBy());
     querySnapshot.put("sortDir", query.sortDir());
     querySnapshot.put("dynamicFilters", query.dynamicFilters());
+    if (query.recordIds() != null) {
+      // 勾选导出时 ID 集合可能很大，超过 50 条只记录数量，避免审计行膨胀。
+      querySnapshot.put(
+          "recordIds",
+          query.recordIds().size() > 50
+              ? Map.of("size", query.recordIds().size())
+              : query.recordIds());
+    }
 
     detail.put("query", querySnapshot);
 

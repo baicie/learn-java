@@ -105,6 +105,13 @@ export const workRecords = {
   'workRecords.export.submitting': 'Exporting…',
   'workRecords.export.tooManyRows':
     '{{count}} records exceed the limit of {{max}}. Please narrow your filters.',
+  'workRecords.export.scope': 'Export scope',
+  'workRecords.export.scopeFiltered': 'All filtered results ({{count}} rows)',
+  'workRecords.export.scopeSelected': 'Only selected records ({{count}} rows)',
+  'workRecords.list.selectAll': 'Select all on this page',
+  'workRecords.list.selectRow': 'Select this row',
+  'workRecords.list.selectedCount': '{{count}} selected',
+  'workRecords.list.clearSelection': 'Clear selection',
   // Filter operators
   'workRecords.filters.operator.eq': 'Equals',
   'workRecords.filters.operator.in': 'In',

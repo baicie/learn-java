@@ -95,6 +95,7 @@ describe('WorkRecordExportDialog', () => {
         meta={meta}
         currentColumns={[titleColumn]}
         total={1}
+        selectedIds={[]}
       />
     )
 
@@ -117,6 +118,7 @@ describe('WorkRecordExportDialog', () => {
         }}
         currentColumns={[titleColumn, dictionaryColumn]}
         total={1}
+        selectedIds={[]}
       />
     )
 
@@ -141,6 +143,7 @@ describe('WorkRecordExportDialog', () => {
         meta={meta}
         currentColumns={[titleColumn]}
         total={1}
+        selectedIds={[]}
       />
     )
 
@@ -148,10 +151,98 @@ describe('WorkRecordExportDialog', () => {
 
     await screen.getByRole('button', { name: '确认导出' }).click()
 
-    expect(exportMock).toHaveBeenCalledWith(query, ['title'])
+    expect(exportMock).toHaveBeenCalledWith(query, ['title'], undefined)
 
     expect(downloadMock).toHaveBeenCalledOnce()
     expect(onOpenChange).toHaveBeenCalledWith(false)
+  })
+
+  it('defaults to selected scope and exports only checked record ids', async () => {
+    const onOpenChange = vi.fn()
+
+    const screen = await render(
+      <WorkRecordExportDialog
+        open
+        onOpenChange={onOpenChange}
+        query={query}
+        meta={meta}
+        currentColumns={[titleColumn]}
+        total={100}
+        selectedIds={['record-1', 'record-2']}
+      />
+    )
+
+    await expect
+      .element(screen.getByRole('radio', { name: /仅勾选的记录/ }))
+      .toBeChecked()
+
+    await screen.getByRole('checkbox', { name: /我确认导出/ }).click()
+    await screen.getByRole('button', { name: '确认导出' }).click()
+
+    expect(exportMock).toHaveBeenCalledWith(
+      query,
+      ['title'],
+      ['record-1', 'record-2']
+    )
+  })
+
+  it('exports the full filtered result when switching back to filtered scope', async () => {
+    const screen = await render(
+      <WorkRecordExportDialog
+        open
+        onOpenChange={vi.fn()}
+        query={query}
+        meta={meta}
+        currentColumns={[titleColumn]}
+        total={100}
+        selectedIds={['record-1']}
+      />
+    )
+
+    await screen.getByRole('radio', { name: /全部筛选结果/ }).click()
+
+    await screen.getByRole('checkbox', { name: /我确认导出/ }).click()
+    await screen.getByRole('button', { name: '确认导出' }).click()
+
+    expect(exportMock).toHaveBeenCalledWith(query, ['title'], undefined)
+  })
+
+  it('disables the selected scope when nothing is checked', async () => {
+    const screen = await render(
+      <WorkRecordExportDialog
+        open
+        onOpenChange={vi.fn()}
+        query={query}
+        meta={meta}
+        currentColumns={[titleColumn]}
+        total={1}
+        selectedIds={[]}
+      />
+    )
+
+    await expect
+      .element(screen.getByRole('radio', { name: /仅勾选的记录/ }))
+      .toBeDisabled()
+  })
+
+  it('blocks selected exports over the configured limit', async () => {
+    const screen = await render(
+      <WorkRecordExportDialog
+        open
+        onOpenChange={vi.fn()}
+        query={query}
+        meta={{ ...meta, maxExportRows: 1 }}
+        currentColumns={[titleColumn]}
+        total={1}
+        selectedIds={['record-1', 'record-2']}
+      />
+    )
+
+    await expect
+      .element(screen.getByRole('button', { name: '确认导出' }))
+      .toBeDisabled()
+
+    expect(exportMock).not.toHaveBeenCalled()
   })
 
   it('blocks exports over the configured limit', async () => {
@@ -163,6 +254,7 @@ describe('WorkRecordExportDialog', () => {
         meta={{ ...meta, maxExportRows: 10 }}
         currentColumns={[titleColumn]}
         total={11}
+        selectedIds={[]}
       />
     )
 

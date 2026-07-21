@@ -211,6 +211,10 @@ public class JdbcWorkRecordRepository implements WorkRecordRepository {
       where.append(" and owner_id = :ownerId ");
       params.put("ownerId", query.ownerId());
     }
+    if (query.recordIds() != null && !query.recordIds().isEmpty()) {
+      where.append(" and id in (:recordIds) ");
+      params.put("recordIds", query.recordIds());
+    }
 
     applyDynamicFilters(where, params, query);
 
@@ -270,7 +274,8 @@ public class JdbcWorkRecordRepository implements WorkRecordRepository {
               query.sortBy(),
               query.sortDir(),
               query.quickView(),
-              query.workdayCount());
+              query.workdayCount(),
+              query.recordIds());
       PageResult<WorkRecord> result = page(tenantId, limited);
       items.addAll(result.items());
       if (result.items().size() < result.size()) {

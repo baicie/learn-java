@@ -401,6 +401,7 @@ class WorkRecordExportServiceTest {
         "recordTime",
         "desc",
         "all",
+        null,
         null);
   }
 

@@ -103,6 +103,13 @@ export const workRecords = {
   'workRecords.export.submitting': '导出中…',
   'workRecords.export.tooManyRows':
     '导出记录数 ({{count}}) 超过最大限制 ({{max}})，请缩小筛选范围',
+  'workRecords.export.scope': '导出范围',
+  'workRecords.export.scopeFiltered': '全部筛选结果（共 {{count}} 条）',
+  'workRecords.export.scopeSelected': '仅勾选的记录（共 {{count}} 条）',
+  'workRecords.list.selectAll': '全选当前页',
+  'workRecords.list.selectRow': '选择该行',
+  'workRecords.list.selectedCount': '已选 {{count}} 条',
+  'workRecords.list.clearSelection': '清除选择',
   // Filter operators
   'workRecords.filters.operator.eq': '等于',
   'workRecords.filters.operator.in': '包含',

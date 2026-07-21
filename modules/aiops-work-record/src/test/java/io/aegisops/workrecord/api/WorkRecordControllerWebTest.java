@@ -153,6 +153,68 @@ class WorkRecordControllerWebTest {
   }
 
   @Test
+  @WithMockUser(authorities = {"work-record:export"})
+  void exportPassesRecordIdsToQuery() throws Exception {
+    when(exportService.export(eq("tenant-1"), any(), anyList(), any()))
+        .thenReturn(
+            new WorkRecordExportResult(
+                "records.csv", "\uFEFF\"标题\"\r\n\"日报\"\r\n".getBytes(StandardCharsets.UTF_8), 1));
+
+    mockMvc
+        .perform(
+            post("/api/work-record/records/export")
+                .with(csrf())
+                .contentType("application/json")
+                .content(
+                    """
+                    {
+                      "templateId": "template-1",
+                      "quickView": "all",
+                      "columns": ["title"],
+                      "recordIds": ["record-1", "record-2"]
+                    }
+                    """))
+        .andExpect(status().isOk());
+
+    org.mockito.ArgumentCaptor<io.aegisops.workrecord.application.command.RecordQuery> captor =
+        org.mockito.ArgumentCaptor.forClass(
+            io.aegisops.workrecord.application.command.RecordQuery.class);
+    verify(exportService).export(eq("tenant-1"), captor.capture(), anyList(), any());
+    org.assertj.core.api.Assertions.assertThat(captor.getValue().recordIds())
+        .containsExactly("record-1", "record-2");
+  }
+
+  @Test
+  @WithMockUser(authorities = {"work-record:export"})
+  void exportWithoutRecordIdsKeepsNullIds() throws Exception {
+    when(exportService.export(eq("tenant-1"), any(), anyList(), any()))
+        .thenReturn(
+            new WorkRecordExportResult(
+                "records.csv", "\uFEFF\"标题\"\r\n\"日报\"\r\n".getBytes(StandardCharsets.UTF_8), 1));
+
+    mockMvc
+        .perform(
+            post("/api/work-record/records/export")
+                .with(csrf())
+                .contentType("application/json")
+                .content(
+                    """
+                    {
+                      "templateId": "template-1",
+                      "quickView": "all",
+                      "columns": ["title"]
+                    }
+                    """))
+        .andExpect(status().isOk());
+
+    org.mockito.ArgumentCaptor<io.aegisops.workrecord.application.command.RecordQuery> captor =
+        org.mockito.ArgumentCaptor.forClass(
+            io.aegisops.workrecord.application.command.RecordQuery.class);
+    verify(exportService).export(eq("tenant-1"), captor.capture(), anyList(), any());
+    org.assertj.core.api.Assertions.assertThat(captor.getValue().recordIds()).isNull();
+  }
+
+  @Test
   @WithMockUser(authorities = {"work-record:read:self"})
   void historyEndpointIsNotExposed() throws Exception {
     mockMvc

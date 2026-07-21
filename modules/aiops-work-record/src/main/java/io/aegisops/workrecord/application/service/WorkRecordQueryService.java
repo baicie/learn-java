@@ -147,7 +147,8 @@ public class WorkRecordQueryService {
         quickQuery.sortBy(),
         quickQuery.sortDir(),
         view.value(),
-        quickQuery.workdayCount());
+        quickQuery.workdayCount(),
+        quickQuery.recordIds());
   }
 
   public WorkRecord get(String tenantId, String recordId, UserPrincipal user) {
@@ -262,7 +263,8 @@ public class WorkRecordQueryService {
         query.sortBy(),
         query.sortDir(),
         view.value(),
-        query.workdayCount());
+        query.workdayCount(),
+        query.recordIds());
   }
 
   private List<RecordDynamicFilter> normalizeDynamicFilters(

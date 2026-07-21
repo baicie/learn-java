@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Info } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { downloadExport, exportWorkRecords } from '@/api/work-records/export'
+import { cn } from '@/lib/utils'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -13,7 +14,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import type { ListQueryState, RecordListColumn, RecordListMeta } from './types'
+
+type ExportScope = 'filtered' | 'selected'
 
 type Props = {
   open: boolean
@@ -22,6 +26,7 @@ type Props = {
   meta?: RecordListMeta
   currentColumns: RecordListColumn[]
   total: number
+  selectedIds: string[]
 }
 
 export function WorkRecordExportDialog({
@@ -31,9 +36,11 @@ export function WorkRecordExportDialog({
   meta,
   currentColumns,
   total,
+  selectedIds,
 }: Props) {
   const { t } = useTranslation()
   const [selectedKeys, setSelectedKeys] = useState<string[]>([])
+  const [scope, setScope] = useState<ExportScope>('filtered')
   const [submitting, setSubmitting] = useState(false)
   const [confirmed, setConfirmed] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -59,13 +66,16 @@ export function WorkRecordExportDialog({
   )
 
   const maxRows = meta?.maxExportRows ?? 5000
-  const overLimit = total > maxRows
+  const selectedCount = selectedIds.length
+  const effectiveTotal = scope === 'selected' ? selectedCount : total
+  const overLimit = effectiveTotal > maxRows
 
   const resetDialog = useCallback(() => {
     setSelectedKeys(currentExportableKeys)
+    setScope(selectedIds.length > 0 ? 'selected' : 'filtered')
     setConfirmed(false)
     setError(null)
-  }, [currentExportableKeys])
+  }, [currentExportableKeys, selectedIds.length])
 
   useEffect(() => {
     if (open && !wasOpen.current) {
@@ -100,7 +110,10 @@ export function WorkRecordExportDialog({
 
     if (overLimit) {
       setError(
-        t('workRecords.export.tooManyRows', { count: total, max: maxRows })
+        t('workRecords.export.tooManyRows', {
+          count: effectiveTotal,
+          max: maxRows,
+        })
       )
       return
     }
@@ -109,7 +122,11 @@ export function WorkRecordExportDialog({
     setError(null)
 
     try {
-      const download = await exportWorkRecords(query, selectedKeys)
+      const download = await exportWorkRecords(
+        query,
+        selectedKeys,
+        scope === 'selected' ? selectedIds : undefined
+      )
 
       downloadExport(download)
       onOpenChange(false)
@@ -147,6 +164,36 @@ export function WorkRecordExportDialog({
             </Alert>
           ) : null}
 
+          <div className='grid gap-2 rounded-md border p-3'>
+            <div className='text-sm font-medium'>
+              {t('workRecords.export.scope')}
+            </div>
+            <RadioGroup
+              value={scope}
+              onValueChange={(value) => setScope(value as ExportScope)}
+            >
+              <label className='flex items-center gap-2 text-sm'>
+                <RadioGroupItem value='filtered' />
+                <span>
+                  {t('workRecords.export.scopeFiltered', { count: total })}
+                </span>
+              </label>
+              <label
+                className={cn(
+                  'flex items-center gap-2 text-sm',
+                  !selectedCount && 'text-muted-foreground'
+                )}
+              >
+                <RadioGroupItem value='selected' disabled={!selectedCount} />
+                <span>
+                  {t('workRecords.export.scopeSelected', {
+                    count: selectedCount,
+                  })}
+                </span>
+              </label>
+            </RadioGroup>
+          </div>
+
           <div className='rounded-md border p-3 text-sm'>
             <div>
               {t('workRecords.export.currentFilters')}:
@@ -165,7 +212,7 @@ export function WorkRecordExportDialog({
             {overLimit ? (
               <div className='mt-2 text-destructive'>
                 {t('workRecords.export.tooManyRows', {
-                  count: total,
+                  count: effectiveTotal,
                   max: maxRows,
                 })}
               </div>

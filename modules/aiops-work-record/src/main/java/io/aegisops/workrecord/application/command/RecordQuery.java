@@ -20,7 +20,8 @@ public record RecordQuery(
     String sortBy,
     String sortDir,
     String quickView,
-    Integer workdayCount) {
+    Integer workdayCount,
+    List<String> recordIds) {
 
   public RecordQuery(
       int page,
@@ -52,6 +53,7 @@ public record RecordQuery(
         "recordTime",
         "desc",
         "all",
+        null,
         null);
   }
 }

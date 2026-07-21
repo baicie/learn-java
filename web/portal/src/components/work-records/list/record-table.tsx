@@ -3,6 +3,7 @@ import { PermissionGate } from '@/auth/permission-gate'
 import { useTranslation } from 'react-i18next'
 import { formatDate, formatDateTime } from '@/lib/date-format'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Table,
   TableBody,
@@ -23,6 +24,9 @@ type Props = {
   onSort: (sortBy: string, sortDir: 'asc' | 'desc') => void
   templateNames?: Record<string, string>
   userNames?: Record<string, string>
+  selectedIds: ReadonlySet<string>
+  onToggleRecord: (id: string) => void
+  onToggleAll: (checked: boolean) => void
 }
 
 export function RecordTable({
@@ -34,6 +38,9 @@ export function RecordTable({
   onSort,
   templateNames = {},
   userNames = {},
+  selectedIds,
+  onToggleRecord,
+  onToggleAll,
 }: Props) {
   const { t } = useTranslation()
 
@@ -41,11 +48,28 @@ export function RecordTable({
     return <EmptyState compact title={t('workRecords.list.noRecords')} />
   }
 
+  const selectedOnPage = records.filter((record) =>
+    selectedIds.has(record.id)
+  ).length
+  const allChecked = selectedOnPage === records.length
+  const headerChecked: boolean | 'indeterminate' = allChecked
+    ? true
+    : selectedOnPage > 0
+      ? 'indeterminate'
+      : false
+
   return (
     <div className='overflow-auto rounded-lg border'>
       <Table className='min-w-[960px]'>
         <TableHeader className='bg-muted'>
           <TableRow>
+            <TableHead className='w-10'>
+              <Checkbox
+                aria-label={t('workRecords.list.selectAll')}
+                checked={headerChecked}
+                onCheckedChange={(checked) => onToggleAll(checked === true)}
+              />
+            </TableHead>
             {columns.map((column) => (
               <TableHead key={column.key}>
                 <Button
@@ -74,7 +98,17 @@ export function RecordTable({
         </TableHeader>
         <TableBody>
           {records.map((record) => (
-            <TableRow key={record.id}>
+            <TableRow
+              key={record.id}
+              data-state={selectedIds.has(record.id) ? 'selected' : undefined}
+            >
+              <TableCell>
+                <Checkbox
+                  aria-label={t('workRecords.list.selectRow')}
+                  checked={selectedIds.has(record.id)}
+                  onCheckedChange={() => onToggleRecord(record.id)}
+                />
+              </TableCell>
               {columns.map((column) => (
                 <TableCell key={column.key}>
                   {renderCell(

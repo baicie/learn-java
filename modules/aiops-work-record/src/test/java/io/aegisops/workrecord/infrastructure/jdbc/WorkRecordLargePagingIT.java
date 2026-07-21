@@ -131,6 +131,7 @@ class WorkRecordLargePagingIT {
                 "recordTime",
                 "asc",
                 "all",
+                null,
                 null));
     Duration elapsed = Duration.ofNanos(System.nanoTime() - start);
 
@@ -177,6 +178,7 @@ class WorkRecordLargePagingIT {
                 "recordTime",
                 "asc",
                 "all",
+                null,
                 null));
 
     assertThat(page.items()).isEmpty();

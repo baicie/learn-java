@@ -10,7 +10,8 @@ export type ExportDownload = {
 
 export async function exportWorkRecords(
   query: ListQueryState,
-  columns: string[]
+  columns: string[],
+  recordIds?: string[]
 ): Promise<ExportDownload> {
   try {
     const response = await apiClient.post(
@@ -29,6 +30,7 @@ export async function exportWorkRecords(
         sortBy: query.sortBy,
         sortDir: query.sortDir,
         columns,
+        ...(recordIds && recordIds.length > 0 ? { recordIds } : {}),
       },
       {
         responseType: 'blob',
