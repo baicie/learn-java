@@ -1,4 +1,5 @@
 import { Link } from '@tanstack/react-router'
+import { PermissionGate } from '@/auth/permission-gate'
 import { useTranslation } from 'react-i18next'
 import { formatDate, formatDateTime } from '@/lib/date-format'
 import { Button } from '@/components/ui/button'
@@ -87,14 +88,28 @@ export function RecordTable({
                 </TableCell>
               ))}
               <TableCell>
-                <Button asChild variant='link' size='sm'>
-                  <Link
-                    to='/work-records/$recordId'
-                    params={{ recordId: record.id }}
-                  >
-                    {t('workRecords.list.view')}
-                  </Link>
-                </Button>
+                <div className='flex items-center gap-1'>
+                  <Button asChild variant='link' size='sm'>
+                    <Link
+                      to='/work-records/$recordId'
+                      params={{ recordId: record.id }}
+                    >
+                      {t('workRecords.list.view')}
+                    </Link>
+                  </Button>
+                  {record.status === 'draft' ? (
+                    <PermissionGate anyOf={['work-record:write']}>
+                      <Button asChild variant='link' size='sm'>
+                        <Link
+                          to='/work-records/$recordId/edit'
+                          params={{ recordId: record.id }}
+                        >
+                          {t('common.edit')}
+                        </Link>
+                      </Button>
+                    </PermissionGate>
+                  ) : null}
+                </div>
               </TableCell>
             </TableRow>
           ))}
