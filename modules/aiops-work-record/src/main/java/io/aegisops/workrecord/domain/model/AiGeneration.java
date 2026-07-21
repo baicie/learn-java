@@ -18,8 +18,16 @@ public record AiGeneration(
     String outputMarkdown,
     String provider,
     String model,
+    String providerRunId,
+    String providerWorkflowId,
+    String providerWorkflowVersion,
+    Long providerDurationMs,
+    Long providerTotalTokens,
+    String warningsJson,
+    String fallbackReason,
     String requestedBy,
     String reviewedBy,
     OffsetDateTime reviewedAt,
     OffsetDateTime createdAt,
-    OffsetDateTime finishedAt) {}
+    OffsetDateTime finishedAt) {
+}

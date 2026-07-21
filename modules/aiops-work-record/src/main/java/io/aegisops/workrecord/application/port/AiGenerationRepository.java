@@ -17,7 +17,7 @@ public interface AiGenerationRepository {
 
   boolean markRunning(String tenantId, String id);
 
-  boolean complete(String tenantId, String id, String markdown, String provider, String model);
+  boolean complete(CompleteGeneration command);
 
   boolean markRetrying(String tenantId, String id);
 
@@ -37,4 +37,18 @@ public interface AiGenerationRepository {
       String inputHash,
       String inputJson,
       String requestedBy) {}
+
+  record CompleteGeneration(
+      String tenantId,
+      String id,
+      String markdown,
+      String provider,
+      String model,
+      String providerRunId,
+      String providerWorkflowId,
+      String providerWorkflowVersion,
+      Long providerDurationMs,
+      Long providerTotalTokens,
+      String warningsJson,
+      String fallbackReason) {}
 }

@@ -47,7 +47,22 @@ class AiInputBuilderTest {
     assertThat(request.records()).allMatch(item -> "Alice".equals(item.ownerName()));
     assertThat(request.records())
         .allMatch(item -> item.fields().equals(Map.of("visible", "value")));
+    assertThat(request.actorId()).isEqualTo("user-1");
     assertThat(mapper.writeValueAsBytes(request).length).isLessThanOrEqualTo(65_536);
+  }
+
+  @Test
+  void recordSummaryIncludesRequestingActorId() {
+    WorkRecordQueryService records = mock(WorkRecordQueryService.class);
+    WorkRecordUserLookupService users = mock(WorkRecordUserLookupService.class);
+    when(records.get(any(), any(), any())).thenReturn(record(1, RecordStatus.DONE));
+    when(users.displayNames(any(), any())).thenReturn(Map.of("owner-1", "Alice"));
+    var builder =
+        new AiInputBuilder(records, users, new ObjectMapper().findAndRegisterModules());
+
+    var request = builder.recordSummary("tenant-1", "record-1", principal(), "trace-1");
+
+    assertThat(request.actorId()).isEqualTo("user-1");
   }
 
   @Test

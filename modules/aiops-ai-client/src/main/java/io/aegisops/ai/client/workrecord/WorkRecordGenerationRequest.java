@@ -10,6 +10,7 @@ public record WorkRecordGenerationRequest(
     String generationType,
     String tenantId,
     String resourceId,
+    String actorId,
     LocalDate periodStart,
     LocalDate periodEnd,
     String locale,

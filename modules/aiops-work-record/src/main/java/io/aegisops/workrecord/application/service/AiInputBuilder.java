@@ -41,6 +41,7 @@ public class AiInputBuilder {
         "record_summary",
         tenantId,
         recordId,
+        principal.id(),
         null,
         null,
         "zh-CN",
@@ -95,50 +96,46 @@ public class AiInputBuilder {
     statistics.put("truncated", recordCount > samples.size());
     Map<String, String> ownerNames = ownerNames(tenantId, samples);
     List<WorkRecordGenerationRequest.RecordItem> items = new ArrayList<>();
+    var context = new MonthlyRequestContext(tenantId, start, end, principal.id(), traceId);
     for (WorkRecord sample : samples) {
       items.add(item(sample, ownerNames));
       statistics.put("sampledRecordCount", items.size());
-      if (!fitsMonthlyLimit(tenantId, start, end, items, statistics, traceId)) {
+      if (!fitsMonthlyLimit(context, items, statistics)) {
         items.removeLast();
         break;
       }
     }
     statistics.put("sampledRecordCount", items.size());
     statistics.put("truncated", recordCount > items.size());
-    return request(tenantId, start, end, items, statistics, traceId);
+    return request(context, items, statistics);
   }
 
   private WorkRecordGenerationRequest request(
-      String tenantId,
-      LocalDate start,
-      LocalDate end,
+      MonthlyRequestContext context,
       List<WorkRecordGenerationRequest.RecordItem> items,
-      Map<String, Object> statistics,
-      String traceId) {
+      Map<String, Object> statistics) {
     return new WorkRecordGenerationRequest(
         "work-record-generation.v1",
         "monthly_report",
-        tenantId,
-        start.toString().substring(0, 7),
-        start,
-        end.minusDays(1),
+        context.tenantId(),
+        context.start().toString().substring(0, 7),
+        context.actorId(),
+        context.start(),
+        context.end().minusDays(1),
         "zh-CN",
         "work-record-monthly-v1",
         items,
         statistics,
-        traceId);
+        context.traceId());
   }
 
   private boolean fitsMonthlyLimit(
-      String tenantId,
-      LocalDate start,
-      LocalDate end,
+      MonthlyRequestContext context,
       List<WorkRecordGenerationRequest.RecordItem> items,
-      Map<String, Object> statistics,
-      String traceId) {
+      Map<String, Object> statistics) {
     try {
       return objectMapper.writeValueAsBytes(
-                  request(tenantId, start, end, items, statistics, traceId))
+                  request(context, items, statistics))
               .length
           <= MAX_MONTH_INPUT_BYTES;
     } catch (Exception ex) {
@@ -174,4 +171,7 @@ public class AiInputBuilder {
       throw new IllegalStateException("invalid work-record custom data", ex);
     }
   }
+
+  private record MonthlyRequestContext(
+      String tenantId, LocalDate start, LocalDate end, String actorId, String traceId) {}
 }

@@ -4,8 +4,8 @@ type: operation
 status: accepted
 phase: global
 owner: script
-created: 2026-07-20
-updated: 2026-07-20
+created: 2026-07-21
+updated: 2026-07-21
 related: []
 ---
 
@@ -58,7 +58,7 @@ Do not edit it manually.
 | 数据源 API                       | accepted | phase-1        | 2026-07-18 | [docs/api/datasources.md](api/datasources.md)                       |
 | 多来源可观测与变更接入 API       | accepted | phase-1        | 2026-07-18 | [docs/api/operations-ingestion.md](api/operations-ingestion.md)     |
 | 平台用户与权限管理 API           | accepted | work-record-20 | 2026-07-18 | [docs/api/platform-iam.md](api/platform-iam.md)                     |
-| 工作记录 Phase 20 异步与协作 API | accepted | work-record-20 | 2026-07-20 | [docs/api/work-record-phase20.md](api/work-record-phase20.md)       |
+| 工作记录 Phase 20 异步与协作 API | accepted | work-record-20 | 2026-07-21 | [docs/api/work-record-phase20.md](api/work-record-phase20.md)       |
 | 工作记录模板 API                 | accepted | phase-21       | 2026-07-15 | [docs/api/work-record-templates.md](api/work-record-templates.md)   |
 | 工作记录 API 契约                | draft    | work-record    | 2026-07-09 | [docs/record/api-contract.md](record/api-contract.md)               |
 | 工作记录权限契约                 | draft    | work-record    | 2026-07-09 | [docs/record/permission-contract.md](record/permission-contract.md) |
@@ -154,7 +154,7 @@ Do not edit it manually.
 | 工作记录 Phase 05 动态表单运行态                                 | review     | work-record    | 2026-07-08 | [docs/record/phase-05-record-runtime.md](record/phase-05-record-runtime.md)                                                                                                             |
 | 工作记录 Phase 06 列表筛选与导出                                 | review     | work-record    | 2026-07-08 | [docs/record/phase-06-record-list-export.md](record/phase-06-record-list-export.md)                                                                                                     |
 | 工作记录 Phase 07 权限审计与交付收口                             | review     | work-record    | 2026-07-08 | [docs/record/phase-07-role-permission-hardening.md](record/phase-07-role-permission-hardening.md)                                                                                       |
-| Dify 工作流接入实施方案                                          | draft      | phase-20       | 2026-07-19 | [docs/designs/phase-20/2026-07-19-dify-workflow-integration.md](designs/phase-20/2026-07-19-dify-workflow-integration.md)                                                               |
+| Dify 工作流接入实施方案                                          | draft      | phase-20       | 2026-07-21 | [docs/designs/phase-20/2026-07-19-dify-workflow-integration.md](designs/phase-20/2026-07-19-dify-workflow-integration.md)                                                               |
 | 基于身份的产品体验设计                                           | draft      | phase-21       | 2026-07-18 | [docs/designs/phase-21/2026-07-18-role-based-product-experience.md](designs/phase-21/2026-07-18-role-based-product-experience.md)                                                       |
 | AI-Ops Portal 基础重构：基线与实施总览                           | draft      | work-record    | 2026-07-14 | [docs/record/formily/00-readme-基线与实施总览.md](record/formily/00-readme-基线与实施总览.md)                                                                                           |
 | Portal 清理、路由与导航完整代码                                  | draft      | work-record    | 2026-07-14 | [docs/record/formily/01-portal清理与导航代码.md](record/formily/01-portal清理与导航代码.md)                                                                                             |

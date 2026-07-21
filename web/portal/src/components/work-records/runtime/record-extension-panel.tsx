@@ -40,6 +40,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { ErrorState } from '@/components/feedback/async-state'
 import { PermissionGate } from '@/components/permission-gate'
+import { AiGenerationNotice } from './ai-generation-notice'
 
 export function RecordExtensionPanel({ recordId }: { recordId: string }) {
   const client = useQueryClient()
@@ -324,6 +325,7 @@ export function RecordExtensionPanel({ recordId }: { recordId: string }) {
                     {item.outputMarkdown}
                   </pre>
                 )}
+                <AiGenerationNotice generation={item} />
                 {item.status === 'success' && (
                   <PermissionGate any={['work-record:ai:review']}>
                     <div className='flex gap-2'>
