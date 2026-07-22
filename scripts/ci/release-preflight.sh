@@ -83,11 +83,11 @@ if grep -Fq 'wget -q -O - http://localhost:9008/health' deploy/docker-compose.ap
 fi
 
 echo "==> Validate remote deployment contract"
-grep -Fq "bash -lc '" .github/workflows/deploy.yml
-grep -Fq 'name: Configure Tencent Cloud Docker mirror' .github/workflows/deploy.yml
-grep -Fq 'deploy/scripts/configure-docker-mirror.sh' .github/workflows/deploy.yml
-grep -Fq 'envs: IMAGE_PREFIX,IMAGE_TAG' .github/workflows/deploy.yml
-grep -Fq 'needs: runtime-smoke' .github/workflows/deploy.yml
+grep -Fq "bash -lc '" .github/workflows/release-verify.yml
+grep -Fq 'name: Configure Tencent Cloud Docker mirror' .github/workflows/release-verify.yml
+grep -Fq 'deploy/scripts/configure-docker-mirror.sh' .github/workflows/release-verify.yml
+grep -Fq 'envs: IMAGE_PREFIX,IMAGE_TAG,AIOPS_AGENT_INTERNAL_TOKEN' .github/workflows/release-verify.yml
+grep -Fq 'needs: runtime-smoke' .github/workflows/release-verify.yml
 grep -Fq 'name: Build, smoke and publish' .github/workflows/release-verify.yml
 grep -Fq 'needs.preflight.outputs.release_required' .github/workflows/release-verify.yml
 grep -Fq 'group: ops-scripts-${{ github.workflow }}-${{ github.ref }}' \
@@ -107,11 +107,11 @@ if grep -Fq '      - "fix/**"' .github/workflows/release-verify.yml; then
   exit 1
 fi
 if grep -Fq 'envs: IMAGE_PREFIX,IMAGE_TAG,DOCKERHUB_USERNAME,DOCKERHUB_TOKEN' \
-  .github/workflows/deploy.yml; then
+  .github/workflows/release-verify.yml; then
   echo "Tencent Cloud VM must not receive Docker Hub credentials." >&2
   exit 1
 fi
-if grep -Fq ':latest' .github/workflows/deploy.yml; then
+if grep -Fq ':latest' .github/workflows/release-verify.yml; then
   echo "Production deployment must use immutable commit tags instead of :latest." >&2
   exit 1
 fi
