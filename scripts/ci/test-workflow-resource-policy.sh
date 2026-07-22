@@ -54,6 +54,7 @@ require_text "$DEPLOY_WORKFLOW" "for attempt in 1 2 3; do"
 require_text "$DEPLOY_WORKFLOW" 'retry docker push "$remote_image"'
 require_text "$RELEASE_PREFLIGHT" "AIOPS_AGENT_INTERNAL_TOKEN=preflight-only"
 require_text "$RELEASE_WORKFLOW" "AIOPS_AGENT_INTERNAL_TOKEN: runtime-smoke-only"
+require_text "$DEPLOY_WORKFLOW" "AIOPS_AGENT_INTERNAL_TOKEN: runtime-smoke-only"
 require_text "$AGENT_DOCKERFILE" "pip install --timeout 300 --retries 10 --no-cache-dir ."
 
 release_build_count="$(grep -Ec '^[[:space:]]+docker build \\' "$RELEASE_WORKFLOW")"
