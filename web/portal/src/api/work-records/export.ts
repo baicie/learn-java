@@ -21,8 +21,8 @@ export async function exportWorkRecords(
         templateVersionId: blank(query.templateVersionId),
         statuses: query.statuses,
         keyword: blank(query.keyword),
-        recordTimeFrom: toOffset(query.recordTimeFrom),
-        recordTimeTo: toOffset(query.recordTimeTo),
+        recordTimeFrom: toOffsetStart(query.recordTimeFrom),
+        recordTimeTo: toOffsetEnd(query.recordTimeTo),
         creatorId: blank(query.creatorId),
         ownerId: blank(query.ownerId),
         quickView: query.quickView,
@@ -133,8 +133,28 @@ function blank(value?: string) {
   return value?.trim() || undefined
 }
 
-function toOffset(value?: string) {
+// 筛选只精确到日：起始日按本地 00:00（含），结束日按次日 00:00（后端为 < 右开区间，含结束日当天）。
+function toOffsetStart(value?: string) {
+  return toOffset(value, 0)
+}
+
+function toOffsetEnd(value?: string) {
+  return toOffset(value, 1)
+}
+
+function toOffset(value: string | undefined, dayOffset: number) {
   if (!value) return undefined
+
+  const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim())
+  if (dateOnly) {
+    const [, year, month, day] = dateOnly
+    const local = new Date(
+      Number(year),
+      Number(month) - 1,
+      Number(day) + dayOffset
+    )
+    return local.toISOString()
+  }
 
   const date = new Date(value)
   return Number.isNaN(date.getTime()) ? undefined : date.toISOString()

@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import {
   Select,
   SelectContent,
@@ -115,17 +116,31 @@ export function ListToolbar({ meta, query, userOptions, onChange }: Props) {
           </SelectContent>
         </Select>
 
-        <Input
-          type='datetime-local'
-          value={query.recordTimeFrom}
-          onChange={(event) => onChange({ recordTimeFrom: event.target.value })}
-        />
+        <div className='grid gap-1'>
+          <Label htmlFor='record-time-from'>
+            {t('workRecords.list.recordTimeFromLabel')}
+          </Label>
+          <Input
+            id='record-time-from'
+            type='date'
+            value={query.recordTimeFrom}
+            onChange={(event) =>
+              onChange({ recordTimeFrom: event.target.value })
+            }
+          />
+        </div>
 
-        <Input
-          type='datetime-local'
-          value={query.recordTimeTo}
-          onChange={(event) => onChange({ recordTimeTo: event.target.value })}
-        />
+        <div className='grid gap-1'>
+          <Label htmlFor='record-time-to'>
+            {t('workRecords.list.recordTimeToLabel')}
+          </Label>
+          <Input
+            id='record-time-to'
+            type='date'
+            value={query.recordTimeTo}
+            onChange={(event) => onChange({ recordTimeTo: event.target.value })}
+          />
+        </div>
 
         <Button
           type='button'

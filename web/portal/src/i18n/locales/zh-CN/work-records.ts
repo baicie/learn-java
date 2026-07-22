@@ -17,6 +17,8 @@ export const workRecords = {
   'workRecords.list.actions': '操作',
   'workRecords.list.allStatus': '全部状态',
   'workRecords.list.searchPlaceholder': '搜索记录标题…',
+  'workRecords.list.recordTimeFromLabel': '记录时间（开始）',
+  'workRecords.list.recordTimeToLabel': '记录时间（结束）',
   'workRecords.list.allTemplates': '全部模板',
   'workRecords.list.status.draft': '草稿',
   'workRecords.list.status.processing': '处理中',

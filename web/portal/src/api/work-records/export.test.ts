@@ -56,6 +56,21 @@ describe('exportWorkRecords', () => {
       expect('recordIds' in body).toBe(false)
     }
   })
+
+  it('converts date-only filters to local day boundaries', async () => {
+    await exportWorkRecords(
+      { ...query, recordTimeFrom: '2026-07-01', recordTimeTo: '2026-07-10' },
+      ['title']
+    )
+
+    const body = vi.mocked(apiClient.post).mock.calls[0]?.[1] as {
+      recordTimeFrom?: string
+      recordTimeTo?: string
+    }
+    // 起始日含当天（本地 00:00），结束日含当天（后端为 < 右开区间，传次日 00:00）
+    expect(body.recordTimeFrom).toBe(new Date(2026, 6, 1).toISOString())
+    expect(body.recordTimeTo).toBe(new Date(2026, 6, 11).toISOString())
+  })
 })
 
 describe('normalizeExportError', () => {
