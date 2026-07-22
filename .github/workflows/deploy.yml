@@ -130,11 +130,23 @@ jobs:
       - name: Push immutable images
         run: |
           set -Eeuo pipefail
+
+          retry() {
+            local attempt
+            for attempt in 1 2 3; do
+              "$@" && return 0
+              if [ "$attempt" -eq 3 ]; then
+                return 1
+              fi
+              sleep "$((attempt * 10))"
+            done
+          }
+
           for component in server agent worker runner; do
             local_image="local/aegisops:${RELEASE_REF}-${component}"
             remote_image="${IMAGE_PREFIX}:${IMAGE_TAG}-${component}"
             docker tag "$local_image" "$remote_image"
-            docker push "$remote_image"
+            retry docker push "$remote_image"
           done
 
   runtime-smoke:

@@ -45,6 +45,8 @@ reject_text "$RELEASE_WORKFLOW" "cache: maven"
 reject_text "$DEPLOY_WORKFLOW" "cache: maven"
 reject_text "$E2E_WORKFLOW" "cache: maven"
 require_text "$DEPLOY_WORKFLOW" "Reusing \$image from Release Verify"
+require_text "$DEPLOY_WORKFLOW" "for attempt in 1 2 3; do"
+require_text "$DEPLOY_WORKFLOW" 'retry docker push "$remote_image"'
 require_text "$RELEASE_PREFLIGHT" "AIOPS_AGENT_INTERNAL_TOKEN=preflight-only"
 require_text "$RELEASE_WORKFLOW" "AIOPS_AGENT_INTERNAL_TOKEN: runtime-smoke-only"
 require_text "$AGENT_DOCKERFILE" "pip install --timeout 300 --retries 10 --no-cache-dir ."
