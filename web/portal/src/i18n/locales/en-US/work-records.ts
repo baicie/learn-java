@@ -16,7 +16,7 @@ export const workRecords = {
   'workRecords.list.searchPlaceholder': 'Search records…',
   'workRecords.list.recordTimeFromLabel': 'Record time (from)',
   'workRecords.list.recordTimeToLabel': 'Record time (to)',
-  'workRecords.list.allTemplates': 'All templates',
+  'workRecords.list.allTemplates': 'All work types',
   'workRecords.list.status.draft': 'Draft',
   'workRecords.list.status.processing': 'Processing',
   'workRecords.list.status.done': 'Done',
@@ -28,16 +28,16 @@ export const workRecords = {
   'workRecords.list.import': 'Import',
   'workRecords.import.title': 'Import work records',
   'workRecords.import.description':
-    'Upload an .xlsx file whose first row uses title, status, ownerId, recordTime, or template field codes. Maximum file size: 20 MiB.',
-  'workRecords.import.template': 'Target template',
-  'workRecords.import.templatePlaceholder': 'Select a published template',
-  'workRecords.import.downloadTemplate': 'Download selected template',
-  'workRecords.import.downloadingTemplate': 'Downloading template…',
+    'Upload an .xlsx file whose first row uses title, status, ownerId, recordTime, or work type field codes. Maximum file size: 20 MiB.',
+  'workRecords.import.template': 'Target work type',
+  'workRecords.import.templatePlaceholder': 'Select a published work type',
+  'workRecords.import.downloadTemplate': 'Download import template',
+  'workRecords.import.downloadingTemplate': 'Downloading import template…',
   'workRecords.import.templateDownloaded': 'Import template downloaded',
   'workRecords.import.templateDownloadFailed':
     'Failed to download import template',
   'workRecords.import.templateHint':
-    'Fields come from the current published version of the selected form template.',
+    'Fields come from the current published version of the selected work type. Download the import template before filling it in.',
   'workRecords.import.file': 'Excel file',
   'workRecords.import.invalidFile':
     'Select an .xlsx file no larger than 20 MiB',

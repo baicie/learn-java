@@ -141,7 +141,7 @@ public class WorkRecordListMetaService {
     return List.of(
         builtin("title", "标题", "text", true, true, true, 10),
         builtin("status", "状态", "select", true, true, true, 20),
-        builtin("templateId", "模板", "text", true, false, true, 30),
+        builtin("templateId", "工作类型", "text", true, false, true, 30),
         builtin("ownerId", "负责人", "user", true, true, true, 40),
         builtin("creatorId", "创建人", "user", false, true, true, 50),
         builtin("recordTime", "记录时间", "datetime", true, true, true, 60),
