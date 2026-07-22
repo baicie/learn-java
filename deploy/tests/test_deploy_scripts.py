@@ -46,6 +46,15 @@ def test_java_dockerfile_declares_app_module_in_build_stage():
     assert 'mvn -pl "${APP_MODULE}"' in text
 
 
+def test_server_image_splits_spring_boot_dependencies_for_proxy_uploads():
+    dockerfile = ROOT / "apps/aiops-server/Dockerfile"
+    text = dockerfile.read_text(encoding="utf-8")
+
+    assert "extract --layers --launcher" in text
+    assert text.count("COPY --from=build /tmp/dependency-layers/") == 4
+    assert "org.springframework.boot.loader.launch.JarLauncher" in text
+
+
 def test_build_images_passes_app_ports():
     # server 用专用 Dockerfile（含 portal-build 阶段）
     # runner  用专用 Dockerfile（要装 ansible / sshpass / tini）

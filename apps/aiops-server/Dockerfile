@@ -3,7 +3,7 @@
 # aiops-server 镜像：
 #   1. portal-build：固定 Node/pnpm 版本，独立构建 React Portal；
 #   2. build：Maven/JDK 21 构建 Java，并把 Portal dist 作为静态资源打包；
-#   3. runtime：JRE 21 运行最终 fat jar。
+#   3. runtime：拆分依赖层，避免大镜像层经代理上传超时。
 #
 # 前端构建不再由 Maven 递归启动 web/portal/pom.xml，避免重复下载 Node、
 # 嵌套 Maven 日志难定位以及前端 POM 配置漂移。
@@ -54,7 +54,19 @@ RUN --mount=type=cache,target=/root/.m2 \
        package \
        -DskipTests \
        -P with-portal \
-       -Daiops.portal.skipBuild=true
+       -Daiops.portal.skipBuild=true \
+    && java -Djarmode=tools \
+       -jar apps/aiops-server/target/aiops-server-0.1.0-SNAPSHOT.jar \
+       extract --layers --launcher --destination /tmp/server \
+    && for layer in 0 1 2 3; do \
+         mkdir -p "/tmp/dependency-layers/${layer}/BOOT-INF/lib"; \
+       done \
+    && index=0 \
+    && for dependency in /tmp/server/dependencies/BOOT-INF/lib/*.jar; do \
+         layer=$((index % 4)); \
+         mv "$dependency" "/tmp/dependency-layers/${layer}/BOOT-INF/lib/"; \
+         index=$((index + 1)); \
+       done
 
 FROM ${RUNTIME_IMAGE} AS runtime
 
@@ -69,7 +81,13 @@ RUN addgroup -S aiops && adduser -S aiops -G aiops \
 
 WORKDIR /app
 
-COPY --from=build /workspace/apps/aiops-server/target/aiops-server-0.1.0-SNAPSHOT.jar /app/app.jar
+COPY --from=build /tmp/server/spring-boot-loader/ ./
+COPY --from=build /tmp/dependency-layers/0/ ./
+COPY --from=build /tmp/dependency-layers/1/ ./
+COPY --from=build /tmp/dependency-layers/2/ ./
+COPY --from=build /tmp/dependency-layers/3/ ./
+COPY --from=build /tmp/server/snapshot-dependencies/ ./
+COPY --from=build /tmp/server/application/ ./
 
 USER aiops
 
@@ -78,4 +96,4 @@ EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
     CMD wget -qO- "http://127.0.0.1:8080/actuator/health" || exit 1
 
-ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar /app/app.jar"]
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS org.springframework.boot.loader.launch.JarLauncher"]
