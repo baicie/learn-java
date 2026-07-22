@@ -88,7 +88,7 @@ grep -Fq 'name: Configure Tencent Cloud Docker mirror' .github/workflows/deploy.
 grep -Fq 'deploy/scripts/configure-docker-mirror.sh' .github/workflows/deploy.yml
 grep -Fq 'envs: IMAGE_PREFIX,IMAGE_TAG' .github/workflows/deploy.yml
 grep -Fq 'needs: runtime-smoke' .github/workflows/deploy.yml
-grep -Fq 'name: Compose runtime smoke' .github/workflows/release-verify.yml
+grep -Fq 'name: Build, smoke and publish' .github/workflows/release-verify.yml
 grep -Fq 'needs.preflight.outputs.release_required' .github/workflows/release-verify.yml
 grep -Fq 'group: ops-scripts-${{ github.workflow }}-${{ github.ref }}' \
   .github/workflows/ops-scripts.yml
