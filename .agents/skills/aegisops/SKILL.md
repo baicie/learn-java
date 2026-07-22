@@ -2416,6 +2416,18 @@ API 变更是否同步 OpenAPI 与 docs?
 端口是否与 references/architecture-boundaries.md §1 端口表冲突?
 ```
 
+### 19.1 Git 分支与 PR 规则
+
+功能开发、Bug 修复、重构、CI 或文档等仓库变更必须遵循:
+
+```txt
+1. 修改文件前, 从最新 mvp 创建独立分支或 worktree。
+2. 禁止直接在 mvp 分支修改、提交或推送。
+3. 一个任务使用一个分支或 worktree, 不复用已合并或已关闭 PR 的分支, 不混入无关变更。
+4. 完成影响面验证后提交并推送任务分支。
+5. 创建目标分支为 mvp 的 PR, 通过 PR 合并变更。
+```
+
 ---
 
 ## 20. Agent 响应风格
