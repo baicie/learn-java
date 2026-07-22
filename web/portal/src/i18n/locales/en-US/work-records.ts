@@ -237,6 +237,7 @@ export const workRecords = {
 
   // Detail
   'workRecords.detail.template': 'Work type',
+  'workRecords.detail.basicInfo': 'Record details',
   'workRecords.detail.legacyFields': 'Legacy Fields',
   'workRecords.detail.disabledFieldBadge': 'Disabled field',
   'workRecords.detail.disabledOption': '(disabled)',

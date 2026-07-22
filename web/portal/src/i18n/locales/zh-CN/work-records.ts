@@ -232,6 +232,7 @@ export const workRecords = {
 
   // Detail
   'workRecords.detail.template': '工作类型',
+  'workRecords.detail.basicInfo': '记录基本信息',
   'workRecords.detail.legacyFields': '历史遗留字段',
   'workRecords.detail.disabledFieldBadge': '已禁用字段',
   'workRecords.detail.disabledOption': '（已禁用）',
