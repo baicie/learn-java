@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { CalendarIcon } from 'lucide-react'
 import { zhCN } from 'react-day-picker/locale'
 import { cn } from '@/lib/utils'
@@ -29,14 +29,26 @@ export function DateField({ id, value, onChange, ...rest }: DateFieldProps) {
   const rootRef = useRef<HTMLDivElement>(null)
   const selected = parseIso(value)
 
-  const closeOnOutside = (event: React.PointerEvent) => {
-    if (!rootRef.current?.contains(event.target as Node)) {
-      setOpen(false)
+  // Close on any outside pointerdown without blocking the click itself:
+  // deferring the close lets the click finish dispatching to the real
+  // target first, so one click both closes the calendar and takes effect.
+  useEffect(() => {
+    if (!open) return undefined
+    let timer = 0
+    const handlePointerDown = (event: PointerEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) {
+        timer = window.setTimeout(() => setOpen(false), 0)
+      }
     }
-  }
+    document.addEventListener('pointerdown', handlePointerDown)
+    return () => {
+      window.clearTimeout(timer)
+      document.removeEventListener('pointerdown', handlePointerDown)
+    }
+  }, [open])
 
   return (
-    <div ref={rootRef} className='relative w-full md:max-w-[200px]'>
+    <div ref={rootRef} className='relative w-full'>
       <button
         id={id}
         type='button'
@@ -56,24 +68,17 @@ export function DateField({ id, value, onChange, ...rest }: DateFieldProps) {
       </button>
 
       {open ? (
-        <>
-          <div
-            className='fixed inset-0 z-40'
-            data-testid={`${id}-backdrop`}
-            onPointerDown={closeOnOutside}
+        <div className='absolute top-full left-0 z-50 mt-1 rounded-md border bg-popover shadow-md'>
+          <Calendar
+            mode='single'
+            locale={zhCN}
+            selected={selected}
+            onSelect={(day) => {
+              onChange(day ? toIso(day) : '')
+              setOpen(false)
+            }}
           />
-          <div className='absolute top-full left-0 z-50 mt-1 rounded-md border bg-popover shadow-md'>
-            <Calendar
-              mode='single'
-              locale={zhCN}
-              selected={selected}
-              onSelect={(day) => {
-                onChange(day ? toIso(day) : '')
-                setOpen(false)
-              }}
-            />
-          </div>
-        </>
+        </div>
       ) : null}
     </div>
   )

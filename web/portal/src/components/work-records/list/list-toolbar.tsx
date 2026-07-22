@@ -217,31 +217,33 @@ export function ListToolbar({ meta, query, userOptions, onChange }: Props) {
         </Select>
       </div>
 
-      <div className='grid content-start gap-1.5'>
-        <Label htmlFor='record-time-from'>
-          {t('workRecords.list.recordTimeFromLabel')}
-        </Label>
-        <DateField
-          id='record-time-from'
-          aria-label={t('workRecords.list.recordTimeFromLabel')}
-          value={draft.recordTimeFrom}
-          onChange={(value) => setDraft({ ...draft, recordTimeFrom: value })}
-        />
+      <div className='grid grid-cols-2 content-start gap-2'>
+        <div className='grid content-start gap-1.5'>
+          <Label htmlFor='record-time-from'>
+            {t('workRecords.list.recordTimeFromLabel')}
+          </Label>
+          <DateField
+            id='record-time-from'
+            aria-label={t('workRecords.list.recordTimeFromLabel')}
+            value={draft.recordTimeFrom}
+            onChange={(value) => setDraft({ ...draft, recordTimeFrom: value })}
+          />
+        </div>
+
+        <div className='grid content-start gap-1.5'>
+          <Label htmlFor='record-time-to'>
+            {t('workRecords.list.recordTimeToLabel')}
+          </Label>
+          <DateField
+            id='record-time-to'
+            aria-label={t('workRecords.list.recordTimeToLabel')}
+            value={draft.recordTimeTo}
+            onChange={(value) => setDraft({ ...draft, recordTimeTo: value })}
+          />
+        </div>
       </div>
 
-      <div className='grid content-start gap-1.5'>
-        <Label htmlFor='record-time-to'>
-          {t('workRecords.list.recordTimeToLabel')}
-        </Label>
-        <DateField
-          id='record-time-to'
-          aria-label={t('workRecords.list.recordTimeToLabel')}
-          value={draft.recordTimeTo}
-          onChange={(value) => setDraft({ ...draft, recordTimeTo: value })}
-        />
-      </div>
-
-      <div className='flex items-end justify-end gap-2'>
+      <div className='flex items-end justify-end gap-2 md:col-start-4'>
         <Button type='button' variant='outline' onClick={resetFilters}>
           <RotateCcw data-icon='inline-start' />
           {t('workRecords.list.activeFiltersLabel')}

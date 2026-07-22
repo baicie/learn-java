@@ -73,6 +73,23 @@ describe('ListToolbar date filters', () => {
       })
     )
   })
+
+  it('lets outside clicks pass through while closing the calendar', async () => {
+    const { screen, onChange } = await renderToolbar()
+
+    await screen.getByRole('button', { name: '记录时间（开始）' }).click()
+    await expect
+      .element(screen.getByRole('button', { name: /15日/ }))
+      .toBeVisible()
+
+    // Clicking 查询 while the calendar is open must not be swallowed:
+    // the calendar closes and the search fires in a single click.
+    await screen.getByRole('button', { name: '查询' }).click()
+    expect(onChange).toHaveBeenCalled()
+    await expect
+      .element(screen.getByRole('button', { name: /15日/ }))
+      .not.toBeInTheDocument()
+  })
 })
 
 describe('ListToolbar labeled layout', () => {
