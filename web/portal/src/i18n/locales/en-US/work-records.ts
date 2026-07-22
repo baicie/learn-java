@@ -14,6 +14,8 @@ export const workRecords = {
   'workRecords.list.actions': 'Actions',
   'workRecords.list.allStatus': 'All statuses',
   'workRecords.list.searchPlaceholder': 'Search records…',
+  'workRecords.list.recordTimeFromLabel': 'Record time (from)',
+  'workRecords.list.recordTimeToLabel': 'Record time (to)',
   'workRecords.list.allTemplates': 'All templates',
   'workRecords.list.status.draft': 'Draft',
   'workRecords.list.status.processing': 'Processing',
