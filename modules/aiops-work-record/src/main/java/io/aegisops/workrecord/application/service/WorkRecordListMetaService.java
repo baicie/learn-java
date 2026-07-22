@@ -65,7 +65,9 @@ public class WorkRecordListMetaService {
     List<RecordListColumn> columns = new ArrayList<>(builtinColumns());
     columns.addAll(listColumns(fields));
 
-    List<RecordListColumn> exportColumns = new ArrayList<>(builtinColumns());
+    List<RecordListColumn> exportColumns = new ArrayList<>();
+    exportColumns.add(builtinExportIdColumn());
+    exportColumns.addAll(builtinColumns());
     exportColumns.addAll(exportColumns(fields));
 
     List<RecordListColumn> filterFields =
@@ -137,7 +139,6 @@ public class WorkRecordListMetaService {
 
   private List<RecordListColumn> builtinColumns() {
     return List.of(
-        builtin("id", "记录 ID", "text", true, false, true, 0),
         builtin("title", "标题", "text", true, true, true, 10),
         builtin("status", "状态", "select", true, true, true, 20),
         builtin("templateId", "模板", "text", true, false, true, 30),
@@ -145,6 +146,11 @@ public class WorkRecordListMetaService {
         builtin("creatorId", "创建人", "user", false, true, true, 50),
         builtin("recordTime", "记录时间", "datetime", true, true, true, 60),
         builtin("createdAt", "创建时间", "datetime", false, true, true, 70));
+  }
+
+  // 记录 ID 对使用人没有意义，不进列表列与列显示控制；导出头保留以便导出结果可回查记录。
+  private RecordListColumn builtinExportIdColumn() {
+    return builtin("id", "记录 ID", "text", true, false, true, 0);
   }
 
   private RecordListColumn builtin(
