@@ -9,12 +9,12 @@
 #   ./scripts/deploy/deploy-app.sh logs server
 #   ./scripts/deploy/deploy-app.sh status
 #
-# 与 deploy.yml 的差异：
+# 与 GitHub Release 工作流的差异：
 #   - 本脚本面向"本地或单 VM 一键起"；复制源 compose 到临时目录后再 sed 占位符，避免污染源文件
-#   - deploy.yml 走 SSH 到腾讯云 VM，远程就地 sed 同一份 compose 文件
+#   - Release 工作流通过 deploy/scripts/deploy-app.sh 在腾讯云 VM 部署
 #
 # 注意：
-#   - 不会修改 deploy/docker-compose.app.yml，deploy.yml 的 sed 仍能找到占位符
+#   - 不会修改 deploy/docker-compose.app.yml
 #   - 镜像需先存在；缺失时直接报错给 build-images.sh 提示
 
 set -euo pipefail
@@ -48,7 +48,7 @@ sed_in_place() {
 }
 
 stamp_compose() {
-  # 占位符是 deploy.yml 留的：
+  # 占位符由生产 Compose 文件保留：
   #   server  : DOCKERHUB_USERNAME_REPLACE_ME/aegisops:git-SHA_REPLACE_ME
   #   其他    : DOCKERHUB_USERNAME_REPLACE_ME/aegisops/aiops-<app>:git-SHA_REPLACE_ME
   sed_in_place "s|DOCKERHUB_USERNAME_REPLACE_ME/aegisops:git-SHA_REPLACE_ME|${REGISTRY}/aiops-server:${VERSION}|" "$RUNTIME_COMPOSE"
