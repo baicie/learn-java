@@ -21,7 +21,7 @@ jobs:
   deploy:
     name: Deploy ${{ inputs.component }} to Tencent Cloud VM
     if: inputs.component == 'zabbix'
-    runs-on: [self-hosted, linux, x64, aegisops-cn]
+    runs-on: ubuntu-latest
     timeout-minutes: 25
     environment:
       name: aegisops-prod

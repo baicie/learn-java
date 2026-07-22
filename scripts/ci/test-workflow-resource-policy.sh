@@ -31,6 +31,7 @@ reject_text() {
 require_text "$CI_WORKFLOW" "needs: docs"
 require_text "$CI_WORKFLOW" "needs: agent"
 require_text "$CI_WORKFLOW" "needs: frontend"
+require_text "$CI_WORKFLOW" "TZ: Asia/Shanghai"
 require_text "$CI_WORKFLOW" 'if: ${{ !cancelled() }}'
 reject_text "$CI_WORKFLOW" "if: always()"
 require_text "$OPS_WORKFLOW" "needs: shellcheck"
@@ -44,6 +45,10 @@ reject_text "$CI_WORKFLOW" "cache: pip"
 reject_text "$RELEASE_WORKFLOW" "cache: maven"
 reject_text "$DEPLOY_WORKFLOW" "cache: maven"
 reject_text "$E2E_WORKFLOW" "cache: maven"
+for workflow in "$ROOT_DIR"/.github/workflows/*.yml; do
+  reject_text "$workflow" "self-hosted"
+  reject_text "$workflow" "bash scripts/ci/prepare-docker.sh"
+done
 require_text "$DEPLOY_WORKFLOW" "Reusing \$image from Release Verify"
 require_text "$DEPLOY_WORKFLOW" "for attempt in 1 2 3; do"
 require_text "$DEPLOY_WORKFLOW" 'retry docker push "$remote_image"'
