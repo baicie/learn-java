@@ -85,8 +85,8 @@ describe('validateRecordForm', () => {
 
     expect(errors).toEqual(
       expect.objectContaining({
-        templateId: '请选择记录模板',
-        templateVersionId: '请选择模板版本',
+        templateId: '请选择工作类型',
+        templateVersionId: '请选择工作类型版本',
         title: '请输入记录标题',
         recordTime: '记录时间格式无效',
       })

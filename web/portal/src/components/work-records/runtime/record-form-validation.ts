@@ -14,11 +14,11 @@ export function validateRecordForm(
   const errors: RecordFormErrors = {}
 
   if (!form.templateId.trim()) {
-    errors.templateId = '请选择记录模板'
+    errors.templateId = '请选择工作类型'
   }
 
   if (!form.templateVersionId.trim()) {
-    errors.templateVersionId = '请选择模板版本'
+    errors.templateVersionId = '请选择工作类型版本'
   }
 
   if (!form.title.trim()) {

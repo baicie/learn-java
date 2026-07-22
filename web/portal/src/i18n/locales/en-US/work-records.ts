@@ -14,6 +14,8 @@ export const workRecords = {
   'workRecords.list.actions': 'Actions',
   'workRecords.list.allStatus': 'All statuses',
   'workRecords.list.searchPlaceholder': 'Search records…',
+  'workRecords.list.keywordLabel': 'Keyword',
+  'workRecords.list.search': 'Search',
   'workRecords.list.recordTimeFromLabel': 'Record time (from)',
   'workRecords.list.recordTimeToLabel': 'Record time (to)',
   'workRecords.list.allTemplates': 'All work types',
@@ -61,7 +63,7 @@ export const workRecords = {
   'workRecords.edit.title': 'Edit record',
   'workRecords.detail.title': 'Record details',
   'workRecords.field.recordId': 'Record ID',
-  'workRecords.field.templateVersion': 'Template version',
+  'workRecords.field.templateVersion': 'Work type version',
   'workRecords.designer.title': 'Form Designer',
   'workRecords.designer.description':
     'Configure work record templates, fields and dictionary bindings.',
@@ -70,7 +72,7 @@ export const workRecords = {
   'workRecords.field.owner': 'Owner',
   'workRecords.field.creator': 'Created by',
   'workRecords.field.recordTime': 'Record time',
-  'workRecords.field.template': 'Template',
+  'workRecords.field.template': 'Work type',
   'workRecords.status.draft': 'Draft',
   'workRecords.status.processing': 'Processing',
   'workRecords.status.done': 'Done',
@@ -138,13 +140,13 @@ export const workRecords = {
   // Form
   'workRecords.form.basicInfo': 'Basic Info',
   'workRecords.form.recordContent': 'Record Content',
-  'workRecords.form.selectTemplate': 'Select template',
+  'workRecords.form.selectTemplate': 'Select work type',
   'workRecords.form.titlePlaceholder': 'Enter record title',
   'workRecords.form.ownerPlaceholder': 'Select or enter owner',
-  'workRecords.form.templateRequired': 'Please select a template',
+  'workRecords.form.templateRequired': 'Please select a work type',
   'workRecords.form.titleRequired': 'Please enter a title',
   'workRecords.form.recordTimeRequired': 'Please choose a record time',
-  'workRecords.form.versionRequired': 'Please pick a template version',
+  'workRecords.form.versionRequired': 'Please pick a work type version',
   'workRecords.form.validationFailed':
     'Please fix the form errors before submitting',
   'workRecords.form.saveSuccess': 'Work record saved',
@@ -153,9 +155,9 @@ export const workRecords = {
   'workRecords.form.saveDraft': 'Save as Draft',
   'workRecords.form.saving': 'Saving…',
   'workRecords.form.submitting': 'Submitting…',
-  'workRecords.form.notPublishedTitle': 'No published template',
+  'workRecords.form.notPublishedTitle': 'No published work type',
   'workRecords.form.notPublishedHint':
-    'Publish a template in the designer before creating records.',
+    'Publish a work type in the designer before creating records.',
   'workRecords.form.recordNotFound': 'Record not found',
   'workRecords.form.loading': 'Loading…',
   'workRecords.form.cancel': 'Cancel',
@@ -166,9 +168,9 @@ export const workRecords = {
   'workRecords.form.yes': 'Yes / No',
 
   // Template switching
-  'workRecords.templateSwitch.title': 'Switch template',
+  'workRecords.templateSwitch.title': 'Switch work type',
   'workRecords.templateSwitch.description':
-    'Switching templates clears all dynamic values for the current template.',
+    'Switching work types clears all dynamic values for the current work type.',
   'workRecords.templateSwitch.confirm': 'Clear and switch',
 
   // Designer
@@ -234,7 +236,7 @@ export const workRecords = {
   'workRecords.calendar.default.confirm': 'Confirm switch',
 
   // Detail
-  'workRecords.detail.template': 'Template',
+  'workRecords.detail.template': 'Work type',
   'workRecords.detail.legacyFields': 'Legacy Fields',
   'workRecords.detail.disabledFieldBadge': 'Disabled field',
   'workRecords.detail.disabledOption': '(disabled)',
