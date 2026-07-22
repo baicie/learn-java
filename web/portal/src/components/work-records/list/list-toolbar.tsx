@@ -12,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { DateField } from './date-field'
 import type {
   ListQueryState,
   RecordListMeta,
@@ -220,13 +221,11 @@ export function ListToolbar({ meta, query, userOptions, onChange }: Props) {
         <Label htmlFor='record-time-from'>
           {t('workRecords.list.recordTimeFromLabel')}
         </Label>
-        <Input
+        <DateField
           id='record-time-from'
-          type='date'
+          aria-label={t('workRecords.list.recordTimeFromLabel')}
           value={draft.recordTimeFrom}
-          onChange={(event) =>
-            setDraft({ ...draft, recordTimeFrom: event.target.value })
-          }
+          onChange={(value) => setDraft({ ...draft, recordTimeFrom: value })}
         />
       </div>
 
@@ -234,13 +233,11 @@ export function ListToolbar({ meta, query, userOptions, onChange }: Props) {
         <Label htmlFor='record-time-to'>
           {t('workRecords.list.recordTimeToLabel')}
         </Label>
-        <Input
+        <DateField
           id='record-time-to'
-          type='date'
+          aria-label={t('workRecords.list.recordTimeToLabel')}
           value={draft.recordTimeTo}
-          onChange={(event) =>
-            setDraft({ ...draft, recordTimeTo: event.target.value })
-          }
+          onChange={(value) => setDraft({ ...draft, recordTimeTo: value })}
         />
       </div>
 

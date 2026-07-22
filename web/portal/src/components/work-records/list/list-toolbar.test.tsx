@@ -27,14 +27,51 @@ describe('ListToolbar date filters', () => {
     await expect.element(screen.getByText('记录时间（结束）')).toBeVisible()
   })
 
-  it('uses date-only inputs instead of datetime inputs', async () => {
+  it('shows the placeholder in yyyy/mm/dd style when empty', async () => {
     const { screen } = await renderToolbar()
 
-    const from = screen.getByLabelText('记录时间（开始）')
-    const to = screen.getByLabelText('记录时间（结束）')
+    const from = screen.getByRole('button', { name: '记录时间（开始）' })
+    const to = screen.getByRole('button', { name: '记录时间（结束）' })
 
-    await expect.element(from).toHaveAttribute('type', 'date')
-    await expect.element(to).toHaveAttribute('type', 'date')
+    await expect.element(from).toHaveTextContent('yyyy/mm/dd')
+    await expect.element(to).toHaveTextContent('yyyy/mm/dd')
+  })
+
+  it('displays existing values as yyyy/mm/dd', async () => {
+    const screen = await render(
+      <I18nextProvider i18n={i18n} defaultNS='translation'>
+        <ListToolbar
+          query={{
+            ...buildEmptyListQuery(),
+            recordTimeFrom: '2026-07-01',
+            recordTimeTo: '2026-07-22',
+          }}
+          userOptions={[]}
+          onChange={vi.fn()}
+        />
+      </I18nextProvider>
+    )
+
+    await expect
+      .element(screen.getByRole('button', { name: '记录时间（开始）' }))
+      .toHaveTextContent('2026/07/01')
+    await expect
+      .element(screen.getByRole('button', { name: '记录时间（结束）' }))
+      .toHaveTextContent('2026/07/22')
+  })
+
+  it('picks a date from the calendar and applies it on search', async () => {
+    const { screen, onChange } = await renderToolbar()
+
+    await screen.getByRole('button', { name: '记录时间（开始）' }).click()
+    await screen.getByRole('button', { name: /15日/ }).click()
+
+    await screen.getByRole('button', { name: '查询' }).click()
+    expect(onChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        recordTimeFrom: expect.stringMatching(/^\d{4}-\d{2}-15$/),
+      })
+    )
   })
 })
 
