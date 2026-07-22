@@ -151,6 +151,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     needs: publish-images
+    env:
+      AIOPS_AGENT_INTERNAL_TOKEN: runtime-smoke-only
     environment:
       name: aegisops-prod
 
