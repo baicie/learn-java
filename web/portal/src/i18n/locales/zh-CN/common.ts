@@ -46,6 +46,7 @@ export const common = {
 
   'settings.title': '设置',
   'settings.description': '管理个人资料、账户安全、语言和界面偏好。',
+  'settings.buildVersion': '构建版本',
   'settings.nav.profile': '个人资料',
   'settings.nav.account': '账户与语言',
   'settings.nav.appearance': '外观',

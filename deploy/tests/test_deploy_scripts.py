@@ -54,8 +54,17 @@ def test_build_images_passes_app_ports():
     text = script.read_text(encoding="utf-8")
 
     assert "apps/aiops-server/Dockerfile" in text
+    assert '--build-arg BUILD_VERSION="${VERSION}"' in text
     assert "apps/aiops-runner/Dockerfile" in text
     assert "--build-arg APP_PORT=8081" in text  # worker 走通用模板，必须显式传 port
+
+
+def test_server_image_exposes_build_version_to_portal():
+    dockerfile = ROOT / "apps/aiops-server/Dockerfile"
+    text = dockerfile.read_text(encoding="utf-8")
+
+    assert "ARG BUILD_VERSION=development" in text
+    assert "ENV VITE_BUILD_VERSION=${BUILD_VERSION}" in text
 
 
 def test_worker_uses_compose_redis_service():

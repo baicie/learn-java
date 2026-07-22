@@ -10,6 +10,8 @@ import { Search } from '@/components/search'
 import { ThemeSwitch } from '@/components/theme-switch'
 import { SidebarNav } from './components/sidebar-nav'
 
+const buildVersion = import.meta.env.VITE_BUILD_VERSION || 'development'
+
 export function Settings() {
   const { t } = useTranslation()
   const sidebarNavItems = [
@@ -60,6 +62,15 @@ export function Settings() {
         <div className='flex flex-1 flex-col gap-2 overflow-hidden lg:flex-row lg:gap-12'>
           <aside className='top-0 lg:sticky lg:w-1/5'>
             <SidebarNav items={sidebarNavItems} />
+            <Separator className='my-4' />
+            <div className='flex flex-col gap-1 px-2'>
+              <span className='text-xs font-medium text-muted-foreground'>
+                {t('settings.buildVersion')}
+              </span>
+              <code className='text-xs break-all' title={buildVersion}>
+                {buildVersion}
+              </code>
+            </div>
           </aside>
           <div className='flex w-full overflow-y-hidden p-1'>
             <Outlet />

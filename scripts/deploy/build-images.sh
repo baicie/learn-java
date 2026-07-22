@@ -22,6 +22,7 @@ cd "$ROOT_DIR"
 # aiops-server：专用 Dockerfile（含 portal-build 阶段，产出 static/portal 嵌入 jar）
 docker build \
   -f apps/aiops-server/Dockerfile \
+  --build-arg BUILD_VERSION="${VERSION}" \
   -t "${REGISTRY}/aiops-server:${VERSION}" .
 
 # aiops-worker：通用 Java 模板

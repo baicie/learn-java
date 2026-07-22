@@ -14,6 +14,9 @@ ARG RUNTIME_IMAGE=eclipse-temurin:21-jre-alpine
 
 FROM ${NODE_IMAGE} AS portal-build
 
+ARG BUILD_VERSION=development
+ENV VITE_BUILD_VERSION=${BUILD_VERSION}
+
 WORKDIR /workspace
 
 RUN npm install --global pnpm@10.33.4
