@@ -52,8 +52,6 @@ jobs:
     name: Backend
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    needs: frontend
-    if: ${{ !cancelled() }}
 
     steps:
       - name: Checkout
@@ -88,8 +86,6 @@ jobs:
     name: Frontend
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    needs: agent
-    if: ${{ !cancelled() }}
 
     steps:
       - name: Checkout
@@ -130,8 +126,6 @@ jobs:
     name: AI Agent
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: docs
-    if: ${{ !cancelled() }}
 
     steps:
       - name: Checkout

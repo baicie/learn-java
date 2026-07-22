@@ -28,9 +28,9 @@ reject_text() {
   fi
 }
 
-require_text "$CI_WORKFLOW" "needs: docs"
-require_text "$CI_WORKFLOW" "needs: agent"
-require_text "$CI_WORKFLOW" "needs: frontend"
+reject_text "$CI_WORKFLOW" "needs: docs"
+reject_text "$CI_WORKFLOW" "needs: agent"
+reject_text "$CI_WORKFLOW" "needs: frontend"
 require_text "$CI_WORKFLOW" "TZ: Asia/Shanghai"
 require_text "$CI_WORKFLOW" 'if: ${{ !cancelled() }}'
 reject_text "$CI_WORKFLOW" "if: always()"
