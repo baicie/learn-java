@@ -31,6 +31,7 @@ reject_text() {
 require_text "$CI_WORKFLOW" "needs: docs"
 require_text "$CI_WORKFLOW" "needs: agent"
 require_text "$CI_WORKFLOW" "needs: frontend"
+require_text "$CI_WORKFLOW" "TZ: Asia/Shanghai"
 require_text "$CI_WORKFLOW" 'if: ${{ !cancelled() }}'
 reject_text "$CI_WORKFLOW" "if: always()"
 require_text "$OPS_WORKFLOW" "needs: shellcheck"
