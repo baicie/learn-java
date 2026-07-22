@@ -49,6 +49,7 @@ export const common = {
   'settings.title': 'Settings',
   'settings.description':
     'Manage your profile, account security, language and interface preferences.',
+  'settings.buildVersion': 'Build version',
   'settings.nav.profile': 'Profile',
   'settings.nav.account': 'Account & Language',
   'settings.nav.appearance': 'Appearance',

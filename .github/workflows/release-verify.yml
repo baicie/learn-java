@@ -123,6 +123,7 @@ jobs:
         run: |
           set -Eeuo pipefail
           docker build \
+            --build-arg BUILD_VERSION="${RELEASE_REF}" \
             --file apps/aiops-server/Dockerfile \
             --tag "local/aegisops:${RELEASE_REF}-server" \
             .
