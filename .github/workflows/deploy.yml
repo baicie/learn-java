@@ -235,6 +235,7 @@ jobs:
         env:
           IMAGE_PREFIX: ${{ env.IMAGE_PREFIX }}
           IMAGE_TAG: ${{ env.IMAGE_TAG }}
+          AIOPS_AGENT_INTERNAL_TOKEN: ${{ secrets.AIOPS_AGENT_INTERNAL_TOKEN }}
         with:
           host: ${{ secrets.PERF_VM_HOST }}
           username: ${{ secrets.PERF_VM_USER }}
@@ -243,7 +244,7 @@ jobs:
           port: ${{ secrets.PERF_VM_SSH_PORT || '22' }}
           timeout: 10m
           command_timeout: 20m
-          envs: IMAGE_PREFIX,IMAGE_TAG
+          envs: IMAGE_PREFIX,IMAGE_TAG,AIOPS_AGENT_INTERNAL_TOKEN
           script: |
             bash -lc '
               set -Eeuo pipefail
