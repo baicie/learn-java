@@ -29,7 +29,7 @@ jobs:
         'e2e'
       )
 
-    runs-on: [self-hosted, linux, x64, aegisops-cn]
+    runs-on: ubuntu-latest
     timeout-minutes: 35
     env:
       POSTGRES_CONTAINER: work-record-postgres-${{ github.run_id }}-${{ github.run_attempt }}
@@ -48,9 +48,6 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: "22"
-
-      - name: Prepare Docker
-        run: bash scripts/ci/prepare-docker.sh
 
       - name: Start PostgreSQL
         run: |

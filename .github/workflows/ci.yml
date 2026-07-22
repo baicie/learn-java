@@ -32,7 +32,7 @@ env:
 jobs:
   docs:
     name: Docs
-    runs-on: [self-hosted, linux, x64, aegisops-cn]
+    runs-on: ubuntu-latest
     timeout-minutes: 5
 
     steps:
@@ -49,7 +49,7 @@ jobs:
 
   backend:
     name: Backend
-    runs-on: [self-hosted, linux, x64, aegisops-cn]
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     needs: frontend
     if: ${{ !cancelled() }}
@@ -69,9 +69,6 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
-      - name: Prepare Docker
-        run: bash scripts/ci/prepare-docker.sh
-
       - name: Verify backend
         run: bash scripts/ci/backend.sh
 
@@ -88,7 +85,7 @@ jobs:
 
   frontend:
     name: Frontend
-    runs-on: [self-hosted, linux, x64, aegisops-cn]
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     needs: agent
     if: ${{ !cancelled() }}
@@ -130,7 +127,7 @@ jobs:
 
   agent:
     name: AI Agent
-    runs-on: [self-hosted, linux, x64, aegisops-cn]
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     needs: docs
     if: ${{ !cancelled() }}
@@ -149,7 +146,7 @@ jobs:
 
   summary:
     name: CI Summary
-    runs-on: [self-hosted, linux, x64, aegisops-cn]
+    runs-on: ubuntu-latest
     needs: [docs, backend, frontend, agent]
     if: ${{ !cancelled() }}
 
