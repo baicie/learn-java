@@ -49,9 +49,10 @@ for workflow in "$ROOT_DIR"/.github/workflows/*.yml; do
   reject_text "$workflow" "self-hosted"
   reject_text "$workflow" "bash scripts/ci/prepare-docker.sh"
 done
-require_text "$DEPLOY_WORKFLOW" "Reusing \$image from Release Verify"
-require_text "$DEPLOY_WORKFLOW" "for attempt in 1 2 3; do"
-require_text "$DEPLOY_WORKFLOW" 'retry docker push "$remote_image"'
+reject_text "$DEPLOY_WORKFLOW" "publish-images:"
+require_text "$RELEASE_WORKFLOW" "for attempt in 1 2 3; do"
+require_text "$RELEASE_WORKFLOW" 'retry docker push "$remote_image"'
+require_text "$RELEASE_WORKFLOW" "uses: docker/login-action@v4"
 require_text "$RELEASE_PREFLIGHT" "AIOPS_AGENT_INTERNAL_TOKEN=preflight-only"
 require_text "$RELEASE_WORKFLOW" "AIOPS_AGENT_INTERNAL_TOKEN: runtime-smoke-only"
 require_text "$DEPLOY_WORKFLOW" "AIOPS_AGENT_INTERNAL_TOKEN: runtime-smoke-only"
