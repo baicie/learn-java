@@ -44,8 +44,9 @@ ENV SPRING_PROFILES_ACTIVE=private
 ENV ANSIBLE_HOST_KEY_CHECKING=False
 ENV PYTHONUNBUFFERED=1
 
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
+RUN sed -i 's|http://|https://|g' /etc/apt/sources.list \
+    && apt-get -o Acquire::Retries=5 update \
+    && apt-get -o Acquire::Retries=5 install -y --no-install-recommends \
         ansible \
         sshpass \
         openssh-client \

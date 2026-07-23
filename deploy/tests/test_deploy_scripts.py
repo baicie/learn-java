@@ -67,6 +67,14 @@ def test_server_image_exposes_build_version_to_portal():
     assert "ENV VITE_BUILD_VERSION=${BUILD_VERSION}" in text
 
 
+def test_runner_image_retries_apt_over_https():
+    dockerfile = ROOT / "apps/aiops-runner/Dockerfile"
+    text = dockerfile.read_text(encoding="utf-8")
+
+    assert "sed -i 's|http://|https://|g' /etc/apt/sources.list" in text
+    assert text.count("Acquire::Retries=5") == 2
+
+
 def test_worker_uses_compose_redis_service():
     compose_file = ROOT / "deploy/docker-compose.app.yml"
     compose = yaml.safe_load(compose_file.read_text(encoding="utf-8"))
