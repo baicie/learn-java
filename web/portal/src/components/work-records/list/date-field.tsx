@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { CalendarIcon } from 'lucide-react'
 import { zhCN } from 'react-day-picker/locale'
 import { cn } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
 
 type DateFieldProps = {
@@ -49,23 +50,22 @@ export function DateField({ id, value, onChange, ...rest }: DateFieldProps) {
 
   return (
     <div ref={rootRef} className='relative w-full'>
-      <button
+      <Button
         id={id}
-        type='button'
+        variant='outline'
+        className={cn(
+          'flex h-9 w-full items-center justify-between gap-2 bg-transparent',
+          'dark:bg-input/30'
+        )}
         aria-label={rest['aria-label']}
         aria-expanded={open}
         onClick={() => setOpen((prev) => !prev)}
-        className={cn(
-          'flex h-9 w-full items-center justify-between gap-2 rounded-md border border-input bg-transparent px-3 text-sm shadow-xs transition-[color,box-shadow] outline-none',
-          'hover:bg-accent/50 focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50',
-          'dark:bg-input/30 dark:hover:bg-input/50'
-        )}
       >
         <span className={cn(!selected && 'text-muted-foreground')}>
           {selected ? value.replace(/-/g, '/') : 'yyyy/mm/dd'}
         </span>
         <CalendarIcon className='size-4 shrink-0 text-muted-foreground' />
-      </button>
+      </Button>
 
       {open ? (
         <div className='absolute top-full left-0 z-50 mt-1 rounded-md border bg-popover shadow-md'>
