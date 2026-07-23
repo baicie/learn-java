@@ -40,14 +40,13 @@ class WorkRecordListMetaServiceTest {
     var meta = service.meta("t1", "tpl1");
 
     assertThat(meta.templates()).hasSize(1);
-    assertThat(meta.columns())
+    assertThat(meta.columns()).noneMatch(column -> column.key().equals("id"));
+    assertThat(meta.exportColumns())
         .anySatisfy(
             column -> {
               assertThat(column.key()).isEqualTo("id");
               assertThat(column.title()).isEqualTo("记录 ID");
-              assertThat(column.visibleByDefault()).isTrue();
             });
-    assertThat(meta.exportColumns()).anyMatch(column -> column.key().equals("id"));
     assertThat(meta.columns()).anyMatch(column -> column.key().equals("custom.priority"));
     assertThat(meta.exportColumns()).anyMatch(column -> column.key().equals("custom.priority"));
     assertThat(meta.filterFields()).anyMatch(column -> column.fieldCode().equals("priority"));
@@ -71,8 +70,8 @@ class WorkRecordListMetaServiceTest {
 
     var meta = service.meta("t1", "tpl1");
 
-    assertThat(meta.columns()).hasSize(10); // 8 builtin + col1 + col3
-    assertThat(meta.exportColumns()).hasSize(10); // 8 builtin + col1 + col2
+    assertThat(meta.columns()).hasSize(9); // 7 builtin + col1 + col3
+    assertThat(meta.exportColumns()).hasSize(10); // 8 builtin (含记录 ID) + col1 + col2
     assertThat(
             meta.exportColumns().stream()
                 .filter(c -> "custom.col2".equals(c.key()))

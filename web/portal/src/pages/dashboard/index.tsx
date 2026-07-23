@@ -110,9 +110,9 @@ export function Dashboard() {
           loading={isLoading}
         />
         <MetricCard
-          title='已发布模板'
+          title='已发布工作类型'
           value={metrics.publishedTemplateCount}
-          description={`共 ${templates.data?.length ?? 0} 个模板`}
+          description={`共 ${templates.data?.length ?? 0} 个工作类型`}
           icon={LayoutTemplate}
           loading={templates.isLoading}
         />
@@ -206,11 +206,11 @@ export function Dashboard() {
             <QuickLink
               to='/work-records/new'
               title='新建工作记录'
-              description='选择模板并填写工作内容'
+              description='选择工作类型并填写工作内容'
             />
             <QuickLink
               to='/work-records/templates'
-              title='模板管理'
+              title='工作类型管理'
               description='维护表单字段和发布版本'
             />
             <QuickLink

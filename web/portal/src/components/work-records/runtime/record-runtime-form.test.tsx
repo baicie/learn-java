@@ -61,8 +61,10 @@ describe('RecordRuntimeForm', () => {
       />
     )
 
-    await expect.element(screen.getByText('模板：日报模板')).toBeVisible()
-    await expect.element(screen.getByText('模板：v1')).not.toBeInTheDocument()
+    await expect.element(screen.getByText('工作类型：日报模板')).toBeVisible()
+    await expect
+      .element(screen.getByText('工作类型：v1'))
+      .not.toBeInTheDocument()
   })
 
   it('renders summary error card and per-field errors', async () => {
