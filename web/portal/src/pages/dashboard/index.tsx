@@ -210,7 +210,7 @@ export function Dashboard() {
             />
             <QuickLink
               to='/work-records/templates'
-              title='模板管理'
+              title='工作类型管理'
               description='维护表单字段和发布版本'
             />
             <QuickLink
