@@ -509,16 +509,19 @@ ${year}-01-01,HOLIDAY,false,元旦,
                         if (!canWrite) return
                         void submitUpdateDay(date)
                       }}
-                      className='w-full [--cell-size:4.5rem]'
+                      className='w-full'
                       classNames={{
                         root: 'w-full',
-                        months: 'w-full',
-                        month: 'w-full',
-                        month_grid: 'w-full table-fixed',
-                        day: 'h-20 w-full p-0.5',
-                        month_caption: 'mb-2 text-base font-semibold',
-                        weekday: 'font-medium',
-                        week: 'mt-1',
+                        months: 'relative flex w-full flex-col gap-4',
+                        month: 'flex w-full flex-col gap-4',
+                        month_grid: 'w-full',
+                        weekdays: 'flex w-full',
+                        weekday:
+                          'flex-1 text-center rounded-md text-[0.8rem] font-medium text-muted-foreground select-none',
+                        week: 'mt-1 flex w-full',
+                        day: 'group/day relative flex-1 h-20 p-0.5',
+                        month_caption:
+                          'flex h-(--cell-size) w-full items-center justify-center px-(--cell-size) text-base font-semibold',
                       }}
                       components={{
                         DayButton: (
