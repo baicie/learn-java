@@ -153,12 +153,16 @@ public class AiInputBuilder {
 
   private WorkRecordGenerationRequest.RecordItem item(
       WorkRecord record, Map<String, String> ownerNames) {
+    String ownerName =
+        record.ownerId() == null
+            ? "anonymous"
+            : ownerNames.getOrDefault(record.ownerId(), "anonymous");
     return new WorkRecordGenerationRequest.RecordItem(
         record.id(),
         record.title(),
         record.status().value(),
         record.recordTime(),
-        ownerNames.getOrDefault(record.ownerId(), "anonymous"),
+        ownerName,
         readObject(record.customDataJson()),
         List.of());
   }

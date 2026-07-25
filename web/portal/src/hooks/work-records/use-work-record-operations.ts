@@ -19,6 +19,8 @@ export function useWorkRecordOperations(from: string, to: string) {
   const canAnalyze = permissions.includes('work-record:analytics')
   const canHandover = permissions.includes('work-record:handover')
   const canGenerate = permissions.includes('work-record:ai:generate')
+  const canGenerateMonthly =
+    canGenerate && permissions.includes('work-record:read:all')
   const canApprove = permissions.includes('work-record:approval:act')
   const [statistics, workload, handovers, market, monthlyReports, approvals] =
     useQueries({
@@ -42,7 +44,7 @@ export function useWorkRecordOperations(from: string, to: string) {
         queryOptions({
           queryKey: ['work-record-monthly-ai', from.slice(0, 7)],
           queryFn: () => listMonthlyAiGenerations(from),
-          enabled: canGenerate,
+          enabled: canGenerateMonthly,
           refetchInterval: (query) =>
             getAiGenerationRefetchInterval(query.state.data),
         }),

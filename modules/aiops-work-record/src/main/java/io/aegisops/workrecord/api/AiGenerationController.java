@@ -40,7 +40,7 @@ public class AiGenerationController {
   }
 
   @PostMapping("/monthly")
-  @PreAuthorize("hasAuthority('work-record:ai:generate')")
+  @PreAuthorize("hasAuthority('work-record:ai:generate') and hasAuthority('work-record:read:all')")
   public ApiResponse<AiGeneration> monthly(
       @RequestParam LocalDate month, @AuthenticationPrincipal UserPrincipal principal) {
     return ApiResponse.ok(

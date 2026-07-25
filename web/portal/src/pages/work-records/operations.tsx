@@ -244,7 +244,7 @@ export function WorkRecordOperationsPage() {
           </Card>
         </div>
       </section>
-      <PermissionGate any={['work-record:ai:generate']}>
+      <PermissionGate all={['work-record:ai:generate', 'work-record:read:all']}>
         <Card>
           <CardHeader className='flex-row items-start justify-between gap-4'>
             <div>

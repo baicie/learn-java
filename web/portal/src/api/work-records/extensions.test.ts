@@ -6,6 +6,7 @@ import {
   getStatistics,
   listRecordAiGenerations,
   listComments,
+  requestMonthlyAiReport,
 } from './extensions'
 
 vi.mock('@/lib/api-client', () => ({
@@ -97,5 +98,23 @@ describe('work-record extension api', () => {
       warningsJson: '["Dify 服务暂时不可用"]',
       fallbackReason: 'http_503',
     })
+  })
+
+  it('parses queued AI generations when null fields are omitted', async () => {
+    vi.mocked(apiClient.post).mockResolvedValueOnce(
+      envelope({
+        id: 'ai-monthly-1',
+        generationType: 'monthly_report',
+        resourceType: 'tenant_month',
+        resourceId: '2026-07',
+        status: 'queued',
+        requestedBy: 'user-1',
+        createdAt: '2026-07-25T00:00:00Z',
+      })
+    )
+
+    await expect(
+      requestMonthlyAiReport('2026-07-01T00:00:00Z')
+    ).resolves.toMatchObject({ id: 'ai-monthly-1', status: 'queued' })
   })
 })

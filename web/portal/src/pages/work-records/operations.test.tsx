@@ -80,19 +80,22 @@ vi.mock('@/hooks/work-records/use-work-record-operations', () => ({
   }),
 }))
 
-function authorize() {
+function authorize(
+  permissions = [
+    'work-record:analytics',
+    'work-record:handover',
+    'work-record:ai:generate',
+    'work-record:read:all',
+    'work-record:approval:act',
+  ]
+) {
   const principal: AuthorizationPrincipal = {
     userId: 'user-1',
     tenantId: 'tenant-1',
     username: 'alice',
     displayName: 'Alice',
     roles: ['record_admin'],
-    permissions: [
-      'work-record:analytics',
-      'work-record:handover',
-      'work-record:ai:generate',
-      'work-record:approval:act',
-    ],
+    permissions,
     dataScopes: {},
   }
   useAuthStore.getState().auth.setPrincipal(principal)
@@ -130,5 +133,18 @@ describe('WorkRecordOperationsPage', () => {
     )
     await screen.getByRole('button', { name: '同意' }).click()
     expect(api.actOnApprovalTask).toHaveBeenCalledWith('task-1', true, '同意')
+  })
+
+  it('hides monthly reports when the user cannot read tenant-wide records', async () => {
+    authorize(['work-record:ai:generate'])
+    const screen = await render(
+      <QueryClientProvider client={new QueryClient()}>
+        <WorkRecordOperationsPage />
+      </QueryClientProvider>
+    )
+
+    await expect
+      .element(screen.getByRole('button', { name: '生成月报' }))
+      .not.toBeInTheDocument()
   })
 })
