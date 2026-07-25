@@ -32,7 +32,9 @@ describe('TemplateSwitchSelect', () => {
     await screen.getByRole('combobox').click()
     await screen.getByRole('option', { name: '周报' }).click()
 
-    await expect.element(screen.getByText('切换记录模板')).toBeVisible()
+    await expect
+      .element(screen.getByRole('heading', { name: '切换工作类型' }))
+      .toBeVisible()
 
     expect(onChange).not.toHaveBeenCalled()
 

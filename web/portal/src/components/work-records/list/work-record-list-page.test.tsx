@@ -233,6 +233,7 @@ describe('WorkRecordListPage', () => {
 
     const search = screen.getByPlaceholder('搜索记录标题…')
     await userEvent.fill(search, 'tester-refresh')
+    await screen.getByRole('button', { name: '查询' }).click()
 
     // Old rows must still render and the blocking ErrorState must not appear.
     await expect

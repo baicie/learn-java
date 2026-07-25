@@ -49,12 +49,12 @@ describe('WorkRecordImportDialog', () => {
       <WorkRecordImportDialog open onOpenChange={vi.fn()} meta={meta} />
     )
     const downloadButton = screen.getByRole('button', {
-      name: '下载所选模板',
+      name: '下载导入模板',
     })
 
     await expect.element(downloadButton).toBeDisabled()
 
-    await screen.getByRole('combobox', { name: '目标模板' }).click()
+    await screen.getByRole('combobox', { name: '目标工作类型' }).click()
     await screen.getByRole('option', { name: '日报' }).click()
     await downloadButton.click()
 

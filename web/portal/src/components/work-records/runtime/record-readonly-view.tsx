@@ -69,19 +69,11 @@ export function RecordReadonlyView({
         </>
       }
     >
-      <DetailSection
-        title={t('workRecords.field.template')}
-        description={t('workRecords.designer.emptyHint')}
-      >
+      <DetailSection title={t('workRecords.detail.basicInfo')}>
         <div className='grid gap-3 text-sm md:grid-cols-2'>
-          <Info label={t('workRecords.field.recordId')} value={record.id} />
           <Info
             label={t('workRecords.field.template')}
             value={template?.name ?? record.templateId}
-          />
-          <Info
-            label={t('workRecords.field.templateVersion')}
-            value={record.templateVersionId}
           />
           <Info
             label={t('workRecords.field.status')}

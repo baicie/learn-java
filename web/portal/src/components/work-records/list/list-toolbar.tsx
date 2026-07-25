@@ -1,3 +1,5 @@
+import { useState } from 'react'
+import { RotateCcw, Search } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -10,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { DateField } from './date-field'
 import type {
   ListQueryState,
   RecordListMeta,
@@ -23,24 +26,112 @@ type Props = {
   onChange: (patch: Partial<ListQueryState>) => void
 }
 
+type FilterDraft = {
+  keyword: string
+  templateId: string
+  ownerId: string
+  creatorId: string
+  status: string
+  recordTimeFrom: string
+  recordTimeTo: string
+}
+
+function filtersOf(query: ListQueryState): FilterDraft {
+  return {
+    keyword: query.keyword,
+    templateId: query.templateId,
+    ownerId: query.ownerId,
+    creatorId: query.creatorId,
+    status: query.statuses[0] ?? 'all',
+    recordTimeFrom: query.recordTimeFrom,
+    recordTimeTo: query.recordTimeTo,
+  }
+}
+
+const EMPTY_DRAFT: FilterDraft = {
+  keyword: '',
+  templateId: 'all',
+  ownerId: 'all',
+  creatorId: '',
+  status: 'all',
+  recordTimeFrom: '',
+  recordTimeTo: '',
+}
+
 export function ListToolbar({ meta, query, userOptions, onChange }: Props) {
   const { t } = useTranslation()
-  return (
-    <div className='grid gap-3 rounded-lg border p-4'>
-      <div className='grid gap-3 md:grid-cols-4'>
-        <Input
-          placeholder={t('workRecords.list.searchPlaceholder')}
-          value={query.keyword}
-          onChange={(event) => onChange({ keyword: event.target.value })}
-        />
+  const [draft, setDraft] = useState<FilterDraft>(() => filtersOf(query))
+  const appliedKey = JSON.stringify(filtersOf(query))
+  const [lastAppliedKey, setLastAppliedKey] = useState(appliedKey)
 
+  // Sync the draft when the applied filters change from outside
+  // (e.g. route search params), per the render-time adjustment pattern.
+  if (lastAppliedKey !== appliedKey) {
+    setLastAppliedKey(appliedKey)
+    setDraft(JSON.parse(appliedKey) as FilterDraft)
+  }
+
+  const applyFilters = () => {
+    onChange({
+      keyword: draft.keyword,
+      templateId: draft.templateId === 'all' ? '' : draft.templateId,
+      ownerId: draft.ownerId === 'all' ? '' : draft.ownerId,
+      creatorId: draft.creatorId,
+      statuses: draft.status === 'all' ? [] : [draft.status],
+      recordTimeFrom: draft.recordTimeFrom,
+      recordTimeTo: draft.recordTimeTo,
+    })
+  }
+
+  const resetFilters = () => {
+    setDraft(EMPTY_DRAFT)
+    onChange({
+      keyword: '',
+      templateId: '',
+      ownerId: '',
+      creatorId: '',
+      statuses: [],
+      recordTimeFrom: '',
+      recordTimeTo: '',
+    })
+  }
+
+  return (
+    <form
+      className='grid gap-3 rounded-lg border p-4 md:grid-cols-4'
+      onSubmit={(event) => {
+        event.preventDefault()
+        applyFilters()
+      }}
+    >
+      <div className='grid content-start gap-1.5'>
+        <Label htmlFor='filter-keyword'>
+          {t('workRecords.list.keywordLabel')}
+        </Label>
+        <div className='relative'>
+          <Input
+            id='filter-keyword'
+            className='pr-8'
+            placeholder={t('workRecords.list.searchPlaceholder')}
+            value={draft.keyword}
+            onChange={(event) =>
+              setDraft({ ...draft, keyword: event.target.value })
+            }
+          />
+          <Search className='pointer-events-none absolute top-1/2 right-2.5 size-4 -translate-y-1/2 text-muted-foreground' />
+        </div>
+      </div>
+
+      <div className='grid content-start gap-1.5'>
+        <Label>{t('workRecords.field.template')}</Label>
         <Select
-          value={query.templateId || 'all'}
-          onValueChange={(value) =>
-            onChange({ templateId: value === 'all' ? '' : value })
-          }
+          value={draft.templateId}
+          onValueChange={(value) => setDraft({ ...draft, templateId: value })}
         >
-          <SelectTrigger className='w-full'>
+          <SelectTrigger
+            className='w-full'
+            aria-label={t('workRecords.field.template')}
+          >
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -56,12 +147,13 @@ export function ListToolbar({ meta, query, userOptions, onChange }: Props) {
             </SelectGroup>
           </SelectContent>
         </Select>
+      </div>
 
+      <div className='grid content-start gap-1.5'>
+        <Label>{t('workRecords.field.owner')}</Label>
         <Select
-          value={query.ownerId || 'all'}
-          onValueChange={(value) =>
-            onChange({ ownerId: value === 'all' ? '' : value })
-          }
+          value={draft.ownerId}
+          onValueChange={(value) => setDraft({ ...draft, ownerId: value })}
         >
           <SelectTrigger
             className='w-full'
@@ -80,22 +172,30 @@ export function ListToolbar({ meta, query, userOptions, onChange }: Props) {
             </SelectGroup>
           </SelectContent>
         </Select>
+      </div>
 
+      <div className='grid content-start gap-1.5'>
+        <Label htmlFor='filter-creator'>{t('workRecords.field.creator')}</Label>
         <Input
+          id='filter-creator'
           placeholder={t('workRecords.field.creator')}
-          value={query.creatorId}
-          onChange={(event) => onChange({ creatorId: event.target.value })}
+          value={draft.creatorId}
+          onChange={(event) =>
+            setDraft({ ...draft, creatorId: event.target.value })
+          }
         />
       </div>
 
-      <div className='grid gap-3 md:grid-cols-4'>
+      <div className='grid content-start gap-1.5'>
+        <Label>{t('workRecords.field.status')}</Label>
         <Select
-          value={query.statuses[0] ?? 'all'}
-          onValueChange={(value) =>
-            onChange({ statuses: value === 'all' ? [] : [value] })
-          }
+          value={draft.status}
+          onValueChange={(value) => setDraft({ ...draft, status: value })}
         >
-          <SelectTrigger className='w-full'>
+          <SelectTrigger
+            className='w-full'
+            aria-label={t('workRecords.field.status')}
+          >
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -115,51 +215,44 @@ export function ListToolbar({ meta, query, userOptions, onChange }: Props) {
             </SelectGroup>
           </SelectContent>
         </Select>
+      </div>
 
-        <div className='grid gap-1'>
+      <div className='grid grid-cols-2 content-start gap-2'>
+        <div className='grid content-start gap-1.5'>
           <Label htmlFor='record-time-from'>
             {t('workRecords.list.recordTimeFromLabel')}
           </Label>
-          <Input
+          <DateField
             id='record-time-from'
-            type='date'
-            value={query.recordTimeFrom}
-            onChange={(event) =>
-              onChange({ recordTimeFrom: event.target.value })
-            }
+            aria-label={t('workRecords.list.recordTimeFromLabel')}
+            value={draft.recordTimeFrom}
+            onChange={(value) => setDraft({ ...draft, recordTimeFrom: value })}
           />
         </div>
 
-        <div className='grid gap-1'>
+        <div className='grid content-start gap-1.5'>
           <Label htmlFor='record-time-to'>
             {t('workRecords.list.recordTimeToLabel')}
           </Label>
-          <Input
+          <DateField
             id='record-time-to'
-            type='date'
-            value={query.recordTimeTo}
-            onChange={(event) => onChange({ recordTimeTo: event.target.value })}
+            aria-label={t('workRecords.list.recordTimeToLabel')}
+            value={draft.recordTimeTo}
+            onChange={(value) => setDraft({ ...draft, recordTimeTo: value })}
           />
         </div>
+      </div>
 
-        <Button
-          type='button'
-          variant='outline'
-          onClick={() =>
-            onChange({
-              keyword: '',
-              templateId: '',
-              statuses: [],
-              ownerId: '',
-              creatorId: '',
-              recordTimeFrom: '',
-              recordTimeTo: '',
-            })
-          }
-        >
+      <div className='flex items-end justify-end gap-2 md:col-start-4'>
+        <Button type='button' variant='outline' onClick={resetFilters}>
+          <RotateCcw data-icon='inline-start' />
           {t('workRecords.list.activeFiltersLabel')}
         </Button>
+        <Button type='submit'>
+          <Search data-icon='inline-start' />
+          {t('workRecords.list.search')}
+        </Button>
       </div>
-    </div>
+    </form>
   )
 }
