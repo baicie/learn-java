@@ -65,6 +65,26 @@ class AiInputBuilderTest {
   }
 
   @Test
+  void monthlyReportUsesAnonymousOwnerForUnassignedRecords() {
+    WorkRecordQueryService records = mock(WorkRecordQueryService.class);
+    WorkRecordUserLookupService users = mock(WorkRecordUserLookupService.class);
+    WorkRecord unassigned = record(1, RecordStatus.DONE, null);
+    when(records.page(any(), any(), any()))
+        .thenReturn(new PageResult<>(1, 1, 100, List.of(unassigned)));
+    when(users.displayNames(any(), any())).thenReturn(Map.of());
+    var builder = new AiInputBuilder(records, users, new ObjectMapper().findAndRegisterModules());
+
+    var request =
+        builder.monthlyReport(
+            "tenant-1", java.time.LocalDate.of(2026, 7, 1), principal(), "trace-1");
+
+    assertThat(request.records())
+        .singleElement()
+        .extracting(item -> item.ownerName())
+        .isEqualTo("anonymous");
+  }
+
+  @Test
   void monthlyReportDropsOversizedSamplesButKeepsAuthoritativeCounts() throws Exception {
     WorkRecordQueryService records = mock(WorkRecordQueryService.class);
     WorkRecordUserLookupService users = mock(WorkRecordUserLookupService.class);
@@ -104,6 +124,10 @@ class AiInputBuilderTest {
   }
 
   private static WorkRecord record(int index, RecordStatus status) {
+    return record(index, status, "owner-1");
+  }
+
+  private static WorkRecord record(int index, RecordStatus status, String ownerId) {
     return new WorkRecord(
         "record-" + index,
         "tenant-1",
@@ -111,7 +135,7 @@ class AiInputBuilderTest {
         "version-1",
         "Title " + index,
         status,
-        "owner-1",
+        ownerId,
         "creator-1",
         OffsetDateTime.parse("2026-07-01T00:00:00Z"),
         "{}",

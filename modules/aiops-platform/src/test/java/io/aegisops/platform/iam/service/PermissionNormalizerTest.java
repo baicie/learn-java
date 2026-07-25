@@ -61,12 +61,12 @@ class PermissionNormalizerTest {
     Mockito.when(repo.listAll())
         .thenReturn(
             List.of(
-                def("work-record:read:self", "work-record", PermissionRisk.NORMAL, Set.of()),
+                def("work-record:read:all", "work-record", PermissionRisk.NORMAL, Set.of()),
                 def(
                     "work-record:ai:generate",
                     "work-record",
                     PermissionRisk.HIGH,
-                    Set.of("work-record:read:self")),
+                    Set.of("work-record:read:all")),
                 def(
                     "work-record:ai:review",
                     "work-record",
@@ -78,7 +78,7 @@ class PermissionNormalizerTest {
 
     assertThat(result.permissions())
         .containsExactlyInAnyOrder(
-            "work-record:read:self", "work-record:ai:generate", "work-record:ai:review");
+            "work-record:read:all", "work-record:ai:generate", "work-record:ai:review");
   }
 
   @Test
@@ -88,7 +88,7 @@ class PermissionNormalizerTest {
         .thenReturn(
             List.of(
                 new PermissionDefinition(
-                    "work-record:read:self",
+                    "work-record:read:all",
                     "work-record",
                     "read",
                     "",
@@ -100,7 +100,7 @@ class PermissionNormalizerTest {
                     "work-record:ai:generate",
                     "work-record",
                     PermissionRisk.HIGH,
-                    Set.of("work-record:read:self"))));
+                    Set.of("work-record:read:all"))));
     PermissionNormalizer normalizer = new PermissionNormalizer(repo);
 
     assertThatThrownBy(() -> normalizer.normalize(Set.of("work-record:ai:generate")))

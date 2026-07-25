@@ -39,6 +39,18 @@ describe('handleServerError', () => {
     expect(toastError).toHaveBeenCalledWith('Validation failed')
   })
 
+  it('uses the standard API response message when no title is provided', () => {
+    const error = new AxiosError('Forbidden')
+    error.response = {
+      status: 403,
+      data: { message: 'access denied' },
+    } as AxiosError['response']
+
+    handleServerError(error)
+
+    expect(toastError).toHaveBeenCalledWith('access denied')
+  })
+
   it('falls back to the generic message when Axios response has no data.title', () => {
     const error = new AxiosError('Request failed')
     error.response = {
