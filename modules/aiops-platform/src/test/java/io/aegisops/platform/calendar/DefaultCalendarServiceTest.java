@@ -226,6 +226,19 @@ class DefaultCalendarServiceTest {
     verifyNoInteractions(audit);
   }
 
+  @Test
+  void legacyCalendarCannotBecomeDefault() {
+    CalendarRecord target = calendar("cal-2051", 2051, true);
+    when(repository.findCalendar("t1", "cal-2051")).thenReturn(Optional.of(target));
+
+    assertThatThrownBy(() -> service.setDefaultCalendar("t1", "cal-2051", "u1"))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("between 2000 and 2050");
+
+    verify(repository, never()).setDefaultCalendar(anyString(), anyString(), anyString());
+    verifyNoInteractions(audit);
+  }
+
   private CalendarRecord calendar(int year) {
     return calendar("cal-" + year, year, true);
   }

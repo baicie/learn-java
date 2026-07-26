@@ -46,30 +46,6 @@ public class CalendarRepository {
     return rows.stream().findFirst();
   }
 
-  public CalendarRecord createCalendar(
-      String tenantId, CreateCalendarRequest request, String createdBy) {
-    String id = Ids.newId();
-    jdbc.update(
-        """
-            insert into platform_calendar(
-              id, tenant_id, calendar_code, calendar_name, region_code, timezone,
-              year, enabled, source_type, description, created_by)
-            values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-        id,
-        tenantId,
-        request.calendarCode(),
-        request.calendarName(),
-        defaultText(request.regionCode(), "CN"),
-        defaultText(request.timezone(), "Asia/Shanghai"),
-        request.year(),
-        request.enabled() == null || request.enabled(),
-        defaultText(request.sourceType(), "manual"),
-        request.description(),
-        createdBy);
-    return findCalendar(tenantId, id).orElseThrow();
-  }
-
   public List<CalendarDayRecord> listDays(
       String tenantId, String calendarId, LocalDate start, LocalDate end) {
     return jdbc.query(

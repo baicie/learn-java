@@ -5,7 +5,7 @@ status: draft
 phase: work-record
 owner: platform-team
 created: 2026-07-09
-updated: 2026-07-09
+updated: 2026-07-25
 related:
   - docs/record/enterprise-roadmap.md
   - docs/record/api-contract.md
@@ -48,10 +48,14 @@ work-record:export
 
 ```
 platform:dict:read
+platform:dict:write
 platform:calendar:read
+platform:calendar:write
+platform:calendar:import
 
 work-record:template:read
 work-record:template:write
+work-record:read:self
 work-record:read:all
 work-record:write
 work-record:delete
@@ -61,6 +65,10 @@ work-record:export
 ### 普通用户
 
 ```
+platform:dict:read
+platform:calendar:read
+
+work-record:template:read
 work-record:read:self
 work-record:write
 ```
@@ -68,6 +76,10 @@ work-record:write
 ### 只读用户
 
 ```
+platform:dict:read
+platform:calendar:read
+
+work-record:template:read
 work-record:read:self
 ```
 
@@ -84,6 +96,8 @@ or owner_id = currentUserId
 
 系统管理员：可读全部记录。
 
+所有工作日历权限仅作用于当前租户。支持的年度范围为 2000–2050；年度日历由平台自动初始化，权限不包含手工创建年度日历的能力。
+
 ## 5. API 权限映射
 
 ```
@@ -99,15 +113,16 @@ DELETE /api/platform/dictionaries/{dictCode}/items/{itemId}
   platform:dict:write
 
 GET /api/platform/calendars
+GET /api/platform/calendars/default
+GET /api/platform/calendars/{calendarId}/days
 GET /api/platform/calendar-days/*
   platform:calendar:read
 
-POST /api/platform/calendars
-PUT /api/platform/calendars/{calendarId}
-DELETE /api/platform/calendars/{calendarId}
+PUT /api/platform/calendars/{calendarId}/default
 PUT /api/platform/calendars/{calendarId}/days/{date}
   platform:calendar:write
 
+GET /api/platform/calendars/import-template
 POST /api/platform/calendars/{calendarId}/days/import
   platform:calendar:import
 
@@ -158,9 +173,10 @@ platform.dict.type.update
 platform.dict.item.create
 platform.dict.item.update
 
-platform.calendar.create
-platform.calendar.update
-platform.calendar.day.update
+platform.calendar.default.change
+platform.calendar.day.override
+platform.calendar.day.import_create
+platform.calendar.day.import_overwrite
 platform.calendar.import
 
 work_record.template.create

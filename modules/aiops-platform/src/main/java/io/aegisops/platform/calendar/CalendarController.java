@@ -5,6 +5,11 @@ import io.aegisops.common.tenant.TenantContext;
 import io.aegisops.security.UserPrincipal;
 import java.time.LocalDate;
 import java.util.List;
+import org.springframework.http.CacheControl;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -15,6 +20,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api/platform")
@@ -29,15 +35,6 @@ public class CalendarController {
   @PreAuthorize("hasAuthority('platform:calendar:read')")
   public ApiResponse<List<CalendarRecord>> listCalendars() {
     return ApiResponse.ok(service.listCalendars(TenantContext.requireTenantId()));
-  }
-
-  @PostMapping("/calendars")
-  @PreAuthorize("hasAuthority('platform:calendar:write')")
-  public ApiResponse<CalendarRecord> createCalendar(
-      @RequestBody CreateCalendarRequest request, @AuthenticationPrincipal UserPrincipal user) {
-    return ApiResponse.ok(
-        service.createCalendar(
-            TenantContext.requireTenantId(), request, user == null ? "system" : user.id()));
   }
 
   @GetMapping("/calendars/{calendarId}/days")
@@ -64,17 +61,34 @@ public class CalendarController {
             user == null ? "system" : user.id()));
   }
 
-  @PostMapping("/calendars/{calendarId}/days/import")
+  @GetMapping("/calendars/import-template")
   @PreAuthorize("hasAuthority('platform:calendar:import')")
-  public ApiResponse<Integer> importCsv(
+  public ResponseEntity<byte[]> downloadImportTemplate(@RequestParam int year) {
+    String filename = "work-calendar-holidays-" + year + "-template.xlsx";
+    return ResponseEntity.ok()
+        .cacheControl(CacheControl.noStore())
+        .contentType(
+            MediaType.parseMediaType(
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+        .header(
+            HttpHeaders.CONTENT_DISPOSITION,
+            ContentDisposition.attachment().filename(filename).build().toString())
+        .body(service.createHolidayImportTemplate(year));
+  }
+
+  @PostMapping(
+      value = "/calendars/{calendarId}/days/import",
+      consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+  @PreAuthorize("hasAuthority('platform:calendar:import')")
+  public ApiResponse<Integer> importXlsx(
       @PathVariable String calendarId,
-      @RequestBody ImportCalendarCsvRequest request,
+      @RequestParam("file") MultipartFile file,
       @AuthenticationPrincipal UserPrincipal user) {
     return ApiResponse.ok(
-        service.importCsv(
+        service.importXlsx(
             TenantContext.requireTenantId(),
             calendarId,
-            request,
+            file,
             user == null ? "system" : user.id()));
   }
 

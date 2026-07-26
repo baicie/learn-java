@@ -147,7 +147,7 @@ export const common = {
 
   'calendars.title': 'Work calendars',
   'calendars.subtitle':
-    'Maintain workdays, holidays and adjusted workdays used by daily reports, monthly reports, scheduling and statistics.',
+    'Work calendars for 2000 through 2050 are generated automatically; maintain dates or import public holidays.',
   'calendars.month': 'Month',
   'calendars.year': 'Year',
   'calendars.legend.workday': 'Workday',
@@ -161,17 +161,25 @@ export const common = {
   'calendars.day.missing':
     'Date {date} is not part of this calendar and cannot be toggled.',
   'calendars.calendar.loading': 'Loading calendar…',
-  'calendars.create.button': 'Create annual calendar',
-  'calendars.create.success': 'Annual calendar created',
-  'calendars.create.failed': 'Failed to create annual calendar',
-  'calendars.import.button': 'Import sample CSV',
-  'calendars.import.success': 'Calendar import succeeded',
-  'calendars.import.failed': 'Calendar import failed',
-  'calendars.import.confirmTitle': 'Import calendar',
-  'calendars.import.confirmDescription':
-    'Importing will overwrite workday / holiday / adjustment entries for the affected dates in the CSV.',
-  'calendars.import.confirmTarget': 'Target calendar',
-  'calendars.import.confirmAction': 'Confirm import',
+  'calendars.import.button': 'Import public holidays',
+  'calendars.import.title': 'Import public holidays',
+  'calendars.import.description':
+    'Use the XLSX template to import public holidays for the selected year.',
+  'calendars.import.target': 'Target calendar',
+  'calendars.import.downloadTemplate': 'Download XLSX template',
+  'calendars.import.downloadingTemplate': 'Downloading template',
+  'calendars.import.templateDownloaded': 'Import template downloaded',
+  'calendars.import.templateDownloadFailed':
+    'Failed to download import template',
+  'calendars.import.templateHint':
+    'Enter public holidays only; omit regular workdays, weekends and adjusted workdays.',
+  'calendars.import.file': 'XLSX file',
+  'calendars.import.invalidFile':
+    'Select a non-empty .xlsx file no larger than 5 MB.',
+  'calendars.import.action': 'Start import',
+  'calendars.import.importing': 'Importing',
+  'calendars.import.success': 'Public holidays imported',
+  'calendars.import.failed': 'Failed to import public holidays',
   'calendars.default.label': 'Default calendar',
   'calendars.default.unset': 'Default calendar not set',
   'calendars.default.currentBadge': 'Current default',
@@ -192,8 +200,9 @@ export const common = {
   'calendars.day.workdayToOff': 'Workday → Off',
   'calendars.day.offToWorkday': 'Off → Workday',
   'calendars.day.manualHoliday': 'Manual override',
-  'calendars.emptyTitle': 'No calendar for this year yet',
-  'calendars.emptyDescription': 'Create the annual calendar before continuing.',
+  'calendars.emptyTitle': 'Calendar unavailable for this year',
+  'calendars.emptyDescription':
+    'Work calendars support years 2000 through 2050.',
   'calendars.days.emptyTitle': 'No calendar days',
   'calendars.days.emptyDescription':
     'There are no calendar entries to display for this month.',

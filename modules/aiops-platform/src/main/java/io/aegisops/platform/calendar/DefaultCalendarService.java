@@ -22,7 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class DefaultCalendarService {
   private static final int MIN_YEAR = 2000;
-  private static final int MAX_YEAR = 2100;
+  private static final int MAX_YEAR = 2050;
   private static final int MAX_RECENT_WORKDAYS = 60;
 
   private final DefaultCalendarRepository repository;
@@ -54,6 +54,7 @@ public class DefaultCalendarService {
         repository
             .findCalendar(tenantId, calendarId)
             .orElseThrow(() -> new IllegalArgumentException("calendar not found"));
+    validateYear(target.year());
 
     if (!target.enabled()) {
       throw new IllegalStateException("disabled calendar cannot be default");
@@ -264,6 +265,7 @@ public class DefaultCalendarService {
         continue;
       }
 
+      validateYear(calendar.year());
       ZoneId zoneId = parseZone(calendar.timezone());
       int localYear = now.atZone(zoneId).getYear();
 
