@@ -5,7 +5,7 @@ status: draft
 phase: work-record
 owner: platform-team
 created: 2026-07-09
-updated: 2026-07-09
+updated: 2026-07-25
 related:
   - docs/record/enterprise-roadmap.md
   - docs/record/schema-contract.md
@@ -64,26 +64,41 @@ DELETE /api/platform/dictionaries/{dictCode}/items/{itemId}
 
 ```
 GET    /api/platform/calendars
-POST   /api/platform/calendars
-GET    /api/platform/calendars/{calendarId}
-PUT    /api/platform/calendars/{calendarId}
-DELETE /api/platform/calendars/{calendarId}
+GET    /api/platform/calendars/default?year=2026
+PUT    /api/platform/calendars/{calendarId}/default
 
-GET    /api/platform/calendars/{calendarId}/days
+GET    /api/platform/calendars/{calendarId}/days?start=2026-01-01&end=2026-12-31
 PUT    /api/platform/calendars/{calendarId}/days/{date}
+
+GET    /api/platform/calendars/import-template?year=2026
 POST   /api/platform/calendars/{calendarId}/days/import
 
-GET    /api/platform/calendar-days/check?date=2026-07-09
-GET    /api/platform/calendar-days/range?start=2026-07-01&end=2026-07-31
-GET    /api/platform/calendar-days/workdays/count?start=2026-07-01&end=2026-07-31
+GET    /api/platform/calendar-days/check?calendarId={calendarId}&date=2026-07-09
+GET    /api/platform/calendar-days/range?calendarId={calendarId}&start=2026-07-01&end=2026-07-31
+GET    /api/platform/calendar-days/workdays/count?calendarId={calendarId}&start=2026-07-01&end=2026-07-31
 ```
 
 约束：
 
 1. 所有查询按 tenantId 隔离。
-2. CSV 导入必须写审计。
-3. 单日覆盖必须写审计。
-4. 工作日判断以 platform_calendar_day.is_workday 为准。
+2. 平台为每个租户自动初始化 2000–2050 年共 51 个年度日历，不提供创建年度日历的 API。
+3. 每个年度默认包含完整日期；周一至周五为工作日，周六、周日为周末。
+4. 模板下载和导入均要求 `platform:calendar:import` 权限。
+5. XLSX 导入只接收法定节假日，导入后固定写入 `dayType=HOLIDAY`、`isWorkday=false`，不接受普通工作日、周末或调休工作日。
+6. 导入请求使用 `multipart/form-data`，文件字段名为 `file`，仅允许 `.xlsx`，最大 5 MB、最多 1000 个非空数据行。
+7. 导入日期必须属于所选日历年度，同一文件内日期不可重复。
+8. 单日覆盖和 XLSX 导入必须写审计。
+9. 工作日判断以 `platform_calendar_day.is_workday` 为准。
+
+XLSX 模板固定为以下三列：
+
+| 列名          | 必填 | 说明                         |
+| ------------- | ---- | ---------------------------- |
+| `date`        | 是   | 日期，格式为 `YYYY-MM-DD`    |
+| `holidayName` | 是   | 法定节假日名称               |
+| `remark`      | 否   | 备注                         |
+
+模板下载返回 XLSX 二进制文件。导入成功时，统一 JSON 响应中的 `data` 为已处理的节假日行数。
 
 ## 4. 模板 API
 

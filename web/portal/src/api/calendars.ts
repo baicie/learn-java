@@ -38,23 +38,17 @@ const calendarDaySchema = z.object({
 export type Calendar = z.infer<typeof calendarSchema>
 export type CalendarDay = z.infer<typeof calendarDaySchema>
 
+const XLSX_CONTENT_TYPE =
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+
+export type CalendarImportTemplate = {
+  blob: Blob
+  fileName: string
+}
+
 export async function listCalendars(): Promise<Calendar[]> {
   const { data } = await apiClient.get('/api/platform/calendars')
   return apiResponseSchema(z.array(calendarSchema)).parse(data).data
-}
-
-export async function createCalendar(input: {
-  calendarCode: string
-  calendarName: string
-  regionCode: string
-  timezone: string
-  year: number
-  enabled?: boolean
-  sourceType?: string
-  description?: string
-}) {
-  const { data } = await apiClient.post('/api/platform/calendars', input)
-  return apiResponseSchema(calendarSchema).parse(data).data
 }
 
 export async function listCalendarDays(
@@ -90,14 +84,42 @@ export async function updateCalendarDay(
   return apiResponseSchema(calendarDaySchema).parse(data).data
 }
 
-export async function importCalendarCsv(calendarId: string, csv: string) {
+export async function importCalendarXlsx(calendarId: string, file: File) {
+  const form = new FormData()
+  form.append('file', file)
   const { data } = await apiClient.post(
     `/api/platform/calendars/${calendarId}/days/import`,
-    {
-      csv,
-    }
+    form
   )
   return apiResponseSchema(z.number()).parse(data).data
+}
+
+export async function downloadCalendarImportTemplate(
+  year: number
+): Promise<CalendarImportTemplate> {
+  const response = await apiClient.get(
+    '/api/platform/calendars/import-template',
+    { params: { year }, responseType: 'blob' }
+  )
+  return {
+    blob:
+      response.data instanceof Blob
+        ? response.data
+        : new Blob([response.data], { type: XLSX_CONTENT_TYPE }),
+    fileName: `work-calendar-holidays-${year}-template.xlsx`,
+  }
+}
+
+export function saveCalendarImportTemplate(template: CalendarImportTemplate) {
+  const url = URL.createObjectURL(template.blob)
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = template.fileName
+  anchor.style.display = 'none'
+  document.body.appendChild(anchor)
+  anchor.click()
+  anchor.remove()
+  URL.revokeObjectURL(url)
 }
 
 export async function getDefaultCalendar(year: number): Promise<Calendar> {

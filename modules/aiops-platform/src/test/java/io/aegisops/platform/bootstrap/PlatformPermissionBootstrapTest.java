@@ -30,6 +30,15 @@ class PlatformPermissionBootstrapTest {
             "work-record:write",
             "work-record:delete",
             "work-record:export");
+
+    assertThat(bootstrap.permissions())
+        .filteredOn(permission -> "platform:calendar:import".equals(permission.permissionCode()))
+        .singleElement()
+        .satisfies(
+            permission -> {
+              assertThat(permission.permissionName()).isEqualTo("导入法定节假日");
+              assertThat(permission.description()).contains("XLSX").doesNotContain("CSV");
+            });
   }
 
   @Test

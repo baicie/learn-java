@@ -93,14 +93,14 @@ public class PlatformPermissionBootstrap implements ApplicationRunner {
             "platform:calendar:write",
             "维护工作日历",
             "platform",
-            "新增日历、覆盖日期",
+            "覆盖单日设置和调整默认日历",
             130),
         new PlatformPermissionCode(
             "perm-platform-calendar-import",
             "platform:calendar:import",
-            "导入工作日历",
+            "导入法定节假日",
             "platform",
-            "导入 CSV 工作日历",
+            "下载 XLSX 模板并导入法定节假日",
             140));
   }
 

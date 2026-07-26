@@ -1,12 +1,10 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuthorization } from '@/auth/use-authorization'
-import { CalendarDays, Check, Clock3, MapPin, Plus, Upload } from 'lucide-react'
+import { CalendarDays, Check, Clock3, MapPin, Upload } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import {
-  createCalendar,
   getDefaultCalendar,
-  importCalendarCsv,
   listCalendarDays,
   listCalendars,
   setDefaultCalendar,
@@ -38,6 +36,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { CalendarImportDialog } from '@/components/calendars/calendar-import-dialog'
 import { notify } from '@/components/feedback/app-toaster'
 import {
   EmptyState,
@@ -50,6 +49,8 @@ import { PermissionGate } from '@/components/permission-gate'
 
 const WRITE_PERMISSION = 'platform:calendar:write'
 const IMPORT_PERMISSION = 'platform:calendar:import'
+const MIN_YEAR = 2000
+const MAX_YEAR = 2050
 
 function monthRange(year: number, month: number) {
   const start = `${year}-${String(month).padStart(2, '0')}-01`
@@ -139,9 +140,12 @@ export function CalendarsPage() {
   const canWrite = principal?.permissions.includes(WRITE_PERMISSION) ?? false
 
   const now = new Date()
-  const [year, setYear] = useState(now.getFullYear())
+  const [year, setYear] = useState(() =>
+    Math.min(MAX_YEAR, Math.max(MIN_YEAR, now.getFullYear()))
+  )
   const [month, setMonth] = useState(now.getMonth() + 1)
   const [selectedCalendarId, setSelectedCalendarId] = useState('')
+  const [importOpen, setImportOpen] = useState(false)
 
   const calendars = useQuery({
     queryKey: ['platform-calendars'],
@@ -189,46 +193,21 @@ export function CalendarsPage() {
   const dayMap = useMemo(() => buildDayMap(days.data ?? []), [days.data])
 
   const invalidate = async () => {
-    await queryClient.invalidateQueries({
-      queryKey: ['platform-calendars'],
-    })
-    await queryClient.invalidateQueries({
-      queryKey: ['platform-calendar-days'],
-    })
-  }
-
-  const createMutation = useMutation({
-    mutationFn: () =>
-      createCalendar({
-        calendarCode: `CN_${year}`,
-        calendarName: `中国大陆 ${year} 工作日历`,
-        regionCode: 'CN',
-        timezone: 'Asia/Shanghai',
-        year,
-        enabled: true,
-        sourceType: 'manual',
+    await Promise.all([
+      queryClient.invalidateQueries({
+        queryKey: ['platform-calendars'],
       }),
-    onSuccess: async () => {
-      notify.success(t('calendars.create.success'))
-      await invalidate()
-    },
-    onError: (error) => notify.error(error, t('calendars.create.failed')),
-  })
-
-  const importMutation = useMutation({
-    mutationFn: (calendarId: string) =>
-      importCalendarCsv(
-        calendarId,
-        `date,dayType,isWorkday,holidayName,remark
-${year}-01-01,HOLIDAY,false,元旦,
-`
-      ),
-    onSuccess: async () => {
-      notify.success(t('calendars.import.success'))
-      await invalidate()
-    },
-    onError: (error) => notify.error(error, t('calendars.import.failed')),
-  })
+      queryClient.invalidateQueries({
+        queryKey: ['platform-calendar-days'],
+      }),
+      queryClient.invalidateQueries({
+        queryKey: ['work-record-workday-summary'],
+      }),
+      queryClient.invalidateQueries({
+        queryKey: ['work-record-list'],
+      }),
+    ])
+  }
 
   const defaultMutation = useMutation({
     mutationFn: (calendarId: string) => setDefaultCalendar(calendarId),
@@ -318,26 +297,6 @@ ${year}-01-01,HOLIDAY,false,元旦,
     })
   }
 
-  const confirmImport = async () => {
-    if (!selectedCalendar) return
-
-    const accepted = await confirm({
-      title: t('calendars.import.confirmTitle'),
-      description: t('calendars.import.confirmDescription'),
-      details: (
-        <div>
-          {t('calendars.import.confirmTarget')}:{selectedCalendar.calendarName}
-        </div>
-      ),
-      confirmText: t('calendars.import.confirmAction'),
-      variant: 'warning',
-    })
-
-    if (accepted) {
-      importMutation.mutate(selectedCalendar.id)
-    }
-  }
-
   const confirmDefault = async () => {
     if (!selectedCalendar) return
 
@@ -359,11 +318,13 @@ ${year}-01-01,HOLIDAY,false,元旦,
   }
 
   const handleMonthChange = (next: Date) => {
+    if (next.getFullYear() < MIN_YEAR || next.getFullYear() > MAX_YEAR) return
     setYear(next.getFullYear())
     setMonth(next.getMonth() + 1)
   }
 
   const handleYearChange = (next: number) => {
+    if (!Number.isInteger(next) || next < MIN_YEAR || next > MAX_YEAR) return
     if (next === year) return
     setSelectedCalendarId('')
     setYear(next)
@@ -408,29 +369,20 @@ ${year}-01-01,HOLIDAY,false,元旦,
                 <Input
                   className='w-24'
                   type='number'
+                  min={MIN_YEAR}
+                  max={MAX_YEAR}
                   value={year}
                   onChange={(event) =>
                     handleYearChange(Number(event.target.value))
                   }
                 />
               </label>
-              <PermissionGate any={[WRITE_PERMISSION]}>
-                <Button
-                  size='sm'
-                  onClick={() => createMutation.mutate()}
-                  disabled={createMutation.isPending}
-                >
-                  <Plus className='mr-1 size-4' />
-                  {t('calendars.create.button')}
-                </Button>
-              </PermissionGate>
               {selectedCalendar ? (
                 <PermissionGate any={[IMPORT_PERMISSION]}>
                   <Button
                     size='sm'
                     variant='outline'
-                    onClick={() => void confirmImport()}
-                    disabled={importMutation.isPending}
+                    onClick={() => setImportOpen(true)}
                   >
                     <Upload className='mr-1 size-4' />
                     {t('calendars.import.button')}
@@ -598,6 +550,16 @@ ${year}-01-01,HOLIDAY,false,元旦,
           )}
         </CardContent>
       </Card>
+      {selectedCalendar ? (
+        <CalendarImportDialog
+          open={importOpen}
+          onOpenChange={setImportOpen}
+          calendarId={selectedCalendar.id}
+          calendarName={selectedCalendar.calendarName}
+          year={selectedCalendar.year}
+          onImported={invalidate}
+        />
+      ) : null}
     </main>
   )
 }

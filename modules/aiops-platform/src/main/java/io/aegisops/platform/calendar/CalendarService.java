@@ -1,7 +1,7 @@
 package io.aegisops.platform.calendar;
 
 import io.aegisops.platform.audit.PlatformAuditService;
-import java.nio.charset.StandardCharsets;
+import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDate;
@@ -13,15 +13,19 @@ import java.util.List;
 import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 @Service
 public class CalendarService {
+  private static final int MIN_YEAR = 2000;
+  private static final int MAX_YEAR = 2050;
+  private static final long MAX_IMPORT_FILE_BYTES = 5L * 1024 * 1024;
   private static final int MAX_IMPORT_ROWS = 1000;
   private static final int CHANGED_DATE_LIMIT = 200;
 
   private final CalendarRepository repository;
   private final PlatformAuditService audit;
-  private final CalendarCsvImporter csvImporter = new CalendarCsvImporter();
+  private final CalendarXlsxImporter xlsxImporter = new CalendarXlsxImporter();
 
   public CalendarService(CalendarRepository repository, PlatformAuditService audit) {
     this.repository = repository;
@@ -29,56 +33,17 @@ public class CalendarService {
   }
 
   public List<CalendarRecord> listCalendars(String tenantId) {
-    return repository.listCalendars(tenantId);
-  }
-
-  @Transactional
-  public CalendarRecord createCalendar(
-      String tenantId, CreateCalendarRequest request, String actor) {
-    if (request == null) {
-      throw new IllegalArgumentException("calendar request is required");
-    }
-
-    requireText(request.calendarCode(), "calendarCode");
-    requireText(request.calendarName(), "calendarName");
-    if (request.year() == null || request.year() < 2000 || request.year() > 2100) {
-      throw new IllegalArgumentException("year must be between 2000 and 2100");
-    }
-
-    String timezone = normalizeTimezone(request.timezone());
-
-    CreateCalendarRequest normalized =
-        new CreateCalendarRequest(
-            request.calendarCode(),
-            request.calendarName(),
-            request.regionCode(),
-            timezone,
-            request.year(),
-            request.enabled(),
-            request.sourceType(),
-            request.description());
-
-    String effectiveActor = defaultActor(actor);
-
-    CalendarRecord record = repository.createCalendar(tenantId, normalized, effectiveActor);
-    initializeYearDays(tenantId, record.id(), normalized.year(), effectiveActor);
-
-    audit.recordChange(
-        tenantId,
-        effectiveActor,
-        "platform.calendar.create",
-        "platform_calendar",
-        record.id(),
-        Map.of(),
-        record,
-        Map.of("calendarCode", record.calendarCode(), "year", String.valueOf(record.year())));
-    return record;
+    return repository.listCalendars(tenantId).stream()
+        .filter(calendar -> isSupportedYear(calendar.year()))
+        .toList();
   }
 
   public List<CalendarDayRecord> listDays(
       String tenantId, String calendarId, LocalDate start, LocalDate end) {
     requireText(calendarId, "calendarId");
     requireRange(start, end);
+    CalendarRecord calendar = requireSupportedCalendar(tenantId, calendarId);
+    requireCalendarRange(calendar, start, end);
 
     List<CalendarDayRecord> configured = repository.listDays(tenantId, calendarId, start, end);
     Map<LocalDate, CalendarDayRecord> byDate = new HashMap<>();
@@ -116,6 +81,9 @@ public class CalendarService {
       throw new IllegalArgumentException("workday is required");
     }
 
+    CalendarRecord calendar = requireSupportedCalendar(tenantId, calendarId);
+    requireCalendarDate(calendar, date);
+
     CalendarDayRecord before =
         repository
             .findDay(tenantId, calendarId, date)
@@ -149,9 +117,9 @@ public class CalendarService {
   }
 
   @Transactional
-  public int importCsv(
-      String tenantId, String calendarId, ImportCalendarCsvRequest request, String actor) {
-    List<CalendarCsvImporter.CalendarCsvRow> rows = importRows(tenantId, calendarId, request);
+  public int importXlsx(String tenantId, String calendarId, MultipartFile file, String actor) {
+    ParsedImport parsedImport = parseImport(tenantId, calendarId, file);
+    List<CalendarXlsxImporter.CalendarImportRow> rows = parsedImport.rows();
 
     String effectiveActor = defaultActor(actor);
 
@@ -160,7 +128,7 @@ public class CalendarService {
     int unchangedCount = 0;
     List<String> changedDates = new ArrayList<>();
 
-    for (CalendarCsvImporter.CalendarCsvRow row : rows) {
+    for (CalendarXlsxImporter.CalendarImportRow row : rows) {
       CalendarDayRecord before = repository.findDay(tenantId, calendarId, row.date()).orElse(null);
 
       CalendarDayRecord after =
@@ -168,13 +136,7 @@ public class CalendarService {
               tenantId,
               calendarId,
               new CalendarDayMutation(
-                  row.date(),
-                  row.dayType(),
-                  row.workday(),
-                  null,
-                  row.holidayName(),
-                  "csv",
-                  row.remark()),
+                  row.date(), "HOLIDAY", false, null, row.holidayName(), "xlsx", row.remark()),
               effectiveActor);
 
       Map<String, Object> afterSnapshot = semanticDay(after);
@@ -220,34 +182,43 @@ public class CalendarService {
         tenantId,
         calendarId,
         effectiveActor,
-        request.csv(),
+        sha256(parsedImport.content()),
         rows.size(),
         new ImportCounts(createdCount, overwrittenCount, unchangedCount, changedDates));
 
     return rows.size();
   }
 
-  private List<CalendarCsvImporter.CalendarCsvRow> importRows(
-      String tenantId, String calendarId, ImportCalendarCsvRequest request) {
+  private ParsedImport parseImport(String tenantId, String calendarId, MultipartFile file) {
     requireText(calendarId, "calendarId");
-    if (request == null) {
-      throw new IllegalArgumentException("calendar import request is required");
+    if (file == null || file.isEmpty()) {
+      throw new IllegalArgumentException("xlsx file is required");
     }
-    repository
-        .findCalendar(tenantId, calendarId)
-        .orElseThrow(() -> new IllegalArgumentException("calendar not found"));
-    List<CalendarCsvImporter.CalendarCsvRow> rows = csvImporter.parse(request.csv());
+    if (file.getSize() > MAX_IMPORT_FILE_BYTES) {
+      throw new IllegalArgumentException("xlsx file must not exceed 5 MB");
+    }
+    String originalFilename = file.getOriginalFilename();
+    if (originalFilename == null
+        || !originalFilename.toLowerCase(java.util.Locale.ROOT).endsWith(".xlsx")) {
+      throw new IllegalArgumentException("calendar import must be an xlsx file");
+    }
+    CalendarRecord calendar = requireSupportedCalendar(tenantId, calendarId);
+    byte[] content = fileBytes(file);
+    List<CalendarXlsxImporter.CalendarImportRow> rows = xlsxImporter.parse(content);
     if (rows.size() > MAX_IMPORT_ROWS) {
-      throw new IllegalArgumentException("calendar import exceeds " + MAX_IMPORT_ROWS + " rows");
+      throw new IllegalArgumentException("holiday import exceeds " + MAX_IMPORT_ROWS + " rows");
     }
-    return rows;
+    if (rows.stream().anyMatch(row -> row.date().getYear() != calendar.year())) {
+      throw new IllegalArgumentException("holiday date must belong to the selected calendar year");
+    }
+    return new ParsedImport(rows, content);
   }
 
   private void auditImport(
       String tenantId,
       String calendarId,
       String actor,
-      String csv,
+      String contentSha256,
       int rowCount,
       ImportCounts counts) {
     Map<String, Object> summary = new LinkedHashMap<>();
@@ -259,7 +230,7 @@ public class CalendarService {
     summary.put(
         "changedDatesTruncated",
         (counts.created() + counts.overwritten()) > counts.changedDates().size());
-    summary.put("csvSha256", sha256(csv));
+    summary.put("xlsxSha256", contentSha256);
     audit.recordChange(
         tenantId,
         actor,
@@ -268,17 +239,21 @@ public class CalendarService {
         calendarId,
         Map.of(),
         summary,
-        Map.of("calendarId", calendarId, "source", "csv"));
+        Map.of("calendarId", calendarId, "source", "xlsx"));
   }
 
   private record ImportCounts(
       int created, int overwritten, int unchanged, List<String> changedDates) {}
+
+  private record ParsedImport(List<CalendarXlsxImporter.CalendarImportRow> rows, byte[] content) {}
 
   public WorkdayCheckResponse checkWorkday(String tenantId, String calendarId, LocalDate date) {
     requireText(calendarId, "calendarId");
     if (date == null) {
       throw new IllegalArgumentException("date is required");
     }
+    CalendarRecord calendar = requireSupportedCalendar(tenantId, calendarId);
+    requireCalendarDate(calendar, date);
 
     CalendarDayRecord day =
         repository
@@ -300,24 +275,6 @@ public class CalendarService {
                 .count();
 
     return new WorkdayCountResponse(start, end, count);
-  }
-
-  private void initializeYearDays(String tenantId, String calendarId, int year, String actor) {
-    LocalDate start = LocalDate.of(year, 1, 1);
-    LocalDate end = LocalDate.of(year, 12, 31);
-
-    start
-        .datesUntil(end.plusDays(1))
-        .forEach(
-            date -> {
-              CalendarDayRecord derived = derivedDay(tenantId, calendarId, date);
-              repository.upsertDay(
-                  tenantId,
-                  calendarId,
-                  new CalendarDayMutation(
-                      date, derived.dayType(), derived.workday(), null, null, "generated", null),
-                  actor);
-            });
   }
 
   private CalendarDayRecord derivedDay(String tenantId, String calendarId, LocalDate date) {
@@ -360,13 +317,57 @@ public class CalendarService {
     }
   }
 
-  private String sha256(String value) {
+  private byte[] fileBytes(MultipartFile file) {
+    try {
+      return file.getBytes();
+    } catch (IOException ex) {
+      throw new IllegalArgumentException("unable to read xlsx file", ex);
+    }
+  }
+
+  private String sha256(byte[] value) {
     try {
       MessageDigest digest = MessageDigest.getInstance("SHA-256");
-      return HexFormat.of().formatHex(digest.digest(value.getBytes(StandardCharsets.UTF_8)));
+      return HexFormat.of().formatHex(digest.digest(value));
     } catch (NoSuchAlgorithmException ex) {
       throw new IllegalStateException("SHA-256 is unavailable", ex);
     }
+  }
+
+  public byte[] createHolidayImportTemplate(int year) {
+    validateSupportedYear(year);
+    return xlsxImporter.createTemplate(year);
+  }
+
+  private CalendarRecord requireSupportedCalendar(String tenantId, String calendarId) {
+    CalendarRecord calendar =
+        repository
+            .findCalendar(tenantId, calendarId)
+            .orElseThrow(() -> new IllegalArgumentException("calendar not found"));
+    validateSupportedYear(calendar.year());
+    return calendar;
+  }
+
+  private void requireCalendarDate(CalendarRecord calendar, LocalDate date) {
+    if (date.getYear() != calendar.year()) {
+      throw new IllegalArgumentException("date must belong to the selected calendar year");
+    }
+  }
+
+  private void requireCalendarRange(CalendarRecord calendar, LocalDate start, LocalDate end) {
+    if (start.getYear() != calendar.year() || end.getYear() != calendar.year()) {
+      throw new IllegalArgumentException("date range must belong to the selected calendar year");
+    }
+  }
+
+  private void validateSupportedYear(int year) {
+    if (!isSupportedYear(year)) {
+      throw new IllegalArgumentException("year must be between " + MIN_YEAR + " and " + MAX_YEAR);
+    }
+  }
+
+  private boolean isSupportedYear(int year) {
+    return year >= MIN_YEAR && year <= MAX_YEAR;
   }
 
   private void validateDayType(String dayType) {
@@ -395,17 +396,6 @@ public class CalendarService {
   private void requireText(String value, String field) {
     if (value == null || value.isBlank()) {
       throw new IllegalArgumentException(field + " is required");
-    }
-  }
-
-  private String normalizeTimezone(String value) {
-    String timezone = value == null || value.isBlank() ? "Asia/Shanghai" : value.trim();
-
-    try {
-      java.time.ZoneId.of(timezone);
-      return timezone;
-    } catch (java.time.DateTimeException ex) {
-      throw new IllegalArgumentException("invalid timezone: " + timezone, ex);
     }
   }
 

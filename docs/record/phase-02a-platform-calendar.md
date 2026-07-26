@@ -5,7 +5,7 @@ status: review
 phase: work-record
 owner: ai
 created: 2026-07-08
-updated: 2026-07-08
+updated: 2026-07-25
 related:
   - docs/record/index.md
   - docs/record/phase-02-platform-dictionary.md
@@ -24,8 +24,8 @@ related:
 ```text
 aiops-platform/calendar 轻量基础能力
 工作记录可消费，但不拥有它
-第一版优先表 + API + 导入
-页面可选，默认延后
+平台自动生成基础日历，用户只导入法定节假日例外
+Portal 提供年度查看、模板下载和 XLSX 导入
 ```
 
 为什么需要工作日历：
@@ -60,18 +60,18 @@ modules/aiops-work-record
 3. 工作日判断 API。
 4. 日期范围 API。
 5. 工作日数量统计 API。
-6. CSV 导入能力。
-7. 默认 CN 年度日历 seed 或导入模板。
+6. XLSX 法定节假日导入能力。
+7. 自动生成 2000–2050 年 CN 年度日历，并提供导入模板。
 8. 租户级自定义覆盖。
 9. 权限、租户隔离、审计。
 ```
 
-第一版可选做：
+当前页面能力：
 
 ```text
 1. /platform/calendars 页面。
 2. 表格视图维护日期。
-3. CSV 导入 Dialog。
+3. XLSX 模板下载与法定节假日导入 Dialog。
 ```
 
 第一版不做：
@@ -93,11 +93,9 @@ platform_calendar
 platform_calendar_day
 CalendarService
 CalendarController
-CSV import
+XLSX holiday import
 unit tests
 ```
-
-页面延后到 Phase 08 或平台管理专项。
 
 ## 3. 领域模型
 
@@ -127,7 +125,7 @@ calendarName: 中国大陆 2026 工作日历
 regionCode: CN
 timezone: Asia/Shanghai
 year: 2026
-sourceType: manual
+sourceType: generated
 ```
 
 ### 3.2 CalendarDay
@@ -272,16 +270,15 @@ create index idx_platform_calendar_day_workday
 
 ```http
 GET    /api/platform/calendars
-POST   /api/platform/calendars
-GET    /api/platform/calendars/{calendarId}
-PUT    /api/platform/calendars/{calendarId}
-DELETE /api/platform/calendars/{calendarId}
+GET    /api/platform/calendars/default?year=2026
+PUT    /api/platform/calendars/{calendarId}/default
 ```
 
-删除策略：
+年度范围：
 
 ```text
-第一版不物理删除，DELETE 表示 enabled=false。
+平台为每个租户一次性初始化 2000–2050 年共 51 个年度日历。
+不提供手工创建、编辑或删除年度日历的 API。
 ```
 
 ### 6.2 日期管理 API
@@ -289,6 +286,7 @@ DELETE /api/platform/calendars/{calendarId}
 ```http
 GET  /api/platform/calendars/{calendarId}/days?start=2026-01-01&end=2026-12-31
 PUT  /api/platform/calendars/{calendarId}/days/{date}
+GET  /api/platform/calendars/import-template?year=2026
 POST /api/platform/calendars/{calendarId}/days/import
 ```
 
@@ -307,18 +305,18 @@ POST /api/platform/calendars/{calendarId}/days/import
 ### 6.3 工作日查询 API
 
 ```http
-GET /api/platform/calendar-days/check?date=2026-07-08
-GET /api/platform/calendar-days/range?start=2026-07-01&end=2026-07-31
-GET /api/platform/calendar-days/workdays/count?start=2026-07-01&end=2026-07-31
+GET /api/platform/calendar-days/check?calendarId={calendarId}&date=2026-07-08
+GET /api/platform/calendar-days/range?calendarId={calendarId}&start=2026-07-01&end=2026-07-31
+GET /api/platform/calendar-days/workdays/count?calendarId={calendarId}&start=2026-07-01&end=2026-07-31
 ```
 
 默认选择规则：
 
 ```text
-1. 如果传 calendarId，使用指定日历。
-2. 如果未传 calendarId，根据 current tenant + date.year + regionCode=CN 找 enabled 日历。
-3. 如果找不到日历，按保守默认策略返回周一到周五工作日，并在响应中标记 source=fallback。
-4. 生产环境建议通过配置禁止 fallback，并要求 seed 年度日历。
+1. 页面查询显式传 calendarId，并校验该日历属于当前租户。
+2. 工作记录模块按 current tenant + year 使用默认日历绑定。
+3. 2000–2050 年的默认日历由迁移和新租户触发器自动建立。
+4. 默认绑定或日期覆盖不完整时返回配置错误，不静默使用跨租户或跨年度数据。
 ```
 
 工作日判断响应：
@@ -345,32 +343,31 @@ GET /api/platform/calendar-days/workdays/count?start=2026-07-01&end=2026-07-31
 }
 ```
 
-## 7. CSV 导入
+## 7. XLSX 法定节假日导入
 
-第一版使用 CSV 导入，不做自动爬取。
+第一版使用 XLSX 模板导入法定节假日，不做自动爬取，也不让用户导入全年普通日期。
 
 导入模板：
 
-```csv
-date,dayType,isWorkday,holidayName,remark
-2026-01-01,HOLIDAY,false,元旦,
-2026-02-14,ADJUSTED_WORKDAY,true,,春节调休上班
-2026-02-17,HOLIDAY,false,春节,
-```
+| 列名          | 必填 | 说明                      |
+| ------------- | ---- | ------------------------- |
+| `date`        | 是   | 日期，格式 `YYYY-MM-DD`   |
+| `holidayName` | 是   | 法定节假日名称            |
+| `remark`      | 否   | 备注                      |
 
 导入规则：
 
 ```text
 1. date 必须属于 calendar.year。
-2. dayType 必须是受支持枚举。
-3. isWorkday 必须与 dayType 兼容。
-4. 同一天重复出现时拒绝整批导入。
-5. 导入采用事务，任意一行失败则整批失败。
-6. 已存在日期时按 upsert 更新。
-7. 导入结果写审计，记录成功行数、失败原因摘要、calendarId。
+2. holidayName 必填；remark 可选。
+3. 同一天重复出现时拒绝整批导入。
+4. 导入采用事务，任意一行失败则整批失败。
+5. 已存在日期时按 upsert 更新为 HOLIDAY、isWorkday=false。
+6. 只允许 .xlsx，最大 5 MB，最多 1000 个非空数据行。
+7. 导入结果写审计，记录成功行数、变更摘要、calendarId 和文件 SHA-256。
 ```
 
-第一版不支持 Excel。若后续要支持 Excel，必须补充文件大小限制、解析库、公式注入风险和单元格类型规则。
+普通工作日、周末和调休工作日不通过 XLSX 导入；需要特殊覆盖时使用单日维护 API。
 
 ## 8. 后端实现落点
 
@@ -381,15 +378,9 @@ modules/aiops-platform/src/main/java/io/aegisops/platform/calendar/
 ├─ CalendarController.java
 ├─ CalendarService.java
 ├─ CalendarRepository.java
-├─ CalendarDayRepository.java
-├─ CalendarDayType.java
-├─ CalendarCsvImportService.java
-├─ CalendarQueryService.java
-├─ CalendarPermission.java
-├─ CreateCalendarRequest.java
-├─ UpdateCalendarRequest.java
+├─ CalendarXlsxImporter.java
 ├─ UpdateCalendarDayRequest.java
-├─ CalendarDayCheckResponse.java
+├─ WorkdayCheckResponse.java
 └─ WorkdayCountResponse.java
 ```
 
@@ -403,9 +394,7 @@ apps/aiops-server/src/main/resources/db/migration/V00XX__init_platform_calendar.
 
 ## 9. 前端页面设计
 
-第一版页面可选。
-
-如果做页面，路径：
+页面路径：
 
 ```text
 /platform/calendars
@@ -415,14 +404,10 @@ apps/aiops-server/src/main/resources/db/migration/V00XX__init_platform_calendar.
 
 ```text
 web/portal/src/routes/_authenticated/platform/calendars.tsx
-web/portal/src/features/calendars/index.tsx
-web/portal/src/features/calendars/api/calendar-api.ts
-web/portal/src/features/calendars/data/calendar-schema.ts
-web/portal/src/features/calendars/hooks/use-calendars.ts
-web/portal/src/features/calendars/components/calendar-table.tsx
-web/portal/src/features/calendars/components/calendar-day-table.tsx
-web/portal/src/features/calendars/components/calendar-import-dialog.tsx
-web/portal/src/features/calendars/components/calendar-day-dialog.tsx
+web/portal/src/pages/calendars/index.tsx
+web/portal/src/api/calendars.ts
+web/portal/src/lib/calendars/calendar-helpers.ts
+web/portal/src/components/calendars/calendar-import-dialog.tsx
 ```
 
 页面结构：
@@ -430,21 +415,17 @@ web/portal/src/features/calendars/components/calendar-day-dialog.tsx
 ```text
 顶部：
   年份选择
-  地区选择
   日历选择
-  导入 CSV
-  批量生成
+  下载 XLSX 模板
+  导入法定节假日
 
 主体：
-  第一版表格视图
+  月历视图与日期状态图例
 
-表格列：
-  日期
-  星期
-  类型
-  是否工作日
-  节日名称
-  备注
+月历单元格：
+  日期与节假日名称
+  工作日、周末、法定节假日和调休工作日状态
+  有维护权限时可执行单日覆盖
   操作
 ```
 
@@ -485,11 +466,11 @@ platform:calendar:import
 审计动作：
 
 ```text
-platform.calendar.create
-platform.calendar.update
-platform.calendar.disable
-platform.calendar_day.update
-platform.calendar_day.import
+platform.calendar.default.change
+platform.calendar.day.override
+platform.calendar.day.import_create
+platform.calendar.day.import_overwrite
+platform.calendar.import
 ```
 
 审计摘要：
@@ -504,7 +485,7 @@ importRowCount
 sourceType
 ```
 
-不要在审计中保存完整 CSV 内容。
+不要在审计中保存完整 XLSX 内容。
 
 ## 12. 国际化
 
@@ -516,7 +497,7 @@ platform.calendars.description
 platform.calendars.year
 platform.calendars.region
 platform.calendars.import
-platform.calendars.generate
+platform.calendars.downloadTemplate
 platform.calendars.date
 platform.calendars.dayOfWeek
 platform.calendars.dayType
@@ -545,10 +526,10 @@ workRecords.export.workdaySummary
 
 ```text
 CalendarServiceTest
-  - createsCalendarForTenant
-  - rejectsDuplicateCalendarCode
-  - rejectsDuplicateRegionYear
-  - disablesCalendarInsteadOfPhysicalDelete
+  - listsGeneratedCalendarsForTenant
+  - rejectsTemplateYearOutsideSupportedRange
+  - importsStatutoryHolidays
+  - writesImportAudit
 
 CalendarDayServiceTest
   - updatesSingleDay
@@ -556,15 +537,15 @@ CalendarDayServiceTest
   - rejectsDateOutsideCalendarYear
   - checksWorkdayByDate
   - countsWorkdaysInRange
-  - fallsBackToWeekdayRuleWhenAllowed
+  - rejectsMissingOrIncompleteDefaultCalendar
 
-CalendarCsvImportServiceTest
-  - importsValidCsv
-  - rejectsDuplicateDateInCsv
-  - rejectsInvalidDayType
+CalendarXlsxImporterTest
+  - importsValidXlsx
+  - rejectsDuplicateDateInXlsx
+  - rejectsInvalidHeaders
   - rejectsDateOutsideYear
   - upsertsExistingDay
-  - writesAudit
+  - rejectsOversizedImport
 
 CalendarTenantIsolationTest
   - cannotReadCalendarFromAnotherTenant
@@ -584,15 +565,15 @@ calendar-import-dialog.test.tsx
 ## 14. 验收标准
 
 ```text
-1. 能为租户创建 CN_YYYY 工作日历。
-2. 能导入 CSV 并生成 calendar day。
+1. 每个租户自动拥有 2000–2050 年共 51 个 CN_YYYY 工作日历及完整基础日期。
+2. 能下载 XLSX 模板并仅导入法定节假日。
 3. 能查询某一天是否工作日。
 4. 能查询日期范围内每天的工作日状态。
 5. 能统计范围内工作日数量。
 6. 能覆盖某一天为公司假期或公司工作日。
 7. 所有查询按 tenantId 隔离。
 8. 导入和单日更新写审计。
-9. 不存在工作日历时的 fallback 行为明确且可配置。
+9. 缺少默认绑定或日期覆盖不完整时返回明确的配置错误。
 10. 工作记录模块不依赖 calendar 包内部实现，只通过公开 service/API 消费。
 ```
 

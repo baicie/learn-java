@@ -5,7 +5,7 @@ status: draft
 phase: work-record
 owner: platform-team
 created: 2026-07-09
-updated: 2026-07-09
+updated: 2026-07-25
 related:
   - docs/record/enterprise-roadmap.md
   - docs/record/api-contract.md
@@ -39,8 +39,10 @@ related:
 - [ ] 字典类型可新增、编辑、禁用。
 - [ ] 字典项可新增、编辑、禁用。
 - [ ] 字典项禁用后历史记录仍能回显 label。
-- [ ] 工作日历可创建。
-- [ ] 工作日历可 CSV 导入。
+- [ ] 每个租户自动生成 2000–2050 年共 51 个年度工作日历及完整基础日期。
+- [ ] 可下载三列 XLSX 法定节假日导入模板。
+- [ ] 工作日历只允许通过 XLSX 导入法定节假日，不接受全年普通日期或调休工作日。
+- [ ] XLSX 导入限制为 5 MB、1000 个非空数据行，且日期必须属于所选年度并不可重复。
 - [ ] 工作日历可判断某天是否工作日。
 - [ ] 工作日历可统计区间工作日数量。
 

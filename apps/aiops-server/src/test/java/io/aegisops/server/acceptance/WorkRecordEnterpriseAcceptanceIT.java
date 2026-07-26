@@ -90,7 +90,7 @@ class WorkRecordEnterpriseAcceptanceIT {
   @Test
   void completeEnterpriseAcceptanceScenario() {
     step("01 创建默认字典", this::createDefaultDictionary);
-    step("02 创建工作日历", this::createWorkCalendar);
+    step("02 获取自动生成的工作日历", this::loadAutomaticallyGeneratedWorkCalendar);
     step("03 创建并发布模板 v1", this::createAndPublishTemplateV1);
     step("04 用户填写 v1 记录", this::usersCreateV1Records);
     step("05 管理员查看全部记录", this::administratorCanReadAllRecords);
@@ -157,32 +157,23 @@ class WorkRecordEnterpriseAcceptanceIT {
     assertThat(state.p2ItemId).isNotBlank();
   }
 
-  private void createWorkCalendar() {
+  private void loadAutomaticallyGeneratedWorkCalendar() {
     int year = Year.now(ZoneId.of("Asia/Shanghai")).getValue();
+    JsonNode calendars = api.getData("/api/platform/calendars", tokens.admin());
 
-    JsonNode calendar =
-        api.postData(
-            "/api/platform/calendars",
-            tokens.admin(),
-            Map.of(
-                "calendarCode",
-                "acc_cn_" + year + "_" + state.suffix,
-                "calendarName",
-                "验收工作日历 " + year,
-                "regionCode",
-                "CN",
-                "timezone",
-                "Asia/Shanghai",
-                "year",
-                year,
-                "enabled",
-                true,
-                "sourceType",
-                "acceptance",
-                "description",
-                "Phase 18 验收日历"));
+    assertThat(calendars.isArray()).isTrue();
+    assertThat(calendars.size()).isEqualTo(51);
+
+    Set<Integer> years = new LinkedHashSet<>();
+    calendars.forEach(calendar -> years.add(calendar.path("year").asInt()));
+    assertThat(years).hasSize(51).contains(2000, year, 2050);
+
+    JsonNode calendar = findGeneratedCalendar(calendars, year);
+    assertThat(calendar.path("calendarCode").asText()).isEqualTo("CN_" + year);
+    assertThat(calendar.path("sourceType").asText()).isEqualTo("generated");
 
     state.calendarId = calendar.path("id").asText();
+    assertThat(state.calendarId).isNotBlank();
   }
 
   private void createAndPublishTemplateV1() {
@@ -465,14 +456,14 @@ class WorkRecordEnterpriseAcceptanceIT {
         .contains(
             "platform.dict_type.create",
             "platform.dict_item.create",
-            "platform.calendar.create",
             "work_record.template.create",
             "work_record.template.draft.update",
             "work_record.template.publish",
             "work_record.record.create",
             "platform.dict_item.disable",
             "work_record.record.export",
-            "work_record.record.export_rejected");
+            "work_record.record.export_rejected")
+        .doesNotContain("platform.calendar.create");
 
     List<JsonNode> publishes = eventsForAction(events, "work_record.template.publish");
 
@@ -585,6 +576,16 @@ class WorkRecordEnterpriseAcceptanceIT {
       }
     }
     throw new AssertionError("item not found: " + id);
+  }
+
+  private JsonNode findGeneratedCalendar(JsonNode calendars, int year) {
+    for (JsonNode calendar : calendars) {
+      if (calendar.path("year").asInt() == year
+          && "generated".equals(calendar.path("sourceType").asText())) {
+        return calendar;
+      }
+    }
+    throw new AssertionError("generated calendar not found for year: " + year);
   }
 
   private String objectField(String json, String fieldName) {
