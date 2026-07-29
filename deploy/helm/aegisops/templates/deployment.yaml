@@ -23,6 +23,9 @@ spec:
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") $root | sha256sum }}
         checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") $root | sha256sum }}
+        {{- if eq $appName "server" }}
+        checksum/server-secret: {{ include (print $.Template.BasePath "/server-secret.yaml") $root | sha256sum }}
+        {{- end }}
     spec:
       serviceAccountName: {{ include "aegisops.serviceAccountName" $root }}
       imagePullSecrets:
@@ -50,6 +53,13 @@ spec:
           env:
             - name: AIOPS_APP_NAME
               value: {{ $appName | quote }}
+            {{- if eq $appName "server" }}
+            - name: AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "aegisops.fullname" $root }}-server-secret
+                  key: AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN
+            {{- end }}
             {{- if and (eq $appName "agent") (eq $root.Values.dify.workRecordProvider "dify") }}
             - name: AIOPS_AGENT_DIFY_WORK_RECORD_API_KEY
               valueFrom:

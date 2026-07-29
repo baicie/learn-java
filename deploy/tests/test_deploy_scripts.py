@@ -1,7 +1,11 @@
 from __future__ import annotations
 
+import os
+import shutil
+import subprocess
 from pathlib import Path
 
+import pytest
 import yaml
 
 
@@ -23,6 +27,41 @@ def test_deploy_scripts_exist_and_are_shell_safe():
         assert path.exists(), f"missing {script}"
         text = path.read_text(encoding="utf-8")
         assert "set -euo pipefail" in text
+
+
+def test_generate_secrets_includes_random_zabbix_webhook_signing_secret(tmp_path):
+    if os.name == "nt":
+        git = shutil.which("git")
+        git_root = Path(git).resolve().parents[1] if git else None
+        bash = git_root / "bin" / "bash.exe" if git_root else None
+    else:
+        found = shutil.which("bash")
+        bash = Path(found) if found else None
+
+    if bash is None or not bash.exists():
+        pytest.skip("bash is required to exercise generate-secrets.sh")
+
+    output = tmp_path / "generated-secrets.values.yaml"
+    subprocess.run(
+        [
+            str(bash),
+            (ROOT / "scripts/deploy/generate-secrets.sh").as_posix(),
+            output.as_posix(),
+        ],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    values = yaml.safe_load(output.read_text(encoding="utf-8"))
+    signing_secret = values["security"]["zabbixWebhookSigningSecret"]
+    assert signing_secret
+    assert not signing_secret.startswith("CHANGE_ME_")
+    assert signing_secret not in {
+        values["security"]["internalAgentToken"],
+        values["security"]["jwtSecret"],
+    }
 
 
 def test_offline_image_list_contains_required_images():
@@ -93,6 +132,40 @@ def test_worker_uses_agent_for_ai_generation():
     assert worker["environment"]["AIOPS_AGENT_BASE_URL"] == "http://aiops-agent:9008"
     assert worker["environment"]["AIOPS_AGENT_INTERNAL_TOKEN"] == "${AIOPS_AGENT_INTERNAL_TOKEN:?AIOPS_AGENT_INTERNAL_TOKEN is required}"
     assert worker["depends_on"]["aiops-agent"]["condition"] == "service_healthy"
+
+
+def test_zabbix_webhook_signing_secret_is_required_by_compose_and_has_no_public_default():
+    compose_file = ROOT / "deploy/docker-compose.app.yml"
+    compose = yaml.safe_load(compose_file.read_text(encoding="utf-8"))
+    server_environment = compose["services"]["aiops-server"]["environment"]
+
+    assert server_environment["AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN"] == (
+        "${AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN:?"
+        "AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN is required}"
+    )
+
+    application = (
+        ROOT / "apps/aiops-server/src/main/resources/application.yml"
+    ).read_text(encoding="utf-8")
+    assert "dev-zabbix-webhook-token" not in application
+
+
+def test_release_pipeline_propagates_required_zabbix_webhook_signing_secret():
+    workflow = (ROOT / ".github/workflows/release-verify.yml").read_text(
+        encoding="utf-8"
+    )
+    preflight = (ROOT / "scripts/ci/release-preflight.sh").read_text(encoding="utf-8")
+
+    assert "AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN: runtime-smoke-only" in workflow
+    assert (
+        "AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN: "
+        "${{ secrets.AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN }}"
+    ) in workflow
+    assert (
+        "envs: IMAGE_PREFIX,IMAGE_TAG,AIOPS_AGENT_INTERNAL_TOKEN,"
+        "AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN"
+    ) in workflow
+    assert "AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN=preflight-only" in preflight
 
 
 def test_compose_dify_secrets_are_only_exposed_to_agent():

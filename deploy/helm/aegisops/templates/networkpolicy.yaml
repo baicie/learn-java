@@ -22,7 +22,7 @@ spec:
         - protocol: TCP
           port: 8080
         - protocol: TCP
-          port: 8000
+          port: {{ .Values.apps.agent.port }}
   {{- if .Values.networkPolicy.egressEnabled }}
   egress:
     - {}

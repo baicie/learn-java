@@ -15,6 +15,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
+    restart: unless-stopped
 
   redis:
     image: redis:7-alpine
@@ -24,6 +25,7 @@ services:
     command: ["redis-server", "--appendonly", "yes"]
     volumes:
       - redis_data:/data
+    restart: unless-stopped
 
   # ClickHouse 是规划中的 OLAP 存储，当前 MVP 后端没有 Java/前端代码连接它。
   # 为避免本地 docker 内存压力（约 800MB+）并保持一键启动轻量，先整体注释。
@@ -40,6 +42,7 @@ services:
   #     CLICKHOUSE_PASSWORD: aegisops
   #   volumes:
   #     - clickhouse_data:/var/lib/clickhouse
+  #   restart: unless-stopped
 
   victoriametrics:
     image: victoriametrics/victoria-metrics:v1.109.1
@@ -51,6 +54,7 @@ services:
       - "-retentionPeriod=30d"
     volumes:
       - vm_data:/storage
+    restart: unless-stopped
 
   minio:
     image: minio/minio:latest
@@ -69,6 +73,7 @@ services:
       retries: 20
     volumes:
       - minio_data:/data
+    restart: unless-stopped
 
   minio-init:
     image: minio/mc:latest
@@ -97,6 +102,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
+    restart: unless-stopped
 
   zabbix-server:
     image: zabbix/zabbix-server-pgsql:alpine-7.0-latest

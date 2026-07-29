@@ -34,7 +34,7 @@ data:
   VICTORIA_METRICS_BASE_URL: {{ .Values.external.victoriaMetrics.baseUrl | quote }}
   AIOPS_EVIDENCE_VICTORIA_BASE_URL: {{ .Values.external.victoriaMetrics.baseUrl | quote }}
 
-  AIOPS_AGENT_BASE_URL: "http://{{ include "aegisops.fullname" . }}-agent:8000"
+  AIOPS_AGENT_BASE_URL: "http://{{ include "aegisops.fullname" . }}-agent:{{ .Values.apps.agent.port }}"
 
   AIOPS_PUBLIC_API_RPM: {{ .Values.security.publicApiRequestsPerMinute | quote }}
   AIOPS_INTERNAL_AGENT_RPM: {{ .Values.security.internalAgentRequestsPerMinute | quote }}

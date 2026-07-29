@@ -36,6 +36,7 @@ config:
 security:
   internalAgentToken: ""
   jwtSecret: ""
+  zabbixWebhookSigningSecret: ""
   internalAgentTokenRequired: true
   tenantRequired: true
   publicApiRequestsPerMinute: 600
@@ -131,7 +132,7 @@ apps:
     image:
       repository: "aegisops/aiops-agent"
       tag: "0.1.0"
-    port: 8000
+    port: 9008
     env: {}
     resources:
       requests:
