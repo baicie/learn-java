@@ -3,9 +3,8 @@ package io.aegisops.datasource;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.aegisops.common.exception.AppException;
-import io.aegisops.common.outbox.OutboxMessage;
-import io.aegisops.common.outbox.OutboxWriter;
 import io.aegisops.datasource.api.dto.StartSyncResponse;
+import io.aegisops.datasource.application.ManualDataSourceSyncApplicationService;
 import io.aegisops.kubernetes.application.KubernetesInventoryClientFactory;
 import io.aegisops.kubernetes.domain.model.KubernetesConfig;
 import io.aegisops.zabbix.ZabbixClient;
@@ -32,45 +31,26 @@ public class DataSourceService {
   private final ObjectMapper objectMapper;
   private final ZabbixClientFactory zabbixClientFactory;
   private final KubernetesInventoryClientFactory kubernetesClientFactory;
-  private final OutboxWriter outboxWriter;
+  private final ManualDataSourceSyncApplicationService manualSyncService;
 
   public DataSourceService(
       JdbcTemplate jdbc,
       ObjectMapper objectMapper,
       ZabbixClientFactory zabbixClientFactory,
       KubernetesInventoryClientFactory kubernetesClientFactory,
-      OutboxWriter outboxWriter) {
+      ManualDataSourceSyncApplicationService manualSyncService) {
     this.jdbc = jdbc;
     this.objectMapper = objectMapper;
     this.zabbixClientFactory = zabbixClientFactory;
     this.kubernetesClientFactory = kubernetesClientFactory;
-    this.outboxWriter = outboxWriter;
+    this.manualSyncService = manualSyncService;
   }
 
   @Transactional
   public StartSyncResponse startSync(String tenantId, String id) {
-    DataSourceEntity entity = getEntity(tenantId, id);
-    String jobName = syncJobName(entity);
-    String runId = newId("sync");
-    jdbc.update(
-        """
-        insert into datasource_sync_run(id, tenant_id, datasource_id, sync_type, status, started_at)
-        values (?, ?, ?, 'manual', 'pending', now())
-        """,
-        runId,
-        tenantId,
-        id);
-    Map<String, Object> payload = Map.of("tenantId", tenantId, "datasourceId", id, "runId", runId);
-    outboxWriter.enqueue(
-        new OutboxMessage(
-            tenantId,
-            "worker",
-            jobName,
-            payload,
-            jobName + ":" + tenantId + ":" + id + ":" + runId,
-            3,
-            null));
-    return new StartSyncResponse(runId, "pending");
+    DataSourceEntity entity = getEntity(tenantId, id, true);
+    requireActiveForManualSync(entity);
+    return manualSyncService.start(tenantId, id, entity.type());
   }
 
   public List<DataSourceRecord> list(String tenantId) {
@@ -194,12 +174,19 @@ public class DataSourceService {
   }
 
   private DataSourceEntity getEntity(String tenantId, String id) {
+    return getEntity(tenantId, id, false);
+  }
+
+  private DataSourceEntity getEntity(String tenantId, String id, boolean forUpdate) {
     try {
       return jdbc.queryForObject(
           """
-                    select id, tenant_id, type, name, status, config_json::text, created_at, updated_at, last_sync_at
-                    from datasource where tenant_id = ? and id = ?
-                    """,
+          select id, tenant_id, type, name, status, config_json::text,
+                 created_at, updated_at, last_sync_at
+          from datasource
+          where tenant_id = ? and id = ?
+          """
+              + (forUpdate ? "for update" : ""),
           (rs, rowNum) ->
               new DataSourceEntity(
                   rs.getString("id"),
@@ -229,12 +216,11 @@ public class DataSourceService {
     }
   }
 
-  private String syncJobName(DataSourceEntity entity) {
-    return switch (entity.type()) {
-      case SOURCE_ZABBIX -> "zabbix-sync";
-      case SOURCE_KUBERNETES -> "kubernetes-sync";
-      default -> throw new AppException("UNSUPPORTED_DATASOURCE", "Datasource cannot be synced");
-    };
+  private void requireActiveForManualSync(DataSourceEntity entity) {
+    if (!"active".equals(entity.status())) {
+      throw new AppException(
+          "DATASOURCE_SYNC_NOT_READY", "Datasource must pass its connection test before syncing");
+    }
   }
 
   private String testConnection(DataSourceEntity entity) {

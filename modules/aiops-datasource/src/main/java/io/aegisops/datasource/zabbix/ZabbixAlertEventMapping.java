@@ -14,6 +14,7 @@ public record ZabbixAlertEventMapping(
     String entityName,
     Map<String, Object> labels,
     OffsetDateTime startsAt,
+    OffsetDateTime endsAt,
     String status,
     Object rawPayload,
     String fingerprint,

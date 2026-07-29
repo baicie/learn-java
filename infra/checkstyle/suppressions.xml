@@ -3,6 +3,8 @@
     "-//Checkstyle//DTD SuppressionFilter Configuration 1.2//EN"
     "https://checkstyle.org/dtds/suppressions_1_2.dtd">
 <suppressions>
+  <!-- Audit DTO keeps its pre-request-metadata constructor for cross-module compatibility. -->
+  <suppress files="AuditRecordCommand.java" checks="ParameterNumber"/>
   <!-- Existing Work Record debt; keep all other files and checks enforced. -->
   <suppress files="WorkRecordTemplateController.java|WorkRecordController.java|WorkRecordControllerWebTest.java|WorkRecordServiceAuthorizationTest.java|WorkRecordTemplateServiceTest.java|WorkRecordQueryServiceAuthorizationTest.java|WorkRecordQueryServiceTest.java|WorkRecordExportServiceTest.java|WorkRecordTemplateVersionServiceTest.java|WorkRecordServicePhase9Test.java|WorkRecordExportColumnResolverTest.java|WorkRecordValueValidatorTest.java" checks="AvoidStarImport"/>
   <suppress files="RecordQuery.java|WorkRecordService.java|WorkRecordListMetaService.java|WorkRecordAuditService.java|WorkRecordFieldAuditService.java|WorkRecordTemplateVersionService.java|WorkRecordExportService.java|WorkRecordAuditRepository.java|WorkRecordTemplateVersionRepository.java|WorkRecordFixtures.java|WorkRecordExportServiceTest.java|WorkRecordListMetaServiceTest.java|WorkRecordExportColumnResolverTest.java|WorkRecordTemplate.java|WorkRecordField.java|FormFieldDescriptor.java|TemplateFieldIndexEntry.java" checks="ParameterNumber"/>

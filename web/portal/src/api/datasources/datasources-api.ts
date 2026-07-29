@@ -61,6 +61,14 @@ export async function testDatasource(id: string) {
   ).parse(data).data
 }
 
+export async function getZabbixWebhookToken(id: string) {
+  const { data } = await apiClient.get(
+    `/api/datasources/${id}/zabbix-webhook-token`
+  )
+  return apiResponseSchema(z.object({ token: z.string().min(1) })).parse(data)
+    .data
+}
+
 export async function syncDatasource(id: string) {
   const { data } = await apiClient.post(`/api/datasources/${id}/sync`)
   return apiResponseSchema(

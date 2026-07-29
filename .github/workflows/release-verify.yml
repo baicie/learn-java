@@ -107,6 +107,7 @@ jobs:
       name: aegisops-prod
     env:
       AIOPS_AGENT_INTERNAL_TOKEN: runtime-smoke-only
+      AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN: runtime-smoke-only
     if: >-
       github.event_name != 'pull_request' &&
       needs.preflight.outputs.release_required == 'true'
@@ -306,6 +307,7 @@ jobs:
           IMAGE_PREFIX: ${{ env.IMAGE_PREFIX }}
           IMAGE_TAG: ${{ env.IMAGE_TAG }}
           AIOPS_AGENT_INTERNAL_TOKEN: ${{ secrets.AIOPS_AGENT_INTERNAL_TOKEN }}
+          AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN: ${{ secrets.AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN }}
         with:
           host: ${{ secrets.PERF_VM_HOST }}
           username: ${{ secrets.PERF_VM_USER }}
@@ -314,7 +316,7 @@ jobs:
           port: ${{ secrets.PERF_VM_SSH_PORT || '22' }}
           timeout: 10m
           command_timeout: 20m
-          envs: IMAGE_PREFIX,IMAGE_TAG,AIOPS_AGENT_INTERNAL_TOKEN
+          envs: IMAGE_PREFIX,IMAGE_TAG,AIOPS_AGENT_INTERNAL_TOKEN,AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN
           script: |
             bash -lc '
               set -Eeuo pipefail

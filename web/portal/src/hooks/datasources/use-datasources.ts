@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   createDatasource,
+  getZabbixWebhookToken,
   listDatasources,
   listSyncRuns,
   syncDatasource,
@@ -11,6 +12,11 @@ import {
   type UpdateDatasourceInput,
 } from '@/api/datasources/datasources-api'
 import { datasourceKeys } from '@/api/datasources/query-keys'
+import { apiClient } from '@/lib/api-client'
+import {
+  buildZabbixWebhookUrl,
+  downloadZabbixMediaTypeTemplate,
+} from '@/lib/datasources/zabbix-webhook'
 
 export function useDatasources() {
   return useQuery({
@@ -67,6 +73,20 @@ export function useTestDatasource() {
     mutationFn: (id: string) => testDatasource(id),
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: datasourceKeys.all }),
+  })
+}
+
+export function useDownloadZabbixWebhookTemplate() {
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { token } = await getZabbixWebhookToken(id)
+      const webhookUrl = buildZabbixWebhookUrl(
+        id,
+        apiClient.defaults.baseURL,
+        window.location.origin
+      )
+      downloadZabbixMediaTypeTemplate(webhookUrl, token)
+    },
   })
 }
 

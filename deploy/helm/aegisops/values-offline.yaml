@@ -8,6 +8,7 @@ offline:
 security:
   internalAgentToken: "CHANGE_ME_INTERNAL_AGENT_TOKEN"
   jwtSecret: "CHANGE_ME_JWT_SECRET"
+  zabbixWebhookSigningSecret: ""
 
 apps:
   server:

@@ -2,10 +2,10 @@ import { CircleHelp, Copy, Download, TriangleAlert } from 'lucide-react'
 import { apiClient } from '@/lib/api-client'
 import type { Datasource } from '@/lib/datasources/datasource'
 import {
-  buildZabbixMediaTypeYaml,
   buildZabbixWebhookUrl,
   isLoopbackWebhookUrl,
 } from '@/lib/datasources/zabbix-webhook'
+import { useDownloadZabbixWebhookTemplate } from '@/hooks/datasources/use-datasources'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import {
@@ -25,8 +25,6 @@ import {
 } from '@/components/ui/tooltip'
 import { notify } from '@/components/feedback/app-toaster'
 
-const TEMPLATE_FILE_NAME = 'aegisops-zabbix-webhook-7.0.yaml'
-
 export function ZabbixWebhookDialog({
   datasource,
   open,
@@ -36,6 +34,7 @@ export function ZabbixWebhookDialog({
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
+  const templateDownload = useDownloadZabbixWebhookTemplate()
   const webhookUrl = buildZabbixWebhookUrl(
     datasource.id,
     apiClient.defaults.baseURL,
@@ -52,18 +51,9 @@ export function ZabbixWebhookDialog({
   }
 
   const downloadTemplate = () => {
-    const blob = new Blob([buildZabbixMediaTypeYaml(webhookUrl)], {
-      type: 'application/yaml;charset=utf-8',
+    templateDownload.mutate(datasource.id, {
+      onError: (error) => notify.error(error, '获取 Webhook Token 失败'),
     })
-    const url = URL.createObjectURL(blob)
-    const anchor = document.createElement('a')
-    anchor.href = url
-    anchor.download = TEMPLATE_FILE_NAME
-    anchor.style.display = 'none'
-    document.body.appendChild(anchor)
-    anchor.click()
-    anchor.remove()
-    window.setTimeout(() => URL.revokeObjectURL(url), 0)
   }
 
   return (
@@ -133,10 +123,7 @@ export function ZabbixWebhookDialog({
             <ol className='grid list-decimal gap-1 pl-5 text-muted-foreground'>
               <li>下载配置模板。</li>
               <li>在 Zabbix 的 Alerts → Media types 页面点击 Import。</li>
-              <li>
-                导入后编辑 AegisOps Webhook，将 token 参数替换为服务端配置的
-                Webhook Token。
-              </li>
+              <li>导入后确认 AegisOps Webhook 已启用。</li>
               <li>
                 为通知用户添加该 Media，并在 Action 中配置问题和恢复操作。
               </li>
@@ -145,9 +132,14 @@ export function ZabbixWebhookDialog({
         </div>
 
         <DialogFooter>
-          <Button type='button' variant='outline' onClick={downloadTemplate}>
+          <Button
+            type='button'
+            variant='outline'
+            disabled={templateDownload.isPending}
+            onClick={downloadTemplate}
+          >
             <Download />
-            下载配置模板
+            {templateDownload.isPending ? '正在生成模板…' : '下载配置模板'}
           </Button>
         </DialogFooter>
       </DialogContent>

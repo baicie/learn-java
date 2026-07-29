@@ -3,6 +3,7 @@ package io.aegisops.audit;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.OffsetDateTime;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -29,6 +30,9 @@ public class AuditRepository {
             before_json,
             after_json,
             detail_json,
+            request_id,
+            ip,
+            user_agent,
             created_at
         )
         values (
@@ -41,20 +45,13 @@ public class AuditRepository {
             cast(:beforeJson as jsonb),
             cast(:afterJson as jsonb),
             cast(:detailJson as jsonb),
+            :requestId,
+            :ip,
+            :userAgent,
             :createdAt
         )
         """,
-        Map.of(
-            "id", event.id(),
-            "tenantId", event.tenantId(),
-            "actorId", event.actorId(),
-            "action", event.action(),
-            "resourceType", event.resourceType(),
-            "resourceId", event.resourceId(),
-            "beforeJson", event.beforeJson(),
-            "afterJson", event.afterJson(),
-            "detailJson", event.detailJson(),
-            "createdAt", event.createdAt()));
+        insertParameters(event));
   }
 
   public List<AuditEvent> listRecent(String tenantId, int limit) {
@@ -70,6 +67,9 @@ public class AuditRepository {
             before_json::text,
             after_json::text,
             detail_json::text,
+            request_id,
+            ip,
+            user_agent,
             created_at
         from public.audit_log
         where tenant_id = :tenantId
@@ -94,6 +94,9 @@ public class AuditRepository {
             before_json::text,
             after_json::text,
             detail_json::text,
+            request_id,
+            ip,
+            user_agent,
             created_at
         from public.audit_log
         where tenant_id = :tenantId
@@ -121,6 +124,27 @@ public class AuditRepository {
         rs.getString("before_json"),
         rs.getString("after_json"),
         rs.getString("detail_json"),
+        rs.getString("request_id"),
+        rs.getString("ip"),
+        rs.getString("user_agent"),
         rs.getObject("created_at", OffsetDateTime.class));
+  }
+
+  private Map<String, Object> insertParameters(AuditEvent event) {
+    Map<String, Object> parameters = new HashMap<>();
+    parameters.put("id", event.id());
+    parameters.put("tenantId", event.tenantId());
+    parameters.put("actorId", event.actorId());
+    parameters.put("action", event.action());
+    parameters.put("resourceType", event.resourceType());
+    parameters.put("resourceId", event.resourceId());
+    parameters.put("beforeJson", event.beforeJson());
+    parameters.put("afterJson", event.afterJson());
+    parameters.put("detailJson", event.detailJson());
+    parameters.put("requestId", event.requestId());
+    parameters.put("ip", event.ip());
+    parameters.put("userAgent", event.userAgent());
+    parameters.put("createdAt", event.createdAt());
+    return parameters;
   }
 }

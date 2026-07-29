@@ -32,22 +32,30 @@ describe('Zabbix webhook configuration', () => {
     )
   })
 
-  it('generates an importable Zabbix 7.0 media type without secrets', () => {
+  it('generates an importable Zabbix 7.0 media type with its scoped token', () => {
     const url =
       'https://ops.example.com/api/integrations/zabbix/events?datasourceId=ds_1'
-    const yaml = buildZabbixMediaTypeYaml(url)
+    const token = 'zwh_datasource-token'
+    const yaml = buildZabbixMediaTypeYaml(url, token)
 
     expect(yaml).toContain("version: '7.0'")
     expect(yaml).toContain('type: WEBHOOK')
     expect(yaml).toContain(`value: '${url}'`)
-    expect(yaml).toContain("value: '<SET_AEGISOPS_WEBHOOK_TOKEN>'")
+    expect(yaml).toContain(`value: '${token}'`)
+    expect(yaml).not.toContain('<SET_AEGISOPS_WEBHOOK_TOKEN>')
     expect(yaml).toContain('X-AegisOps-Webhook-Token')
     expect(yaml).toContain('message_templates:')
     expect(yaml).toContain('operation_mode: RECOVERY')
+    expect(yaml).toContain(
+      "endsAt: params.status === 'RESOLVED' ? new Date().toISOString() : null"
+    )
     expect(yaml).not.toContain('dev-zabbix-webhook-token')
 
-    expect(buildZabbixMediaTypeYaml("https://ops.example.com/d's_1")).toContain(
-      "value: 'https://ops.example.com/d''s_1'"
-    )
+    expect(
+      buildZabbixMediaTypeYaml(
+        "https://ops.example.com/d's_1",
+        "zwh_token'value"
+      )
+    ).toContain("value: 'zwh_token''value'")
   })
 })

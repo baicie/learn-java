@@ -12,4 +12,7 @@ public record AuditEvent(
     String beforeJson,
     String afterJson,
     String detailJson,
+    String requestId,
+    String ip,
+    String userAgent,
     OffsetDateTime createdAt) {}

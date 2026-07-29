@@ -1,8 +1,26 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { render } from 'vitest-browser-react'
 import type { Datasource } from '@/lib/datasources/datasource'
 import { notify } from '@/components/feedback/app-toaster'
 import { ZabbixWebhookDialog } from './zabbix-webhook-dialog'
+
+const tokenMutate = vi.fn(
+  (
+    _datasourceId: string,
+    options?: {
+      onError?: (error: Error) => void
+    }
+  ) => {
+    void options
+  }
+)
+
+vi.mock('@/hooks/datasources/use-datasources', () => ({
+  useDownloadZabbixWebhookTemplate: () => ({
+    mutate: tokenMutate,
+    isPending: false,
+  }),
+}))
 
 vi.mock('@/components/feedback/app-toaster', () => ({
   notify: {
@@ -25,6 +43,10 @@ const datasource: Datasource = {
 
 afterEach(() => {
   vi.restoreAllMocks()
+})
+
+beforeEach(() => {
+  vi.clearAllMocks()
 })
 
 describe('ZabbixWebhookDialog', () => {
@@ -74,13 +96,7 @@ describe('ZabbixWebhookDialog', () => {
     expect(notify.success).toHaveBeenCalledWith('Webhook 地址已复制')
   })
 
-  it('downloads a Zabbix 7.0 media type template', async () => {
-    const createObjectURL = vi
-      .spyOn(URL, 'createObjectURL')
-      .mockReturnValue('blob:zabbix-template')
-    const anchorClick = vi
-      .spyOn(HTMLAnchorElement.prototype, 'click')
-      .mockImplementation(() => undefined)
+  it('requests a Zabbix 7.0 media type template download', async () => {
     const screen = await render(
       <ZabbixWebhookDialog
         datasource={datasource}
@@ -91,11 +107,31 @@ describe('ZabbixWebhookDialog', () => {
 
     await screen.getByRole('button', { name: '下载配置模板' }).click()
 
-    expect(createObjectURL).toHaveBeenCalledOnce()
-    expect(createObjectURL.mock.calls[0][0]).toBeInstanceOf(Blob)
-    expect(anchorClick).toHaveBeenCalledOnce()
-    expect((anchorClick.mock.instances[0] as HTMLAnchorElement).download).toBe(
-      'aegisops-zabbix-webhook-7.0.yaml'
+    expect(tokenMutate).toHaveBeenCalledWith(
+      'ds_zabbix_1',
+      expect.objectContaining({
+        onError: expect.any(Function),
+      })
     )
+  })
+
+  it('does not create a template when token retrieval fails', async () => {
+    const error = new Error('request failed')
+    tokenMutate.mockImplementationOnce((_datasourceId, options) => {
+      options?.onError?.(error)
+    })
+    const createObjectURL = vi.spyOn(URL, 'createObjectURL')
+    const screen = await render(
+      <ZabbixWebhookDialog
+        datasource={datasource}
+        open
+        onOpenChange={vi.fn()}
+      />
+    )
+
+    await screen.getByRole('button', { name: '下载配置模板' }).click()
+
+    expect(createObjectURL).not.toHaveBeenCalled()
+    expect(notify.error).toHaveBeenCalledWith(error, '获取 Webhook Token 失败')
   })
 })

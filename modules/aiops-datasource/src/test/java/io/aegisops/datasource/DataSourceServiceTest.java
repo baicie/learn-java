@@ -1,14 +1,17 @@
 package io.aegisops.datasource;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.aegisops.common.outbox.OutboxWriter;
+import io.aegisops.common.exception.AppException;
+import io.aegisops.datasource.application.ManualDataSourceSyncApplicationService;
 import io.aegisops.kubernetes.application.KubernetesInventoryClientFactory;
 import io.aegisops.zabbix.ZabbixClientFactory;
 import java.time.OffsetDateTime;
@@ -44,7 +47,7 @@ class DataSourceServiceTest {
             new ObjectMapper(),
             mock(ZabbixClientFactory.class),
             mock(KubernetesInventoryClientFactory.class),
-            mock(OutboxWriter.class));
+            mock(ManualDataSourceSyncApplicationService.class));
 
     DataSourceRecord result =
         service.update(
@@ -67,5 +70,89 @@ class DataSourceServiceTest {
             org.mockito.ArgumentMatchers.eq("ds-1"));
     assertThat(config.getValue()).contains("https://new.example").contains("secret-token");
     assertThat(result).isEqualTo(updated);
+  }
+
+  @Test
+  void rejectsManualSyncWhenTheDatasourceAlreadyHasAnInflightRun() {
+    JdbcTemplate jdbc = mock(JdbcTemplate.class);
+    ManualDataSourceSyncApplicationService manualSyncService =
+        mock(ManualDataSourceSyncApplicationService.class);
+    OffsetDateTime now = OffsetDateTime.parse("2026-07-18T00:00:00Z");
+    DataSourceEntity entity =
+        new DataSourceEntity(
+            "ds-1",
+            "tenant-1",
+            "zabbix",
+            "Zabbix",
+            "active",
+            "{\"endpoint\":\"https://zabbix.example\",\"apiToken\":\"secret-token\"}",
+            now,
+            now,
+            null);
+    when(jdbc.queryForObject(anyString(), any(RowMapper.class), any(Object[].class)))
+        .thenReturn(entity);
+    when(manualSyncService.start("tenant-1", "ds-1", "zabbix"))
+        .thenThrow(
+            new AppException(
+                "DATASOURCE_SYNC_ALREADY_RUNNING", "Datasource already has an active sync run"));
+    DataSourceService service =
+        new DataSourceService(
+            jdbc,
+            new ObjectMapper(),
+            mock(ZabbixClientFactory.class),
+            mock(KubernetesInventoryClientFactory.class),
+            manualSyncService);
+
+    assertThatThrownBy(() -> service.startSync("tenant-1", "ds-1"))
+        .isInstanceOfSatisfying(
+            AppException.class,
+            exception ->
+                assertThat(exception.errorCode()).isEqualTo("DATASOURCE_SYNC_ALREADY_RUNNING"));
+
+    ArgumentCaptor<String> selectSql = ArgumentCaptor.forClass(String.class);
+    verify(jdbc).queryForObject(selectSql.capture(), any(RowMapper.class), any(Object[].class));
+    assertThat(normalize(selectSql.getValue()))
+        .contains("where tenant_id = ? and id = ? for update");
+    verify(manualSyncService).start("tenant-1", "ds-1", "zabbix");
+  }
+
+  @Test
+  void rejectsManualSyncBeforeTheDatasourceConnectionIsActive() {
+    JdbcTemplate jdbc = mock(JdbcTemplate.class);
+    ManualDataSourceSyncApplicationService manualSyncService =
+        mock(ManualDataSourceSyncApplicationService.class);
+    OffsetDateTime now = OffsetDateTime.parse("2026-07-18T00:00:00Z");
+    DataSourceEntity entity =
+        new DataSourceEntity(
+            "ds-1",
+            "tenant-1",
+            "zabbix",
+            "Zabbix",
+            "inactive",
+            "{\"endpoint\":\"https://zabbix.example\",\"apiToken\":\"secret-token\"}",
+            now,
+            now,
+            null);
+    when(jdbc.queryForObject(anyString(), any(RowMapper.class), any(Object[].class)))
+        .thenReturn(entity);
+    DataSourceService service =
+        new DataSourceService(
+            jdbc,
+            new ObjectMapper(),
+            mock(ZabbixClientFactory.class),
+            mock(KubernetesInventoryClientFactory.class),
+            manualSyncService);
+
+    assertThatThrownBy(() -> service.startSync("tenant-1", "ds-1"))
+        .isInstanceOfSatisfying(
+            AppException.class,
+            exception -> assertThat(exception.errorCode()).isEqualTo("DATASOURCE_SYNC_NOT_READY"));
+
+    verifyNoInteractions(manualSyncService);
+    verify(jdbc, org.mockito.Mockito.never()).update(anyString(), any(Object[].class));
+  }
+
+  private String normalize(String sql) {
+    return sql.replaceAll("\\s+", " ").toLowerCase();
   }
 }

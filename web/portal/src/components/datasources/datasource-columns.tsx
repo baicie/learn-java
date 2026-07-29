@@ -107,6 +107,7 @@ export function datasourceColumns({
               <Button
                 size='sm'
                 variant='ghost'
+                disabled={pending || row.original.status !== 'active'}
                 onClick={() => onWebhook(row.original)}
               >
                 <Webhook />
@@ -116,7 +117,7 @@ export function datasourceColumns({
             <Button
               size='sm'
               variant='ghost'
-              disabled={pending}
+              disabled={pending || row.original.status !== 'active'}
               onClick={() => onSync(row.original.id)}
             >
               <RefreshCw />

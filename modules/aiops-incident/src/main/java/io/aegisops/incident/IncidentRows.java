@@ -27,4 +27,24 @@ final class IncidentRows {
         rs.getObject("created_at", OffsetDateTime.class),
         rs.getObject("updated_at", OffsetDateTime.class));
   }
+
+  static AlertCandidate alertCandidate(ResultSet rs) throws SQLException {
+    return new AlertCandidate(
+        rs.getString("id"),
+        rs.getString("tenant_id"),
+        rs.getString("source"),
+        rs.getString("source_event_id"),
+        rs.getString("severity"),
+        rs.getString("title"),
+        rs.getString("description"),
+        rs.getString("asset_id"),
+        rs.getString("entity_type"),
+        rs.getString("entity_name"),
+        rs.getString("fingerprint"),
+        rs.getString("aggregation_key"),
+        rs.getString("labels_json"),
+        rs.getObject("starts_at", OffsetDateTime.class),
+        rs.getObject("ends_at", OffsetDateTime.class),
+        rs.getObject("created_at", OffsetDateTime.class));
+  }
 }

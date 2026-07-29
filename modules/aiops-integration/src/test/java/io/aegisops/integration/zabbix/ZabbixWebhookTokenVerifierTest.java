@@ -7,11 +7,14 @@ import org.junit.jupiter.api.Test;
 class ZabbixWebhookTokenVerifierTest {
 
   @Test
-  void shouldVerifyToken() {
+  void shouldDeriveAndVerifyDatasourceScopedToken() {
     ZabbixWebhookTokenVerifier verifier =
         new ZabbixWebhookTokenVerifier(new ZabbixWebhookProperties("secret"));
+    String token = verifier.tokenForDatasource("ds-a");
 
-    assertThat(verifier.verify("secret")).isTrue();
+    assertThat(verifier.verify("ds-a", token)).isTrue();
+    assertThat(verifier.verify("ds-b", token)).isFalse();
+    assertThat(verifier.verify("ds-a", "secret")).isFalse();
   }
 
   @Test
@@ -19,17 +22,22 @@ class ZabbixWebhookTokenVerifierTest {
     ZabbixWebhookTokenVerifier verifier =
         new ZabbixWebhookTokenVerifier(new ZabbixWebhookProperties("secret"));
 
-    assertThat(verifier.verify("bad")).isFalse();
-    assertThat(verifier.verify(null)).isFalse();
-    assertThat(verifier.verify(" ")).isFalse();
+    assertThat(verifier.verify("ds-a", "bad")).isFalse();
+    assertThat(verifier.verify("ds-a", null)).isFalse();
+    assertThat(verifier.verify("ds-a", " ")).isFalse();
+    assertThat(verifier.verify(null, "token")).isFalse();
   }
 
   @Test
   void shouldRejectWhenExpectedTokenMissing() {
-    assertThat(new ZabbixWebhookTokenVerifier(new ZabbixWebhookProperties(null)).verify("secret"))
+    assertThat(
+            new ZabbixWebhookTokenVerifier(new ZabbixWebhookProperties(null))
+                .verify("ds-a", "secret"))
         .isFalse();
 
-    assertThat(new ZabbixWebhookTokenVerifier(new ZabbixWebhookProperties(" ")).verify("secret"))
+    assertThat(
+            new ZabbixWebhookTokenVerifier(new ZabbixWebhookProperties(" "))
+                .verify("ds-a", "secret"))
         .isFalse();
   }
 }

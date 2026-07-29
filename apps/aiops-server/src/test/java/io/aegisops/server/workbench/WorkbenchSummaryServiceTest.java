@@ -49,6 +49,9 @@ class WorkbenchSummaryServiceTest {
     assertThat(result.datasourceErrors()).isZero();
     assertThat(result.pendingTasks()).isZero();
     assertThat(result.moduleHealth()).isEqualTo("HEALTHY");
+    verify(jdbc)
+        .queryForObject(
+            contains("severity in ('high','critical','disaster')"), eq(Long.class), anyString());
     verify(jdbc, never()).queryForObject(contains("automation_job"), eq(Long.class), anyString());
   }
 

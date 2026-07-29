@@ -13,6 +13,7 @@ cat > "$OUT" <<EOF
 security:
   internalAgentToken: "$(gen_secret)"
   jwtSecret: "$(gen_secret)"
+  zabbixWebhookSigningSecret: "$(gen_secret)"
 
 external:
   postgres:

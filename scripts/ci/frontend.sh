@@ -17,6 +17,7 @@ if ! command -v pnpm > /dev/null 2>&1; then
 fi
 
 # ---- Formily ADR guard (applies to portal only) ----
+node --test "$SCRIPT_DIR/portal-guards.test.mjs"
 "$SCRIPT_DIR/check-formily-deps.sh"
 node "$SCRIPT_DIR/check-portal-no-features.mjs"
 node "$SCRIPT_DIR/check-portal-ui-primitives.mjs"

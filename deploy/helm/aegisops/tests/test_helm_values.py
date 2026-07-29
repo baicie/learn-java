@@ -37,6 +37,7 @@ def test_security_defaults_do_not_contain_real_secret():
 
     assert values["security"]["internalAgentToken"] == ""
     assert values["security"]["jwtSecret"] == ""
+    assert values["security"]["zabbixWebhookSigningSecret"] == ""
     assert values["dify"]["workRecordApiKey"] == ""
     assert values["dify"]["userHmacSecret"] == ""
 
@@ -52,6 +53,8 @@ def test_rendered_dify_secrets_are_only_exposed_to_agent():
             "security.internalAgentToken=test-internal-token",
             "--set-string",
             "security.jwtSecret=test-jwt-secret",
+            "--set-string",
+            "security.zabbixWebhookSigningSecret=test-zabbix-signing-secret",
             "--set-string",
             "external.postgres.password=test-db-password",
             "--set-string",
@@ -96,6 +99,11 @@ def test_rendered_dify_secrets_are_only_exposed_to_agent():
             assert "AIOPS_AGENT_DIFY_WORK_RECORD_API_KEY" not in effective_env_names
             assert "AIOPS_AGENT_DIFY_USER_HMAC_SECRET" not in effective_env_names
 
+        if app_name == "server":
+            assert "AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN" in effective_env_names
+        else:
+            assert "AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN" not in effective_env_names
+
         assert all("agent-dify" not in name for name in secret_refs)
 
 
@@ -116,12 +124,68 @@ def test_values_ports_match_application_defaults():
     assert values["apps"]["server"]["port"] == 8080
     assert values["apps"]["worker"]["port"] == 8081
     assert values["apps"]["runner"]["port"] == 8092
-    assert values["apps"]["agent"]["port"] == 8000
+    assert values["apps"]["agent"]["port"] == 9008
+
+
+def test_rendered_agent_contract_uses_registered_port():
+    result = subprocess.run(
+        [
+            "helm",
+            "template",
+            "test",
+            str(ROOT),
+            "--set-string",
+            "security.internalAgentToken=test-internal-token",
+            "--set-string",
+            "security.jwtSecret=test-jwt-secret",
+            "--set-string",
+            "security.zabbixWebhookSigningSecret=test-zabbix-signing-secret",
+            "--set-string",
+            "external.postgres.password=test-db-password",
+            "--set",
+            "networkPolicy.enabled=true",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    documents = [document for document in yaml.safe_load_all(result.stdout) if document]
+    agent_deployment = next(
+        document
+        for document in documents
+        if document["kind"] == "Deployment"
+        and document["metadata"]["labels"]["app.kubernetes.io/component"] == "agent"
+    )
+    agent_service = next(
+        document
+        for document in documents
+        if document["kind"] == "Service"
+        and document["metadata"]["labels"]["app.kubernetes.io/component"] == "agent"
+    )
+    configmap = next(
+        document
+        for document in documents
+        if document["kind"] == "ConfigMap"
+        and document["metadata"]["name"].endswith("-config")
+    )
+    network_policy = next(
+        document for document in documents if document["kind"] == "NetworkPolicy"
+    )
+
+    container = agent_deployment["spec"]["template"]["spec"]["containers"][0]
+    assert container["ports"][0]["containerPort"] == 9008
+    assert agent_service["spec"]["ports"][0]["port"] == 9008
+    assert configmap["data"]["AIOPS_AGENT_BASE_URL"].endswith("-agent:9008")
+    ingress_ports = network_policy["spec"]["ingress"][0]["ports"]
+    assert {entry["port"] for entry in ingress_ports} >= {8080, 9008}
 
 
 def test_configmap_contains_application_env_names():
     configmap = (ROOT / "templates" / "configmap.yaml").read_text(encoding="utf-8")
     secret = (ROOT / "templates" / "secret.yaml").read_text(encoding="utf-8")
+    server_secret = (ROOT / "templates" / "server-secret.yaml").read_text(
+        encoding="utf-8"
+    )
 
     assert "AIOPS_DB_URL" in configmap
     assert "AIOPS_DB_USERNAME" in configmap
@@ -130,3 +194,59 @@ def test_configmap_contains_application_env_names():
 
     assert "AIOPS_DB_PASSWORD" in secret
     assert "AIOPS_AGENT_INTERNAL_TOKEN" in secret
+    assert "AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN" not in secret
+    assert "AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN" in server_secret
+
+
+def test_private_and_offline_values_do_not_ship_a_public_zabbix_signing_secret():
+    for name in ("values-private.yaml", "values-offline.yaml"):
+        values = load_yaml(name)
+        assert values["security"]["zabbixWebhookSigningSecret"] == ""
+
+
+def test_server_requires_zabbix_webhook_signing_secret():
+    result = subprocess.run(
+        [
+            "helm",
+            "template",
+            "test",
+            str(ROOT),
+            "--set-string",
+            "security.internalAgentToken=test-internal-token",
+            "--set-string",
+            "security.jwtSecret=test-jwt-secret",
+            "--set-string",
+            "external.postgres.password=test-db-password",
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode != 0
+    assert "security.zabbixWebhookSigningSecret is required" in result.stderr
+
+
+def test_disabled_server_does_not_require_zabbix_webhook_signing_secret():
+    result = subprocess.run(
+        [
+            "helm",
+            "template",
+            "test",
+            str(ROOT),
+            "--set-string",
+            "security.internalAgentToken=test-internal-token",
+            "--set-string",
+            "security.jwtSecret=test-jwt-secret",
+            "--set-string",
+            "external.postgres.password=test-db-password",
+            "--set",
+            "apps.server.enabled=false",
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN" not in result.stdout

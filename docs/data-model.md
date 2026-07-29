@@ -5,7 +5,7 @@ status: accepted
 phase: global
 owner: ai
 created: 2026-06-30
-updated: 2026-07-17
+updated: 2026-07-29
 related:
   - .agents/skills/aegisops/SKILL.md
   - docs/architecture.md
@@ -66,7 +66,9 @@ Tenant 1 ─┬─ n User
 - 密码：password_hash，禁止明文
 - 配置：encrypted_config，禁明文 token 列
 - Fingerprint：source + asset_id + source_trigger_id + normalized_title
-- Severity（AlertEvent）：info | warning | average | high | disaster
+- Severity（AlertEvent）：info | low | warning | medium | high | critical | disaster；兼容输入
+  `average` 入库为 `medium`，Zabbix `disaster` 映射为平台 `critical`
+- Alert Status：open | resolved；兼容输入 `recovered | closed | ok` 入库为 `resolved`
 - Incident Status：open | investigating | mitigating | resolved | closed | ignored
 - Automation Status：pending → waiting_approval → approved → running → success/failed/cancelled/timeout
 ```
@@ -119,3 +121,9 @@ CSV 预检使用内容 SHA-256 保证同一租户、同一来源实例下的幂�
 Kubernetes Cluster、Node、Namespace、Workload、Pod、Service 与 Ingress 都映射为 Asset，外部 UID 使用 `k8s_uid` 强身份。Cluster 是每个 Kubernetes DataSource 的合成根资源；API owner reference 转为 `contains` 关系，无可解析 owner 的顶层资源直接挂到 Cluster。
 
 RUM Page URL 是弱身份，只在同一 RUM DataSource 的 SourceLink 中保证幂等，不跨来源自动合并。原始用户标识不存储，`user_hash` 为不可逆 SHA-256。
+
+## 8. 审计请求上下文（Phase Z9）
+
+`V0049__init_audit_request_metadata.sql` 为 `audit_log` 增加 `request_id`、`ip` 和
+`user_agent`。领取 Zabbix Webhook token 时写入这三项请求上下文，以便按一次具体请求追溯
+敏感凭据操作；token 与签名 secret 不进入审计记录。

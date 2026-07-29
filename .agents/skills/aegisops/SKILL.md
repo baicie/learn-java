@@ -798,20 +798,25 @@ created_at
 
 ```txt
 info
+low
 warning
-average
+medium
 high
+critical
 disaster
 ```
+
+兼容外部输入 `average`，入库时归一为 `medium`；Zabbix 的 `disaster` 在接入映射层归一为
+平台 `critical`，原始级别仍保留在 `raw_payload`。
 
 状态值:
 
 ```txt
 open
-recovered
-ignored
-suppressed
+resolved
 ```
+
+兼容外部输入 `recovered | closed | ok`，入库时统一归一为 `resolved`。
 
 指纹规则:
 

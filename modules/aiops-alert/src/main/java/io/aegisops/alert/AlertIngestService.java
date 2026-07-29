@@ -2,6 +2,7 @@ package io.aegisops.alert;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.aegisops.common.outbox.OutboxMessage;
 import io.aegisops.common.outbox.OutboxWriter;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -37,6 +38,23 @@ public class AlertIngestService {
     String fingerprint = fingerprintPolicy.fingerprint(request);
     String aggregationKey = fingerprintPolicy.aggregationKey(request);
 
+    return ingestValidated(tenantId, request, fingerprint, aggregationKey);
+  }
+
+  @Transactional
+  public AlertIngestResult ingest(
+      String tenantId, AlertIngestRequest request, String fingerprint, String aggregationKey) {
+    validateTenant(tenantId);
+    validate(request);
+    validateIdentity(fingerprint, "fingerprint");
+    validateIdentity(aggregationKey, "aggregation key");
+
+    return ingestValidated(tenantId, request, fingerprint, aggregationKey);
+  }
+
+  private AlertIngestResult ingestValidated(
+      String tenantId, AlertIngestRequest request, String fingerprint, String aggregationKey) {
+
     AlertIngestResult result =
         repository.upsert(
             tenantId,
@@ -48,6 +66,12 @@ public class AlertIngestService {
 
     enqueueAggregation(tenantId, request, result);
     return result;
+  }
+
+  private void validateIdentity(String value, String field) {
+    if (value == null || value.isBlank()) {
+      throw new IllegalArgumentException(field + " is required");
+    }
   }
 
   private void validateTenant(String tenantId) {
@@ -79,7 +103,15 @@ public class AlertIngestService {
     payload.put("aggregationKey", result.aggregationKey());
     payload.put("created", result.created());
 
-    outboxWriter.enqueue(OUTBOX_TARGET_APP, OUTBOX_JOB_NAME, tenantId, payload);
+    outboxWriter.enqueueOrRequeueFailed(
+        new OutboxMessage(
+            tenantId,
+            OUTBOX_TARGET_APP,
+            OUTBOX_JOB_NAME,
+            payload,
+            "alert-lifecycle:" + result.alertId() + ":" + result.status(),
+            3,
+            null));
   }
 
   private String writeJson(Object value) {

@@ -29,7 +29,7 @@ tsx scripts/start.ts <command>
 | `logs <app>`  | tail `apps/<app>/logs/console.log`                                                 | 只读                             |
 | `help`        | 打印 usage                                                                         | 只读                             |
 
-`app` 可选值：`server`（port 8080）/ `worker`（本地 port 8091）/ `runner`（port 8082）。
+`app` 可选值：`server`（port 8080）/ `worker`（本地 port 8091）/ `runner`（port 8092）。
 
 ## 启动顺序与超时
 
@@ -55,12 +55,31 @@ tsx scripts/start.ts <command>
 - `scripts/start.ts` 是本地开发的快速入口 —— 给人用的，不是给 CI 用的
 - 两者不重复：ci 强调守门，start 强调编排
 
+## Zabbix 合约场景
+
+启动 `dev` 环境后，可运行以下任一脚本验证 Webhook 到报告的 HTTP 合约：
+
+```bash
+node scripts/demo-zabbix-scenario.mjs
+# Linux / macOS / Git Bash
+bash scripts/demo-zabbix-scenario.sh
+```
+
+脚本只复用 `type=zabbix` 且 endpoint 与 `AIOPS_ZABBIX_ENDPOINT` 完全一致的数据源；找不到时才
+创建。Node.js 请求默认 30 秒超时，可用 `AIOPS_HTTP_TIMEOUT_MS` 调整；Bash 使用
+`AIOPS_HTTP_CONNECT_TIMEOUT_SECONDS` 和 `AIOPS_HTTP_TIMEOUT_SECONDS`。四条事件共用同一
+`startsAt`，并严格校验 Incident 精确关联、Evidence 新建或更新、RCA 命中、AI 诊断字段及
+Markdown 报告章节；任一步为空、超时或返回非成功状态都会非零退出。
+
+该脚本直接注入 Webhook，只验证 HTTP 合约；真实 Zabbix trigger/problem 路径仍使用
+`python scripts/demo/setup-zabbix-demo.py --action incident` 验收。
+
 ## 故障排查
 
-| 现象                         | 原因                         | 修复                         |
-| ---------------------------- | ---------------------------- | ---------------------------- |
-| 容器起不来                   | Docker daemon 未运行         | `docker info`                |
-| Maven 构建失败               | Java 版本不符                | SKILL §4 要求 JDK 21         |
-| 后端起不来                   | 8080/8091/8082 端口被占      | `netstat -ano \| findstr :8080` |
-| `clean` 后 Postgres 数据丢失 | 这是设计行为                 | 不在生产环境用 clean         |
-| 找不到 tsx                   | 未安装                       | `pnpm install`               |
+| 现象                         | 原因                    | 修复                            |
+| ---------------------------- | ----------------------- | ------------------------------- |
+| 容器起不来                   | Docker daemon 未运行    | `docker info`                   |
+| Maven 构建失败               | Java 版本不符           | SKILL §4 要求 JDK 21            |
+| 后端起不来                   | 8080/8091/8092 端口被占 | `netstat -ano \| findstr :8080` |
+| `clean` 后 Postgres 数据丢失 | 这是设计行为            | 不在生产环境用 clean            |
+| 找不到 tsx                   | 未安装                  | `pnpm install`                  |

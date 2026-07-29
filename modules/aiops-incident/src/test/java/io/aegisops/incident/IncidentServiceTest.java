@@ -41,6 +41,23 @@ class IncidentServiceTest {
     assertThat(repository.linkedAlerts).hasSize(4);
     assertThat(repository.insertedIncidents.get(0).aggregationKey())
         .isEqualTo("zabbix:ds_1:10084:order-service:demo:202606210510");
+    assertThat(repository.windowedLookupInvoked).isTrue();
+    assertThat(repository.unlinkedLookupInvoked).isFalse();
+  }
+
+  @Test
+  void shouldUseUnboundedCandidateLookupForWorkerAggregation() {
+    FakeIncidentRepository repository =
+        new FakeIncidentRepository(
+            List.of(alert("a1", "Old Zabbix Alert", "high", "zabbix:ds_1:trigger_old")));
+    IncidentService service = new IncidentService(repository, new IncidentAggregationPolicy());
+
+    IncidentAggregationResponse response = service.aggregateUnlinkedAlerts("tenant_1", 100);
+
+    assertThat(response.alertsScanned()).isOne();
+    assertThat(response.alertsLinked()).isOne();
+    assertThat(repository.unlinkedLookupInvoked).isTrue();
+    assertThat(repository.windowedLookupInvoked).isFalse();
   }
 
   @Test
@@ -64,6 +81,32 @@ class IncidentServiceTest {
     assertThat(repository.statusUpdateTimes)
         .anyMatch(entry -> entry.startsWith("inc_1:2026-06-21T05:21"));
     assertThat(repository.timelineEvents).contains("incident_resolved");
+  }
+
+  @Test
+  void shouldNotWriteResolvedTimelineWhenIncidentStatusChangedConcurrently() {
+    FakeIncidentRepository repository =
+        new FakeIncidentRepository(List.of(alert("a1", "CPU High", "high", "fp1", null)));
+    repository.linkedAlertCandidates =
+        List.of(
+            alert("a1", "CPU High", "high", "fp1", OffsetDateTime.parse("2026-06-21T05:20:00Z")));
+    repository.allowAutoResolve = false;
+    IncidentService service = new IncidentService(repository, new IncidentAggregationPolicy());
+
+    service.aggregateUnlinkedAlerts("tenant_1", 100);
+
+    assertThat(repository.statusUpdates).isEmpty();
+    assertThat(repository.timelineEvents).doesNotContain("incident_resolved");
+  }
+
+  @Test
+  void shouldBackfillPrimaryAssetsEvenWhenNoUnlinkedAlertsRemain() {
+    FakeIncidentRepository repository = new FakeIncidentRepository(List.of());
+    IncidentService service = new IncidentService(repository, new IncidentAggregationPolicy());
+
+    service.aggregateUnlinkedAlerts("tenant_1", 100);
+
+    assertThat(repository.primaryAssetBackfills).isOne();
   }
 
   private static AlertCandidate alert(
@@ -104,6 +147,10 @@ class IncidentServiceTest {
     private String lastTenantId = "tenant_1";
     private int idCounter = 1;
     private List<AlertCandidate> linkedAlertCandidates = List.of();
+    private boolean windowedLookupInvoked;
+    private boolean unlinkedLookupInvoked;
+    private boolean allowAutoResolve = true;
+    private int primaryAssetBackfills;
 
     FakeIncidentRepository(List<AlertCandidate> candidates) {
       this.candidates = candidates;
@@ -117,6 +164,13 @@ class IncidentServiceTest {
     @Override
     public List<AlertCandidate> findOpenAlertCandidates(
         String tenantId, OffsetDateTime since, int limit) {
+      windowedLookupInvoked = true;
+      return candidates;
+    }
+
+    @Override
+    public List<AlertCandidate> findUnlinkedAlertCandidates(String tenantId, int limit) {
+      unlinkedLookupInvoked = true;
       return candidates;
     }
 
@@ -212,6 +266,22 @@ class IncidentServiceTest {
         OffsetDateTime resolvedAt) {
       statusUpdates.add(incidentId + ":" + status);
       statusUpdateTimes.add(incidentId + ":" + resolvedAt);
+    }
+
+    @Override
+    public boolean resolveIfActiveAt(
+        String tenantId, String incidentId, OffsetDateTime resolvedAt) {
+      if (!allowAutoResolve) {
+        return false;
+      }
+      updateStatusAt(tenantId, incidentId, "resolved", true, resolvedAt);
+      return true;
+    }
+
+    @Override
+    public int backfillPrimaryAssetIds(String tenantId) {
+      primaryAssetBackfills++;
+      return 0;
     }
 
     @Override

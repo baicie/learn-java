@@ -1,12 +1,14 @@
 package io.aegisops.datasource.application;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.aegisops.alert.AlertIngestRequest;
-import io.aegisops.alert.AlertIngestService;
 import io.aegisops.asset.api.dto.AssetUpsertCommand;
-import io.aegisops.asset.application.AssetApplicationService;
 import io.aegisops.asset.domain.model.AssetIdentityInput;
 import io.aegisops.common.exception.AppException;
 import io.aegisops.datasource.application.port.DataSourceSyncStore;
+import io.aegisops.datasource.application.port.DataSourceSyncStore.SyncRunClaimResult;
 import io.aegisops.datasource.zabbix.ZabbixAlertEventMapping;
 import io.aegisops.datasource.zabbix.ZabbixHostAssetMapping;
 import io.aegisops.datasource.zabbix.ZabbixSyncMapper;
@@ -17,6 +19,7 @@ import java.time.ZoneOffset;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -24,52 +27,100 @@ public class DataSourceSyncApplicationService {
   private final DataSourceSyncStore syncStore;
   private final ZabbixClientFactory clientFactory;
   private final ZabbixSyncMapper mapper;
-  private final AssetApplicationService assetService;
-  private final AlertIngestService alertService;
+  private final DataSourceSyncWriteService syncWriteService;
+  private final ObjectMapper objectMapper;
 
   public DataSourceSyncApplicationService(
       DataSourceSyncStore syncStore,
       ZabbixClientFactory clientFactory,
       ZabbixSyncMapper mapper,
-      AssetApplicationService assetService,
-      AlertIngestService alertService) {
+      DataSourceSyncWriteService syncWriteService,
+      ObjectMapper objectMapper) {
     this.syncStore = syncStore;
     this.clientFactory = clientFactory;
     this.mapper = mapper;
-    this.assetService = assetService;
-    this.alertService = alertService;
+    this.syncWriteService = syncWriteService;
+    this.objectMapper = objectMapper;
   }
 
   public void execute(String tenantId, String datasourceId, String runId) {
+    execute(tenantId, datasourceId, runId, UUID.randomUUID().toString());
+  }
+
+  public void execute(String tenantId, String datasourceId, String runId, String claimToken) {
+    if (claimToken == null || claimToken.isBlank()) {
+      throw new IllegalArgumentException("claimToken is required");
+    }
+    DataSourceSyncClaim syncClaim =
+        new DataSourceSyncClaim(tenantId, datasourceId, runId, claimToken);
     OffsetDateTime syncStarted = OffsetDateTime.now(ZoneOffset.UTC);
-    requirePendingRun(tenantId, datasourceId, runId);
-    syncStore.start(tenantId, datasourceId, runId);
+    SyncRunClaimResult claimResult =
+        syncStore.claimForExecution(tenantId, datasourceId, runId, claimToken);
+    if (claimResult == SyncRunClaimResult.ALREADY_COMPLETED) {
+      return;
+    }
+    if (claimResult == SyncRunClaimResult.ACTIVE) {
+      throw new AppException(
+          "DATASOURCE_SYNC_RUN_ACTIVE", "Datasource sync run is already running");
+    }
+    if (claimResult != SyncRunClaimResult.ACQUIRED) {
+      throw new AppException("DATASOURCE_SYNC_RUN_NOT_FOUND", "Runnable sync run not found");
+    }
+    ensureClaimActive(syncClaim);
     SyncStats stats = new SyncStats();
     try {
       ZabbixClient client =
           clientFactory.create(syncStore.loadZabbixConfig(tenantId, datasourceId));
-      Map<String, String> assetIdsByHostId = syncHosts(tenantId, datasourceId, client, stats);
-      stats.hostsMissing = assetService.markMissing(tenantId, "zabbix", datasourceId, syncStarted);
-      syncProblems(tenantId, datasourceId, client, assetIdsByHostId, stats);
-      complete(tenantId, datasourceId, runId, stats);
-    } catch (RuntimeException exception) {
-      fail(tenantId, datasourceId, runId, stats, exception);
+      Map<String, String> assetIdsByHostId = syncHosts(syncClaim, client, stats);
+      ensureClaimActive(syncClaim);
+      stats.hostsMissing = syncWriteService.markMissingHosts(syncClaim, syncStarted);
+      syncProblems(syncClaim, client, assetIdsByHostId, stats);
+    } catch (AppException exception) {
+      if ("DATASOURCE_SYNC_CLAIM_LOST".equals(exception.errorCode())) {
+        throw exception;
+      }
+      if (!fail(syncClaim, stats, exception)) {
+        throw claimLost();
+      }
       throw new AppException("DATASOURCE_SYNC_FAILED", exception.getMessage());
+    } catch (RuntimeException exception) {
+      if (!fail(syncClaim, stats, exception)) {
+        throw claimLost();
+      }
+      throw new AppException("DATASOURCE_SYNC_FAILED", exception.getMessage());
+    }
+    ensureClaimActive(syncClaim);
+    if (!complete(syncClaim, stats)) {
+      throw claimLost();
     }
   }
 
+  public boolean renewLease(
+      String tenantId,
+      String datasourceId,
+      String runId,
+      String claimToken,
+      OffsetDateTime leaseUntil) {
+    return syncStore.renewClaim(tenantId, datasourceId, runId, claimToken, leaseUntil);
+  }
+
   private Map<String, String> syncHosts(
-      String tenantId, String datasourceId, ZabbixClient client, SyncStats stats) {
+      DataSourceSyncClaim claim, ZabbixClient client, SyncStats stats) {
     Map<String, String> assetIdsByHostId = new LinkedHashMap<>();
-    for (var host : client.getHosts(1000)) {
-      ZabbixHostAssetMapping mapping = mapper.mapHost(datasourceId, host);
+    var hosts = client.getHosts(1000);
+    ensureClaimActive(claim);
+    for (var host : hosts) {
+      ZabbixHostAssetMapping mapping = mapper.mapHost(claim.datasourceId(), host);
       if (mapping == null) {
         continue;
       }
+      ensureClaimActive(claim);
       var result =
-          assetService.upsert(
+          syncWriteService.upsertHost(
+              claim,
+              host.hostId(),
               new AssetUpsertCommand(
-                  tenantId,
+                  claim.tenantId(),
                   "host",
                   mapping.name(),
                   mapping.displayName(),
@@ -81,8 +132,8 @@ public class DataSourceSyncApplicationService {
                   mapping.ip(),
                   mapping.tags(),
                   "zabbix",
-                  datasourceId,
-                  datasourceId,
+                  claim.datasourceId(),
+                  claim.datasourceId(),
                   host.hostId(),
                   "sync",
                   Map.of("hostId", host.hostId(), "status", mapping.status()),
@@ -94,25 +145,29 @@ public class DataSourceSyncApplicationService {
         stats.hostsUpdated++;
       }
     }
+    ensureClaimActive(claim);
+    syncWriteService.reconcileIncidentAssets(claim);
     return assetIdsByHostId;
   }
 
   private void syncProblems(
-      String tenantId,
-      String datasourceId,
+      DataSourceSyncClaim claim,
       ZabbixClient client,
       Map<String, String> assetIdsByHostId,
       SyncStats stats) {
-    for (var problem : client.getProblems(1000)) {
-      ZabbixAlertEventMapping mapping = mapper.mapProblem(datasourceId, problem);
+    var problems = client.getProblems(1000);
+    ensureClaimActive(claim);
+    for (var problem : problems) {
+      ZabbixAlertEventMapping mapping = mapper.mapProblem(claim.datasourceId(), problem);
       if (mapping == null) {
         continue;
       }
+      ensureClaimActive(claim);
       String assetId =
           mapping.hostIds().isEmpty() ? null : assetIdsByHostId.get(mapping.hostIds().getFirst());
       var result =
-          alertService.ingest(
-              tenantId,
+          syncWriteService.ingestAlert(
+              claim,
               new AlertIngestRequest(
                   "zabbix",
                   mapping.sourceEventId(),
@@ -124,9 +179,11 @@ public class DataSourceSyncApplicationService {
                   mapping.entityName(),
                   mapping.labels(),
                   mapping.startsAt(),
-                  null,
+                  mapping.endsAt(),
                   mapping.status(),
-                  rawPayload(mapping.rawPayload())));
+                  rawPayload(mapping.rawPayload())),
+              mapping.fingerprint(),
+              mapping.aggregationKey());
       if (result.created()) {
         stats.alertsCreated++;
       } else {
@@ -135,23 +192,32 @@ public class DataSourceSyncApplicationService {
     }
   }
 
-  private void requirePendingRun(String tenantId, String datasourceId, String runId) {
-    if (!syncStore.isPending(tenantId, datasourceId, runId)) {
-      throw new AppException("DATASOURCE_SYNC_RUN_NOT_FOUND", "Pending sync run not found");
+  private boolean complete(DataSourceSyncClaim claim, SyncStats stats) {
+    return syncStore.completeClaimed(
+        claim.tenantId(), claim.datasourceId(), claim.runId(), claim.claimToken(), stats.toMap());
+  }
+
+  private boolean fail(DataSourceSyncClaim claim, SyncStats stats, RuntimeException exception) {
+    return syncStore.failClaimed(
+        claim.tenantId(),
+        claim.datasourceId(),
+        claim.runId(),
+        claim.claimToken(),
+        stats.toMap(),
+        exception.getMessage());
+  }
+
+  private AppException claimLost() {
+    return new AppException(
+        "DATASOURCE_SYNC_CLAIM_LOST", "Datasource sync run was claimed by another worker");
+  }
+
+  private void ensureClaimActive(DataSourceSyncClaim claim) {
+    OffsetDateTime leaseUntil = OffsetDateTime.now(ZoneOffset.UTC).plusMinutes(5);
+    if (!renewLease(
+        claim.tenantId(), claim.datasourceId(), claim.runId(), claim.claimToken(), leaseUntil)) {
+      throw claimLost();
     }
-  }
-
-  private void complete(String tenantId, String datasourceId, String runId, SyncStats stats) {
-    syncStore.complete(tenantId, datasourceId, runId, stats.toMap());
-  }
-
-  private void fail(
-      String tenantId,
-      String datasourceId,
-      String runId,
-      SyncStats stats,
-      RuntimeException exception) {
-    syncStore.fail(tenantId, datasourceId, runId, stats.toMap(), exception.getMessage());
   }
 
   private String stringTag(Map<String, Object> tags, String key) {
@@ -170,6 +236,9 @@ public class DataSourceSyncApplicationService {
   private Map<String, Object> rawPayload(Object value) {
     if (value instanceof Map<?, ?> map) {
       return (Map<String, Object>) map;
+    }
+    if (value instanceof JsonNode node && node.isObject()) {
+      return objectMapper.convertValue(node, new TypeReference<>() {});
     }
     return Map.of("value", value == null ? "" : value.toString());
   }

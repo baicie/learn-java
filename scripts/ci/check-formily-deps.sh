@@ -56,7 +56,7 @@ while IFS= read -r pkg_name; do
 done < <(
   node -e "
     const fs = require('fs')
-    const pkg = JSON.parse(fs.readFileSync('$PACKAGE_JSON', 'utf8'))
+    const pkg = JSON.parse(fs.readFileSync(process.argv[1], 'utf8'))
     const deps = {
       ...(pkg.dependencies || {}),
       ...(pkg.devDependencies || {}),
@@ -64,7 +64,7 @@ done < <(
       ...(pkg.peerDependencies || {})
     }
     Object.keys(deps).forEach((name) => console.log(name))
-  "
+  " "$PACKAGE_JSON"
 )
 
 # Check pnpm-lock.yaml
@@ -80,14 +80,14 @@ if [[ -f "$LOCK_FILE" ]]; then
   done < <(
     node -e "
       const fs = require('fs')
-      const content = fs.readFileSync('$LOCK_FILE', 'utf8')
+      const content = fs.readFileSync(process.argv[1], 'utf8')
       const seen = new Set()
       const re = /@formily\/[A-Za-z0-9._-]+/g
       for (const match of content.matchAll(re)) {
         seen.add(match[0])
       }
       Array.from(seen).sort().forEach((name) => console.log(name))
-    "
+    " "$LOCK_FILE"
   )
 fi
 

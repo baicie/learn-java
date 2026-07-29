@@ -17,13 +17,18 @@ final class NoopOutboxRepository implements OutboxRepository {
   final List<String> markDoneCalls = new ArrayList<>();
   int recoverExpiredLeasesCalls;
   int extendLeaseCalls;
+  boolean ownsClaim = true;
 
   @Override
   public List<AutomationOutboxRecord> claimNextPending(
-      String targetApp, int batchSize, OffsetDateTime leaseUntil) {
+      String targetApp, int batchSize, OffsetDateTime leaseUntil, String claimToken) {
     List<AutomationOutboxRecord> snapshot = new ArrayList<>(pending);
     pending.clear();
-    snapshot.forEach(r -> statuses.put(r.getId(), "processing"));
+    snapshot.forEach(
+        row -> {
+          row.setClaimToken(claimToken);
+          statuses.put(row.getId(), "processing");
+        });
     return snapshot;
   }
 
@@ -34,9 +39,10 @@ final class NoopOutboxRepository implements OutboxRepository {
   }
 
   @Override
-  public boolean extendLease(String id, String targetApp, OffsetDateTime leaseUntil) {
+  public boolean extendLease(
+      String id, String targetApp, String claimToken, OffsetDateTime leaseUntil) {
     extendLeaseCalls++;
-    return "processing".equals(statuses.get(id));
+    return ownsClaim && "processing".equals(statuses.get(id));
   }
 
   @Override
@@ -45,21 +51,30 @@ final class NoopOutboxRepository implements OutboxRepository {
   }
 
   @Override
-  public boolean markDone(String id, OffsetDateTime processedAt) {
+  public boolean markDone(String id, String claimToken, OffsetDateTime processedAt) {
+    if (!ownsClaim) {
+      return false;
+    }
     statuses.put(id, "done");
     markDoneCalls.add(id);
     return true;
   }
 
   @Override
-  public boolean recordFailure(String id, String errorMessage) {
+  public boolean recordFailure(String id, String claimToken, String errorMessage) {
+    if (!ownsClaim) {
+      return false;
+    }
     statuses.put(id, "pending");
     errorMessages.put(id, errorMessage);
     return true;
   }
 
   @Override
-  public boolean resetProcessing(String id) {
+  public boolean resetProcessing(String id, String claimToken) {
+    if (!ownsClaim) {
+      return false;
+    }
     statuses.put(id, "pending");
     return true;
   }

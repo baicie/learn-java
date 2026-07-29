@@ -1,5 +1,8 @@
 package io.aegisops.worker.job;
 
+import io.aegisops.persistence.jooq.public_.tables.records.AutomationOutboxRecord;
+import java.time.OffsetDateTime;
+
 /**
  * Common contract for any outbox-driven job executed by the worker process.
  *
@@ -21,5 +24,10 @@ public interface OutboxJob {
    * @return {@link JobResult#success()} if the side effect landed; {@link JobResult#failure} with a
    *     short reason otherwise
    */
-  JobResult handle(io.aegisops.persistence.jooq.public_.tables.records.AutomationOutboxRecord row);
+  JobResult handle(AutomationOutboxRecord row);
+
+  /** Renew any job-specific lease that shares ownership with the outbox row. */
+  default boolean renewLease(AutomationOutboxRecord row, OffsetDateTime leaseUntil) {
+    return true;
+  }
 }

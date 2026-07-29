@@ -56,3 +56,8 @@ aiops:
     batch-size: ${AIOPS_OUTBOX_BATCH:10}
     target-app: ${AIOPS_OUTBOX_TARGET_APP:worker}
     lease-duration-ms: ${AIOPS_OUTBOX_LEASE_MS:300000}
+  zabbix-sync:
+    enabled: ${AIOPS_ZABBIX_SYNC_ENABLED:true}
+    poll-delay-ms: ${AIOPS_ZABBIX_SYNC_POLL_MS:5000}
+    cadence-ms: ${AIOPS_ZABBIX_SYNC_CADENCE_MS:60000}
+    batch-size: ${AIOPS_ZABBIX_SYNC_BATCH:50}

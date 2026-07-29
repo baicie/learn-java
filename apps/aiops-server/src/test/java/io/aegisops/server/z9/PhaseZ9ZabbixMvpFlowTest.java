@@ -2,47 +2,21 @@ package io.aegisops.server.z9;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.mockito.Mockito.doThrow;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import io.aegisops.ai.client.AiAgentClient;
 import io.aegisops.ai.client.dto.AgentDiagnosisRequest;
 import io.aegisops.ai.client.dto.AgentDiagnosisResponse;
-import io.aegisops.common.tenant.TenantContext;
-import io.aegisops.integration.zabbix.ZabbixWebhookTokenVerifier;
-import io.aegisops.zabbix.ZabbixClient;
-import io.aegisops.zabbix.ZabbixClientFactory;
-import io.aegisops.zabbix.ZabbixEvent;
-import io.aegisops.zabbix.ZabbixHistoryPoint;
-import io.aegisops.zabbix.ZabbixHistoryQuery;
-import io.aegisops.zabbix.ZabbixItem;
-import io.aegisops.zabbix.ZabbixTrendPoint;
-import io.aegisops.zabbix.ZabbixTrigger;
-import java.time.Instant;
+import io.aegisops.alert.AlertIngestRequest;
+import io.aegisops.common.outbox.OutboxMessage;
+import io.aegisops.incident.IncidentAggregateRequest;
 import java.time.OffsetDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.stubbing.Answer;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.http.MediaType;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.test.web.servlet.MockMvc;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 /**
@@ -54,119 +28,12 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @Testcontainers(disabledWithoutDocker = true)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureMockMvc(addFilters = false)
-class PhaseZ9ZabbixMvpFlowTest {
-
-  private static final String TENANT_ID = "tenant_z9";
-  private static final String DATASOURCE_ID = "ds_zabbix_z9";
-
-  /**
-   * Test-time anchor for all {@code startsAt} / zabbix history clock values. Captured once per
-   * {@code @BeforeEach} so the {@code aggregateOpenAlerts(since=now-1440min)} query window picks up
-   * the seeded alerts regardless of when the test happens to run.
-   */
-  private Instant t0;
-
-  @Container
-  static PostgreSQLContainer<?> postgres =
-      new PostgreSQLContainer<>("postgres:16-alpine")
-          .withDatabaseName("aiops_z9")
-          .withUsername("aiops")
-          .withPassword("aiops");
-
-  @DynamicPropertySource
-  static void registerDatasourceProperties(DynamicPropertyRegistry registry) {
-    registry.add("spring.datasource.url", postgres::getJdbcUrl);
-    registry.add("spring.datasource.username", postgres::getUsername);
-    registry.add("spring.datasource.password", postgres::getPassword);
-    registry.add("spring.datasource.driver-class-name", () -> "org.postgresql.Driver");
-  }
-
-  @Autowired private MockMvc mvc;
-  @Autowired private JdbcTemplate jdbc;
-  @Autowired private ObjectMapper objectMapper;
-
-  @MockitoBean private ZabbixWebhookTokenVerifier tokenVerifier;
-  @MockitoBean private ZabbixClientFactory zabbixClientFactory;
-  @MockitoBean private AiAgentClient aiAgentClient;
-
-  @BeforeEach
-  void setUp() {
-    t0 = Instant.now();
-    TenantContext.setTenantId(TENANT_ID);
-    SecurityContextHolder.getContext()
-        .setAuthentication(
-            new UsernamePasswordAuthenticationToken(
-                "phase-z9-user",
-                "n/a",
-                List.of(
-                    new SimpleGrantedAuthority("incident:read"),
-                    new SimpleGrantedAuthority("incident:write"),
-                    new SimpleGrantedAuthority("incident:diagnose"),
-                    new SimpleGrantedAuthority("datasource:read"),
-                    new SimpleGrantedAuthority("evidence:read"),
-                    new SimpleGrantedAuthority("evidence:write"),
-                    new SimpleGrantedAuthority("rca:read"),
-                    new SimpleGrantedAuthority("rca:write"),
-                    new SimpleGrantedAuthority("report:read"),
-                    new SimpleGrantedAuthority("report:write"))));
-
-    when(tokenVerifier.verify(any())).thenReturn(true);
-
-    ZabbixClient zabbixClient = org.mockito.Mockito.mock(ZabbixClient.class);
-    when(zabbixClientFactory.create(any())).thenReturn(zabbixClient);
-
-    when(zabbixClient.getItems(any()))
-        .thenReturn(
-            List.of(
-                item("item_cpu", "demo.cpu.util", "AegisOps Demo CPU Utilization", "%"),
-                item("item_api", "demo.order.create.time", "AegisOps Demo Order Create Time", "s"),
-                item("item_health", "demo.health.status", "AegisOps Demo Health Status", ""),
-                item("item_error", "demo.error.count", "AegisOps Demo Error Count", "count")));
-
-    when(zabbixClient.getHistory(any())).thenAnswer(historyAnswer());
-    when(zabbixClient.getTrends(any())).thenReturn(List.<ZabbixTrendPoint>of());
-    when(zabbixClient.getEvents(any()))
-        .thenReturn(
-            List.of(
-                new ZabbixEvent(
-                    "20001",
-                    "30001",
-                    "CPU High",
-                    "4",
-                    "1",
-                    Instant.parse("2026-06-21T05:10:00Z"),
-                    List.of("10084"),
-                    Map.of("service", "order-service", "env", "demo"),
-                    Map.of())));
-    // Anchor a second event fixture to t0 so the aggregate window picks it up regardless of run
-    // date.
-    when(zabbixClient.getTriggers(any()))
-        .thenReturn(
-            List.of(
-                new ZabbixTrigger(
-                    "30001",
-                    "CPU High",
-                    "last(/aiops-demo-host/demo.cpu.util)>90",
-                    "4",
-                    "1",
-                    List.of("10084"),
-                    Map.of("service", "order-service"),
-                    Map.of())));
-
-    when(aiAgentClient.diagnose(any())).thenAnswer(inv -> aiResponse(inv.getArgument(0)));
-
-    seedTenantAndDatasource();
-  }
-
-  @AfterEach
-  void tearDown() {
-    SecurityContextHolder.clearContext();
-    TenantContext.clear();
-  }
+class PhaseZ9ZabbixMvpFlowTest extends PhaseZ9ZabbixScenarioSupport {
 
   @Test
   void shouldRunZabbixMvpFromWebhookToMarkdownReport() throws Exception {
     seedAlerts();
+    assertWebhookAlertsLinkedToCanonicalAsset();
     String incidentId = aggregateAndRequireIncident();
     collectZabbixEvidence(incidentId);
     analyzeRca(incidentId);
@@ -174,214 +41,293 @@ class PhaseZ9ZabbixMvpFlowTest {
     generateReportAndAssert(incidentId);
   }
 
-  private void seedAlerts() throws Exception {
-    ingestWebhook("20001", "30001", "CPU High", "High");
-    ingestWebhook("20002", "30002", "API Slow", "Average");
-    ingestWebhook("20003", "30003", "Health Check Failed", "Disaster");
-    ingestWebhook("20004", "30004", "Error Log Increased", "Warning");
-  }
+  @Test
+  void shouldRollbackAlertWhenWorkerDispatchFails() throws Exception {
+    doThrow(new IllegalStateException("outbox unavailable"))
+        .when(outboxWriter)
+        .enqueueOrRequeueFailed(any(OutboxMessage.class));
 
-  private String aggregateAndRequireIncident() throws Exception {
-    mvc.perform(
-            post("/api/incidents/aggregate")
-                .header("X-Tenant-Id", TENANT_ID)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(
-                    """
-                    {
-                      "windowMinutes": 1440,
-                      "limit": 1000
-                    }
-                    """))
-        .andExpect(jsonPath("$.data.incidentsCreated").value(1));
+    mvc.perform(webhookRequest("rollback-event", "rollback-trigger", "CPU High", "High"))
+        .andExpect(status().is5xxServerError());
 
-    String incidentId =
+    Integer alertCount =
         jdbc.queryForObject(
             """
-            select id
-            from incident
-            where tenant_id = ?
-            order by created_at desc
-            limit 1
+            select count(*)
+            from alert_event
+            where tenant_id = ? and source = 'zabbix' and source_event_id = ?
             """,
-            String.class,
-            TENANT_ID);
-    assertThat(incidentId).isNotBlank();
-    return incidentId;
-  }
-
-  private void collectZabbixEvidence(String incidentId) throws Exception {
-    mvc.perform(
-            post("/api/incidents/{incidentId}/evidence/zabbix/collect", incidentId)
-                .header("X-Tenant-Id", TENANT_ID)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(
-                    """
-                    {
-                      "lookbackMinutes": 30
-                    }
-                    """))
-        .andExpect(jsonPath("$.data.evidenceCreated").isNumber());
-
-    Integer evidenceCount =
-        jdbc.queryForObject(
-            "select count(*) from diagnosis_evidence where tenant_id = ? and incident_id = ?",
             Integer.class,
             TENANT_ID,
-            incidentId);
-    assertThat(evidenceCount).isNotNull();
-    assertThat(evidenceCount).isGreaterThanOrEqualTo(3);
+            DATASOURCE_ID + ":rollback-event");
+    assertThat(alertCount).isZero();
   }
 
-  private void analyzeRca(String incidentId) throws Exception {
-    mvc.perform(
-            post("/api/incidents/{incidentId}/rca/analyze", incidentId)
-                .header("X-Tenant-Id", TENANT_ID)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(
-                    """
-                    {
-                      "force": true
-                    }
-                    """))
-        .andExpect(jsonPath("$.data.suspectedRootCause").isNotEmpty())
-        .andExpect(jsonPath("$.data.matchedRules").isArray())
-        .andExpect(jsonPath("$.data.evidenceRefs").isArray());
-  }
+  @Test
+  void shouldAggregateOldUnlinkedOpenAlertForWorker() {
+    String alertId = "alert_z9_stale";
+    jdbc.update(
+        """
+        insert into tenant(id, code, name, status, created_at, updated_at)
+        values (?, ?, 'Phase Z9 Stale Alert Tenant', 'active', now(), now())
+        """,
+        STALE_TENANT_ID,
+        STALE_TENANT_ID);
+    jdbc.update(
+        """
+        insert into alert_event(
+          id, tenant_id, source, source_event_id, severity, title, status, fingerprint,
+          aggregation_key, starts_at, created_at, updated_at)
+        values (?, ?, 'zabbix', 'stale-event', 'high', 'Old unlinked alert', 'open',
+                'stale-fingerprint', 'zabbix:stale:host:service:env:bucket',
+                now() - interval '30 days', now() - interval '30 days', now() - interval '30 days')
+        """,
+        alertId,
+        STALE_TENANT_ID);
 
-  private void diagnoseWithAi(String incidentId) throws Exception {
-    mvc.perform(
-            post("/api/incidents/{incidentId}/ai/diagnose", incidentId)
-                .header("X-Tenant-Id", TENANT_ID)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(
-                    """
-                    {
-                      "force": true,
-                      "locale": "zh-CN"
-                    }
-                    """))
-        .andExpect(jsonPath("$.data.summary").isNotEmpty())
-        .andExpect(jsonPath("$.data.evidenceRefs").isArray())
-        .andExpect(jsonPath("$.data.matchedRules").isArray());
-  }
+    var response = incidentService.aggregateUnlinkedAlerts(STALE_TENANT_ID, 1000);
 
-  private void generateReportAndAssert(String incidentId) throws Exception {
-    mvc.perform(
-            post("/api/incidents/{incidentId}/reports", incidentId)
-                .header("X-Tenant-Id", TENANT_ID)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(
-                    """
-                    {
-                      "force": true,
-                      "locale": "zh-CN",
-                      "createdBy": "phase-z9-test"
-                    }
-                    """))
-        .andExpect(jsonPath("$.data.markdownContent").isNotEmpty())
-        .andExpect(jsonPath("$.data.versionNo").value(1));
-
-    String markdown =
+    assertThat(response.alertsScanned()).isOne();
+    assertThat(response.alertsLinked()).isOne();
+    Integer linkCount =
         jdbc.queryForObject(
             """
-            select markdown_content
-            from incident_report
-            where tenant_id = ? and incident_id = ?
-            order by created_at desc
-            limit 1
+            select count(*)
+            from incident_event
+            where event_type = 'alert' and event_id = ?
             """,
-            String.class,
+            Integer.class,
+            alertId);
+    assertThat(linkCount).isOne();
+  }
+
+  @Test
+  void shouldCreateResolvedIncidentWhenAlertRecoversBeforeFirstWorkerAggregation() {
+    String alertId = "alert_z9_recovered_before_aggregation";
+    OffsetDateTime startedAt = OffsetDateTime.parse("2026-07-27T05:10:00Z");
+    OffsetDateTime recoveredAt = OffsetDateTime.parse("2026-07-27T05:11:00Z");
+    jdbc.update(
+        """
+        insert into tenant(id, code, name, status, created_at, updated_at)
+        values (?, ?, 'Phase Z9 Recovered Alert Tenant', 'active', now(), now())
+        """,
+        RECOVERED_BEFORE_AGGREGATION_TENANT_ID,
+        RECOVERED_BEFORE_AGGREGATION_TENANT_ID);
+    jdbc.update(
+        """
+        insert into alert_event(
+          id, tenant_id, source, source_event_id, severity, title, status, fingerprint,
+          aggregation_key, starts_at, ends_at, created_at, updated_at)
+        values (?, ?, 'zabbix', 'short-lived-event', 'high', 'Short-lived alert', 'resolved',
+                'short-lived-fingerprint', 'zabbix:short:host:service:env:bucket',
+                ?, ?, ?, ?)
+        """,
+        alertId,
+        RECOVERED_BEFORE_AGGREGATION_TENANT_ID,
+        startedAt,
+        recoveredAt,
+        startedAt,
+        recoveredAt);
+
+    var manualResponse =
+        incidentService.aggregateOpenAlerts(
+            RECOVERED_BEFORE_AGGREGATION_TENANT_ID, new IncidentAggregateRequest(60, 1000));
+    assertThat(manualResponse.alertsScanned()).isZero();
+
+    var workerResponse =
+        incidentService.aggregateUnlinkedAlerts(RECOVERED_BEFORE_AGGREGATION_TENANT_ID, 1000);
+
+    assertThat(workerResponse.alertsScanned()).isOne();
+    assertThat(workerResponse.incidentsCreated()).isOne();
+    assertThat(workerResponse.alertsLinked()).isOne();
+    StatusAt incident =
+        jdbc.queryForObject(
+            "select status, resolved_at from incident where tenant_id = ?",
+            (rs, rowNum) ->
+                new StatusAt(
+                    rs.getString("status"), rs.getObject("resolved_at", OffsetDateTime.class)),
+            RECOVERED_BEFORE_AGGREGATION_TENANT_ID);
+    assertThat(incident.status()).isEqualTo("resolved");
+    assertThat(incident.at()).isEqualTo(recoveredAt);
+    Integer linkCount =
+        jdbc.queryForObject(
+            "select count(*) from incident_event where event_type = 'alert' and event_id = ?",
+            Integer.class,
+            alertId);
+    assertThat(linkCount).isOne();
+  }
+
+  @Test
+  void shouldNotReopenResolvedAlertWhenOlderOpenEventIsReplayed() {
+    OffsetDateTime startedAt = OffsetDateTime.parse("2026-07-27T05:10:00Z");
+    OffsetDateTime recoveredAt = OffsetDateTime.parse("2026-07-27T05:20:00Z");
+    jdbc.update(
+        """
+        insert into tenant(id, code, name, status, created_at, updated_at)
+        values (?, ?, 'Phase Z9 Replay Tenant', 'active', now(), now())
+        """,
+        REPLAY_TENANT_ID,
+        REPLAY_TENANT_ID);
+
+    alertIngestService.ingest(
+        REPLAY_TENANT_ID,
+        new AlertIngestRequest(
+            "zabbix",
+            "replayed-event",
+            "high",
+            "Recovered before replay",
+            null,
+            null,
+            "host",
+            "replay-host",
+            Map.of("state", "resolved"),
+            startedAt,
+            recoveredAt,
+            "resolved",
+            Map.of("eventid", "replayed-event", "r_eventid", "recovery-event")),
+        "replayed-fingerprint",
+        "zabbix:replay:host:service:env:bucket");
+    alertIngestService.ingest(
+        REPLAY_TENANT_ID,
+        new AlertIngestRequest(
+            "zabbix",
+            "replayed-event",
+            "high",
+            "Older open replay",
+            null,
+            null,
+            "host",
+            "replay-host",
+            Map.of("state", "open"),
+            startedAt,
+            null,
+            "open",
+            Map.of("eventid", "replayed-event")),
+        "stale-fingerprint",
+        "zabbix:stale:host:service:env:bucket");
+
+    AlertState alert =
+        jdbc.queryForObject(
+            """
+            select status, ends_at, title, labels::text, raw_payload::text,
+                   fingerprint, aggregation_key
+            from alert_event
+            where tenant_id = ? and source = 'zabbix' and source_event_id = 'replayed-event'
+            """,
+            (rs, rowNum) ->
+                new AlertState(
+                    rs.getString("status"),
+                    rs.getObject("ends_at", OffsetDateTime.class),
+                    rs.getString("title"),
+                    rs.getString("labels"),
+                    rs.getString("raw_payload"),
+                    rs.getString("fingerprint"),
+                    rs.getString("aggregation_key")),
+            REPLAY_TENANT_ID);
+    assertThat(alert.status()).isEqualTo("resolved");
+    assertThat(alert.endsAt()).isEqualTo(recoveredAt);
+    assertThat(alert.title()).isEqualTo("Recovered before replay");
+    assertThat(alert.labelsJson()).contains("resolved").doesNotContain("open");
+    assertThat(alert.rawPayloadJson()).contains("recovery-event");
+    assertThat(alert.fingerprint()).isEqualTo("replayed-fingerprint");
+    assertThat(alert.aggregationKey()).isEqualTo("zabbix:replay:host:service:env:bucket");
+  }
+
+  @Test
+  void shouldNotReopenResolvedWebhookAlertWhenOlderProblemIsReplayed() throws Exception {
+    OffsetDateTime startedAt = OffsetDateTime.parse("2026-07-27T05:10:00Z");
+    OffsetDateTime recoveredAt = OffsetDateTime.parse("2026-07-27T05:20:00Z");
+    Map<String, Object> recovered =
+        webhookPayload("webhook-replayed-event", "webhook-trigger", "Recovered webhook", "High");
+    recovered.put("status", "OK");
+    recovered.put("eventValue", "0");
+    recovered.put("startsAt", startedAt.toString());
+    recovered.put("endsAt", recoveredAt.toString());
+    mvc.perform(webhookRequest(recovered)).andExpect(status().isOk());
+
+    Map<String, Object> olderProblem =
+        webhookPayload("webhook-replayed-event", "webhook-trigger", "Older problem", "High");
+    olderProblem.put("startsAt", startedAt.toString());
+    mvc.perform(webhookRequest(olderProblem)).andExpect(status().isOk());
+
+    StatusAt alert =
+        jdbc.queryForObject(
+            """
+            select status, ends_at
+            from alert_event
+            where tenant_id = ? and source = 'zabbix' and source_event_id = ?
+            """,
+            (rs, rowNum) ->
+                new StatusAt(rs.getString("status"), rs.getObject("ends_at", OffsetDateTime.class)),
             TENANT_ID,
-            incidentId);
-
-    assertThat(markdown).contains("故障报告");
-    assertThat(markdown).contains("关键证据");
-    assertThat(markdown).contains("AI 诊断");
+            DATASOURCE_ID + ":webhook-replayed-event");
+    assertThat(alert.status()).isEqualTo("resolved");
+    assertThat(alert.at()).isEqualTo(recoveredAt);
   }
 
-  private void ingestWebhook(String eventId, String triggerId, String title, String severity)
-      throws Exception {
-    Map<String, Object> payload = new HashMap<>();
-    payload.put("datasourceId", DATASOURCE_ID);
-    payload.put("eventId", eventId);
-    payload.put("problemId", eventId);
-    payload.put("triggerId", triggerId);
-    payload.put("objectId", triggerId);
-    payload.put("status", "PROBLEM");
-    payload.put("eventValue", "1");
-    payload.put("severity", severity);
-    payload.put("title", title);
-    payload.put("message", title + " on order-service");
-    payload.put("hostId", "10084");
-    payload.put("hostName", "aiops-demo-host");
-    payload.put("app", "mall");
-    payload.put("env", "demo");
-    payload.put("service", "order-service");
-    payload.put("endpoint", "/api/order/create");
-    payload.put("startsAt", t0.minusSeconds(60).toString());
-    payload.put("tags", Map.of("service", "order-service", "env", "demo"));
-
-    mvc.perform(
-            post("/api/integrations/zabbix/events")
-                .param("datasourceId", DATASOURCE_ID)
-                .header("X-AegisOps-Webhook-Token", "z9-token")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(payload)))
-        .andExpect(jsonPath("$.data.alertId").exists());
+  @Test
+  void shouldResolvePolledAlertAndIncidentWhenZabbixProblemRecovers() {
+    runPollingProblemRecoveryScenario();
   }
 
-  private Answer<List<ZabbixHistoryPoint>> historyAnswer() {
-    return invocation -> {
-      ZabbixHistoryQuery query = invocation.getArgument(0);
-      String itemId = query.itemIds().get(0);
+  @Test
+  void shouldBackfillOpenWebhookAlertAndLinkedIncidentOnFirstHostSync() throws Exception {
+    seedTenantAndDatasourceWithoutAsset(
+        WEBHOOK_BEFORE_SYNC_OPEN_TENANT_ID, WEBHOOK_BEFORE_SYNC_OPEN_DATASOURCE_ID);
+    ingestWebhookBeforeHostSync(
+        WEBHOOK_BEFORE_SYNC_OPEN_DATASOURCE_ID, "early-open-event", "PROBLEM", "1");
+    incidentService.aggregateUnlinkedAlerts(WEBHOOK_BEFORE_SYNC_OPEN_TENANT_ID, 1000);
 
-      if ("item_cpu".equals(itemId)) {
-        return List.of(
-            point(itemId, "20", t0.minusSeconds(1200)),
-            point(itemId, "95", t0.minusSeconds(60)),
-            point(itemId, "96", t0.plusSeconds(600)));
-      }
+    assertMissingAlertAndIncidentAssets(WEBHOOK_BEFORE_SYNC_OPEN_TENANT_ID, "early-open-event");
 
-      if ("item_api".equals(itemId)) {
-        return List.of(
-            point(itemId, "0.12", t0.minusSeconds(1200)),
-            point(itemId, "2.5", t0.minusSeconds(60)));
-      }
+    runFirstHostSync(
+        WEBHOOK_BEFORE_SYNC_OPEN_TENANT_ID,
+        WEBHOOK_BEFORE_SYNC_OPEN_DATASOURCE_ID,
+        "sync_z9_webhook_before_sync_open");
 
-      if ("item_health".equals(itemId)) {
-        return List.of(
-            point(itemId, "1", t0.minusSeconds(1200)), point(itemId, "0", t0.minusSeconds(60)));
-      }
-
-      if ("item_error".equals(itemId)) {
-        return List.of(
-            point(itemId, "0", t0.minusSeconds(1200)), point(itemId, "12", t0.minusSeconds(60)));
-      }
-
-      return List.of();
-    };
+    assertAlertAndIncidentShareCanonicalAsset(
+        WEBHOOK_BEFORE_SYNC_OPEN_TENANT_ID, "early-open-event");
   }
 
-  private ZabbixItem item(String itemId, String key, String name, String units) {
-    return new ZabbixItem(
-        itemId,
-        "10084",
-        name,
-        key,
-        0,
-        units,
-        "19",
-        "10s",
-        Map.of("service", "order-service", "env", "demo"),
-        Map.of());
+  @Test
+  void shouldBackfillResolvedWebhookAlertAndLinkedIncidentOnFirstHostSync() throws Exception {
+    seedTenantAndDatasourceWithoutAsset(
+        WEBHOOK_BEFORE_SYNC_RESOLVED_TENANT_ID, WEBHOOK_BEFORE_SYNC_RESOLVED_DATASOURCE_ID);
+    ingestWebhookBeforeHostSync(
+        WEBHOOK_BEFORE_SYNC_RESOLVED_DATASOURCE_ID, "early-resolved-event", "PROBLEM", "1");
+    incidentService.aggregateUnlinkedAlerts(WEBHOOK_BEFORE_SYNC_RESOLVED_TENANT_ID, 1000);
+
+    ingestWebhookBeforeHostSync(
+        WEBHOOK_BEFORE_SYNC_RESOLVED_DATASOURCE_ID, "early-resolved-event", "OK", "0");
+    incidentService.aggregateUnlinkedAlerts(WEBHOOK_BEFORE_SYNC_RESOLVED_TENANT_ID, 1000);
+
+    assertThat(
+            jdbc.queryForObject(
+                "select status from alert_event where tenant_id = ? and source_event_id = ?",
+                String.class,
+                WEBHOOK_BEFORE_SYNC_RESOLVED_TENANT_ID,
+                WEBHOOK_BEFORE_SYNC_RESOLVED_DATASOURCE_ID + ":early-resolved-event"))
+        .isEqualTo("resolved");
+    assertThat(
+            jdbc.queryForObject(
+                "select status from incident where tenant_id = ?",
+                String.class,
+                WEBHOOK_BEFORE_SYNC_RESOLVED_TENANT_ID))
+        .isEqualTo("resolved");
+    assertMissingAlertAndIncidentAssets(
+        WEBHOOK_BEFORE_SYNC_RESOLVED_TENANT_ID, "early-resolved-event");
+
+    runFirstHostSync(
+        WEBHOOK_BEFORE_SYNC_RESOLVED_TENANT_ID,
+        WEBHOOK_BEFORE_SYNC_RESOLVED_DATASOURCE_ID,
+        "sync_z9_webhook_before_sync_resolved");
+
+    assertAlertAndIncidentShareCanonicalAsset(
+        WEBHOOK_BEFORE_SYNC_RESOLVED_TENANT_ID, "early-resolved-event");
   }
 
-  private ZabbixHistoryPoint point(String itemId, String value, Instant clock) {
-    return new ZabbixHistoryPoint(itemId, 0, clock, value, Map.of("value", value));
-  }
-
-  private AgentDiagnosisResponse aiResponse(AgentDiagnosisRequest req) {
+  @Override
+  protected AgentDiagnosisResponse aiResponse(AgentDiagnosisRequest req) {
     List<String> ns = List.of("查看 CPU Top 进程", "检查发布记录", "必要时扩容");
     List<String> rb = List.of("CPU 巡检 Runbook");
     List<String> rs = List.of("需人工确认扩容方案");
@@ -409,32 +355,5 @@ class PhaseZ9ZabbixMvpFlowTest {
         tl,
         rw,
         OffsetDateTime.now());
-  }
-
-  private void seedTenantAndDatasource() {
-    jdbc.update(
-        """
-        insert into tenant(id, code, name, status, created_at, updated_at)
-        values (?, 'tenant_z9', 'Phase Z9 Tenant', 'active', now(), now())
-        on conflict (id) do nothing
-        """,
-        TENANT_ID);
-
-    jdbc.update(
-        """
-        insert into datasource(id, tenant_id, name, type, status, config_json, created_at, updated_at)
-        values (?, ?, 'Phase Z9 Zabbix', 'zabbix', 'active',
-          '{"endpoint": "http://zabbix.local/api_jsonrpc.php", "username": "Admin", "password": "zabbix", "apiToken": null, "connectTimeoutSeconds": 3, "readTimeoutSeconds": 3}'::jsonb,
-          now(), now())
-        on conflict (id) do update set
-          tenant_id = excluded.tenant_id,
-          name = excluded.name,
-          type = excluded.type,
-          status = excluded.status,
-          config_json = excluded.config_json,
-          updated_at = now()
-        """,
-        DATASOURCE_ID,
-        TENANT_ID);
   }
 }

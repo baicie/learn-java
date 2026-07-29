@@ -10,8 +10,7 @@ import java.util.Optional;
  *
  * <p>All three apps (server, worker, runner) share this table; each app reads only the rows whose
  * {@code target_app} matches its {@link OutboxProperties#targetApp()}. Worker-only writes from the
- * rest of this app (see {@code OutboxPoller}) call {@link #markDone}, {@link #markFailed}, and
- * {@link #incrementRetry}.
+ * rest of this app (see {@code OutboxPoller}) must present the claim token on every state change.
  *
  * <p>Cross-app writes (server → outbox, runner → outbox) go through the {@code server} or {@code
  * runner} repository side. Each app owns the rows it picks up.
@@ -25,19 +24,19 @@ public interface OutboxRepository {
    * pollers do not double-pick.
    */
   List<AutomationOutboxRecord> claimNextPending(
-      String targetApp, int batchSize, OffsetDateTime leaseUntil);
+      String targetApp, int batchSize, OffsetDateTime leaseUntil, String claimToken);
 
   /** Return expired processing rows to the pending queue before claiming new work. */
   int recoverExpiredLeases(String targetApp, OffsetDateTime now);
 
   /** Extend a currently processing row lease while a long-running job is active. */
-  boolean extendLease(String id, String targetApp, OffsetDateTime leaseUntil);
+  boolean extendLease(String id, String targetApp, String claimToken, OffsetDateTime leaseUntil);
 
   /** Read a row by id. */
   Optional<AutomationOutboxRecord> findById(String id);
 
   /** Mark {@code id} as completed at {@code processedAt}. */
-  boolean markDone(String id, OffsetDateTime processedAt);
+  boolean markDone(String id, String claimToken, OffsetDateTime processedAt);
 
   /**
    * Mark {@code id} as failed with {@code errorMessage}.
@@ -45,7 +44,7 @@ public interface OutboxRepository {
    * @return {@code true} if the row was updated and {@code retry_count} has not yet exceeded the
    *     per-row {@code max_retries}; otherwise the row stays pending for the next sweep.
    */
-  boolean recordFailure(String id, String errorMessage);
+  boolean recordFailure(String id, String claimToken, String errorMessage);
 
   /**
    * Reset a stuck row from {@code processing} back to {@code pending} when its lease expired.
@@ -53,5 +52,5 @@ public interface OutboxRepository {
    * <p>Currently unused (MVP uses max_retries only), but reserved for the future sweep that detects
    * a worker crash mid-job.
    */
-  boolean resetProcessing(String id);
+  boolean resetProcessing(String id, String claimToken);
 }
