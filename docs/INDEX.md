@@ -4,8 +4,8 @@ type: operation
 status: accepted
 phase: global
 owner: script
-created: 2026-07-21
-updated: 2026-07-21
+created: 2026-07-29
+updated: 2026-07-29
 related: []
 ---
 
@@ -28,7 +28,7 @@ Do not edit it manually.
 | ----------------------- | -------- | ------- | ---------- | ------------------------------------------------------------- |
 | Automation Safety Rules | accepted | global  | 2026-06-30 | [docs/automation-safety.md](automation-safety.md)             |
 | Agent Skill 管理        | accepted | global  | 2026-07-14 | [docs/operations/agent-skills.md](operations/agent-skills.md) |
-| Git 工作流              | accepted | phase-8 | 2026-07-17 | [docs/operations/git-workflow.md](operations/git-workflow.md) |
+| Git 工作流              | accepted | phase-8 | 2026-07-22 | [docs/operations/git-workflow.md](operations/git-workflow.md) |
 | 项目文档导航            | accepted | global  | 2026-07-14 | [docs/README.md](README.md)                                   |
 
 ## adr
@@ -40,6 +40,7 @@ Do not edit it manually.
 | 工作记录模板设计器采用 @formily/core，禁用 Antd/Fusion setters | accepted | work-record | 2026-07-14 | [docs/adr/0005-work-record-designer-formily-core-only.md](adr/0005-work-record-designer-formily-core-only.md)     |
 | portal 测试栈选型（vitest browser + Playwright e2e）           | accepted | work-record | 2026-07-08 | [docs/adr/0006-portal-vitest-browser-and-playwright-e2e.md](adr/0006-portal-vitest-browser-and-playwright-e2e.md) |
 | Portal 采用面向路由的源码分层                                  | accepted | phase-21    | 2026-07-14 | [docs/adr/0007-portal-route-oriented-source-layout.md](adr/0007-portal-route-oriented-source-layout.md)           |
+| 统一 aiops-agent 运行端口                                      | accepted | global      | 2026-07-29 | [docs/adr/0008-standardize-aiops-agent-port.md](adr/0008-standardize-aiops-agent-port.md)                         |
 
 ## ai
 
@@ -55,13 +56,13 @@ Do not edit it manually.
 | 当前账户 API                     | accepted | phase-21       | 2026-07-14 | [docs/api/account.md](api/account.md)                               |
 | AI 模型管理 API                  | accepted | phase-4        | 2026-07-18 | [docs/api/ai-models.md](api/ai-models.md)                           |
 | 资源中心 API                     | accepted | phase-1        | 2026-07-16 | [docs/api/assets.md](api/assets.md)                                 |
-| 数据源 API                       | accepted | phase-1        | 2026-07-18 | [docs/api/datasources.md](api/datasources.md)                       |
+| 数据源 API                       | accepted | phase-1        | 2026-07-29 | [docs/api/datasources.md](api/datasources.md)                       |
 | 多来源可观测与变更接入 API       | accepted | phase-1        | 2026-07-18 | [docs/api/operations-ingestion.md](api/operations-ingestion.md)     |
 | 平台用户与权限管理 API           | accepted | work-record-20 | 2026-07-18 | [docs/api/platform-iam.md](api/platform-iam.md)                     |
 | 工作记录 Phase 20 异步与协作 API | accepted | work-record-20 | 2026-07-21 | [docs/api/work-record-phase20.md](api/work-record-phase20.md)       |
 | 工作记录模板 API                 | accepted | phase-21       | 2026-07-15 | [docs/api/work-record-templates.md](api/work-record-templates.md)   |
-| 工作记录 API 契约                | draft    | work-record    | 2026-07-09 | [docs/record/api-contract.md](record/api-contract.md)               |
-| 工作记录权限契约                 | draft    | work-record    | 2026-07-09 | [docs/record/permission-contract.md](record/permission-contract.md) |
+| 工作记录 API 契约                | draft    | work-record    | 2026-07-25 | [docs/record/api-contract.md](record/api-contract.md)               |
+| 工作记录权限契约                 | draft    | work-record    | 2026-07-25 | [docs/record/permission-contract.md](record/permission-contract.md) |
 
 ## architecture
 
@@ -74,7 +75,7 @@ Do not edit it manually.
 
 | Title                | Status   | Phase       | Updated    | Path                                                        |
 | -------------------- | -------- | ----------- | ---------- | ----------------------------------------------------------- |
-| Core Domain Models   | accepted | global      | 2026-07-17 | [docs/data-model.md](data-model.md)                         |
+| Core Domain Models   | accepted | global      | 2026-07-29 | [docs/data-model.md](data-model.md)                         |
 | 工作记录 Schema 契约 | draft    | work-record | 2026-07-09 | [docs/record/schema-contract.md](record/schema-contract.md) |
 
 ## design
@@ -91,7 +92,6 @@ Do not edit it manually.
 | Portal shadcn/ui 使用审计实施计划                                | accepted   | phase-21       | 2026-07-19 | [docs/designs/phase-21/2026-07-19-portal-shadcn-usage-audit-plan.md](designs/phase-21/2026-07-19-portal-shadcn-usage-audit-plan.md)                                                     |
 | Portal 顶部页面页签布局实现计划                                  | accepted   | phase-21       | 2026-07-19 | [docs/designs/phase-21/2026-07-19-portal-top-page-tabs.md](designs/phase-21/2026-07-19-portal-top-page-tabs.md)                                                                         |
 | DeepSeek 模型管理页面设计                                        | accepted   | phase-4        | 2026-07-18 | [docs/designs/phase-4/2026-07-18-deepseek-model-management.md](designs/phase-4/2026-07-18-deepseek-model-management.md)                                                                 |
-| Zabbix Webhook Integration                                       | accepted   | global         | 2026-06-30 | [docs/integrations/zabbix-webhook.md](integrations/zabbix-webhook.md)                                                                                                                   |
 | Phase2：Incident 聚合与事故中心                                  | accepted   | global         | 2026-06-30 | [docs/mvp/design/phase2.md](mvp/design/phase2.md)                                                                                                                                       |
 | Phase3：RCA 规则引擎与证据链                                     | accepted   | global         | 2026-06-30 | [docs/mvp/design/phase3.md](mvp/design/phase3.md)                                                                                                                                       |
 | Phase4.1：Agent Context Contract & Safety Boundary               | accepted   | global         | 2026-06-30 | [docs/mvp/design/phase4.1.md](mvp/design/phase4.1.md)                                                                                                                                   |
@@ -135,12 +135,11 @@ Do not edit it manually.
 | AegisOps Production Runbook                                      | accepted   | global         | 2026-06-30 | [docs/operations/runbook.md](operations/runbook.md)                                                                                                                                     |
 | Phase8.0：SaaS Multi-tenant Hardening                            | accepted   | global         | 2026-06-30 | [docs/phase8.md](phase8.md)                                                                                                                                                             |
 | Phase Z3: Zabbix Alert Aggregation Strategy                      | accepted   | global         | 2026-06-30 | [docs/scenarios/phase-z3-zabbix-incident-aggregation.md](scenarios/phase-z3-zabbix-incident-aggregation.md)                                                                             |
-| Phase Z4: Zabbix Evidence Collector                              | accepted   | global         | 2026-06-30 | [docs/scenarios/phase-z4-zabbix-evidence-collector.md](scenarios/phase-z4-zabbix-evidence-collector.md)                                                                                 |
+| Phase Z4: Zabbix Evidence Collector                              | accepted   | global         | 2026-07-27 | [docs/scenarios/phase-z4-zabbix-evidence-collector.md](scenarios/phase-z4-zabbix-evidence-collector.md)                                                                                 |
 | Phase Z5: Evidence-aware RCA Rules                               | accepted   | global         | 2026-06-30 | [docs/scenarios/phase-z5-rca-evidence-rules.md](scenarios/phase-z5-rca-evidence-rules.md)                                                                                               |
 | Phase Z6: Evidence-based AI Diagnosis                            | accepted   | global         | 2026-06-30 | [docs/scenarios/phase-z6-ai-diagnosis-evidence.md](scenarios/phase-z6-ai-diagnosis-evidence.md)                                                                                         |
 | Phase Z7: Markdown Incident Report                               | accepted   | global         | 2026-06-30 | [docs/scenarios/phase-z7-markdown-incident-report.md](scenarios/phase-z7-markdown-incident-report.md)                                                                                   |
-| Phase Z9：Zabbix MVP 端到端验收                                  | accepted   | global         | 2026-07-17 | [docs/scenarios/phase-z9-zabbix-mvp-acceptance.md](scenarios/phase-z9-zabbix-mvp-acceptance.md)                                                                                         |
-| Scenario 01 - Zabbix Host & Service Incident Diagnosis           | accepted   | z0             | 2026-06-21 | [docs/scenarios/zabbix-host-service-incident.md](scenarios/zabbix-host-service-incident.md)                                                                                             |
+| Phase Z9：Zabbix MVP 端到端验收                                  | accepted   | global         | 2026-07-29 | [docs/scenarios/phase-z9-zabbix-mvp-acceptance.md](scenarios/phase-z9-zabbix-mvp-acceptance.md)                                                                                         |
 | 工作记录动态导入模板下载实施计划                                 | review     | work-record-20 | 2026-07-19 | [docs/designs/phase-20/2026-07-19-work-record-import-template-download.md](designs/phase-20/2026-07-19-work-record-import-template-download.md)                                         |
 | 工作记录导入模板字典下拉设计                                     | review     | work-record-20 | 2026-07-20 | [docs/designs/phase-20/2026-07-20-work-record-import-dictionary-dropdowns.md](designs/phase-20/2026-07-20-work-record-import-dictionary-dropdowns.md)                                   |
 | 工作记录表单设计器详细设计（@formily/core only）                 | review     | work-record    | 2026-07-08 | [docs/record/designer-design.md](record/designer-design.md)                                                                                                                             |
@@ -148,7 +147,7 @@ Do not edit it manually.
 | 工作记录 Phase 00 产品边界与总体契约                             | review     | work-record    | 2026-07-08 | [docs/record/phase-00-baseline-and-contract.md](record/phase-00-baseline-and-contract.md)                                                                                               |
 | 工作记录 Phase 01 Portal 壳、导航与国际化                        | review     | work-record    | 2026-07-08 | [docs/record/phase-01-portal-i18n-and-shell.md](record/phase-01-portal-i18n-and-shell.md)                                                                                               |
 | 工作记录 Phase 02 平台字典完整设计                               | review     | work-record    | 2026-07-08 | [docs/record/phase-02-platform-dictionary.md](record/phase-02-platform-dictionary.md)                                                                                                   |
-| 工作记录 Phase 02A 平台工作日历                                  | review     | work-record    | 2026-07-08 | [docs/record/phase-02a-platform-calendar.md](record/phase-02a-platform-calendar.md)                                                                                                     |
+| 工作记录 Phase 02A 平台工作日历                                  | review     | work-record    | 2026-07-25 | [docs/record/phase-02a-platform-calendar.md](record/phase-02a-platform-calendar.md)                                                                                                     |
 | 工作记录 Phase 03 模板与字段契约                                 | review     | work-record    | 2026-07-08 | [docs/record/phase-03-work-record-template.md](record/phase-03-work-record-template.md)                                                                                                 |
 | 工作记录 Phase 04 Portal 原生模板设计器                          | review     | work-record    | 2026-07-08 | [docs/record/phase-04-formily-designer.md](record/phase-04-formily-designer.md)                                                                                                         |
 | 工作记录 Phase 05 动态表单运行态                                 | review     | work-record    | 2026-07-08 | [docs/record/phase-05-record-runtime.md](record/phase-05-record-runtime.md)                                                                                                             |
@@ -165,14 +164,22 @@ Do not edit it manually.
 | Designer 后端编译、旧版本兼容与迁移代码                          | draft      | work-record    | 2026-07-14 | [docs/record/formily/06-designer后端编译兼容与迁移代码.md](record/formily/06-designer后端编译兼容与迁移代码.md)                                                                         |
 | 可配置工作记录模块（终版设计 · pre-portal · 已废弃）             | deprecated | work-record    | 2026-07-07 | [docs/record/2026-07-06-record-index-pre-portal.md](record/2026-07-06-record-index-pre-portal.md)                                                                                       |
 | 工作记录模块 Phase 设计与代码包（已废弃）                        | deprecated | work-record    | 2026-07-07 | [docs/record/work-record-phases-design-code.md](record/work-record-phases-design-code.md)                                                                                               |
+| Scenario 01 - Zabbix Host & Service Incident Diagnosis           | deprecated | z0             | 2026-07-27 | [docs/scenarios/zabbix-host-service-incident.md](scenarios/zabbix-host-service-incident.md)                                                                                             |
 
 ## fix
 
 | Title                                  | Status   | Phase    | Updated    | Path                                                                                                                        |
 | -------------------------------------- | -------- | -------- | ---------- | --------------------------------------------------------------------------------------------------------------------------- |
+| 修复 Zabbix 真实端到端链路             | accepted | phase-1  | 2026-07-29 | [docs/fixes/phase-1/2026-07-27-zabbix-end-to-end-flow.md](fixes/phase-1/2026-07-27-zabbix-end-to-end-flow.md)               |
 | 工作记录模板与表单体验修复计划         | accepted | phase-21 | 2026-07-15 | [docs/fixes/phase-21/2026-07-15-work-record-template-form-ux.md](fixes/phase-21/2026-07-15-work-record-template-form-ux.md) |
 | PR2 - RuntimePhase + health phase 标签 | accepted | phase-5  | 2026-06-30 | [docs/fixes/phase-5/2026-06-30-runtime-phase.md](fixes/phase-5/2026-06-30-runtime-phase.md)                                 |
 | 第二轮回盘问题修复总记录               | draft    | phase-5  | 2026-06-30 | [docs/fixes/phase-5/2026-06-29-second-review-remediation.md](fixes/phase-5/2026-06-29-second-review-remediation.md)         |
+
+## integration
+
+| Title                      | Status   | Phase  | Updated    | Path                                                                  |
+| -------------------------- | -------- | ------ | ---------- | --------------------------------------------------------------------- |
+| Zabbix Webhook Integration | accepted | global | 2026-07-29 | [docs/integrations/zabbix-webhook.md](integrations/zabbix-webhook.md) |
 
 ## phase
 
@@ -219,7 +226,7 @@ Do not edit it manually.
 
 | Title                                 | Status | Phase       | Updated    | Path                                                                  |
 | ------------------------------------- | ------ | ----------- | ---------- | --------------------------------------------------------------------- |
-| 工作记录企业级验收清单                | draft  | work-record | 2026-07-09 | [docs/record/acceptance-checklist.md](record/acceptance-checklist.md) |
+| 工作记录企业级验收清单                | draft  | work-record | 2026-07-25 | [docs/record/acceptance-checklist.md](record/acceptance-checklist.md) |
 | 工作记录企业级重做路线图              | draft  | work-record | 2026-07-09 | [docs/record/enterprise-roadmap.md](record/enterprise-roadmap.md)     |
 | 工作记录 Phase 0 详细设计（对话记录） | draft  | work-record | 2026-07-09 | [docs/record/phase/00.md](record/phase/00.md)                         |
 | 工作记录阶段对话记录                  | draft  |             | 2026-07-14 | [docs/record/phase/step.md](record/phase/step.md)                     |

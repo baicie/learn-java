@@ -1,17 +1,19 @@
 ---
 title: Scenario 01 - Zabbix Host & Service Incident Diagnosis
 type: design
-status: accepted
+status: deprecated
 phase: z0
 owner: platform-team
 created: 2026-06-21
-updated: 2026-06-21
-related: docs/architecture/phase-z0-module-boundaries.md
+updated: 2026-07-27
+related:
+  - docs/architecture/phase-z0-module-boundaries.md
+  - docs/scenarios/phase-z9-zabbix-mvp-acceptance.md
 ---
-# Scenario 01 - Zabbix Host & Service Incident Diagnosis
-
 
 # Scenario 01: Zabbix Host & Service Incident Diagnosis
+
+> 本文保留 Phase Z0 历史基线，当前验收流程已由 `phase-z9-zabbix-mvp-acceptance.md` 取代。已删除的 demo-order-service 不再是运行时依赖。
 
 ## Goal
 
@@ -49,8 +51,8 @@ The final target scenario is:
 
 ```txt
 1. Start local docker-compose environment.
-2. Zabbix monitors aiops-demo-host and order-service.
-3. Inject CPU high / API slow / health check failed fault.
+2. Zabbix 为 aiops-demo-host 配置 trapper items 与 triggers。
+3. 通过 history.push 注入 CPU high / API slow / health check failed 信号。
 4. Zabbix triggers problems.
 5. Zabbix sends webhook to AegisOps.
 6. AegisOps creates alert_event.
@@ -61,17 +63,19 @@ The final target scenario is:
 11. AegisOps generates Markdown incident report.
 ```
 
-## Demo Service
+## Demo Signal Source
 
-Future Phase Z1 will add:
+当前 Phase Z9 使用 Zabbix trapper item 接收可复现信号：
 
 ```txt
-order-service
-  GET  /health
-  POST /api/order/create
+scripts/demo/setup-zabbix-demo.py --action setup
+scripts/demo/setup-zabbix-demo.py --action incident
+scripts/demo/setup-zabbix-demo.py --action recover
 ```
 
-Fault modes:
+该脚本驱动真实 Zabbix trigger/problem，但不新增第四个 Java app，也不模拟业务 HTTP 服务。
+
+Fault profiles:
 
 ```txt
 CPU high

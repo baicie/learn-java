@@ -5,9 +5,10 @@ status: accepted
 phase: global
 owner: ai
 created: 2026-06-30
-updated: 2026-06-30
+updated: 2026-07-27
 related: []
 ---
+
 # Phase Z4: Zabbix Evidence Collector
 
 ## Goal
@@ -78,7 +79,7 @@ trigger.get
 
 ## Demo Mapping
 
-The Phase Z1 demo service exposes these Zabbix HTTP Agent metrics:
+Phase Z9 demo 通过 `history.push` 向真实 Zabbix trapper items 注入以下指标：
 
 ```txt
 demo.cpu.util
@@ -91,6 +92,8 @@ demo.error.count
 
 Z4 classifies these items and converts abnormal values into
 diagnosis_evidence records.
+
+这些 key 与原 HTTP Agent 方案保持一致，因此 Evidence Collector 不依赖指标产生方式；已删除的 demo-order-service 不再是采集前置条件。
 
 ## Idempotency
 
