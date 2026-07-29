@@ -95,7 +95,7 @@ class AssetSourceFoundationAcceptanceIT {
     when(client.getProblems(1000)).thenReturn(List.of());
 
     jdbc.update(
-        "insert into datasource(id,tenant_id,type,name,status,config_json) values (?,?, 'zabbix',?,'inactive',?::jsonb)",
+        "insert into datasource(id,tenant_id,type,name,status,config_json) values (?,?, 'zabbix',?,'active',?::jsonb)",
         "ds-zabbix-a",
         TENANT_A,
         "验收 Zabbix",

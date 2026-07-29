@@ -10,6 +10,8 @@ import io.aegisops.asset.application.port.AssetStore;
 import io.aegisops.asset.domain.model.Asset;
 import io.aegisops.common.exception.ResourceNotFoundException;
 import java.util.List;
+import java.util.Locale;
+import java.util.Optional;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -24,6 +26,15 @@ public class AssetQueryService {
 
   public List<Asset> listRecent(String tenantId) {
     return repository.listRecent(tenantId, RECENT_ASSET_LIMIT);
+  }
+
+  public Optional<String> findAssetIdBySourceLink(
+      String tenantId, String sourceType, String sourceInstanceId, String externalId) {
+    return repository.findAssetIdBySourceLink(
+        tenantId.trim(),
+        sourceType.trim().toLowerCase(Locale.ROOT),
+        sourceInstanceId.trim(),
+        externalId.trim());
   }
 
   public AssetPageResponse page(String tenantId, AssetQuery query) {
