@@ -33,7 +33,10 @@ public class WorkbenchSummaryService {
     long activeIncidents =
         count("incident", tenantId, "status not in ('resolved','closed','ignored')");
     long criticalAlerts =
-        count("alert_event", tenantId, "severity in ('high','disaster') and status = 'open'");
+        count(
+            "alert_event",
+            tenantId,
+            "severity in ('high','critical','disaster') and status = 'open'");
     long todayNewAlerts = countSince("alert_event", tenantId, "created_at", todayStart);
     long datasourceErrors = count("datasource", tenantId, "status = 'error'");
 

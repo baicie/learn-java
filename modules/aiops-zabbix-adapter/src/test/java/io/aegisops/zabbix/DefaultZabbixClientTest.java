@@ -10,6 +10,7 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
@@ -196,7 +197,7 @@ class DefaultZabbixClientTest {
   }
 
   @Test
-  void getProblemsParsesSeverityAndClock() {
+  void getProblemsRequestsAndParsesTagsAndRecoveryMetadata() {
     // Zabbix 7.x: problem.get returns no hosts; client does a follow-up
     // event.get(filter.value=1) to back-fill hostids. Each problem triggers
     // its own event.get so the mock below is intentionally simple.
@@ -208,9 +209,11 @@ class DefaultZabbixClientTest {
                 MediaType.APPLICATION_JSON));
     server
         .expect(requestTo(CONFIG.endpoint()))
+        .andExpect(
+            content().string(org.hamcrest.Matchers.containsString("\"selectTags\":\"extend\"")))
         .andRespond(
             withSuccess(
-                "{\"jsonrpc\":\"2.0\",\"result\":[{\"eventid\":\"99\",\"objectid\":\"500\",\"name\":\"CPU high\",\"severity\":\"4\",\"clock\":\"1700000000\",\"tags\":[{\"tag\":\"env\",\"value\":\"prod\"}]}],\"id\":2}",
+                "{\"jsonrpc\":\"2.0\",\"result\":[{\"eventid\":\"99\",\"objectid\":\"500\",\"name\":\"CPU high\",\"severity\":\"4\",\"clock\":\"1700000000\",\"r_eventid\":\"100\",\"r_clock\":\"1700000300\",\"tags\":[{\"tag\":\"env\",\"value\":\"prod\"}]}],\"id\":2}",
                 MediaType.APPLICATION_JSON));
     server
         .expect(requestTo(CONFIG.endpoint()))
@@ -227,6 +230,9 @@ class DefaultZabbixClientTest {
     assertEquals("CPU high", p.name());
     assertEquals(List.of("7"), p.hostIds());
     assertEquals(Map.of("env", "prod"), p.tags());
+    assertEquals("100", p.recoveryEventId());
+    assertEquals(Instant.ofEpochSecond(1700000300), p.recoveryClock());
+    assertTrue(p.recovered());
   }
 
   @Test

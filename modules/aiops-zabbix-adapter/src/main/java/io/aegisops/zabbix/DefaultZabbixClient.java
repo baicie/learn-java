@@ -91,6 +91,7 @@ final class DefaultZabbixClient implements ZabbixClient, JsonRpcCaller {
 
     Map<String, Object> params = new LinkedHashMap<>();
     params.put("output", "extend");
+    params.put("selectTags", "extend");
     // Zabbix 7.x: problem.get has no selectHosts; use event.get with
     // filter.value=1 to back-fill hostids. Keep recent=true so we don't
     // hammer Zabbix with a global problem scan.

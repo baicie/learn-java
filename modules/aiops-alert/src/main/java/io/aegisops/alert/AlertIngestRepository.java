@@ -12,6 +12,88 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public class AlertIngestRepository {
+  private static final String UPSERT_SQL =
+      """
+          insert into alert_event(
+            id, tenant_id, source, source_event_id, severity, title, description,
+            asset_id, entity_type, entity_name, labels, starts_at, ends_at, status,
+            raw_payload, fingerprint, aggregation_key, updated_at, created_at
+          ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?, ?, ?, ?::jsonb, ?, ?, now(), now())
+          on conflict (tenant_id, source, source_event_id) where source_event_id is not null
+          do update set
+            severity = case
+              when alert_event.status = 'resolved' and excluded.status = 'open'
+                then alert_event.severity
+              else excluded.severity
+            end,
+            title = case
+              when alert_event.status = 'resolved' and excluded.status = 'open'
+                then alert_event.title
+              else excluded.title
+            end,
+            description = case
+              when alert_event.status = 'resolved' and excluded.status = 'open'
+                then alert_event.description
+              else excluded.description
+            end,
+            asset_id = case
+              when alert_event.status = 'resolved' and excluded.status = 'open'
+                then alert_event.asset_id
+              else excluded.asset_id
+            end,
+            entity_type = case
+              when alert_event.status = 'resolved' and excluded.status = 'open'
+                then alert_event.entity_type
+              else excluded.entity_type
+            end,
+            entity_name = case
+              when alert_event.status = 'resolved' and excluded.status = 'open'
+                then alert_event.entity_name
+              else excluded.entity_name
+            end,
+            labels = case
+              when alert_event.status = 'resolved' and excluded.status = 'open'
+                then alert_event.labels
+              else excluded.labels
+            end,
+            starts_at = case
+              when alert_event.status = 'resolved' and excluded.status = 'open'
+                then alert_event.starts_at
+              else least(alert_event.starts_at, excluded.starts_at)
+            end,
+            ends_at = case
+              when alert_event.status = 'resolved' and excluded.status = 'open'
+                then alert_event.ends_at
+              else excluded.ends_at
+            end,
+            status = case
+              when alert_event.status = 'resolved' and excluded.status = 'open'
+                then alert_event.status
+              else excluded.status
+            end,
+            raw_payload = case
+              when alert_event.status = 'resolved' and excluded.status = 'open'
+                then alert_event.raw_payload
+              else excluded.raw_payload
+            end,
+            fingerprint = case
+              when alert_event.status = 'resolved' and excluded.status = 'open'
+                then alert_event.fingerprint
+              else excluded.fingerprint
+            end,
+            aggregation_key = case
+              when alert_event.status = 'resolved' and excluded.status = 'open'
+                then alert_event.aggregation_key
+              else excluded.aggregation_key
+            end,
+            updated_at = case
+              when alert_event.status = 'resolved' and excluded.status = 'open'
+                then alert_event.updated_at
+              else now()
+            end
+          returning id, xmax = 0 as created, status, fingerprint, aggregation_key
+          """;
+
   private final JdbcTemplate jdbc;
 
   public AlertIngestRepository(JdbcTemplate jdbc) {
@@ -33,37 +115,15 @@ public class AlertIngestRepository {
     OffsetDateTime startsAt =
         request.startsAt() == null ? OffsetDateTime.now() : request.startsAt();
 
-    String sql =
-        """
-            insert into alert_event(
-              id, tenant_id, source, source_event_id, severity, title, description,
-              asset_id, entity_type, entity_name, labels, starts_at, ends_at, status,
-              raw_payload, fingerprint, aggregation_key, updated_at, created_at
-            ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?, ?, ?, ?::jsonb, ?, ?, now(), now())
-            on conflict (tenant_id, source, source_event_id) where source_event_id is not null
-            do update set
-              severity = excluded.severity,
-              title = excluded.title,
-              description = excluded.description,
-              asset_id = excluded.asset_id,
-              entity_type = excluded.entity_type,
-              entity_name = excluded.entity_name,
-              labels = excluded.labels,
-              starts_at = least(alert_event.starts_at, excluded.starts_at),
-              ends_at = excluded.ends_at,
-              status = excluded.status,
-              raw_payload = excluded.raw_payload,
-              fingerprint = excluded.fingerprint,
-              aggregation_key = excluded.aggregation_key,
-              updated_at = now()
-            returning id, xmax = 0 as created
-            """;
-
     return jdbc.queryForObject(
-        sql,
+        UPSERT_SQL,
         (rs, rowNum) ->
             new AlertIngestResult(
-                rs.getString("id"), rs.getBoolean("created"), fingerprint, aggregationKey),
+                rs.getString("id"),
+                rs.getBoolean("created"),
+                rs.getString("status"),
+                rs.getString("fingerprint"),
+                rs.getString("aggregation_key")),
         id,
         tenantId,
         source,
@@ -104,8 +164,8 @@ public class AlertIngestRepository {
     }
     String normalized = severity.trim().toLowerCase(Locale.ROOT);
     return switch (normalized) {
-      case "info", "low", "warning", "critical", "disaster" -> normalized;
-      case "high" -> "critical";
+      case "info", "low", "warning", "medium", "high", "critical", "disaster" -> normalized;
+      case "average" -> "medium";
       default -> "info";
     };
   }
@@ -116,7 +176,7 @@ public class AlertIngestRepository {
     }
     String normalized = status.trim().toLowerCase(Locale.ROOT);
     return switch (normalized) {
-      case "resolved", "closed", "ok" -> "resolved";
+      case "recovered", "resolved", "closed", "ok" -> "resolved";
       default -> "open";
     };
   }
