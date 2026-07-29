@@ -1,0 +1,72 @@
+name: Manual Docker Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 要打包的分支
+        required: true
+        default: mvp
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: manual-docker-build-${{ inputs.branch }}
+  cancel-in-progress: false
+
+env:
+  IMAGE_PREFIX: ${{ secrets.DOCKERHUB_USERNAME }}/aegisops
+
+jobs:
+  build:
+    name: Build and push ${{ inputs.branch }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout selected branch
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.branch }}
+
+      - name: Resolve source commit
+        id: source
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Build images
+        env:
+          REGISTRY: local
+          VERSION: ${{ steps.source.outputs.sha }}
+        run: bash scripts/deploy/build-images.sh
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Push images
+        env:
+          IMAGE_TAG: ${{ steps.source.outputs.sha }}
+        run: |
+          set -Eeuo pipefail
+
+          retry() {
+            local attempt
+            for attempt in 1 2 3; do
+              "$@" && return 0
+              if [ "$attempt" -eq 3 ]; then
+                return 1
+              fi
+              sleep "$((attempt * 10))"
+            done
+          }
+
+          for component in server agent worker runner; do
+            local_image="local/aiops-${component}:${IMAGE_TAG}"
+            remote_image="${IMAGE_PREFIX}:${IMAGE_TAG}-${component}"
+            docker tag "$local_image" "$remote_image"
+            retry docker push "$remote_image"
+          done

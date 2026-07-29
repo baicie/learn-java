@@ -5,6 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 CI_WORKFLOW="$ROOT_DIR/.github/workflows/ci.yml"
 OPS_WORKFLOW="$ROOT_DIR/.github/workflows/ops-scripts.yml"
 RELEASE_WORKFLOW="$ROOT_DIR/.github/workflows/release-verify.yml"
+MANUAL_DOCKER_WORKFLOW="$ROOT_DIR/.github/workflows/manual-docker-build.yml"
 E2E_WORKFLOW="$ROOT_DIR/.github/workflows/work-record-e2e.yml"
 RELEASE_PREFLIGHT="$ROOT_DIR/scripts/ci/release-preflight.sh"
 BACKEND_SCRIPT="$ROOT_DIR/scripts/ci/backend.sh"
@@ -51,6 +52,10 @@ require_text "$RELEASE_WORKFLOW" "for attempt in 1 2 3; do"
 require_text "$RELEASE_WORKFLOW" 'retry docker push "$remote_image"'
 require_text "$RELEASE_WORKFLOW" "uses: docker/login-action@v4"
 require_text "$RELEASE_WORKFLOW" '--build-arg BUILD_VERSION="${RELEASE_REF}"'
+require_text "$MANUAL_DOCKER_WORKFLOW" "workflow_dispatch:"
+require_text "$MANUAL_DOCKER_WORKFLOW" 'ref: ${{ inputs.branch }}'
+require_text "$MANUAL_DOCKER_WORKFLOW" "run: bash scripts/deploy/build-images.sh"
+require_text "$MANUAL_DOCKER_WORKFLOW" 'remote_image="${IMAGE_PREFIX}:${IMAGE_TAG}-${component}"'
 require_text "$RELEASE_PREFLIGHT" "AIOPS_AGENT_INTERNAL_TOKEN=preflight-only"
 require_text "$RELEASE_PREFLIGHT" "AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN=preflight-only"
 require_text "$RELEASE_WORKFLOW" "AIOPS_AGENT_INTERNAL_TOKEN: runtime-smoke-only"
