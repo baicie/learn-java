@@ -1,12 +1,45 @@
 import assert from 'node:assert/strict'
+import { createServer, type Server } from 'node:net'
 import { test } from 'node:test'
 import { join } from 'node:path'
 
 import {
   isManagedAppProcess,
+  isTcpPortAvailable,
   parseJavaProcessList,
   parseJavaSystemProperties,
 } from './start-process.ts'
+
+async function listenOnEphemeralPort(): Promise<{
+  server: Server
+  port: number
+}> {
+  const server = createServer()
+  await new Promise<void>((resolve, reject) => {
+    server.once('error', reject)
+    server.listen({ host: '127.0.0.1', port: 0, exclusive: true }, resolve)
+  })
+  const address = server.address()
+  assert.ok(address && typeof address !== 'string')
+  return { server, port: address.port }
+}
+
+function closeServer(server: Server): Promise<void> {
+  return new Promise((resolve, reject) => {
+    server.close((error) => (error ? reject(error) : resolve()))
+  })
+}
+
+test('isTcpPortAvailable detects occupied and released loopback ports', async (context) => {
+  const { server, port } = await listenOnEphemeralPort()
+  context.after(() => {
+    if (server.listening) server.close()
+  })
+
+  assert.equal(await isTcpPortAvailable(port), false)
+  await closeServer(server)
+  assert.equal(await isTcpPortAvailable(port), true)
+})
 
 test('parseJavaProcessList extracts Java launch commands by PID', () => {
   const processes = parseJavaProcessList(`

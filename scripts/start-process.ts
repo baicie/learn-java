@@ -1,4 +1,19 @@
+import { createServer } from 'node:net'
 import { isAbsolute, normalize, resolve } from 'node:path'
+
+export function isTcpPortAvailable(
+  port: number,
+  host = '127.0.0.1'
+): Promise<boolean> {
+  return new Promise((resolve) => {
+    const server = createServer()
+    server.unref()
+    server.once('error', () => resolve(false))
+    server.listen({ port, host, exclusive: true }, () => {
+      server.close(() => resolve(true))
+    })
+  })
+}
 
 export function parseJavaProcessList(output: string): Map<number, string> {
   const processes = new Map<number, string>()

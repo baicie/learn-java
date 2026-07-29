@@ -13,6 +13,7 @@ import { fileURLToPath } from 'node:url'
 
 import {
   isManagedAppProcess,
+  isTcpPortAvailable,
   parseJavaProcessList,
   parseJavaSystemProperties,
 } from './start-process.ts'
@@ -22,9 +23,24 @@ const __dirname = dirname(__filename)
 const root = join(__dirname, '..')
 
 const APPS = {
-  server: { name: 'aiops-server', port: 8080, dir: 'apps/aiops-server' },
-  worker: { name: 'aiops-worker', port: 8091, dir: 'apps/aiops-worker' },
-  runner: { name: 'aiops-runner', port: 8082, dir: 'apps/aiops-runner' },
+  server: {
+    name: 'aiops-server',
+    port: 8080,
+    portEnv: 'AIOPS_SERVER_PORT',
+    dir: 'apps/aiops-server',
+  },
+  worker: {
+    name: 'aiops-worker',
+    port: 8091,
+    portEnv: 'AIOPS_WORKER_PORT',
+    dir: 'apps/aiops-worker',
+  },
+  runner: {
+    name: 'aiops-runner',
+    port: 8092,
+    portEnv: 'AIOPS_RUNNER_PORT',
+    dir: 'apps/aiops-runner',
+  },
 }
 
 const FRONTEND_DIR = join(root, 'web', 'portal')
@@ -309,9 +325,7 @@ async function startApp(key: keyof typeof APPS): Promise<number | null> {
     SPRING_PROFILES_ACTIVE: 'default',
   }
 
-  if (key === 'server') env.AIOPS_SERVER_PORT = '8080'
-  if (key === 'worker') env.AIOPS_WORKER_PORT = '8091'
-  if (key === 'runner') env.AIOPS_RUNNER_PORT = '8082'
+  env[app.portEnv] = String(app.port)
 
   const javaBin = isWin ? 'java.exe' : 'java'
   const args = [
@@ -479,6 +493,8 @@ async function startFrontend(onReady?: () => void): Promise<void> {
 async function findPortOccupant(
   port: number
 ): Promise<{ pid: number; name: string } | null> {
+  if (await isTcpPortAvailable(port)) return null
+
   const psCmd = isWin
     ? `Get-NetTCPConnection -State Listen -LocalPort ${port} -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty OwningProcess`
     : `lsof -iTCP:${port} -sTCP:LISTEN -t 2>/dev/null | head -n 1`
@@ -642,7 +658,9 @@ async function main(): Promise<void> {
       console.log('  URLs:')
       console.log('    Server:  http://localhost:8080')
       console.log('    Worker:  http://localhost:8091/actuator/health')
-      console.log('    Runner:  http://localhost:8082/actuator/health')
+      console.log(
+        `    Runner:  http://localhost:${APPS.runner.port}/actuator/health`
+      )
       console.log('    Swagger: http://localhost:8080/swagger-ui.html')
       console.log('    Minio:   http://localhost:9001 (minioadmin/minioadmin)')
       console.log()
