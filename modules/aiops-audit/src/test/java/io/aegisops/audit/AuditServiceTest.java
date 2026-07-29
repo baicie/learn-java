@@ -3,8 +3,11 @@ package io.aegisops.audit;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.verify;
 
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -52,6 +55,41 @@ class AuditServiceTest {
     assertThat(event.beforeJson()).contains("\"a\":1");
     assertThat(event.afterJson()).contains("\"b\":2");
     assertThat(event.detailJson()).contains("\"c\":3");
+  }
+
+  @Test
+  void recordShouldPersistRequestMetadata() throws Exception {
+    AuditRepository repository = new AuditRepository(jdbc);
+    AuditJson auditJson = new AuditJson(new com.fasterxml.jackson.databind.ObjectMapper());
+    AuditService service = new AuditService(repository, auditJson);
+    AuditRecordCommand command =
+        new AuditRecordCommand(
+            "tenant-1",
+            "user-1",
+            "module.view",
+            "MODULE",
+            "platform",
+            "{}",
+            "{}",
+            "{}",
+            "req-audit-1",
+            "203.0.113.10",
+            "portal-test-agent");
+
+    AuditEvent event = service.record(command);
+
+    assertThat(event.requestId()).isEqualTo("req-audit-1");
+    assertThat(event.ip()).isEqualTo("203.0.113.10");
+    assertThat(event.userAgent()).isEqualTo("portal-test-agent");
+
+    verify(jdbc)
+        .update(
+            anyString(),
+            argThat(
+                (Map<String, ?> parameters) ->
+                    "req-audit-1".equals(parameters.get("requestId"))
+                        && "203.0.113.10".equals(parameters.get("ip"))
+                        && "portal-test-agent".equals(parameters.get("userAgent"))));
   }
 
   @Test

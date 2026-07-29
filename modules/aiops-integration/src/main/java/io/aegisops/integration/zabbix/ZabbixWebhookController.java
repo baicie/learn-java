@@ -26,10 +26,8 @@ public class ZabbixWebhookController {
   @PostMapping("/events")
   public ApiResponse<ZabbixWebhookIngestResponse> events(
       @RequestParam(value = "datasourceId", required = false) String datasourceId,
-      @RequestParam(value = "token", required = false) String queryToken,
-      @RequestHeader(value = "X-AegisOps-Webhook-Token", required = false) String headerToken,
+      @RequestHeader(value = "X-AegisOps-Webhook-Token", required = false) String token,
       @RequestBody ZabbixWebhookPayload payload) {
-    String token = headerToken == null || headerToken.isBlank() ? queryToken : headerToken;
     return ApiResponse.ok(service.ingest(datasourceId, token, payload));
   }
 }

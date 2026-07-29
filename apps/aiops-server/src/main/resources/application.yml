@@ -85,7 +85,7 @@ aiops:
   integrations:
     zabbix:
       webhook:
-        token: ${AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN:dev-zabbix-webhook-token}
+        token: ${AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN:${random.value}}
   work-record:
     export:
       max-rows: ${AIOPS_WORK_RECORD_EXPORT_MAX_ROWS:5000}

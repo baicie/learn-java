@@ -9,7 +9,34 @@ public record AuditRecordCommand(
     String resourceId,
     String beforeJson,
     String afterJson,
-    String detailJson) {
+    String detailJson,
+    String requestId,
+    String ip,
+    String userAgent) {
+
+  /** Compatibility constructor for callers that do not yet collect HTTP request metadata. */
+  public AuditRecordCommand(
+      String tenantId,
+      String actorId,
+      String action,
+      String resourceType,
+      String resourceId,
+      String beforeJson,
+      String afterJson,
+      String detailJson) {
+    this(
+        tenantId,
+        actorId,
+        action,
+        resourceType,
+        resourceId,
+        beforeJson,
+        afterJson,
+        detailJson,
+        null,
+        null,
+        null);
+  }
 
   /** Compatibility constructor for callers that only have a detail JSON. */
   public AuditRecordCommand(
@@ -19,6 +46,17 @@ public record AuditRecordCommand(
       String resourceType,
       String resourceId,
       String detailJson) {
-    this(tenantId, actorId, action, resourceType, resourceId, "{}", "{}", detailJson);
+    this(
+        tenantId,
+        actorId,
+        action,
+        resourceType,
+        resourceId,
+        "{}",
+        "{}",
+        detailJson,
+        null,
+        null,
+        null);
   }
 }

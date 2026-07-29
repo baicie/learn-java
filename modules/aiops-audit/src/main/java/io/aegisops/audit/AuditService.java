@@ -43,6 +43,9 @@ public class AuditService {
             auditJson.normalizeObject(command.beforeJson(), "beforeJson"),
             auditJson.normalizeObject(command.afterJson(), "afterJson"),
             auditJson.normalizeObject(command.detailJson(), "detailJson"),
+            command.requestId(),
+            command.ip(),
+            command.userAgent(),
             OffsetDateTime.now(ZoneOffset.UTC));
 
     repository.insert(event);

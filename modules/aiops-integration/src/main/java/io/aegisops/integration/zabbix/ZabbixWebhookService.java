@@ -1,117 +1,76 @@
 package io.aegisops.integration.zabbix;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.aegisops.alert.AlertIngestRequest;
+import io.aegisops.alert.AlertIngestResult;
+import io.aegisops.alert.AlertIngestService;
+import io.aegisops.asset.application.AssetQueryService;
 import io.aegisops.common.exception.AppException;
-import io.aegisops.common.outbox.OutboxWriter;
-import io.aegisops.datasource.zabbix.ZabbixExternalIds;
-import java.util.LinkedHashMap;
+import io.aegisops.common.exception.ErrorCode;
 import java.util.Map;
-import java.util.UUID;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class ZabbixWebhookService {
-  private static final String OUTBOX_TARGET_APP = "worker";
-  private static final String OUTBOX_JOB_NAME = "incident-aggregate";
-
   private final JdbcTemplate jdbc;
+  private final AssetQueryService assetQueryService;
+  private final AlertIngestService alertIngestService;
   private final ObjectMapper objectMapper;
   private final ZabbixWebhookTokenVerifier tokenVerifier;
   private final ZabbixWebhookMapper mapper;
-  private final OutboxWriter outboxWriter;
 
   public ZabbixWebhookService(
       JdbcTemplate jdbc,
+      AssetQueryService assetQueryService,
+      AlertIngestService alertIngestService,
       ObjectMapper objectMapper,
       ZabbixWebhookTokenVerifier tokenVerifier,
-      ZabbixWebhookMapper mapper,
-      OutboxWriter outboxWriter) {
+      ZabbixWebhookMapper mapper) {
     this.jdbc = jdbc;
+    this.assetQueryService = assetQueryService;
+    this.alertIngestService = alertIngestService;
     this.objectMapper = objectMapper;
     this.tokenVerifier = tokenVerifier;
     this.mapper = mapper;
-    this.outboxWriter = outboxWriter;
   }
 
+  @Transactional
   public ZabbixWebhookIngestResponse ingest(
       String datasourceId, String token, ZabbixWebhookPayload payload) {
-    if (!tokenVerifier.verify(token)) {
-      throw new AppException("ZABBIX_WEBHOOK_UNAUTHORIZED", "Invalid Zabbix webhook token");
+    ZabbixWebhookAlertMapping mapping = mapper.map(datasourceId, payload);
+    if (!tokenVerifier.verify(mapping.datasourceId(), token)) {
+      throw new AppException(ErrorCode.UNAUTHORIZED, "Invalid Zabbix webhook token");
     }
 
-    ZabbixWebhookAlertMapping mapping = mapper.map(datasourceId, payload);
     DataSourceBinding datasource = getDatasourceBinding(mapping.datasourceId());
     String assetId = resolveAssetId(datasource.tenantId(), mapping);
 
-    return upsertAlert(datasource, mapping, assetId);
+    return ingestAlert(datasource, mapping, assetId);
   }
 
-  /**
-   * Hands the freshly upserted alert off to the worker process via the {@code automation_outbox}
-   * table. The worker polls {@code target_app='worker'} and dispatches by {@code job_name}.
-   */
-  private void dispatchToWorker(
-      ZabbixWebhookIngestResponse response, ZabbixWebhookAlertMapping mapping) {
-    Map<String, Object> payload = new LinkedHashMap<>();
-    payload.put("alertId", response.alertId());
-    payload.put("datasourceId", response.datasourceId());
-    payload.put("tenantId", response.tenantId());
-    payload.put("sourceEventId", response.sourceEventId());
-    payload.put("status", response.status());
-    payload.put("created", response.created());
-    payload.put("severity", mapping.severity());
-    payload.put("assetExternalIds", mapping.hostIds());
-    outboxWriter.enqueue(OUTBOX_TARGET_APP, OUTBOX_JOB_NAME, payload);
-  }
-
-  private ZabbixWebhookIngestResponse upsertAlert(
+  private ZabbixWebhookIngestResponse ingestAlert(
       DataSourceBinding datasource, ZabbixWebhookAlertMapping mapping, String assetId) {
-    String labelsJson = writeJson(mapping.labels());
-    String rawPayloadJson = writeJson(mapping.rawPayload());
-
-    AlertUpsertResult result =
-        jdbc.queryForObject(
-            """
-            insert into alert_event(id, tenant_id, source, source_event_id, severity, title, description,
-                                    asset_id, entity_type, entity_name, labels, starts_at, ends_at, status,
-                                    raw_payload, fingerprint, aggregation_key, created_at, updated_at)
-            values (?, ?, 'zabbix', ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?, ?, ?, ?::jsonb, ?, ?, now(), now())
-            on conflict (tenant_id, source, source_event_id) where source_event_id is not null
-            do update set
-              severity = excluded.severity,
-              title = excluded.title,
-              description = excluded.description,
-              asset_id = excluded.asset_id,
-              entity_type = excluded.entity_type,
-              entity_name = excluded.entity_name,
-              labels = excluded.labels,
-              starts_at = least(alert_event.starts_at, excluded.starts_at),
-              ends_at = excluded.ends_at,
-              status = excluded.status,
-              raw_payload = excluded.raw_payload,
-              fingerprint = excluded.fingerprint,
-              aggregation_key = excluded.aggregation_key,
-              updated_at = now()
-            returning id, (xmax = 0) as created
-            """,
-            (rs, rowNum) -> new AlertUpsertResult(rs.getString("id"), rs.getBoolean("created")),
-            newId("alert"),
+    AlertIngestResult result =
+        alertIngestService.ingest(
             datasource.tenantId(),
-            mapping.sourceEventId(),
-            mapping.severity(),
-            mapping.title(),
-            mapping.description(),
-            assetId,
-            mapping.entityType(),
-            mapping.entityName(),
-            labelsJson,
-            mapping.startsAt(),
-            mapping.endsAt(),
-            mapping.status(),
-            rawPayloadJson,
+            new AlertIngestRequest(
+                "zabbix",
+                mapping.sourceEventId(),
+                mapping.severity(),
+                mapping.title(),
+                mapping.description(),
+                assetId,
+                mapping.entityType(),
+                mapping.entityName(),
+                mapping.labels(),
+                mapping.startsAt(),
+                mapping.endsAt(),
+                mapping.status(),
+                rawPayload(mapping.rawPayload())),
             mapping.fingerprint(),
             mapping.aggregationKey());
 
@@ -121,10 +80,9 @@ public class ZabbixWebhookService {
             datasource.id(),
             datasource.tenantId(),
             mapping.sourceEventId(),
-            mapping.status(),
+            result.status(),
             result.created(),
             result.created() ? "Zabbix alert event created" : "Zabbix alert event updated");
-    dispatchToWorker(response, mapping);
     return response;
   }
 
@@ -132,9 +90,10 @@ public class ZabbixWebhookService {
     try {
       return jdbc.queryForObject(
           """
-          select id, tenant_id
-          from datasource
-          where id = ? and type = 'zabbix'
+          select d.id, d.tenant_id
+          from datasource d
+          join tenant t on t.id = d.tenant_id and t.status = 'active'
+          where d.id = ? and d.type = 'zabbix' and d.status = 'active'
           """,
           (rs, rowNum) -> new DataSourceBinding(rs.getString("id"), rs.getString("tenant_id")),
           datasourceId);
@@ -147,35 +106,18 @@ public class ZabbixWebhookService {
     if (mapping.hostIds().isEmpty()) {
       return null;
     }
-    String sourceId = ZabbixExternalIds.sourceId(mapping.datasourceId(), mapping.hostIds().get(0));
-    try {
-      return jdbc.queryForObject(
-          """
-          select id
-          from asset
-          where tenant_id = ? and source = 'zabbix' and source_id = ?
-          """,
-          String.class,
-          tenantId,
-          sourceId);
-    } catch (EmptyResultDataAccessException ex) {
-      return null;
-    }
+    return assetQueryService
+        .findAssetIdBySourceLink(
+            tenantId, "zabbix", mapping.datasourceId(), mapping.hostIds().getFirst())
+        .orElse(null);
   }
 
-  private String writeJson(Object value) {
-    try {
-      return objectMapper.writeValueAsString(value);
-    } catch (JsonProcessingException ex) {
-      throw new AppException("JSON_SERIALIZE_FAILED", "Failed to serialize JSON");
+  private Map<String, Object> rawPayload(Object value) {
+    if (value == null) {
+      return Map.of();
     }
-  }
-
-  private String newId(String prefix) {
-    return prefix + "_" + UUID.randomUUID().toString().replace("-", "");
+    return objectMapper.convertValue(value, new TypeReference<>() {});
   }
 
   private record DataSourceBinding(String id, String tenantId) {}
-
-  private record AlertUpsertResult(String alertId, boolean created) {}
 }
