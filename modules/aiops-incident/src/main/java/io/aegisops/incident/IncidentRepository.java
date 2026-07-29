@@ -9,6 +9,8 @@ public interface IncidentRepository {
 
   List<AlertCandidate> findOpenAlertCandidates(String tenantId, OffsetDateTime since, int limit);
 
+  List<AlertCandidate> findUnlinkedAlertCandidates(String tenantId, int limit);
+
   List<IncidentSummaryRecord> listIncidents(String tenantId, int limit);
 
   Optional<IncidentSummaryRecord> findIncident(String tenantId, String incidentId);
@@ -39,6 +41,10 @@ public interface IncidentRepository {
       String status,
       boolean terminal,
       OffsetDateTime resolvedAt);
+
+  boolean resolveIfActiveAt(String tenantId, String incidentId, OffsetDateTime resolvedAt);
+
+  int backfillPrimaryAssetIds(String tenantId);
 
   List<IncidentSummaryRecord> findActiveIncidentsReadyToResolve(String tenantId);
 

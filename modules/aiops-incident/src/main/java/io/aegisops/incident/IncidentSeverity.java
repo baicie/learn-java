@@ -11,8 +11,10 @@ public final class IncidentSeverity {
           "info", 10,
           "low", 20,
           "warning", 30,
-          "critical", 40,
-          "disaster", 50);
+          "medium", 40,
+          "high", 50,
+          "critical", 60,
+          "disaster", 70);
 
   private IncidentSeverity() {}
 

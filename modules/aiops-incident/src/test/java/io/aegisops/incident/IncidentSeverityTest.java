@@ -18,6 +18,7 @@ class IncidentSeverityTest {
     assertEquals("critical", IncidentSeverity.max("warning", "critical"));
     assertEquals("disaster", IncidentSeverity.max("disaster", "critical"));
     assertEquals("warning", IncidentSeverity.max("info", "warning"));
+    assertEquals("high", IncidentSeverity.max("medium", "high"));
   }
 
   @Test

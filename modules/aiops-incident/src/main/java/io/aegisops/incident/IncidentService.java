@@ -72,6 +72,24 @@ public class IncidentService {
     List<AlertCandidate> candidates =
         repository.findOpenAlertCandidates(tenantId, since, normalizedRequest.normalizedLimit());
 
+    return aggregateCandidates(tenantId, candidates);
+  }
+
+  @Transactional
+  public IncidentAggregationResponse aggregateUnlinkedAlerts(String tenantId, int limit) {
+    repository.acquireTenantAggregationLock(tenantId);
+    int normalizedLimit = new IncidentAggregateRequest(null, limit).normalizedLimit();
+    List<AlertCandidate> candidates =
+        repository.findUnlinkedAlertCandidates(tenantId, normalizedLimit);
+
+    IncidentAggregationResponse response = aggregateCandidates(tenantId, candidates);
+    repository.backfillPrimaryAssetIds(tenantId);
+    return response;
+  }
+
+  private IncidentAggregationResponse aggregateCandidates(
+      String tenantId, List<AlertCandidate> candidates) {
+
     Map<String, List<AlertCandidate>> groups =
         candidates.stream()
             .collect(
@@ -121,7 +139,9 @@ public class IncidentService {
               .max(OffsetDateTime::compareTo)
               .orElse(OffsetDateTime.now());
 
-      repository.updateStatusAt(tenantId, incident.id(), "resolved", true, resolvedAt);
+      if (!repository.resolveIfActiveAt(tenantId, incident.id(), resolvedAt)) {
+        continue;
+      }
 
       repository.addTimeline(
           new TimelineCreateCommand(

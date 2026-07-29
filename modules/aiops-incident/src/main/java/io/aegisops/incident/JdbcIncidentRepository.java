@@ -54,26 +54,32 @@ public class JdbcIncidentRepository implements IncidentRepository {
                 order by starts_at asc
                 limit ?
                 """,
-        (rs, rowNum) ->
-            new AlertCandidate(
-                rs.getString("id"),
-                rs.getString("tenant_id"),
-                rs.getString("source"),
-                rs.getString("source_event_id"),
-                rs.getString("severity"),
-                rs.getString("title"),
-                rs.getString("description"),
-                rs.getString("asset_id"),
-                rs.getString("entity_type"),
-                rs.getString("entity_name"),
-                rs.getString("fingerprint"),
-                rs.getString("aggregation_key"),
-                rs.getString("labels_json"),
-                rs.getObject("starts_at", OffsetDateTime.class),
-                rs.getObject("ends_at", OffsetDateTime.class),
-                rs.getObject("created_at", OffsetDateTime.class)),
+        (rs, rowNum) -> IncidentRows.alertCandidate(rs),
         tenantId,
         since,
+        limit);
+  }
+
+  @Override
+  public List<AlertCandidate> findUnlinkedAlertCandidates(String tenantId, int limit) {
+    return jdbc.query(
+        """
+                select id, tenant_id, source, source_event_id, severity, title, description,
+                       asset_id, entity_type, entity_name, fingerprint, aggregation_key,
+                       labels::text as labels_json, starts_at, ends_at, created_at
+                from alert_event a
+                where tenant_id = ?
+                  and status in ('open', 'resolved')
+                  and not exists (
+                    select 1 from incident_event ie
+                    where ie.event_type = 'alert'
+                      and ie.event_id = a.id
+                  )
+                order by starts_at asc
+                limit ?
+                """,
+        (rs, rowNum) -> IncidentRows.alertCandidate(rs),
+        tenantId,
         limit);
   }
 
@@ -103,6 +109,13 @@ public class JdbcIncidentRepository implements IncidentRepository {
                       and ie.event_type = 'alert'
                       and a.status = 'open'
                   )
+                  and not exists (
+                    select 1
+                    from alert_event a
+                    where a.tenant_id = i.tenant_id
+                      and a.aggregation_key = i.aggregation_key
+                      and a.status = 'open'
+                  )
                 order by i.started_at asc
                 """,
         (rs, rowNum) -> IncidentRows.summary(rs),
@@ -125,24 +138,7 @@ public class JdbcIncidentRepository implements IncidentRepository {
                   and ie.event_type = 'alert'
                 order by a.starts_at asc
                 """,
-        (rs, rowNum) ->
-            new AlertCandidate(
-                rs.getString("id"),
-                rs.getString("tenant_id"),
-                rs.getString("source"),
-                rs.getString("source_event_id"),
-                rs.getString("severity"),
-                rs.getString("title"),
-                rs.getString("description"),
-                rs.getString("asset_id"),
-                rs.getString("entity_type"),
-                rs.getString("entity_name"),
-                rs.getString("fingerprint"),
-                rs.getString("aggregation_key"),
-                rs.getString("labels_json"),
-                rs.getObject("starts_at", OffsetDateTime.class),
-                rs.getObject("ends_at", OffsetDateTime.class),
-                rs.getObject("created_at", OffsetDateTime.class)),
+        (rs, rowNum) -> IncidentRows.alertCandidate(rs),
         incidentId);
   }
 
@@ -394,6 +390,65 @@ public class JdbcIncidentRepository implements IncidentRepository {
     if (updated == 0) {
       throw new AppException("INCIDENT_NOT_FOUND", "Incident not found");
     }
+  }
+
+  @Override
+  public boolean resolveIfActiveAt(String tenantId, String incidentId, OffsetDateTime resolvedAt) {
+    OffsetDateTime effectiveResolvedAt = resolvedAt == null ? OffsetDateTime.now() : resolvedAt;
+    return jdbc.update(
+            """
+                update incident i
+                set status = 'resolved',
+                    resolved_at = coalesce(i.resolved_at, ?),
+                    updated_at = now()
+                where i.tenant_id = ?
+                  and i.id = ?
+                  and i.status in ('open', 'investigating', 'mitigating')
+                  and not exists (
+                    select 1
+                    from alert_event a
+                    where a.tenant_id = i.tenant_id
+                      and a.aggregation_key = i.aggregation_key
+                      and a.status = 'open'
+                  )
+                """,
+            effectiveResolvedAt,
+            tenantId,
+            incidentId)
+        == 1;
+  }
+
+  @Override
+  public int backfillPrimaryAssetIds(String tenantId) {
+    return jdbc.update(
+        """
+            with candidates as (
+              select distinct on (ie.incident_id)
+                     ie.incident_id,
+                     a.asset_id
+              from incident_event ie
+              join incident i on i.id = ie.incident_id
+              join alert_event a on a.id = ie.event_id
+                                and a.tenant_id = i.tenant_id
+              where i.tenant_id = ?
+                and i.primary_asset_id is null
+                and ie.event_type = 'alert'
+                and a.asset_id is not null
+              order by ie.incident_id,
+                       case when ie.relation_type = 'primary' then 0 else 1 end,
+                       a.starts_at,
+                       a.id
+            )
+            update incident i
+            set primary_asset_id = candidates.asset_id,
+                updated_at = now()
+            from candidates
+            where i.id = candidates.incident_id
+              and i.tenant_id = ?
+              and i.primary_asset_id is null
+            """,
+        tenantId,
+        tenantId);
   }
 
   private void ensureIncidentBelongsToTenant(String tenantId, String incidentId) {
