@@ -21,6 +21,7 @@ __pycache__/
 *.egg-info/
 .venv/
 .pytest_cache/
+/apps/aiops-agent/build/
 
 # Infra secrets & env files (must NEVER be committed)
 infra/.env

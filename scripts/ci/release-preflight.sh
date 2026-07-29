@@ -86,7 +86,12 @@ echo "==> Validate remote deployment contract"
 grep -Fq "bash -lc '" .github/workflows/release-verify.yml
 grep -Fq 'name: Configure Tencent Cloud Docker mirror' .github/workflows/release-verify.yml
 grep -Fq 'deploy/scripts/configure-docker-mirror.sh' .github/workflows/release-verify.yml
-grep -Fq 'envs: IMAGE_PREFIX,IMAGE_TAG,AIOPS_AGENT_INTERNAL_TOKEN' .github/workflows/release-verify.yml
+grep -Fq 'envs: IMAGE_PREFIX,IMAGE_TAG,AIOPS_AGENT_INTERNAL_TOKEN,AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN' \
+  .github/workflows/release-verify.yml
+grep -Fq 'AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN: runtime-smoke-only' \
+  .github/workflows/release-verify.yml
+grep -Fq 'AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN: ${{ secrets.AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN }}' \
+  .github/workflows/release-verify.yml
 grep -Fq 'needs: runtime-smoke' .github/workflows/release-verify.yml
 grep -Fq 'name: Build, smoke and publish' .github/workflows/release-verify.yml
 grep -Fq 'needs.preflight.outputs.release_required' .github/workflows/release-verify.yml
@@ -130,6 +135,7 @@ AIOPS_AGENT_IMAGE=example.invalid/aegisops/aiops-agent:test \
 AIOPS_WORKER_IMAGE=example.invalid/aegisops/aiops-worker:test \
 AIOPS_RUNNER_IMAGE=example.invalid/aegisops/aiops-runner:test \
 AIOPS_AGENT_INTERNAL_TOKEN=preflight-only \
+AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN=preflight-only \
   docker compose -f deploy/docker-compose.app.yml config --quiet
 ZABBIX_DB_PASSWORD=preflight-only \
   docker compose -f deploy/docker-compose.zabbix.yml config --quiet

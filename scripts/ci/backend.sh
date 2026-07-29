@@ -27,6 +27,6 @@ echo "==> Verify platform, work-record and server"
 "${MAVEN}" \
   -B \
   -ntp \
-  -pl modules/aiops-platform,modules/aiops-work-record,apps/aiops-server \
+  -pl modules/aiops-platform,modules/aiops-work-record,apps/aiops-server,apps/aiops-worker \
   -am \
   verify
