@@ -42,6 +42,7 @@ class OutboxWriterTest {
             eq(String.class),
             eq("worker"),
             eq("excel-export"),
-            eq("export:user-1:request-1"));
+            eq("export:user-1:request-1"),
+            eq("tenant-1"));
   }
 }

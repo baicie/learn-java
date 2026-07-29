@@ -29,7 +29,7 @@ public class JooqOutboxRepository implements OutboxRepository {
 
   @Override
   public List<AutomationOutboxRecord> claimNextPending(
-      String targetApp, int batchSize, OffsetDateTime leaseUntil) {
+      String targetApp, int batchSize, OffsetDateTime leaseUntil, String claimToken) {
     return dsl.fetch(
             """
                 with candidates as (
@@ -44,14 +44,15 @@ public class JooqOutboxRepository implements OutboxRepository {
                 )
                 update automation_outbox outbox
                    set status = 'processing', lease_until = cast(? as timestamptz),
-                       updated_at = now()
+                       claim_token = ?, updated_at = now()
                   from candidates
                  where outbox.id = candidates.id
                 returning outbox.*
                 """,
             targetApp,
             batchSize,
-            leaseUntil)
+            leaseUntil,
+            claimToken)
         .into(AutomationOutboxRecord.class);
   }
 
@@ -59,7 +60,13 @@ public class JooqOutboxRepository implements OutboxRepository {
   public int recoverExpiredLeases(String targetApp, OffsetDateTime now) {
     return dsl.update(AUTOMATION_OUTBOX)
         .set(AUTOMATION_OUTBOX.STATUS, "pending")
+        .set(
+            AUTOMATION_OUTBOX.RETRY_COUNT,
+            DSL.when(AUTOMATION_OUTBOX.REPLAY_REQUESTED.isTrue(), 0)
+                .otherwise(AUTOMATION_OUTBOX.RETRY_COUNT))
+        .set(AUTOMATION_OUTBOX.REPLAY_REQUESTED, false)
         .setNull(AUTOMATION_OUTBOX.LEASE_UNTIL)
+        .setNull(AUTOMATION_OUTBOX.CLAIM_TOKEN)
         .set(AUTOMATION_OUTBOX.UPDATED_AT, DSL.currentOffsetDateTime())
         .where(AUTOMATION_OUTBOX.TARGET_APP.eq(targetApp))
         .and(AUTOMATION_OUTBOX.STATUS.eq("processing"))
@@ -68,13 +75,16 @@ public class JooqOutboxRepository implements OutboxRepository {
   }
 
   @Override
-  public boolean extendLease(String id, String targetApp, OffsetDateTime leaseUntil) {
+  public boolean extendLease(
+      String id, String targetApp, String claimToken, OffsetDateTime leaseUntil) {
     return dsl.update(AUTOMATION_OUTBOX)
             .set(AUTOMATION_OUTBOX.LEASE_UNTIL, leaseUntil)
             .set(AUTOMATION_OUTBOX.UPDATED_AT, DSL.currentOffsetDateTime())
             .where(AUTOMATION_OUTBOX.ID.eq(id))
             .and(AUTOMATION_OUTBOX.TARGET_APP.eq(targetApp))
             .and(AUTOMATION_OUTBOX.STATUS.eq("processing"))
+            .and(AUTOMATION_OUTBOX.CLAIM_TOKEN.eq(claimToken))
+            .and(AUTOMATION_OUTBOX.LEASE_UNTIL.gt(DSL.currentOffsetDateTime()))
             .execute()
         == 1;
   }
@@ -86,52 +96,74 @@ public class JooqOutboxRepository implements OutboxRepository {
   }
 
   @Override
-  public boolean markDone(String id, OffsetDateTime processedAt) {
+  public boolean markDone(String id, String claimToken, OffsetDateTime processedAt) {
     int updated =
         dsl.update(AUTOMATION_OUTBOX)
             .set(AUTOMATION_OUTBOX.STATUS, "done")
             .set(AUTOMATION_OUTBOX.PROCESSED_AT, processedAt)
             .setNull(AUTOMATION_OUTBOX.LEASE_UNTIL)
+            .setNull(AUTOMATION_OUTBOX.CLAIM_TOKEN)
             .setNull(AUTOMATION_OUTBOX.ERROR_MESSAGE)
+            .set(AUTOMATION_OUTBOX.REPLAY_REQUESTED, false)
             .set(AUTOMATION_OUTBOX.UPDATED_AT, DSL.currentOffsetDateTime())
             .where(AUTOMATION_OUTBOX.ID.eq(id))
             .and(AUTOMATION_OUTBOX.STATUS.eq("processing"))
+            .and(AUTOMATION_OUTBOX.CLAIM_TOKEN.eq(claimToken))
+            .and(AUTOMATION_OUTBOX.LEASE_UNTIL.gt(DSL.currentOffsetDateTime()))
             .execute();
     return updated == 1;
   }
 
   @Override
-  public boolean recordFailure(String id, String errorMessage) {
+  public boolean recordFailure(String id, String claimToken, String errorMessage) {
     int updated =
         dsl.execute(
             """
                 update automation_outbox
-                   set retry_count = retry_count + 1,
-                       status = case when retry_count + 1 >= max_retries
-                                     then 'failed' else 'pending' end,
-                       available_at = case when retry_count + 1 >= max_retries then available_at
-                                           else now() + make_interval(
-                                             secs => least(300, power(2, retry_count)::integer)) end,
+                   set retry_count = case when replay_requested then 0 else retry_count + 1 end,
+                       status = case
+                         when replay_requested then 'pending'
+                         when retry_count + 1 >= max_retries then 'failed'
+                         else 'pending'
+                       end,
+                       available_at = case
+                         when replay_requested or retry_count + 1 >= max_retries then available_at
+                         else now() + make_interval(
+                           secs => least(300, power(2, retry_count)::integer))
+                       end,
+                       replay_requested = false,
                        lease_until = null,
+                       claim_token = null,
                        error_message = ?,
                        updated_at = now()
-                 where id = ? and status = 'processing'
+                 where id = ?
+                   and status = 'processing'
+                   and claim_token = ?
+                   and lease_until > now()
                 """,
             errorMessage,
-            id);
+            id,
+            claimToken);
     return updated == 1;
   }
 
   @Override
-  public boolean resetProcessing(String id) {
+  public boolean resetProcessing(String id, String claimToken) {
     int updated =
         dsl.execute(
             """
                 update automation_outbox
-                   set status = 'pending', lease_until = null, updated_at = now()
-                 where id = ? and status = 'processing'
+                   set status = 'pending',
+                       retry_count = case when replay_requested then 0 else retry_count end,
+                       replay_requested = false,
+                       lease_until = null, claim_token = null, updated_at = now()
+                 where id = ?
+                   and status = 'processing'
+                   and claim_token = ?
+                   and lease_until > now()
                 """,
-            id);
+            id,
+            claimToken);
     return updated == 1;
   }
 }

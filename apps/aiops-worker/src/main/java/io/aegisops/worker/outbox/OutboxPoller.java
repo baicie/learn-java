@@ -8,6 +8,7 @@ import java.time.ZoneOffset;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -62,11 +63,13 @@ public class OutboxPoller {
     }
     OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
     outboxRepository.recoverExpiredLeases(outboxProperties.targetApp(), now);
+    String claimToken = UUID.randomUUID().toString();
     List<AutomationOutboxRecord> claimed =
         outboxRepository.claimNextPending(
             outboxProperties.targetApp(),
             outboxProperties.batchSize(),
-            now.plusNanos(outboxProperties.leaseDurationMs() * 1_000_000L));
+            now.plusNanos(outboxProperties.leaseDurationMs() * 1_000_000L),
+            claimToken);
     if (claimed.isEmpty()) {
       return 0;
     }
@@ -75,6 +78,10 @@ public class OutboxPoller {
     LeaseHeartbeat heartbeat = startLeaseHeartbeat(claimed);
     try {
       for (AutomationOutboxRecord row : claimed) {
+        if (!renewClaimBeforeHandle(row)) {
+          LOGGER.warn("Skipping outbox row {} after claim ownership was lost", row.getId());
+          continue;
+        }
         OutboxJob job = jobsByName.get(row.getJobName());
         JobResult result;
         try {
@@ -89,16 +96,30 @@ public class OutboxPoller {
         }
 
         if (result.isSuccess()) {
-          outboxRepository.markDone(row.getId(), OffsetDateTime.now());
-          success++;
+          if (outboxRepository.markDone(row.getId(), row.getClaimToken(), OffsetDateTime.now())) {
+            success++;
+          }
         } else {
-          outboxRepository.recordFailure(row.getId(), result.reason());
+          outboxRepository.recordFailure(row.getId(), row.getClaimToken(), result.reason());
         }
       }
     } finally {
       heartbeat.close();
     }
     return success;
+  }
+
+  private boolean renewClaimBeforeHandle(AutomationOutboxRecord row) {
+    OffsetDateTime leaseUntil =
+        OffsetDateTime.now(ZoneOffset.UTC)
+            .plusNanos(outboxProperties.leaseDurationMs() * 1_000_000L);
+    try {
+      return outboxRepository.extendLease(
+          row.getId(), outboxProperties.targetApp(), row.getClaimToken(), leaseUntil);
+    } catch (RuntimeException ex) {
+      LOGGER.warn("Failed to confirm outbox claim for row {}", row.getId(), ex);
+      return false;
+    }
   }
 
   private LeaseHeartbeat startLeaseHeartbeat(List<AutomationOutboxRecord> rows) {
@@ -122,8 +143,16 @@ public class OutboxPoller {
                         .plusNanos(outboxProperties.leaseDurationMs() * 1_000_000L);
                 for (AutomationOutboxRecord row : rows) {
                   try {
-                    outboxRepository.extendLease(
-                        row.getId(), outboxProperties.targetApp(), leaseUntil);
+                    boolean extended =
+                        outboxRepository.extendLease(
+                            row.getId(),
+                            outboxProperties.targetApp(),
+                            row.getClaimToken(),
+                            leaseUntil);
+                    OutboxJob job = jobsByName.get(row.getJobName());
+                    if (extended && job != null && !job.renewLease(row, leaseUntil)) {
+                      LOGGER.warn("Failed to extend job lease for outbox row {}", row.getId());
+                    }
                   } catch (RuntimeException ex) {
                     LOGGER.warn("Failed to extend outbox lease for row {}", row.getId(), ex);
                   }

@@ -8,6 +8,7 @@ import io.aegisops.worker.job.JobResult;
 import io.aegisops.worker.job.OutboxJob;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 
 class OutboxPollerTest {
@@ -151,6 +152,52 @@ class OutboxPollerTest {
 
     assertEquals(1, poller.tick());
     assertTrue(repository.extendLeaseCalls > 0);
+  }
+
+  @Test
+  void staleOwnerCannotCountAJobAsCompleted() {
+    NoopOutboxRepository repository = new NoopOutboxRepository();
+    repository.pending.add(row("row-1", "zabbix-sync"));
+    OutboxPoller poller =
+        new OutboxPoller(
+            repository,
+            new OutboxProperties(true, 1000L, 10, "worker"),
+            List.of(new CountingJob("zabbix-sync")));
+    repository.ownsClaim = false;
+
+    assertEquals(0, poller.tick());
+    assertEquals("processing", repository.statuses.get("row-1"));
+    assertTrue(repository.markDoneCalls.isEmpty());
+  }
+
+  @Test
+  void stopsStartingBatchRowsAfterClaimOwnershipIsLost() {
+    NoopOutboxRepository repository = new NoopOutboxRepository();
+    repository.pending.add(row("row-1", "claim-loss"));
+    repository.pending.add(row("row-2", "claim-loss"));
+    AtomicInteger calls = new AtomicInteger();
+    OutboxPoller poller =
+        new OutboxPoller(
+            repository,
+            new OutboxProperties(true, 1000L, 10, "worker"),
+            List.of(
+                new OutboxJob() {
+                  @Override
+                  public String jobName() {
+                    return "claim-loss";
+                  }
+
+                  @Override
+                  public JobResult handle(AutomationOutboxRecord row) {
+                    if (calls.incrementAndGet() == 1) {
+                      repository.ownsClaim = false;
+                    }
+                    return JobResult.success();
+                  }
+                }));
+
+    assertEquals(0, poller.tick());
+    assertEquals(1, calls.get());
   }
 
   @Test
