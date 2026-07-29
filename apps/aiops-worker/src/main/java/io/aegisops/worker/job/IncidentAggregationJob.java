@@ -1,6 +1,5 @@
 package io.aegisops.worker.job;
 
-import io.aegisops.incident.IncidentAggregateRequest;
 import io.aegisops.incident.IncidentService;
 import io.aegisops.persistence.jooq.public_.tables.records.AutomationOutboxRecord;
 import org.slf4j.Logger;
@@ -33,8 +32,7 @@ public class IncidentAggregationJob implements OutboxJob {
     log.info("Running incident aggregation for tenant={}", tenantId);
 
     try {
-      var result =
-          incidentService.aggregateOpenAlerts(tenantId, new IncidentAggregateRequest(30, 1000));
+      var result = incidentService.aggregateUnlinkedAlerts(tenantId, 1000);
       log.info(
           "Incident aggregation completed: scanned={}, groups={}, created={}, updated={}, linked={}",
           result.alertsScanned(),

@@ -1,5 +1,7 @@
 package io.aegisops.worker.runtime;
 
+import io.aegisops.worker.job.ZabbixSyncScheduleJob;
+import io.aegisops.worker.job.ZabbixSyncScheduleProperties;
 import io.aegisops.worker.outbox.OutboxPoller;
 import io.aegisops.worker.outbox.OutboxProperties;
 import java.time.Duration;
@@ -31,7 +33,7 @@ public class WorkerRuntimeTopology {
   @Bean
   public TaskScheduler workerOutboxScheduler() {
     ThreadPoolTaskScheduler scheduler = new ThreadPoolTaskScheduler();
-    scheduler.setPoolSize(1);
+    scheduler.setPoolSize(2);
     scheduler.setThreadNamePrefix("worker-outbox-");
     scheduler.setDaemon(true);
     scheduler.initialize();
@@ -39,35 +41,68 @@ public class WorkerRuntimeTopology {
   }
 
   @Bean
-  public ApplicationRunner workerOutboxBootstrap(
-      OutboxPoller outboxPoller, OutboxProperties outboxProperties, TaskScheduler scheduler) {
+  public ApplicationRunner workerRuntimeBootstrap(
+      OutboxPoller outboxPoller,
+      OutboxProperties outboxProperties,
+      ZabbixSyncScheduleJob zabbixSyncScheduleJob,
+      ZabbixSyncScheduleProperties zabbixSyncProperties,
+      TaskScheduler scheduler) {
     return args -> {
-      if (!outboxProperties.enabled()) {
-        LOGGER.info("Outbox poller disabled by aiops.outbox.enabled=false; skipping bootstrap");
-        return;
-      }
-      LOGGER.info(
-          "Worker outbox poller scheduled: targetApp={} delayMs={} batch={}",
-          outboxProperties.targetApp(),
-          outboxProperties.pollDelayMs(),
-          outboxProperties.batchSize());
-      scheduler.scheduleAtFixedRate(
-          () -> {
-            try {
-              int done = outboxPoller.tick();
-              if (done > 0) {
-                LOGGER.debug("Outbox tick completed {} rows", done);
+      if (outboxProperties.enabled()) {
+        LOGGER.info(
+            "Worker outbox poller scheduled: targetApp={} delayMs={} batch={}",
+            outboxProperties.targetApp(),
+            outboxProperties.pollDelayMs(),
+            outboxProperties.batchSize());
+        scheduler.scheduleAtFixedRate(
+            () -> {
+              try {
+                int done = outboxPoller.tick();
+                if (done > 0) {
+                  LOGGER.debug("Outbox tick completed {} rows", done);
+                }
+              } catch (RuntimeException ex) {
+                LOGGER.warn("Outbox tick failed", ex);
               }
-            } catch (RuntimeException ex) {
-              LOGGER.warn("Outbox tick failed", ex);
-            }
-          },
-          Duration.ofMillis(outboxProperties.pollDelayMs()));
-      // fire one tick right away so the very first batch lands on startup
-      try {
-        outboxPoller.tick();
-      } catch (RuntimeException ex) {
-        LOGGER.warn("Initial outbox tick failed", ex);
+            },
+            Duration.ofMillis(outboxProperties.pollDelayMs()));
+      } else {
+        LOGGER.info("Outbox poller disabled by aiops.outbox.enabled=false; skipping bootstrap");
+      }
+
+      if (zabbixSyncProperties.enabled()) {
+        LOGGER.info(
+            "Zabbix sync dispatcher scheduled: delayMs={} cadenceMs={} batch={}",
+            zabbixSyncProperties.pollDelayMs(),
+            zabbixSyncProperties.cadenceMs(),
+            zabbixSyncProperties.batchSize());
+        scheduler.scheduleWithFixedDelay(
+            () -> {
+              try {
+                int queued = zabbixSyncScheduleJob.tick();
+                if (queued > 0) {
+                  LOGGER.debug("Zabbix sync dispatcher queued {} rows", queued);
+                }
+              } catch (RuntimeException ex) {
+                LOGGER.warn("Zabbix sync dispatcher tick failed", ex);
+              }
+            },
+            Duration.ofMillis(zabbixSyncProperties.pollDelayMs()));
+        try {
+          zabbixSyncScheduleJob.tick();
+        } catch (RuntimeException ex) {
+          LOGGER.warn("Initial Zabbix sync dispatcher tick failed", ex);
+        }
+      } else {
+        LOGGER.info("Zabbix sync dispatcher disabled; skipping bootstrap");
+      }
+
+      if (outboxProperties.enabled()) {
+        try {
+          outboxPoller.tick();
+        } catch (RuntimeException ex) {
+          LOGGER.warn("Initial outbox tick failed", ex);
+        }
       }
     };
   }
