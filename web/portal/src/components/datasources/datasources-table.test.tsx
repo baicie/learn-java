@@ -75,6 +75,48 @@ describe('DatasourcesTable', () => {
     expect(screen.getByRole('button', { name: 'Webhook' }).query()).toBeNull()
   })
 
+  it('disables webhook configuration for an inactive Zabbix datasource', async () => {
+    grantDatasourceWritePermission()
+    const onWebhook = vi.fn()
+    const screen = await render(
+      <QueryClientProvider client={new QueryClient()}>
+        <DatasourcesTable
+          items={[{ ...datasource, status: 'inactive' }]}
+          onTest={vi.fn()}
+          onSync={vi.fn()}
+          onEdit={vi.fn()}
+          onWebhook={onWebhook}
+          pending={false}
+        />
+      </QueryClientProvider>
+    )
+
+    const webhookButton = screen.getByRole('button', { name: 'Webhook' })
+    await expect.element(webhookButton).toBeDisabled()
+    expect(onWebhook).not.toHaveBeenCalled()
+  })
+
+  it('disables manual sync until the datasource connection is active', async () => {
+    grantDatasourceWritePermission()
+    const onSync = vi.fn()
+    const screen = await render(
+      <QueryClientProvider client={new QueryClient()}>
+        <DatasourcesTable
+          items={[{ ...datasource, status: 'inactive' }]}
+          onTest={vi.fn()}
+          onSync={onSync}
+          onEdit={vi.fn()}
+          onWebhook={vi.fn()}
+          pending={false}
+        />
+      </QueryClientProvider>
+    )
+
+    const syncButton = screen.getByRole('button', { name: '同步' })
+    await expect.element(syncButton).toBeDisabled()
+    expect(onSync).not.toHaveBeenCalled()
+  })
+
   it('opens editing for the selected datasource', async () => {
     grantDatasourceWritePermission()
     const onEdit = vi.fn()

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { apiClient } from '@/lib/api-client'
 import {
+  getZabbixWebhookToken,
   listDatasources,
   syncDatasource,
   testDatasource,
@@ -67,6 +68,22 @@ describe('datasource api', () => {
       message: 'zabbix connection succeeded',
       version: '6.0.47',
     })
+  })
+
+  it('gets the datasource-scoped Zabbix webhook token', async () => {
+    vi.mocked(apiClient.get).mockResolvedValue({
+      data: {
+        success: true,
+        data: { token: 'zwh_datasource-token' },
+      },
+    })
+
+    await expect(getZabbixWebhookToken('ds-1')).resolves.toEqual({
+      token: 'zwh_datasource-token',
+    })
+    expect(apiClient.get).toHaveBeenCalledWith(
+      '/api/datasources/ds-1/zabbix-webhook-token'
+    )
   })
 
   it('updates a datasource without requiring a replacement secret', async () => {

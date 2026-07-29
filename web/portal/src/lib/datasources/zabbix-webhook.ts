@@ -1,5 +1,5 @@
 const WEBHOOK_PATH = '/api/integrations/zabbix/events'
-const TOKEN_PLACEHOLDER = '<SET_AEGISOPS_WEBHOOK_TOKEN>'
+const TEMPLATE_FILE_NAME = 'aegisops-zabbix-webhook-7.0.yaml'
 
 export function buildZabbixWebhookUrl(
   datasourceId: string,
@@ -19,7 +19,7 @@ export function isLoopbackWebhookUrl(value: string) {
   )
 }
 
-export function buildZabbixMediaTypeYaml(webhookUrl: string) {
+export function buildZabbixMediaTypeYaml(webhookUrl: string, token: string) {
   return `zabbix_export:
   version: '7.0'
   media_types:
@@ -29,7 +29,7 @@ export function buildZabbixMediaTypeYaml(webhookUrl: string) {
         - name: url
           value: ${yamlString(webhookUrl)}
         - name: token
-          value: ${yamlString(TOKEN_PLACEHOLDER)}
+          value: ${yamlString(token)}
         - name: event_id
           value: '{EVENT.ID}'
         - name: problem_id
@@ -89,6 +89,7 @@ export function buildZabbixMediaTypeYaml(webhookUrl: string) {
             service: params.service,
             endpoint: params.endpoint,
             clock: Number(params.clock),
+            endsAt: params.status === 'RESOLVED' ? new Date().toISOString() : null,
             tags: {
                 app: params.app,
                 env: params.env,
@@ -115,6 +116,24 @@ export function buildZabbixMediaTypeYaml(webhookUrl: string) {
           subject: 'Resolved: {EVENT.NAME}'
           message: 'Resolved: {EVENT.NAME}'
 `
+}
+
+export function downloadZabbixMediaTypeTemplate(
+  webhookUrl: string,
+  token: string
+) {
+  const blob = new Blob([buildZabbixMediaTypeYaml(webhookUrl, token)], {
+    type: 'application/yaml;charset=utf-8',
+  })
+  const url = URL.createObjectURL(blob)
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = TEMPLATE_FILE_NAME
+  anchor.style.display = 'none'
+  document.body.appendChild(anchor)
+  anchor.click()
+  anchor.remove()
+  window.setTimeout(() => URL.revokeObjectURL(url), 0)
 }
 
 function yamlString(value: string) {
