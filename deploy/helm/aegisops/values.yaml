@@ -11,6 +11,7 @@ fullnameOverride: ""
 serviceAccount:
   create: true
   name: ""
+  names: {}
   annotations: {}
 
 podSecurityContext:
@@ -34,13 +35,35 @@ config:
   logLevel: INFO
 
 security:
-  internalAgentToken: ""
   jwtSecret: ""
   zabbixWebhookSigningSecret: ""
+  diagnosisGrantSecret: ""
   internalAgentTokenRequired: true
   tenantRequired: true
   publicApiRequestsPerMinute: 600
   internalAgentRequestsPerMinute: 1200
+  serviceAuth:
+    mode: oauth2
+    staticJavaToAgentToken: ""
+    staticAgentToJavaToken: ""
+    issuerUri: ""
+    jwkSetUri: ""
+    tokenUri: ""
+    agentAudience: aiops-agent-api
+    internalAudience: aegisops-internal-api
+    clients:
+      server:
+        clientId: aiops-server
+        clientSecret: ""
+        scope: "agent:diagnose agent:resume agent:work-record"
+      worker:
+        clientId: aiops-worker
+        clientSecret: ""
+        scope: "agent:diagnose"
+      agent:
+        clientId: aiops-agent
+        clientSecret: ""
+        scope: "evidence:read cases:read checkpoint:read checkpoint:write memory:read memory:write plugin:authorize"
 
 dify:
   workRecordProvider: deterministic
@@ -159,6 +182,10 @@ networkPolicy:
   enabled: false
   ingressNamespaceSelector: {}
   egressEnabled: true
+
+serviceMesh:
+  istio:
+    enabled: false
 
 offline:
   enabled: false

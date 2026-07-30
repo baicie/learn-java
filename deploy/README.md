@@ -66,7 +66,7 @@ deploy/
                         ├── aiops-worker   (8081, 异步消费 + RCA/Incident 聚合)
                         └── aiops-runner   (8092, 隔离执行 ansible / webhook)
 
-  aiops-agent  (9008, Python LangGraph) ── 通过 internal token 调 aiops-server internal API
+  aiops-agent  (9008, Python LangGraph) ── 通过服务 JWT + Diagnosis Grant 调用 Java internal API
 ```
 
 说明：
@@ -132,6 +132,10 @@ docker inspect -f '{{.Name}} {{.HostConfig.Memory}} {{.HostConfig.MemoryReservat
 ## 密钥引用方式
 
 - 所有密钥经 Helm `secretKeyRef` 引用外部 Secret 对象
+- server、worker、agent 使用独立 OAuth2 client secret；Diagnosis Grant 密钥只进入
+  server/worker
+- 生产 Helm 默认使用 OAuth2 Client Credentials；Compose 静态兼容模式必须使用两个方向
+  不同的 token
 - 推荐外部密钥源：阿里云 KMS / HashiCorp Vault / AWS Secrets Manager
 - CI 端：在 GitHub Secrets 配置对应键，由部署脚本注入到 Secret 对象
 - 严禁任何明文密钥出现在 `values.yaml`、`templates/*.yaml`、`Dockerfile` 中

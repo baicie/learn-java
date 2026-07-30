@@ -55,8 +55,16 @@ aiops:
     secret: ${AIOPS_JWT_SECRET:dev-secret-change-me-change-me-change-me}
     ttl-seconds: ${AIOPS_JWT_TTL_SECONDS:86400}
   security:
+    internal-agent-auth-mode: ${AIOPS_INTERNAL_AGENT_AUTH_MODE:static}
     internal-agent-token: ${AIOPS_INTERNAL_AGENT_TOKEN:dev-internal-agent-token}
     internal-agent-token-required: true
+    internal-agent-jwt-issuer-uri: ${AIOPS_INTERNAL_AGENT_JWT_ISSUER_URI:}
+    internal-agent-jwt-jwk-set-uri: ${AIOPS_INTERNAL_AGENT_JWT_JWK_SET_URI:}
+    internal-agent-jwt-audience: ${AIOPS_INTERNAL_AGENT_JWT_AUDIENCE:aegisops-internal-api}
+    diagnosis-grant-secret: ${AIOPS_DIAGNOSIS_GRANT_SECRET:dev-diagnosis-grant-secret-change-me}
+    diagnosis-grant-audience: ${AIOPS_DIAGNOSIS_GRANT_AUDIENCE:aegisops-internal-api}
+    diagnosis-grant-issuers: ${AIOPS_DIAGNOSIS_GRANT_ISSUERS:aiops-server,aiops-worker,aiops-java}
+    diagnosis-grant-required: ${AIOPS_DIAGNOSIS_GRANT_REQUIRED:true}
     tenant-required: true
   quota:
     public-api-requests-per-minute: ${AIOPS_PUBLIC_API_RPM:600}
@@ -69,6 +77,17 @@ aiops:
     internal-token: ${AIOPS_AGENT_INTERNAL_TOKEN:dev-internal-agent-token}
     connect-timeout-millis: ${AIOPS_AGENT_CONNECT_TIMEOUT:3000}
     read-timeout-millis: ${AIOPS_AGENT_READ_TIMEOUT:30000}
+    auth:
+      mode: ${AIOPS_AGENT_AUTH_MODE:static}
+      token-uri: ${AIOPS_AGENT_OAUTH2_TOKEN_URI:}
+      client-id: ${AIOPS_AGENT_OAUTH2_CLIENT_ID:}
+      client-secret: ${AIOPS_AGENT_OAUTH2_CLIENT_SECRET:}
+      scope: ${AIOPS_AGENT_OAUTH2_SCOPE:agent:diagnose agent:resume agent:work-record}
+    grant:
+      issuer: ${AIOPS_AGENT_GRANT_ISSUER:aiops-server}
+      audience: ${AIOPS_DIAGNOSIS_GRANT_AUDIENCE:aegisops-internal-api}
+      secret: ${AIOPS_DIAGNOSIS_GRANT_SECRET:dev-diagnosis-grant-secret-change-me}
+      ttl-seconds: ${AIOPS_DIAGNOSIS_GRANT_TTL_SECONDS:300}
     evidence:
       internal-token: ${AIOPS_AGENT_EVIDENCE_INTERNAL_TOKEN:dev-internal-token}
       default-lookback-minutes: ${AIOPS_AGENT_EVIDENCE_DEFAULT_LOOKBACK_MINUTES:60}

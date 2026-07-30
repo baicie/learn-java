@@ -126,12 +126,38 @@
 诊断工作流运行时, 详见 `docs/adr/0003-aiops-agent-boundary.md`。
 
 ```txt
-- HTTP 接口: /health, /diagnose, /contract
-- 通过 internal token 调用 aiops-server 的 /internal/agent/evidence
+- HTTP 接口: /health, /v1/diagnose, /v1/diagnose/resume, /v1/contracts/diagnosis
+- 通过 OAuth2 服务凭据和 Diagnosis Grant 调用 aiops-server 的 /internal/agent/*
 - 不直连 PostgreSQL / MinIO / ClickHouse
 - 不触发 Runner 执行
 - contract version 由 Java 端 AgentContractValidator 校验
 ```
+
+### 2.5 Java 与 Agent 服务间鉴权
+
+生产环境使用企业 IdP / Keycloak 的 OAuth2 Client Credentials，不新建业务
+`auth-service`。server、worker、agent 使用独立 client、短期 JWT、目标 audience 和端点
+scope。
+
+```txt
+server / worker -> agent:
+  audience: aiops-agent-api
+  scopes: agent:diagnose / agent:resume / agent:work-record
+
+agent -> server:
+  audience: aegisops-internal-api
+  scopes: evidence:read / cases:read / plugin:authorize
+          memory:read / memory:write / checkpoint:read / checkpoint:write
+```
+
+每次 Incident 诊断由 Java 签发短期 Diagnosis Grant，绑定 `tenantId + incidentId +
+traceId`。Agent 只传播 Grant，不持有签名密钥；Java 从有效 Grant 恢复 `TenantContext`，不得
+信任 `X-Tenant-Id` 作为内部 API 的授权来源。
+
+Kubernetes 中四个组件使用独立 ServiceAccount 和 Secret，并以 NetworkPolicy 限制调用
+方向；启用 Istio 时使用 STRICT mTLS 和 AuthorizationPolicy。静态 token 只允许显式开发
+模式，且 Java→Agent 与 Agent→Java 必须使用不同 token。完整决策见
+`docs/adr/0009-service-to-service-authentication.md`。
 
 ## 3. 模块四分类
 

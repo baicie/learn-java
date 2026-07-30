@@ -86,7 +86,7 @@ echo "==> Validate remote deployment contract"
 grep -Fq "bash -lc '" .github/workflows/release-verify.yml
 grep -Fq 'name: Configure Tencent Cloud Docker mirror' .github/workflows/release-verify.yml
 grep -Fq 'deploy/scripts/configure-docker-mirror.sh' .github/workflows/release-verify.yml
-grep -Fq 'envs: IMAGE_PREFIX,IMAGE_TAG,AIOPS_AGENT_INTERNAL_TOKEN,AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN' \
+grep -Fq 'envs: IMAGE_PREFIX,IMAGE_TAG,AIOPS_JAVA_TO_AGENT_TOKEN,AIOPS_AGENT_TO_JAVA_TOKEN,AIOPS_DIAGNOSIS_GRANT_SECRET,AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN' \
   .github/workflows/release-verify.yml
 grep -Fq 'AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN: runtime-smoke-only' \
   .github/workflows/release-verify.yml
@@ -134,7 +134,9 @@ AIOPS_SERVER_IMAGE=example.invalid/aegisops:test \
 AIOPS_AGENT_IMAGE=example.invalid/aegisops/aiops-agent:test \
 AIOPS_WORKER_IMAGE=example.invalid/aegisops/aiops-worker:test \
 AIOPS_RUNNER_IMAGE=example.invalid/aegisops/aiops-runner:test \
-AIOPS_AGENT_INTERNAL_TOKEN=preflight-only \
+AIOPS_JAVA_TO_AGENT_TOKEN=preflight-java-to-agent \
+AIOPS_AGENT_TO_JAVA_TOKEN=preflight-agent-to-java \
+AIOPS_DIAGNOSIS_GRANT_SECRET=preflight-diagnosis-grant-secret-change-me \
 AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN=preflight-only \
   docker compose -f deploy/docker-compose.app.yml config --quiet
 ZABBIX_DB_PASSWORD=preflight-only \

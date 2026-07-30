@@ -41,7 +41,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureTestRestTemplate
 @ActiveProfiles("acceptance")
-@Testcontainers
+@Testcontainers(disabledWithoutDocker = true)
 class WorkRecordEnterpriseAcceptanceIT {
 
   @Container

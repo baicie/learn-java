@@ -35,7 +35,7 @@ if ! PATH="$FAKE_BIN:$PATH" \
 fi
 
 EXPECTED_CALLS=$(cat <<'EOF'
--m pip install -e .[test]
+-m pip install --timeout 300 --retries 10 -e .[test]
 -m ruff check src tests
 -m pytest -q
 EOF

@@ -59,9 +59,13 @@ def test_generate_secrets_includes_random_zabbix_webhook_signing_secret(tmp_path
     assert signing_secret
     assert not signing_secret.startswith("CHANGE_ME_")
     assert signing_secret not in {
-        values["security"]["internalAgentToken"],
+        values["security"]["diagnosisGrantSecret"],
         values["security"]["jwtSecret"],
     }
+    service_clients = values["security"]["serviceAuth"]["clients"]
+    assert service_clients["server"]["clientSecret"]
+    assert service_clients["worker"]["clientSecret"]
+    assert service_clients["agent"]["clientSecret"]
 
 
 def test_offline_image_list_contains_required_images():
@@ -130,7 +134,12 @@ def test_worker_uses_agent_for_ai_generation():
     worker = compose["services"]["aiops-worker"]
 
     assert worker["environment"]["AIOPS_AGENT_BASE_URL"] == "http://aiops-agent:9008"
-    assert worker["environment"]["AIOPS_AGENT_INTERNAL_TOKEN"] == "${AIOPS_AGENT_INTERNAL_TOKEN:?AIOPS_AGENT_INTERNAL_TOKEN is required}"
+    assert worker["environment"]["AIOPS_AGENT_INTERNAL_TOKEN"] == (
+        "${AIOPS_JAVA_TO_AGENT_TOKEN:?AIOPS_JAVA_TO_AGENT_TOKEN is required}"
+    )
+    assert worker["environment"]["AIOPS_DIAGNOSIS_GRANT_SECRET"] == (
+        "${AIOPS_DIAGNOSIS_GRANT_SECRET:?AIOPS_DIAGNOSIS_GRANT_SECRET is required}"
+    )
     assert worker["depends_on"]["aiops-agent"]["condition"] == "service_healthy"
 
 
@@ -162,7 +171,8 @@ def test_release_pipeline_propagates_required_zabbix_webhook_signing_secret():
         "${{ secrets.AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN }}"
     ) in workflow
     assert (
-        "envs: IMAGE_PREFIX,IMAGE_TAG,AIOPS_AGENT_INTERNAL_TOKEN,"
+        "envs: IMAGE_PREFIX,IMAGE_TAG,AIOPS_JAVA_TO_AGENT_TOKEN,"
+        "AIOPS_AGENT_TO_JAVA_TOKEN,AIOPS_DIAGNOSIS_GRANT_SECRET,"
         "AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN"
     ) in workflow
     assert "AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN=preflight-only" in preflight

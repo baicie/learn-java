@@ -165,7 +165,11 @@ services:
       dockerfile: Dockerfile
     container_name: aegisops-agent
     environment:
-      AIOPS_AGENT_INTERNAL_AGENT_TOKEN: dev-internal-agent-token
+      AIOPS_AGENT_INBOUND_AUTH_MODE: static
+      AIOPS_AGENT_INTERNAL_AGENT_TOKEN: ${AIOPS_JAVA_TO_AGENT_TOKEN:-dev-java-to-agent-token}
+      AIOPS_AGENT_OUTBOUND_AUTH_MODE: static
+      AIOPS_AGENT_OUTBOUND_STATIC_TOKEN: ${AIOPS_AGENT_TO_JAVA_TOKEN:-dev-agent-to-java-token}
+      AIOPS_AGENT_DIAGNOSIS_GRANT_REQUIRED: "true"
       AIOPS_AGENT_PROVIDER: aiops-agent
       AIOPS_AGENT_NAME: aegisops_diagnosis_graph
       AIOPS_AGENT_AGENT_NAME: aegisops_diagnosis_graph
@@ -182,7 +186,6 @@ services:
       # Phase4.3 evidence tool. Disabled by default to keep local stack self-contained.
       AIOPS_AGENT_EVIDENCE_ENABLED: "false"
       AIOPS_AGENT_EVIDENCE_BASE_URL: http://aiops-server:8080/internal/agent/evidence
-      AIOPS_AGENT_EVIDENCE_INTERNAL_TOKEN: dev-internal-token
       AIOPS_AGENT_EVIDENCE_TIMEOUT_SECONDS: 5
       # Phase4.4 observability. When enabled, response.raw carries agentRun + agentEval.
       AIOPS_AGENT_TRACE_ENABLED: "true"

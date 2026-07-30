@@ -62,7 +62,7 @@ class CheckpointClient:
                 response = await client.post(
                     url,
                     json=body,
-                    headers=internal_tool_headers(tenant_id),
+                    headers=await internal_tool_headers(tenant_id),
                 )
                 response.raise_for_status()
                 payload = response.json()
@@ -99,7 +99,7 @@ class CheckpointClient:
 
         try:
             async with httpx.AsyncClient(timeout=self.timeout, trust_env=False) as client:
-                response = await client.get(url, headers=internal_tool_headers(tenant_id))
+                response = await client.get(url, headers=await internal_tool_headers(tenant_id))
                 response.raise_for_status()
                 payload = response.json()
 

@@ -11,9 +11,17 @@ gen_secret() {
 
 cat > "$OUT" <<EOF
 security:
-  internalAgentToken: "$(gen_secret)"
   jwtSecret: "$(gen_secret)"
   zabbixWebhookSigningSecret: "$(gen_secret)"
+  diagnosisGrantSecret: "$(gen_secret)"
+  serviceAuth:
+    clients:
+      server:
+        clientSecret: "$(gen_secret)"
+      worker:
+        clientSecret: "$(gen_secret)"
+      agent:
+        clientSecret: "$(gen_secret)"
 
 external:
   postgres:

@@ -1,4 +1,8 @@
 {{- $root := . -}}
+{{- $auth := .Values.security.serviceAuth -}}
+{{- if and (ne $auth.mode "oauth2") (ne $auth.mode "static") -}}
+{{- fail "security.serviceAuth.mode must be oauth2 or static" -}}
+{{- end -}}
 {{- range $appName, $app := .Values.apps }}
 {{- if $app.enabled }}
 ---
@@ -27,7 +31,7 @@ spec:
         checksum/server-secret: {{ include (print $.Template.BasePath "/server-secret.yaml") $root | sha256sum }}
         {{- end }}
     spec:
-      serviceAccountName: {{ include "aegisops.serviceAccountName" $root }}
+      serviceAccountName: {{ include "aegisops.componentServiceAccountName" (list $root $appName) }}
       imagePullSecrets:
         {{- toYaml $root.Values.global.imagePullSecrets | nindent 8 }}
       securityContext:
@@ -44,8 +48,14 @@ spec:
           envFrom:
             - configMapRef:
                 name: {{ include "aegisops.fullname" $root }}-config
+            {{- if ne $appName "agent" }}
             - secretRef:
                 name: {{ include "aegisops.fullname" $root }}-secret
+            {{- end }}
+            {{- if or (eq $appName "server") (eq $appName "worker") (eq $appName "agent") }}
+            - secretRef:
+                name: {{ include "aegisops.fullname" $root }}-{{ $appName }}-auth
+            {{- end }}
             {{- if eq $appName "agent" }}
             - configMapRef:
                 name: {{ include "aegisops.fullname" $root }}-agent-dify
@@ -54,11 +64,77 @@ spec:
             - name: AIOPS_APP_NAME
               value: {{ $appName | quote }}
             {{- if eq $appName "server" }}
+            - name: AIOPS_INTERNAL_AGENT_AUTH_MODE
+              value: {{ $auth.mode | quote }}
+            {{- if eq $auth.mode "oauth2" }}
+            - name: AIOPS_INTERNAL_AGENT_JWT_ISSUER_URI
+              value: {{ required "security.serviceAuth.issuerUri is required in oauth2 mode" $auth.issuerUri | quote }}
+            - name: AIOPS_INTERNAL_AGENT_JWT_JWK_SET_URI
+              value: {{ required "security.serviceAuth.jwkSetUri is required in oauth2 mode" $auth.jwkSetUri | quote }}
+            - name: AIOPS_INTERNAL_AGENT_JWT_AUDIENCE
+              value: {{ $auth.internalAudience | quote }}
+            {{- end }}
+            - name: AIOPS_AGENT_AUTH_MODE
+              value: {{ $auth.mode | quote }}
+            {{- if eq $auth.mode "oauth2" }}
+            - name: AIOPS_AGENT_OAUTH2_TOKEN_URI
+              value: {{ required "security.serviceAuth.tokenUri is required in oauth2 mode" $auth.tokenUri | quote }}
+            - name: AIOPS_AGENT_OAUTH2_CLIENT_ID
+              value: {{ required "security.serviceAuth.clients.server.clientId is required in oauth2 mode" $auth.clients.server.clientId | quote }}
+            - name: AIOPS_AGENT_OAUTH2_SCOPE
+              value: {{ $auth.clients.server.scope | quote }}
+            {{- end }}
+            - name: AIOPS_DIAGNOSIS_GRANT_AUDIENCE
+              value: {{ $auth.internalAudience | quote }}
+            - name: AIOPS_AGENT_GRANT_ISSUER
+              value: "aiops-server"
+            - name: AIOPS_DIAGNOSIS_GRANT_REQUIRED
+              value: "true"
             - name: AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN
               valueFrom:
                 secretKeyRef:
                   name: {{ include "aegisops.fullname" $root }}-server-secret
                   key: AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN
+            {{- end }}
+            {{- if eq $appName "worker" }}
+            - name: AIOPS_AGENT_AUTH_MODE
+              value: {{ $auth.mode | quote }}
+            {{- if eq $auth.mode "oauth2" }}
+            - name: AIOPS_AGENT_OAUTH2_TOKEN_URI
+              value: {{ required "security.serviceAuth.tokenUri is required in oauth2 mode" $auth.tokenUri | quote }}
+            - name: AIOPS_AGENT_OAUTH2_CLIENT_ID
+              value: {{ required "security.serviceAuth.clients.worker.clientId is required in oauth2 mode" $auth.clients.worker.clientId | quote }}
+            - name: AIOPS_AGENT_OAUTH2_SCOPE
+              value: {{ $auth.clients.worker.scope | quote }}
+            {{- end }}
+            - name: AIOPS_DIAGNOSIS_GRANT_AUDIENCE
+              value: {{ $auth.internalAudience | quote }}
+            - name: AIOPS_AGENT_GRANT_ISSUER
+              value: "aiops-worker"
+            {{- end }}
+            {{- if eq $appName "agent" }}
+            - name: AIOPS_AGENT_INBOUND_AUTH_MODE
+              value: {{ $auth.mode | quote }}
+            {{- if eq $auth.mode "oauth2" }}
+            - name: AIOPS_AGENT_INBOUND_OAUTH2_ISSUER
+              value: {{ required "security.serviceAuth.issuerUri is required in oauth2 mode" $auth.issuerUri | quote }}
+            - name: AIOPS_AGENT_INBOUND_OAUTH2_JWKS_URL
+              value: {{ required "security.serviceAuth.jwkSetUri is required in oauth2 mode" $auth.jwkSetUri | quote }}
+            - name: AIOPS_AGENT_INBOUND_OAUTH2_AUDIENCE
+              value: {{ $auth.agentAudience | quote }}
+            {{- end }}
+            - name: AIOPS_AGENT_OUTBOUND_AUTH_MODE
+              value: {{ $auth.mode | quote }}
+            {{- if eq $auth.mode "oauth2" }}
+            - name: AIOPS_AGENT_OUTBOUND_OAUTH2_TOKEN_URL
+              value: {{ required "security.serviceAuth.tokenUri is required in oauth2 mode" $auth.tokenUri | quote }}
+            - name: AIOPS_AGENT_OUTBOUND_OAUTH2_CLIENT_ID
+              value: {{ required "security.serviceAuth.clients.agent.clientId is required in oauth2 mode" $auth.clients.agent.clientId | quote }}
+            - name: AIOPS_AGENT_OUTBOUND_OAUTH2_SCOPE
+              value: {{ $auth.clients.agent.scope | quote }}
+            {{- end }}
+            - name: AIOPS_AGENT_DIAGNOSIS_GRANT_REQUIRED
+              value: "true"
             {{- end }}
             {{- if and (eq $appName "agent") (eq $root.Values.dify.workRecordProvider "dify") }}
             - name: AIOPS_AGENT_DIFY_WORK_RECORD_API_KEY

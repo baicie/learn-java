@@ -26,11 +26,18 @@ class HttpAiAgentClientTest {
         new AgentClientProperties("http://agent:9008", "test-token", 1000, 1000);
 
     HttpAiAgentClient client =
-        new HttpAiAgentClient(properties, objectMapper, restTemplate, new AgentContractValidator());
+        new HttpAiAgentClient(
+            properties,
+            objectMapper,
+            restTemplate,
+            new AgentContractValidator(),
+            headers -> headers.set(AgentContract.INTERNAL_TOKEN_HEADER, "test-token"),
+            request -> "test-diagnosis-grant");
 
     server
         .expect(requestTo("http://agent:9008/v1/diagnose"))
         .andExpect(header(AgentContract.INTERNAL_TOKEN_HEADER, "test-token"))
+        .andExpect(header("X-AegisOps-Diagnosis-Grant", "test-diagnosis-grant"))
         .andExpect(header(AgentContract.TRACE_ID_HEADER, "trace_1"))
         .andExpect(
             header(AgentContract.CONTRACT_VERSION_HEADER, AgentContract.DIAGNOSIS_CONTRACT_VERSION))

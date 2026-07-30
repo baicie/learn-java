@@ -42,6 +42,17 @@ aiops:
     internal-token: ${AIOPS_AGENT_INTERNAL_TOKEN:dev-internal-agent-token}
     connect-timeout-millis: ${AIOPS_AGENT_CONNECT_TIMEOUT:3000}
     read-timeout-millis: ${AIOPS_AGENT_READ_TIMEOUT:90000}
+    auth:
+      mode: ${AIOPS_AGENT_AUTH_MODE:static}
+      token-uri: ${AIOPS_AGENT_OAUTH2_TOKEN_URI:}
+      client-id: ${AIOPS_AGENT_OAUTH2_CLIENT_ID:}
+      client-secret: ${AIOPS_AGENT_OAUTH2_CLIENT_SECRET:}
+      scope: ${AIOPS_AGENT_OAUTH2_SCOPE:agent:diagnose}
+    grant:
+      issuer: ${AIOPS_AGENT_GRANT_ISSUER:aiops-worker}
+      audience: ${AIOPS_DIAGNOSIS_GRANT_AUDIENCE:aegisops-internal-api}
+      secret: ${AIOPS_DIAGNOSIS_GRANT_SECRET:dev-diagnosis-grant-secret-change-me}
+      ttl-seconds: ${AIOPS_DIAGNOSIS_GRANT_TTL_SECONDS:300}
   object-storage:
     endpoint: ${AIOPS_MINIO_ENDPOINT:http://localhost:9002}
     access-key: ${AIOPS_MINIO_ACCESS_KEY:minioadmin}

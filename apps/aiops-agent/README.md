@@ -30,7 +30,11 @@ pytest
 ## Env
 
 ```bash
-AIOPS_AGENT_INTERNAL_TOKEN=dev-internal-token
+AIOPS_AGENT_INBOUND_AUTH_MODE=static
+AIOPS_AGENT_INTERNAL_AGENT_TOKEN=dev-java-to-agent-token
+AIOPS_AGENT_OUTBOUND_AUTH_MODE=static
+AIOPS_AGENT_OUTBOUND_STATIC_TOKEN=dev-agent-to-java-token
+AIOPS_AGENT_DIAGNOSIS_GRANT_REQUIRED=true
 AIOPS_AGENT_MODEL=langgraph-deterministic
 AIOPS_AGENT_PROVIDER=aiops-agent
 AIOPS_AGENT_NAME=aegisops_diagnosis_graph
@@ -79,8 +83,11 @@ It queries Java internal evidence API:
 ```bash
 AIOPS_AGENT_EVIDENCE_ENABLED=true
 AIOPS_AGENT_EVIDENCE_BASE_URL=http://localhost:8080/internal/agent/evidence
-AIOPS_AGENT_EVIDENCE_INTERNAL_TOKEN=dev-internal-token
 ```
+
+生产环境使用 OAuth2 Client Credentials。静态模式只用于本地开发，入站与出站 token
+不得复用。诊断期间 Agent 会把 Java 签发的 `X-AegisOps-Diagnosis-Grant` 原样传播到
+内部工具调用。
 
 Evidence sections:
 

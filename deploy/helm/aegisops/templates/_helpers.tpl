@@ -33,6 +33,17 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end -}}
 {{- end -}}
 
+{{- define "aegisops.componentServiceAccountName" -}}
+{{- $root := index . 0 -}}
+{{- $component := index . 1 -}}
+{{- $configured := index $root.Values.serviceAccount.names $component -}}
+{{- if $root.Values.serviceAccount.create -}}
+{{- default (printf "%s-%s" (include "aegisops.fullname" $root) $component) $configured -}}
+{{- else -}}
+{{- default "default" $configured -}}
+{{- end -}}
+{{- end -}}
+
 {{- define "aegisops.image" -}}
 {{- $root := index . 0 -}}
 {{- $image := index . 1 -}}

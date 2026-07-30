@@ -56,13 +56,19 @@ require_text "$MANUAL_DOCKER_WORKFLOW" "workflow_dispatch:"
 require_text "$MANUAL_DOCKER_WORKFLOW" 'ref: ${{ inputs.branch }}'
 require_text "$MANUAL_DOCKER_WORKFLOW" "run: bash scripts/deploy/build-images.sh"
 require_text "$MANUAL_DOCKER_WORKFLOW" 'remote_image="${IMAGE_PREFIX}:${IMAGE_TAG}-${component}"'
-require_text "$RELEASE_PREFLIGHT" "AIOPS_AGENT_INTERNAL_TOKEN=preflight-only"
+require_text "$RELEASE_PREFLIGHT" "AIOPS_JAVA_TO_AGENT_TOKEN=preflight-java-to-agent"
+require_text "$RELEASE_PREFLIGHT" "AIOPS_AGENT_TO_JAVA_TOKEN=preflight-agent-to-java"
+require_text "$RELEASE_PREFLIGHT" "AIOPS_DIAGNOSIS_GRANT_SECRET=preflight-diagnosis-grant-secret-change-me"
 require_text "$RELEASE_PREFLIGHT" "AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN=preflight-only"
-require_text "$RELEASE_WORKFLOW" "AIOPS_AGENT_INTERNAL_TOKEN: runtime-smoke-only"
+require_text "$RELEASE_WORKFLOW" "AIOPS_JAVA_TO_AGENT_TOKEN: runtime-smoke-java-to-agent"
+require_text "$RELEASE_WORKFLOW" "AIOPS_AGENT_TO_JAVA_TOKEN: runtime-smoke-agent-to-java"
+require_text "$RELEASE_WORKFLOW" "AIOPS_DIAGNOSIS_GRANT_SECRET: runtime-smoke-diagnosis-grant-secret"
 require_text "$RELEASE_WORKFLOW" "AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN: runtime-smoke-only"
-require_text "$RELEASE_WORKFLOW" 'AIOPS_AGENT_INTERNAL_TOKEN: ${{ secrets.AIOPS_AGENT_INTERNAL_TOKEN }}'
+require_text "$RELEASE_WORKFLOW" 'AIOPS_JAVA_TO_AGENT_TOKEN: ${{ secrets.AIOPS_JAVA_TO_AGENT_TOKEN }}'
+require_text "$RELEASE_WORKFLOW" 'AIOPS_AGENT_TO_JAVA_TOKEN: ${{ secrets.AIOPS_AGENT_TO_JAVA_TOKEN }}'
+require_text "$RELEASE_WORKFLOW" 'AIOPS_DIAGNOSIS_GRANT_SECRET: ${{ secrets.AIOPS_DIAGNOSIS_GRANT_SECRET }}'
 require_text "$RELEASE_WORKFLOW" 'AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN: ${{ secrets.AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN }}'
-require_text "$RELEASE_WORKFLOW" "envs: IMAGE_PREFIX,IMAGE_TAG,AIOPS_AGENT_INTERNAL_TOKEN,AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN"
+require_text "$RELEASE_WORKFLOW" "envs: IMAGE_PREFIX,IMAGE_TAG,AIOPS_JAVA_TO_AGENT_TOKEN,AIOPS_AGENT_TO_JAVA_TOKEN,AIOPS_DIAGNOSIS_GRANT_SECRET,AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN"
 require_text "$RELEASE_WORKFLOW" "needs: runtime-smoke"
 require_text "$AGENT_DOCKERFILE" "pip install --timeout 300 --retries 10 --no-cache-dir ."
 require_text "$BACKEND_SCRIPT" "apps/aiops-worker"

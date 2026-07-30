@@ -2,7 +2,7 @@
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: {{ include "aegisops.fullname" . }}
+  name: {{ include "aegisops.fullname" . }}-default-deny
   labels:
     {{- include "aegisops.labels" . | nindent 4 }}
 spec:
@@ -14,17 +14,62 @@ spec:
     {{- if .Values.networkPolicy.egressEnabled }}
     - Egress
     {{- end }}
-  ingress:
-    - from:
-        - namespaceSelector:
-            {{- toYaml .Values.networkPolicy.ingressNamespaceSelector | nindent 12 }}
-      ports:
-        - protocol: TCP
-          port: 8080
-        - protocol: TCP
-          port: {{ .Values.apps.agent.port }}
   {{- if .Values.networkPolicy.egressEnabled }}
   egress:
     - {}
   {{- end }}
+{{- if .Values.apps.agent.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "aegisops.fullname" . }}-agent-ingress
+  labels:
+    {{- include "aegisops.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "aegisops.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: agent
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/component
+                operator: In
+                values:
+                  - server
+                  - worker
+      ports:
+        - protocol: TCP
+          port: {{ .Values.apps.agent.port }}
+{{- end }}
+{{- if .Values.apps.server.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "aegisops.fullname" . }}-server-ingress
+  labels:
+    {{- include "aegisops.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "aegisops.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: server
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            {{- toYaml .Values.networkPolicy.ingressNamespaceSelector | nindent 12 }}
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: agent
+      ports:
+        - protocol: TCP
+          port: {{ .Values.apps.server.port }}
+{{- end }}
 {{- end }}

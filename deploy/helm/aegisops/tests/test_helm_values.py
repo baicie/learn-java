@@ -8,6 +8,22 @@ import yaml
 
 
 ROOT = Path(__file__).resolve().parents[1]
+HELM_SECURITY_ARGS = [
+    "--set-string",
+    "security.serviceAuth.issuerUri=https://idp.example.com/realms/aegisops",
+    "--set-string",
+    "security.serviceAuth.jwkSetUri=https://idp.example.com/realms/aegisops/certs",
+    "--set-string",
+    "security.serviceAuth.tokenUri=https://idp.example.com/realms/aegisops/token",
+    "--set-string",
+    "security.diagnosisGrantSecret=test-diagnosis-grant-secret",
+    "--set-string",
+    "security.serviceAuth.clients.server.clientSecret=test-server-client-secret",
+    "--set-string",
+    "security.serviceAuth.clients.worker.clientSecret=test-worker-client-secret",
+    "--set-string",
+    "security.serviceAuth.clients.agent.clientSecret=test-agent-client-secret",
+]
 
 
 def load_yaml(name: str) -> dict:
@@ -35,11 +51,45 @@ def test_values_has_required_apps():
 def test_security_defaults_do_not_contain_real_secret():
     values = load_yaml("values.yaml")
 
-    assert values["security"]["internalAgentToken"] == ""
     assert values["security"]["jwtSecret"] == ""
     assert values["security"]["zabbixWebhookSigningSecret"] == ""
+    assert values["security"]["diagnosisGrantSecret"] == ""
+    assert values["security"]["serviceAuth"]["clients"]["server"]["clientSecret"] == ""
+    assert values["security"]["serviceAuth"]["clients"]["worker"]["clientSecret"] == ""
+    assert values["security"]["serviceAuth"]["clients"]["agent"]["clientSecret"] == ""
     assert values["dify"]["workRecordApiKey"] == ""
     assert values["dify"]["userHmacSecret"] == ""
+
+
+def test_oauth2_render_requires_identity_provider_endpoints():
+    result = subprocess.run(
+        [
+            "helm",
+            "template",
+            "test",
+            str(ROOT),
+            "--set-string",
+            "security.jwtSecret=test-jwt-secret",
+            "--set-string",
+            "security.zabbixWebhookSigningSecret=test-webhook-secret",
+            "--set-string",
+            "security.diagnosisGrantSecret=test-diagnosis-grant-secret",
+            "--set-string",
+            "security.serviceAuth.clients.server.clientSecret=test-server-client-secret",
+            "--set-string",
+            "security.serviceAuth.clients.worker.clientSecret=test-worker-client-secret",
+            "--set-string",
+            "security.serviceAuth.clients.agent.clientSecret=test-agent-client-secret",
+            "--set-string",
+            "external.postgres.password=test-db-password",
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode != 0
+    assert "security.serviceAuth.issuerUri is required in oauth2 mode" in result.stderr
 
 
 def test_rendered_dify_secrets_are_only_exposed_to_agent():
@@ -49,8 +99,7 @@ def test_rendered_dify_secrets_are_only_exposed_to_agent():
             "template",
             "test",
             str(ROOT),
-            "--set-string",
-            "security.internalAgentToken=test-internal-token",
+            *HELM_SECURITY_ARGS,
             "--set-string",
             "security.jwtSecret=test-jwt-secret",
             "--set-string",
@@ -134,8 +183,7 @@ def test_rendered_agent_contract_uses_registered_port():
             "template",
             "test",
             str(ROOT),
-            "--set-string",
-            "security.internalAgentToken=test-internal-token",
+            *HELM_SECURITY_ARGS,
             "--set-string",
             "security.jwtSecret=test-jwt-secret",
             "--set-string",
@@ -168,21 +216,35 @@ def test_rendered_agent_contract_uses_registered_port():
         if document["kind"] == "ConfigMap"
         and document["metadata"]["name"].endswith("-config")
     )
-    network_policy = next(
-        document for document in documents if document["kind"] == "NetworkPolicy"
+    agent_network_policy = next(
+        document
+        for document in documents
+        if document["kind"] == "NetworkPolicy"
+        and document["metadata"]["name"].endswith("-agent-ingress")
+    )
+    server_network_policy = next(
+        document
+        for document in documents
+        if document["kind"] == "NetworkPolicy"
+        and document["metadata"]["name"].endswith("-server-ingress")
     )
 
     container = agent_deployment["spec"]["template"]["spec"]["containers"][0]
     assert container["ports"][0]["containerPort"] == 9008
     assert agent_service["spec"]["ports"][0]["port"] == 9008
     assert configmap["data"]["AIOPS_AGENT_BASE_URL"].endswith("-agent:9008")
-    ingress_ports = network_policy["spec"]["ingress"][0]["ports"]
-    assert {entry["port"] for entry in ingress_ports} >= {8080, 9008}
+    agent_ingress_ports = agent_network_policy["spec"]["ingress"][0]["ports"]
+    server_ingress_ports = server_network_policy["spec"]["ingress"][0]["ports"]
+    assert {entry["port"] for entry in agent_ingress_ports} == {9008}
+    assert {entry["port"] for entry in server_ingress_ports} == {8080}
 
 
 def test_configmap_contains_application_env_names():
     configmap = (ROOT / "templates" / "configmap.yaml").read_text(encoding="utf-8")
     secret = (ROOT / "templates" / "secret.yaml").read_text(encoding="utf-8")
+    component_auth_secrets = (
+        ROOT / "templates" / "component-auth-secrets.yaml"
+    ).read_text(encoding="utf-8")
     server_secret = (ROOT / "templates" / "server-secret.yaml").read_text(
         encoding="utf-8"
     )
@@ -193,7 +255,10 @@ def test_configmap_contains_application_env_names():
     assert "AIOPS_EVIDENCE_VICTORIA_BASE_URL" in configmap
 
     assert "AIOPS_DB_PASSWORD" in secret
-    assert "AIOPS_AGENT_INTERNAL_TOKEN" in secret
+    assert "AIOPS_AGENT_INTERNAL_TOKEN" not in secret
+    assert "AIOPS_AGENT_OAUTH2_CLIENT_SECRET" in component_auth_secrets
+    assert "AIOPS_AGENT_OUTBOUND_OAUTH2_CLIENT_SECRET" in component_auth_secrets
+    assert "AIOPS_DIAGNOSIS_GRANT_SECRET" in component_auth_secrets
     assert "AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN" not in secret
     assert "AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN" in server_secret
 
@@ -211,8 +276,7 @@ def test_server_requires_zabbix_webhook_signing_secret():
             "template",
             "test",
             str(ROOT),
-            "--set-string",
-            "security.internalAgentToken=test-internal-token",
+            *HELM_SECURITY_ARGS,
             "--set-string",
             "security.jwtSecret=test-jwt-secret",
             "--set-string",
@@ -234,8 +298,7 @@ def test_disabled_server_does_not_require_zabbix_webhook_signing_secret():
             "template",
             "test",
             str(ROOT),
-            "--set-string",
-            "security.internalAgentToken=test-internal-token",
+            *HELM_SECURITY_ARGS,
             "--set-string",
             "security.jwtSecret=test-jwt-secret",
             "--set-string",

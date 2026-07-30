@@ -26,6 +26,6 @@ if [ -z "${PYTHON_BIN}" ]; then
   fi
 fi
 
-"${PYTHON_BIN}" -m pip install -e '.[test]'
+"${PYTHON_BIN}" -m pip install --timeout 300 --retries 10 -e '.[test]'
 "${PYTHON_BIN}" -m ruff check src tests
 "${PYTHON_BIN}" -m pytest -q

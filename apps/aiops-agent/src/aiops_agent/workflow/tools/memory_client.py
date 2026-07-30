@@ -50,7 +50,7 @@ class MemoryClient:
 
         try:
             async with httpx.AsyncClient(timeout=self.timeout, trust_env=False) as client:
-                headers = internal_tool_headers(tenant_id)
+                headers = await internal_tool_headers(tenant_id)
                 response = await client.post(url, json=body, headers=headers)
                 response.raise_for_status()
                 payload = response.json()
@@ -95,7 +95,7 @@ class MemoryClient:
 
         try:
             async with httpx.AsyncClient(timeout=self.timeout, trust_env=False) as client:
-                headers = internal_tool_headers(tenant_id)
+                headers = await internal_tool_headers(tenant_id)
                 response = await client.post(url, json=body, headers=headers)
                 response.raise_for_status()
                 payload = response.json()

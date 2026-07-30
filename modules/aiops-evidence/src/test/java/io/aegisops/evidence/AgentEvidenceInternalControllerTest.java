@@ -18,15 +18,14 @@ import org.springframework.test.web.servlet.MockMvc;
 
 class AgentEvidenceInternalControllerTest {
   @Test
-  void rejectsInvalidToken() throws Exception {
+  void delegatesAuthenticationToTheCentralSecurityFilter() throws Exception {
     MockMvc mvc = standaloneSetup(controller()).build();
 
     mvc.perform(
             post("/internal/agent/evidence/query")
                 .contentType(MediaType.APPLICATION_JSON)
-                .header("X-AegisOps-Internal-Token", "bad")
                 .content(json(request())))
-        .andExpect(status().isUnauthorized());
+        .andExpect(status().isOk());
   }
 
   @Test
@@ -59,7 +58,7 @@ class AgentEvidenceInternalControllerTest {
               }
             });
 
-    return new AgentEvidenceInternalController(properties, service);
+    return new AgentEvidenceInternalController(service);
   }
 
   private EvidenceQueryRequest request() {

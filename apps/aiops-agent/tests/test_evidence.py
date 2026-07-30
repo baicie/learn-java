@@ -98,14 +98,16 @@ def test_http_evidence_client_posts_internal_request(monkeypatch):
     settings = Settings(
         evidence_enabled=True,
         evidence_base_url="http://server:8080/internal/agent/evidence/",
-        evidence_internal_token="evidence-token",
+        internal_agent_token="java-to-agent-token",
+        outbound_static_token="agent-to-java-token",
         evidence_timeout_seconds=3,
     )
 
     bundle = HttpEvidenceClient(settings).query(request())
 
     assert captured["url"] == "http://server:8080/internal/agent/evidence/query"
-    assert captured["headers"]["X-AegisOps-Internal-Token"] == "evidence-token"
+    assert captured["headers"]["X-AIOPS-INTERNAL-TOKEN"] == "agent-to-java-token"
+    assert captured["headers"]["X-Tenant-Id"] == "tenant_1"
     assert captured["json"]["traceId"] == "trace_1"
     assert captured["json"]["serviceNames"] == ["checkout-service"]
     assert captured["timeout"] == 3

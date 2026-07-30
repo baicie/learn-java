@@ -12,6 +12,23 @@ class Settings(BaseSettings):
 
     # Phase 8.0 SaaS multi-tenant hardening.
     internal_agent_token: str = "dev-internal-agent-token"
+    diagnosis_grant_required: bool = False
+    inbound_auth_mode: str = "static"
+    inbound_oauth2_issuer: str = ""
+    inbound_oauth2_jwks_url: str = ""
+    inbound_oauth2_audience: str = "aiops-agent-api"
+    outbound_auth_mode: str = "static"
+    outbound_static_token: str = ""
+    outbound_oauth2_token_url: str = ""
+    outbound_oauth2_client_id: str = ""
+    outbound_oauth2_client_secret: str = ""
+    outbound_oauth2_scope: str = (
+        "evidence:read cases:read checkpoint:read checkpoint:write "
+        "memory:read memory:write plugin:authorize"
+    )
+
+    def normalized_outbound_static_token(self) -> str:
+        return (self.outbound_static_token or self.internal_agent_token).strip()
 
     provider: str = "aiops-agent"
     model: str = "langgraph-deterministic"
@@ -61,7 +78,6 @@ class Settings(BaseSettings):
     # DisabledEvidenceClient and the raw response shows unavailable markers.
     evidence_enabled: bool = False
     evidence_base_url: str = ""
-    evidence_internal_token: str = "dev-internal-token"
     evidence_timeout_seconds: float = 5.0
 
     # Phase4.4 observability. When disabled, response.raw will not contain

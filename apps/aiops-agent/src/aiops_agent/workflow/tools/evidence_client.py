@@ -48,7 +48,7 @@ class EvidenceClient:
                     url,
                     headers={
                         "Content-Type": "application/json",
-                        **internal_tool_headers(tenant_id, settings),
+                        **(await internal_tool_headers(tenant_id, settings)),
                     },
                     json=body,
                 )
