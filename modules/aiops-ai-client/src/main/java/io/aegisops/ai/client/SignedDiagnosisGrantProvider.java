@@ -6,6 +6,7 @@ import io.aegisops.common.security.DiagnosisGrantClaims;
 import io.aegisops.common.security.DiagnosisGrantCodec;
 import java.time.Clock;
 import java.time.Instant;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.stereotype.Component;
 
@@ -16,6 +17,7 @@ public class SignedDiagnosisGrantProvider implements DiagnosisGrantProvider {
   private final DiagnosisGrantCodec codec;
   private final Clock clock;
 
+  @Autowired
   public SignedDiagnosisGrantProvider(AgentGrantProperties properties, ObjectMapper objectMapper) {
     this(properties, new DiagnosisGrantCodec(objectMapper, Clock.systemUTC()), Clock.systemUTC());
   }
