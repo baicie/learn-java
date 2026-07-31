@@ -211,6 +211,28 @@ def exchange_token(
     return token
 
 
+def build_work_record_smoke_request(*, tenant_id: str, trace_id: str) -> dict[str, Any]:
+    return {
+        "contractVersion": "work-record-generation.v1",
+        "generationType": "record_summary",
+        "tenantId": tenant_id,
+        "resourceId": "record-runtime-smoke",
+        "records": [
+            {
+                "id": "record-runtime-smoke",
+                "title": "Runtime authentication smoke",
+                "status": "completed",
+                "recordTime": "2026-07-31T00:00:00Z",
+                "ownerName": "runtime-smoke",
+                "fields": {"summary": "OAuth2 scope verification"},
+                "relations": [],
+            }
+        ],
+        "statistics": {},
+        "traceId": trace_id,
+    }
+
+
 def _postgres_command(tenant_id: str, incident_id: str) -> list[str]:
     return [
         "docker",
@@ -487,15 +509,10 @@ def main() -> None:
         f"{agent_url}/v1/work-record/generate",
         method="POST",
         headers={"Authorization": f"Bearer {worker_token}"},
-        body={
-            "contractVersion": "work-record-generation.v1",
-            "generationType": "record_summary",
-            "tenantId": tenant_id,
-            "resourceId": "record-runtime-smoke",
-            "records": [],
-            "statistics": {},
-            "traceId": trace_id,
-        },
+        body=build_work_record_smoke_request(
+            tenant_id=tenant_id,
+            trace_id=trace_id,
+        ),
     )
     if not str(work_record_response.get("markdown") or "").strip():
         raise RuntimeError("Agent work-record response is missing markdown")

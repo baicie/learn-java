@@ -426,7 +426,9 @@ def test_release_pipeline_propagates_required_zabbix_webhook_signing_secret():
     )
     preflight = (ROOT / "scripts/ci/release-preflight.sh").read_text(encoding="utf-8")
 
-    assert "AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN: runtime-smoke-only" in workflow
+    assert "name: Generate masked runtime credentials" in workflow
+    assert "AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN" in workflow
+    assert "AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN: runtime-smoke-only" not in workflow
     assert (
         "AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN: "
         "${{ secrets.AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN }}"

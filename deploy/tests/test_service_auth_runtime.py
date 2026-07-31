@@ -216,6 +216,55 @@ def test_release_runtime_uses_workflow_mode_for_callback_smoke():
     )
 
 
+def test_release_runtime_generates_and_masks_ephemeral_credentials():
+    workflow = yaml.safe_load(
+        (ROOT / ".github/workflows/release-verify.yml").read_text(encoding="utf-8")
+    )
+    runtime_smoke = workflow["jobs"]["runtime-smoke"]
+    credential_names = {
+        "AIOPS_KEYCLOAK_ADMIN_PASSWORD",
+        "AIOPS_SERVER_OAUTH2_CLIENT_SECRET",
+        "AIOPS_WORKER_OAUTH2_CLIENT_SECRET",
+        "AIOPS_AGENT_OAUTH2_CLIENT_SECRET",
+        "AIOPS_DIAGNOSIS_GRANT_SECRET",
+        "AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN",
+    }
+
+    assert credential_names.isdisjoint(runtime_smoke["env"])
+
+    credential_step = runtime_smoke["steps"][0]
+    assert credential_step["name"] == "Generate masked runtime credentials"
+    script = credential_step["run"]
+    assert "openssl rand -hex 32" in script
+    assert 'echo "::add-mask::$value"' in script
+    assert '>> "$GITHUB_ENV"' in script
+    assert credential_names.issubset(set(script.split()))
+
+
+def test_runtime_work_record_smoke_uses_valid_record_summary_payload():
+    verifier = load_runtime_verifier()
+
+    payload = verifier.build_work_record_smoke_request(
+        tenant_id="tenant-runtime-smoke",
+        trace_id="trace-runtime-smoke",
+    )
+
+    assert payload["generationType"] == "record_summary"
+    assert payload["tenantId"] == "tenant-runtime-smoke"
+    assert payload["traceId"] == "trace-runtime-smoke"
+    assert payload["records"] == [
+        {
+            "id": "record-runtime-smoke",
+            "title": "Runtime authentication smoke",
+            "status": "completed",
+            "recordTime": "2026-07-31T00:00:00Z",
+            "ownerName": "runtime-smoke",
+            "fields": {"summary": "OAuth2 scope verification"},
+            "relations": [],
+        }
+    ]
+
+
 def test_business_diagnosis_uses_java_controller_and_verified_tenant(monkeypatch):
     verifier = load_runtime_verifier()
     requests: list[tuple[str, dict[str, object]]] = []

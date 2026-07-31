@@ -109,11 +109,6 @@ jobs:
       AIOPS_SERVICE_AUTH_ISSUER_URI: http://keycloak:8080/realms/aegisops
       AIOPS_SERVICE_AUTH_JWK_SET_URI: http://keycloak:8080/realms/aegisops/protocol/openid-connect/certs
       AIOPS_SERVICE_AUTH_TOKEN_URI: http://keycloak:8080/realms/aegisops/protocol/openid-connect/token
-      AIOPS_SERVER_OAUTH2_CLIENT_SECRET: runtime-smoke-server-client-secret
-      AIOPS_WORKER_OAUTH2_CLIENT_SECRET: runtime-smoke-worker-client-secret
-      AIOPS_AGENT_OAUTH2_CLIENT_SECRET: runtime-smoke-agent-client-secret
-      AIOPS_DIAGNOSIS_GRANT_SECRET: runtime-smoke-diagnosis-grant-secret
-      AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN: runtime-smoke-only
       AIOPS_AGENT_GENERATION_MODE: workflow
       AIOPS_AGENT_WORKFLOW_EVIDENCE_ENABLED: "true"
       AIOPS_AGENT_WORKFLOW_CASE_RETRIEVAL_ENABLED: "false"
@@ -124,6 +119,24 @@ jobs:
     if: needs.preflight.outputs.release_required == 'true'
 
     steps:
+      - name: Generate masked runtime credentials
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          credential_names=(
+            AIOPS_KEYCLOAK_ADMIN_PASSWORD
+            AIOPS_SERVER_OAUTH2_CLIENT_SECRET
+            AIOPS_WORKER_OAUTH2_CLIENT_SECRET
+            AIOPS_AGENT_OAUTH2_CLIENT_SECRET
+            AIOPS_DIAGNOSIS_GRANT_SECRET
+            AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN
+          )
+          for name in "${credential_names[@]}"; do
+            value="$(openssl rand -hex 32)"
+            echo "::add-mask::$value"
+            printf '%s=%s\n' "$name" "$value" >> "$GITHUB_ENV"
+          done
+
       - name: Checkout
         uses: actions/checkout@v7
         with:

@@ -63,11 +63,15 @@ require_text "$RELEASE_PREFLIGHT" "AIOPS_AGENT_OAUTH2_CLIENT_SECRET=preflight-ag
 require_text "$RELEASE_PREFLIGHT" "AIOPS_DIAGNOSIS_GRANT_SECRET=preflight-diagnosis-grant-secret-change-me"
 require_text "$RELEASE_PREFLIGHT" "AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN=preflight-only"
 require_text "$RELEASE_WORKFLOW" "AIOPS_SERVICE_AUTH_ISSUER_URI: http://keycloak:8080/realms/aegisops"
-require_text "$RELEASE_WORKFLOW" "AIOPS_SERVER_OAUTH2_CLIENT_SECRET: runtime-smoke-server-client-secret"
-require_text "$RELEASE_WORKFLOW" "AIOPS_WORKER_OAUTH2_CLIENT_SECRET: runtime-smoke-worker-client-secret"
-require_text "$RELEASE_WORKFLOW" "AIOPS_AGENT_OAUTH2_CLIENT_SECRET: runtime-smoke-agent-client-secret"
-require_text "$RELEASE_WORKFLOW" "AIOPS_DIAGNOSIS_GRANT_SECRET: runtime-smoke-diagnosis-grant-secret"
-require_text "$RELEASE_WORKFLOW" "AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN: runtime-smoke-only"
+require_text "$RELEASE_WORKFLOW" "name: Generate masked runtime credentials"
+require_text "$RELEASE_WORKFLOW" "openssl rand -hex 32"
+require_text "$RELEASE_WORKFLOW" 'echo "::add-mask::$value"'
+require_text "$RELEASE_WORKFLOW" '>> "$GITHUB_ENV"'
+reject_text "$RELEASE_WORKFLOW" "AIOPS_SERVER_OAUTH2_CLIENT_SECRET: runtime-smoke-server-client-secret"
+reject_text "$RELEASE_WORKFLOW" "AIOPS_WORKER_OAUTH2_CLIENT_SECRET: runtime-smoke-worker-client-secret"
+reject_text "$RELEASE_WORKFLOW" "AIOPS_AGENT_OAUTH2_CLIENT_SECRET: runtime-smoke-agent-client-secret"
+reject_text "$RELEASE_WORKFLOW" "AIOPS_DIAGNOSIS_GRANT_SECRET: runtime-smoke-diagnosis-grant-secret"
+reject_text "$RELEASE_WORKFLOW" "AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN: runtime-smoke-only"
 require_text "$RELEASE_WORKFLOW" 'AIOPS_SERVICE_AUTH_ISSUER_URI: ${{ secrets.AIOPS_SERVICE_AUTH_ISSUER_URI }}'
 require_text "$RELEASE_WORKFLOW" 'AIOPS_SERVER_OAUTH2_CLIENT_SECRET: ${{ secrets.AIOPS_SERVER_OAUTH2_CLIENT_SECRET }}'
 require_text "$RELEASE_WORKFLOW" 'AIOPS_WORKER_OAUTH2_CLIENT_SECRET: ${{ secrets.AIOPS_WORKER_OAUTH2_CLIENT_SECRET }}'
