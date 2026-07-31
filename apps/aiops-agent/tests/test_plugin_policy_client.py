@@ -13,6 +13,17 @@ from aiops_agent.workflow.tools.plugin_policy_client import (
 )
 
 
+@pytest.fixture(autouse=True)
+def oauth_service_headers(monkeypatch):
+    async def headers(_settings):
+        return {"Authorization": "Bearer oauth-service-token"}
+
+    monkeypatch.setattr(
+        "aiops_agent.workflow.tools.internal_auth.service_credential_headers",
+        headers,
+    )
+
+
 @respx.mock
 async def test_authorize_tool_allowed():
     respx.post("http://localhost:8080/internal/agent/plugins/tools/authorize").mock(
@@ -73,6 +84,10 @@ async def test_authorize_tool_sends_internal_headers():
     await client.authorize_tool("tenant_abc", "evidence.fetch")
 
     assert route.calls[0].request.headers[HEADER_TENANT_ID] == "tenant_abc"
+    assert (
+        route.calls[0].request.headers["Authorization"]
+        == "Bearer oauth-service-token"
+    )
 
 
 @respx.mock

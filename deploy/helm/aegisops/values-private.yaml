@@ -8,22 +8,21 @@ config:
 security:
   jwtSecret: "CHANGE_ME_JWT_SECRET"
   zabbixWebhookSigningSecret: ""
-  diagnosisGrantSecret: "CHANGE_ME_DIAGNOSIS_GRANT_SECRET"
+  diagnosisGrantSecret: ""
   serviceAuth:
-    mode: oauth2
     issuerUri: "https://keycloak.example.com/realms/aegisops"
     jwkSetUri: "https://keycloak.example.com/realms/aegisops/protocol/openid-connect/certs"
     tokenUri: "https://keycloak.example.com/realms/aegisops/protocol/openid-connect/token"
     clients:
       server:
         clientId: aiops-server
-        clientSecret: "CHANGE_ME_SERVER_CLIENT_SECRET"
+        clientSecret: ""
       worker:
         clientId: aiops-worker
-        clientSecret: "CHANGE_ME_WORKER_CLIENT_SECRET"
+        clientSecret: ""
       agent:
         clientId: aiops-agent
-        clientSecret: "CHANGE_ME_AGENT_CLIENT_SECRET"
+        clientSecret: ""
 
 external:
   postgres:
@@ -72,3 +71,6 @@ ingress:
           pathType: Prefix
           service: server
           port: 8080
+
+networkPolicy:
+  enabled: true

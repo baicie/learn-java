@@ -79,4 +79,20 @@ class DiagnosisGrantCodecTest {
     assertThatThrownBy(() -> codec.verify(SECRET, token, "different-audience"))
         .isInstanceOf(InvalidDiagnosisGrantException.class);
   }
+
+  @Test
+  void rejectsGrantLongerThanFiveMinutes() {
+    DiagnosisGrantClaims claims =
+        new DiagnosisGrantClaims(
+            "aiops-server",
+            "aegisops-internal-api",
+            "tenant_1",
+            "inc_1",
+            "trace_1",
+            NOW,
+            NOW.plusSeconds(301));
+
+    assertThatThrownBy(() -> codec.issue(SECRET, claims))
+        .isInstanceOf(InvalidDiagnosisGrantException.class);
+  }
 }

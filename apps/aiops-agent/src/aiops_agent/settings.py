@@ -11,24 +11,20 @@ class Settings(BaseSettings):
     )
 
     # Phase 8.0 SaaS multi-tenant hardening.
-    internal_agent_token: str = "dev-internal-agent-token"
-    diagnosis_grant_required: bool = False
-    inbound_auth_mode: str = "static"
-    inbound_oauth2_issuer: str = ""
-    inbound_oauth2_jwks_url: str = ""
+    inbound_oauth2_issuer: str = "http://localhost:8089/realms/aegisops"
+    inbound_oauth2_jwks_url: str = (
+        "http://localhost:8089/realms/aegisops/protocol/openid-connect/certs"
+    )
     inbound_oauth2_audience: str = "aiops-agent-api"
-    outbound_auth_mode: str = "static"
-    outbound_static_token: str = ""
-    outbound_oauth2_token_url: str = ""
-    outbound_oauth2_client_id: str = ""
-    outbound_oauth2_client_secret: str = ""
+    outbound_oauth2_token_url: str = (
+        "http://localhost:8089/realms/aegisops/protocol/openid-connect/token"
+    )
+    outbound_oauth2_client_id: str = "aiops-agent"
+    outbound_oauth2_client_secret: str = "dev-aiops-agent-client-secret"
     outbound_oauth2_scope: str = (
         "evidence:read cases:read checkpoint:read checkpoint:write "
         "memory:read memory:write plugin:authorize"
     )
-
-    def normalized_outbound_static_token(self) -> str:
-        return (self.outbound_static_token or self.internal_agent_token).strip()
 
     provider: str = "aiops-agent"
     model: str = "langgraph-deterministic"
@@ -44,7 +40,7 @@ class Settings(BaseSettings):
     default_locale: str = "zh-CN"
     contract_version: str = "agent-diagnosis.v1"
 
-    # deterministic | mock | deterministic-evidence | openai-compatible
+    # deterministic | mock | deterministic-evidence | openai-compatible | workflow
     generation_mode: str = "deterministic"
 
     # OpenAI-compatible /chat/completions settings.
@@ -114,7 +110,13 @@ class Settings(BaseSettings):
 
     def normalized_generation_mode(self) -> str:
         value = (self.generation_mode or "deterministic").strip().lower()
-        if value not in {"deterministic", "mock", "deterministic-evidence", "openai-compatible"}:
+        if value not in {
+            "deterministic",
+            "mock",
+            "deterministic-evidence",
+            "openai-compatible",
+            "workflow",
+        }:
             return "deterministic"
         return value
 

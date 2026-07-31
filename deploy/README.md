@@ -73,7 +73,8 @@ deploy/
 
 - worker / runner 跟 server 共享同一 Postgres（独立 schema 与表，互不耦合）
 - runner 镜像额外装了 `ansible-playbook` / `sshpass` / `openssh-client` 与 `tini`
-- worker / runner 不依赖 agent（agent 走 canonical workflow 只查 server，不直接调 runner）
+- worker 会调用 agent 执行诊断与工作记录生成，Compose 启动时等待 agent 健康；runner 不依赖
+  agent（agent 的 canonical workflow 只查 server，不直接调 runner）
 
 ## 低内存 VM 配置
 
@@ -113,6 +114,19 @@ docker inspect -f '{{.Name}} {{.HostConfig.Memory}} {{.HostConfig.MemoryReservat
 若诊断、导出或自动化任务出现长时间 GC、容器 OOM，应先按实际指标提高对应单个容器限制，
 不要取消全部限制。
 
+## VM 发布描述符状态
+
+腾讯云 VM 发布使用三个同目录文件管理版本状态：
+
+- `docker-compose.app.yml`：active，只记录最后通过容器健康检查和双向 OAuth2 探针的发布。
+- `docker-compose.app.candidate.yml`：candidate，由发布 workflow 上传，本次部署只读取该文件。
+- `docker-compose.app.previous.yml`：previous，在 candidate 校验通过后从 active 原子快照得到。
+
+workflow 不直接覆盖 active。拉镜像、端口预检、新版本健康检查、OAuth2 探针或自动回滚任一
+阶段失败时，active 都继续指向最后验证成功的发布；只有全部检查通过后，candidate 才在同一
+目录内原子提升为 active。生产 deploy job 固定串行执行，避免手动发布与自动发布竞争同一个
+candidate 文件。
+
 ## 镜像名 / Tag 约束
 
 - 所有镜像统一命名空间：`aegisops/<app-name>:<version>`，前缀由 deploy.yml 注入为 `${DOCKERHUB_USERNAME}/aegisops`
@@ -134,11 +148,24 @@ docker inspect -f '{{.Name}} {{.HostConfig.Memory}} {{.HostConfig.MemoryReservat
 - 所有密钥经 Helm `secretKeyRef` 引用外部 Secret 对象
 - server、worker、agent 使用独立 OAuth2 client secret；Diagnosis Grant 密钥只进入
   server/worker
-- 生产 Helm 默认使用 OAuth2 Client Credentials；Compose 静态兼容模式必须使用两个方向
-  不同的 token
+- Helm 与 Compose 只支持 OAuth2 Client Credentials；server、worker、agent 使用不同
+  client secret
 - 推荐外部密钥源：阿里云 KMS / HashiCorp Vault / AWS Secrets Manager
 - CI 端：在 GitHub Secrets 配置对应键，由部署脚本注入到 Secret 对象
 - 严禁任何明文密钥出现在 `values.yaml`、`templates/*.yaml`、`Dockerfile` 中
+
+## NetworkPolicy 出站白名单
+
+启用 `networkPolicy.enabled=true` 后，chart 会为各组件同时启用 Ingress/Egress 默认拒绝，
+再显式放行 server/worker → agent、agent → server、DNS 和外部依赖流量。生产部署必须
+显式配置 `networkPolicy.egress.allowedCidrs` 为企业 IdP、PostgreSQL、Redis、
+ClickHouse、MinIO、VictoriaMetrics 等实际目标网段。空列表以及 `0.0.0.0/0`、`::/0`
+会在 Helm 渲染阶段被拒绝。
+
+`networkPolicy.egress.externalPorts` 按组件声明可访问的外部端口。删除未使用的端口；Agent
+通常只需要到 IdP 的 `443`，不应开放数据库、Redis、ClickHouse 或 VictoriaMetrics 端口。
+标准 Kubernetes NetworkPolicy 不能按 DNS 名过滤，因此域名解析单独由
+`dnsNamespaceSelector` 放行，实际目标仍必须由 CIDR 与端口共同限制。
 
 ## 本地验证
 

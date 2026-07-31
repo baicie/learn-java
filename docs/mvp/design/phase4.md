@@ -1,15 +1,20 @@
 ---
 title: Phase4：Python LangGraph OSS Diagnosis Agent + Java Agent Client
 type: design
-status: accepted
+status: deprecated
 phase: global
 owner: ai
 created: 2026-06-30
-updated: 2026-06-30
-related: []
+updated: 2026-07-30
+related:
+  - docs/adr/0010-service-authentication-oauth2-only.md
 ---
 
 # Phase4：Python LangGraph OSS Diagnosis Agent + Java Agent Client
+
+> 历史设计（已废弃）：本文保留最初实现过程，其中静态 Token 配置与代码示例不得继续
+> 执行。当前 Java/Agent 服务鉴权以
+> `docs/adr/0010-service-authentication-oauth2-only.md` 为准。
 
 这版基于前面选型讨论重做：**不使用 Google ADK，不把 Agent 写进 Java**。Phase4 采用 **LangGraph OSS Python** 作为 Agent 编排底座，Java 只负责产品后端职责：鉴权、租户隔离、读取 Incident/RCA/Alert、调用 Python Agent、保存诊断结果、写 Timeline。
 
@@ -2381,7 +2386,7 @@ aiops-agent:
     AIOPS_AGENT_MODEL: langgraph-deterministic
     AIOPS_AGENT_NAME: aegisops_diagnosis_graph
   ports:
-    - "9008:9008"
+    - '9008:9008'
   restart: unless-stopped
 ```
 
@@ -2408,30 +2413,30 @@ aiops.agent.base-url=http://aiops-agent:9008
 
 ```ts id="ek7cl4"
 export type AiDiagnosisResponse = {
-  id: string;
-  incidentId: string;
-  status: string;
-  provider: string;
-  model: string;
-  agentName: string;
-  summary: string;
-  rootCause: string;
-  impact: string;
-  nextSteps: string[];
-  runbookSuggestions: string[];
-  risks: string[];
-  createdAt: string;
-};
+  id: string
+  incidentId: string
+  status: string
+  provider: string
+  model: string
+  agentName: string
+  summary: string
+  rootCause: string
+  impact: string
+  nextSteps: string[]
+  runbookSuggestions: string[]
+  risks: string[]
+  createdAt: string
+}
 
 export function diagnoseIncidentAi(id: string, force = true) {
   return apiRequest<AiDiagnosisResponse>(`/api/incidents/${id}/ai/diagnose`, {
-    method: "POST",
-    body: JSON.stringify({ force, locale: "zh-CN" }),
-  });
+    method: 'POST',
+    body: JSON.stringify({ force, locale: 'zh-CN' }),
+  })
 }
 
 export function getLatestIncidentAiDiagnosis(id: string) {
-  return apiRequest<AiDiagnosisResponse>(`/api/incidents/${id}/ai/latest`);
+  return apiRequest<AiDiagnosisResponse>(`/api/incidents/${id}/ai/latest`)
 }
 ```
 
@@ -2447,7 +2452,7 @@ import {
   resolveIncident,
   syncDataSource,
   testDataSource,
-} from "../api/client";
+} from '../api/client'
 ```
 
 ## 增加 state
@@ -2455,16 +2460,16 @@ import {
 ```tsx id="5o0v8h"
 const [aiDiagnosis, setAiDiagnosis] = useState<Awaited<
   ReturnType<typeof diagnoseIncidentAi>
-> | null>(null);
+> | null>(null)
 ```
 
 ## 选择 Incident 时清理
 
 ```tsx id="2f8nnw"
 function selectIncident(id: string) {
-  setSelectedIncidentId(id);
-  setRcaResult(null);
-  setAiDiagnosis(null);
+  setSelectedIncidentId(id)
+  setRcaResult(null)
+  setAiDiagnosis(null)
 }
 ```
 
@@ -2486,14 +2491,14 @@ onClick={() => selectIncident(incident.id)}
 const aiDiagnosisMutation = useMutation({
   mutationFn: (incidentId: string) => diagnoseIncidentAi(incidentId, true),
   onSuccess: async (result) => {
-    setAiDiagnosis(result);
-    setMessage(`AI diagnosis completed: ${result.summary}`);
+    setAiDiagnosis(result)
+    setMessage(`AI diagnosis completed: ${result.summary}`)
     await queryClient.invalidateQueries({
-      queryKey: ["incident", selectedIncidentId],
-    });
+      queryKey: ['incident', selectedIncidentId],
+    })
   },
   onError: (error) => setMessage(String(error)),
-});
+})
 ```
 
 ## 增加按钮
@@ -2504,11 +2509,9 @@ const aiDiagnosisMutation = useMutation({
 <button
   className="mt-3 ml-2 rounded-lg bg-purple-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-60"
   disabled={aiDiagnosisMutation.isPending}
-  onClick={() =>
-    aiDiagnosisMutation.mutate(incidentDetailQuery.data!.incident.id)
-  }
+  onClick={() => aiDiagnosisMutation.mutate(incidentDetailQuery.data!.incident.id)}
 >
-  {aiDiagnosisMutation.isPending ? "Diagnosing..." : "AI Diagnose"}
+  {aiDiagnosisMutation.isPending ? 'Diagnosing...' : 'AI Diagnose'}
 </button>
 ```
 
@@ -2532,18 +2535,15 @@ const aiDiagnosisMutation = useMutation({
           {aiDiagnosis.impact}
         </div>
         <div className="mt-2 text-slate-500">
-          {aiDiagnosis.provider} · {aiDiagnosis.model} · {aiDiagnosis.agentName}{" "}
-          · {aiDiagnosis.createdAt}
+          {aiDiagnosis.provider} · {aiDiagnosis.model} · {aiDiagnosis.agentName} ·{' '}
+          {aiDiagnosis.createdAt}
         </div>
       </div>
 
       <div className="mt-3 space-y-2">
         <h4 className="text-xs font-semibold text-slate-500">Next Steps</h4>
         {aiDiagnosis.nextSteps.map((step, index) => (
-          <div
-            className="rounded-lg border border-slate-200 p-3 text-sm"
-            key={`step-${index}`}
-          >
+          <div className="rounded-lg border border-slate-200 p-3 text-sm" key={`step-${index}`}>
             {index + 1}. {step}
           </div>
         ))}
@@ -2551,9 +2551,7 @@ const aiDiagnosisMutation = useMutation({
 
       {aiDiagnosis.runbookSuggestions.length > 0 && (
         <div className="mt-3 space-y-2">
-          <h4 className="text-xs font-semibold text-slate-500">
-            Runbook Suggestions
-          </h4>
+          <h4 className="text-xs font-semibold text-slate-500">Runbook Suggestions</h4>
           {aiDiagnosis.runbookSuggestions.map((item, index) => (
             <div
               className="rounded-lg border border-slate-200 p-3 text-sm"
@@ -2579,7 +2577,7 @@ const aiDiagnosisMutation = useMutation({
         </div>
       )}
     </div>
-  );
+  )
 }
 ```
 
@@ -2650,5 +2648,5 @@ Phase5：Runbook / Ansible 执行审批，下一阶段
 Phase6：复盘与知识沉淀
 ```
 
-[1]: https://docs.langchain.com/oss/python/langgraph/quickstart "Quickstart - Docs by LangChain"
-[2]: https://fastapi.tiangolo.com/tutorial/testing/ "Testing - FastAPI"
+[1]: https://docs.langchain.com/oss/python/langgraph/quickstart 'Quickstart - Docs by LangChain'
+[2]: https://fastapi.tiangolo.com/tutorial/testing/ 'Testing - FastAPI'

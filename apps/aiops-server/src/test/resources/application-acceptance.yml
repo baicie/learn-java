@@ -14,7 +14,6 @@ aiops:
 
   security:
     tenant-required: true
-    internal-agent-token-required: false
 
   quota:
     rate-limit-enabled: false

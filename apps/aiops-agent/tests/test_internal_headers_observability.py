@@ -10,19 +10,26 @@ from aiops_agent.workflow.tools.internal_auth import internal_tool_headers
 
 
 @pytest.mark.asyncio
-async def test_internal_tool_headers_propagates_request_and_trace_id():
+async def test_internal_tool_headers_propagates_oauth_request_and_trace_id(monkeypatch):
+    async def oauth_headers(_settings):
+        return {"Authorization": "Bearer oauth-service-token"}
+
+    monkeypatch.setattr(
+        "aiops_agent.workflow.tools.internal_auth.service_credential_headers",
+        oauth_headers,
+    )
     token_request = request_id_var.set("req_1")
     token_trace = trace_id_var.set("trace_1")
 
     try:
         headers = await internal_tool_headers(
             "tenant_1",
-            Settings(internal_agent_token="secret"),
+            Settings(),
             diagnosis_grant="diagnosis-grant",
         )
 
         assert headers["X-Tenant-Id"] == "tenant_1"
-        assert headers["X-AIOPS-INTERNAL-TOKEN"] == "secret"
+        assert headers["Authorization"] == "Bearer oauth-service-token"
         assert headers["X-Request-Id"] == "req_1"
         assert headers["X-Trace-Id"] == "trace_1"
     finally:

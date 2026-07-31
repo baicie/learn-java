@@ -1,11 +1,12 @@
 package io.aegisops.security;
 
+import io.aegisops.common.security.DiagnosisGrantAuthorization;
+
 public final class SecurityConstants {
   public static final String HEADER_TENANT_ID = "X-Tenant-Id";
-  public static final String HEADER_INTERNAL_AGENT_TOKEN = "X-AIOPS-INTERNAL-TOKEN";
   public static final String HEADER_DIAGNOSIS_GRANT = "X-AegisOps-Diagnosis-Grant";
   public static final String REQUEST_ATTRIBUTE_DIAGNOSIS_GRANT =
-      "io.aegisops.security.diagnosisGrant";
+      DiagnosisGrantAuthorization.REQUEST_ATTRIBUTE;
   public static final String REQUEST_ATTRIBUTE_SERVICE_PRINCIPAL =
       "io.aegisops.security.servicePrincipal";
 

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import datetime
+
 from aiops_agent.workflow.contracts import AgentCheckpoint, AgentMemory, EvidenceItem, SimilarCase
 
 
@@ -9,14 +11,38 @@ class FakeEvidenceClient:
     def __init__(self, evidence: list[EvidenceItem] | None = None):
         self.evidence = evidence or []
         self.called = False
+        self.query_context: dict[str, object] = {}
 
-    async def fetch_evidence(self, tenant_id: str, incident_id: str) -> list[EvidenceItem]:
+    async def fetch_evidence(
+        self,
+        tenant_id: str,
+        incident_id: str,
+        trace_id: str,
+        *,
+        primary_asset_id: str | None = None,
+        started_at: datetime | None = None,
+        last_seen_at: datetime | None = None,
+    ) -> list[EvidenceItem]:
         self.called = True
+        self.query_context = {
+            "tenant_id": tenant_id,
+            "incident_id": incident_id,
+            "trace_id": trace_id,
+            "primary_asset_id": primary_asset_id,
+            "started_at": started_at,
+            "last_seen_at": last_seen_at,
+        }
         return self.evidence
 
 
 class FailingEvidenceClient:
-    async def fetch_evidence(self, tenant_id: str, incident_id: str) -> list[EvidenceItem]:
+    async def fetch_evidence(
+        self,
+        tenant_id: str,
+        incident_id: str,
+        trace_id: str,
+        **kwargs,
+    ) -> list[EvidenceItem]:
         raise RuntimeError("boom")
 
 

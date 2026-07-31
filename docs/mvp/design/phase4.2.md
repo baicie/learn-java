@@ -1,15 +1,19 @@
 ---
 title: Phase4.2：LangGraph Agent 可选真实 LLM Provider
 type: design
-status: accepted
+status: deprecated
 phase: global
 owner: ai
 created: 2026-06-30
-updated: 2026-06-30
-related: []
+updated: 2026-07-30
+related:
+  - docs/adr/0010-service-authentication-oauth2-only.md
 ---
 
 # Phase4.2：LangGraph Agent 可选真实 LLM Provider
+
+> 历史设计（已废弃）：本文沿用的静态 Token 认证代码和部署示例不得继续执行。当前
+> Java/Agent 服务鉴权以 `docs/adr/0010-service-authentication-oauth2-only.md` 为准。
 
 基于当前 `mvp` 最新实现，Phase4.2 应该作为 **Phase4.1 Contract + Safety Boundary 之后的增量阶段** 来做，而不是覆盖已有实现。
 
@@ -1221,13 +1225,13 @@ aiops-agent:
 
     # Phase4.2 optional LLM provider.
     # Keep empty in local/CI deterministic mode.
-    AIOPS_AGENT_OPENAI_BASE_URL: ""
-    AIOPS_AGENT_OPENAI_API_KEY: ""
+    AIOPS_AGENT_OPENAI_BASE_URL: ''
+    AIOPS_AGENT_OPENAI_API_KEY: ''
     AIOPS_AGENT_OPENAI_TIMEOUT_SECONDS: 30
     AIOPS_AGENT_OPENAI_TEMPERATURE: 0.2
     AIOPS_AGENT_OPENAI_MAX_TOKENS: 1200
   ports:
-    - "9008:9008"
+    - '9008:9008'
   restart: unless-stopped
 ```
 

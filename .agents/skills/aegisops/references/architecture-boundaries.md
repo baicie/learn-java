@@ -9,7 +9,7 @@
 | aiops-server         | 8080             | `AIOPS_SERVER_PORT` | 主 API + SSE, 默认前端访问入口                           |
 | aiops-worker         | 8081             | `AIOPS_WORKER_PORT` | 仅 actuator / `/internal/worker/status`, 不暴露业务 API  |
 | aiops-runner         | 8092             | `AIOPS_RUNNER_PORT` | actuator + `/internal/runner/status`, 不接收外部业务调用 |
-| aiops-agent (Python) | 9008             | `AIOPS_AGENT_PORT`  | FastAPI, 与 Java 通过 internal token 解耦                |
+| aiops-agent (Python) | 9008             | `AIOPS_AGENT_PORT`  | FastAPI, 与 Java 通过 OAuth2 + Diagnosis Grant 解耦      |
 | zabbix-web (docker)  | 8081 → 容器 8080 | docker-compose      | ⚠️ 与 aiops-worker 默认端口冲突                          |
 
 冲突处理:
@@ -140,9 +140,13 @@
 scope。
 
 ```txt
-server / worker -> agent:
+server -> agent:
   audience: aiops-agent-api
   scopes: agent:diagnose / agent:resume / agent:work-record
+
+worker -> agent:
+  audience: aiops-agent-api
+  scopes: agent:diagnose / agent:work-record
 
 agent -> server:
   audience: aegisops-internal-api
@@ -155,9 +159,9 @@ traceId`。Agent 只传播 Grant，不持有签名密钥；Java 从有效 Grant 
 信任 `X-Tenant-Id` 作为内部 API 的授权来源。
 
 Kubernetes 中四个组件使用独立 ServiceAccount 和 Secret，并以 NetworkPolicy 限制调用
-方向；启用 Istio 时使用 STRICT mTLS 和 AuthorizationPolicy。静态 token 只允许显式开发
-模式，且 Java→Agent 与 Agent→Java 必须使用不同 token。完整决策见
-`docs/adr/0009-service-to-service-authentication.md`。
+方向；启用 Istio 时使用 STRICT mTLS 和 AuthorizationPolicy。服务间鉴权只支持 OAuth2
+Client Credentials，不保留静态 Token 兼容模式。完整决策见
+`docs/adr/0010-service-authentication-oauth2-only.md`。
 
 ## 3. 模块四分类
 

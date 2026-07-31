@@ -7,7 +7,7 @@ owner: ai
 created: 2026-06-30
 updated: 2026-07-30
 related:
-  - docs/adr/0009-service-to-service-authentication.md
+  - docs/adr/0010-service-authentication-oauth2-only.md
   - docs/api/internal-service-authentication.md
 ---
 
@@ -28,6 +28,7 @@ related:
 ## Kubernetes
 
 - [ ] 开启 NetworkPolicy
+- [ ] 出站 `allowedCidrs` 仅包含 IdP 与外部依赖的受限网段，不使用全网 CIDR
 - [ ] server / worker / runner / agent 使用独立 ServiceAccount
 - [ ] server / worker / agent 使用独立认证 Secret
 - [ ] Agent 不接收数据库 Secret 与 Diagnosis Grant 签名密钥
@@ -42,7 +43,7 @@ related:
 
 ## AegisOps
 
-- [ ] 生产模式使用 OAuth2 Client Credentials，不使用静态 token
+- [ ] 服务间鉴权只使用 OAuth2 Client Credentials，不存在静态 Token 兼容模式
 - [ ] 服务 JWT 校验 issuer、audience、subject、expiry 与 endpoint scope
 - [ ] Diagnosis Grant required，TTL 不超过 300 秒
 - [ ] 内部租户上下文只从有效 Diagnosis Grant 恢复

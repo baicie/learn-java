@@ -25,14 +25,6 @@ app.kubernetes.io/name: {{ include "aegisops.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end -}}
 
-{{- define "aegisops.serviceAccountName" -}}
-{{- if .Values.serviceAccount.create -}}
-{{- default (include "aegisops.fullname" .) .Values.serviceAccount.name -}}
-{{- else -}}
-{{- default "default" .Values.serviceAccount.name -}}
-{{- end -}}
-{{- end -}}
-
 {{- define "aegisops.componentServiceAccountName" -}}
 {{- $root := index . 0 -}}
 {{- $component := index . 1 -}}
@@ -41,6 +33,52 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- default (printf "%s-%s" (include "aegisops.fullname" $root) $component) $configured -}}
 {{- else -}}
 {{- default "default" $configured -}}
+{{- end -}}
+{{- end -}}
+
+{{- define "aegisops.validateComponentServiceAccounts" -}}
+{{- $root := . -}}
+{{- $seen := dict -}}
+{{- range $component := list "server" "worker" "runner" "agent" -}}
+{{- $configured := index $root.Values.serviceAccount.names $component -}}
+{{- if and (not $root.Values.serviceAccount.create) (empty $configured) -}}
+{{- fail (printf "serviceAccount.names.%s is required when serviceAccount.create=false" $component) -}}
+{{- end -}}
+{{- $resolved := include "aegisops.componentServiceAccountName" (list $root $component) -}}
+{{- if eq $resolved "default" -}}
+{{- fail (printf "serviceAccount.names.%s must not use the default ServiceAccount" $component) -}}
+{{- end -}}
+{{- if hasKey $seen $resolved -}}
+{{- fail (printf "component ServiceAccount names must be distinct: %s and %s both use %s" (index $seen $resolved) $component $resolved) -}}
+{{- end -}}
+{{- $_ := set $seen $resolved $component -}}
+{{- end -}}
+{{- end -}}
+
+{{- define "aegisops.validateIngressNamespaceSelector" -}}
+{{- $selector := default (dict) .Values.networkPolicy.ingressNamespaceSelector -}}
+{{- $matchLabels := default (dict) (get $selector "matchLabels") -}}
+{{- $matchExpressions := default (list) (get $selector "matchExpressions") -}}
+{{- if and (empty $matchLabels) (empty $matchExpressions) -}}
+{{- fail "networkPolicy.ingressNamespaceSelector must select at least one namespace label" -}}
+{{- end -}}
+{{- end -}}
+
+{{- define "aegisops.validateNetworkPolicyEgressCidrs" -}}
+{{- $cidrs := default (list) .Values.networkPolicy.egress.allowedCidrs -}}
+{{- if empty $cidrs -}}
+{{- fail "networkPolicy.egress.allowedCidrs must contain at least one restricted CIDR when networkPolicy.enabled=true" -}}
+{{- end -}}
+{{- range $cidr := $cidrs -}}
+{{- $value := toString $cidr -}}
+{{- if regexMatch ".*/0+$" $value -}}
+{{- fail (printf "networkPolicy.egress.allowedCidrs must not contain world-open CIDR %s" $cidr) -}}
+{{- end -}}
+{{- $ipv4 := regexMatch `^((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.){3}(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])/(0|[1-9]|[12][0-9]|3[0-2])$` $value -}}
+{{- $ipv6 := regexMatch `^[0-9A-Fa-f]{0,4}(:[0-9A-Fa-f]{0,4})+/(0|[1-9]|[1-9][0-9]|1[01][0-9]|12[0-8])$` $value -}}
+{{- if not (or $ipv4 $ipv6) -}}
+{{- fail (printf "networkPolicy.egress.allowedCidrs must contain valid IPv4 or IPv6 CIDRs: %s" $cidr) -}}
+{{- end -}}
 {{- end -}}
 {{- end -}}
 

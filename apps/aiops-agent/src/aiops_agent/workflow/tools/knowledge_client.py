@@ -38,6 +38,7 @@ class KnowledgeClient:
         await self.policy_guard.require_allowed(tenant_id, KNOWLEDGE_SEARCH_CASES)
         url = f"{self.base_url}/internal/agent/tools/search-cases"
         body = {
+            "tenantId": tenant_id,
             "query": query,
             "tags": tags,
             "topK": top_k,

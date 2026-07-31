@@ -59,6 +59,7 @@ jobs:
             || ! git rev-parse HEAD^ >/dev/null 2>&1 \
             || ! git diff --quiet HEAD^ HEAD -- \
               apps modules web contracts deploy scripts infra/checkstyle \
+              infra/keycloak infra/docker-compose.yml \
               pom.xml package.json pnpm-lock.yaml pnpm-workspace.yaml \
               .dockerignore .github/workflows/release-verify.yml; then
             echo "release_required=true" >> "$GITHUB_OUTPUT"
@@ -103,16 +104,24 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     needs: preflight
-    environment:
-      name: aegisops-prod
     env:
-      AIOPS_JAVA_TO_AGENT_TOKEN: runtime-smoke-java-to-agent
-      AIOPS_AGENT_TO_JAVA_TOKEN: runtime-smoke-agent-to-java
+      AIOPS_SERVICE_AUTH_BASE_URL: http://keycloak:8080
+      AIOPS_SERVICE_AUTH_ISSUER_URI: http://keycloak:8080/realms/aegisops
+      AIOPS_SERVICE_AUTH_JWK_SET_URI: http://keycloak:8080/realms/aegisops/protocol/openid-connect/certs
+      AIOPS_SERVICE_AUTH_TOKEN_URI: http://keycloak:8080/realms/aegisops/protocol/openid-connect/token
+      AIOPS_SERVER_OAUTH2_CLIENT_SECRET: runtime-smoke-server-client-secret
+      AIOPS_WORKER_OAUTH2_CLIENT_SECRET: runtime-smoke-worker-client-secret
+      AIOPS_AGENT_OAUTH2_CLIENT_SECRET: runtime-smoke-agent-client-secret
       AIOPS_DIAGNOSIS_GRANT_SECRET: runtime-smoke-diagnosis-grant-secret
       AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN: runtime-smoke-only
-    if: >-
-      github.event_name != 'pull_request' &&
-      needs.preflight.outputs.release_required == 'true'
+      AIOPS_AGENT_GENERATION_MODE: workflow
+      AIOPS_AGENT_WORKFLOW_EVIDENCE_ENABLED: "true"
+      AIOPS_AGENT_WORKFLOW_CASE_RETRIEVAL_ENABLED: "false"
+      AIOPS_AGENT_WORKFLOW_HUMAN_CHECKPOINT_ENABLED: "false"
+      AIOPS_AGENT_WORKFLOW_MULTI_AGENT_ENABLED: "false"
+      AIOPS_AGENT_WORKFLOW_MEMORY_ENABLED: "false"
+      AIOPS_AGENT_WORKFLOW_MEMORY_WRITE_ENABLED: "false"
+    if: needs.preflight.outputs.release_required == 'true'
 
     steps:
       - name: Checkout
@@ -157,7 +166,10 @@ jobs:
           set -Eeuo pipefail
 
           compose() {
-            docker compose -f deploy/docker-compose.app.yml "$@"
+            docker compose \
+              -f deploy/docker-compose.app.yml \
+              -f deploy/docker-compose.idp.yml \
+              "$@"
           }
 
           wait_health() {
@@ -188,26 +200,36 @@ jobs:
 
           diagnose() {
             compose ps || true
-            compose logs --no-color --tail=160 || true
+            compose logs --no-color --tail=160 2>&1 \
+              | python3 deploy/scripts/redact-runtime-output.py || true
           }
           trap diagnose ERR
 
           compose up -d --no-build
           wait_health aegisops-postgres 120
           wait_health aegisops-redis 120
+          wait_health aegisops-keycloak 180
           wait_health aegisops-agent 120
           wait_health aegisops-server 240
           wait_health aegisops-worker 180
           wait_health aegisops-runner 180
           compose ps
 
+      - name: Verify OAuth2 service trust in both directions
+        run: |
+          set -o pipefail
+          python3 scripts/ci/verify-service-auth-runtime.py 2>&1 \
+            | python3 deploy/scripts/redact-runtime-output.py
+
       - name: Log in to Docker Hub
+        if: github.event_name != 'pull_request'
         uses: docker/login-action@v4
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Push verified images
+        if: github.event_name != 'pull_request'
         run: |
           set -Eeuo pipefail
 
@@ -236,6 +258,7 @@ jobs:
           AIOPS_AGENT_IMAGE: local/aegisops:${{ env.RELEASE_REF }}-agent
           AIOPS_WORKER_IMAGE: local/aegisops:${{ env.RELEASE_REF }}-worker
           AIOPS_RUNNER_IMAGE: local/aegisops:${{ env.RELEASE_REF }}-runner
+          COMPOSE_OVERLAY_FILE: deploy/docker-compose.idp.yml
         run: bash scripts/ci/capture-runtime-diagnostics.sh
 
       - name: Upload runtime diagnostics
@@ -254,13 +277,21 @@ jobs:
           AIOPS_AGENT_IMAGE: local/aegisops:${{ env.RELEASE_REF }}-agent
           AIOPS_WORKER_IMAGE: local/aegisops:${{ env.RELEASE_REF }}-worker
           AIOPS_RUNNER_IMAGE: local/aegisops:${{ env.RELEASE_REF }}-runner
-        run: docker compose -f deploy/docker-compose.app.yml down --volumes --remove-orphans || true
+        run: >-
+          docker compose
+          -f deploy/docker-compose.app.yml
+          -f deploy/docker-compose.idp.yml
+          down --volumes --remove-orphans || true
 
   deploy:
     name: Deploy to Tencent Cloud VM
     runs-on: ubuntu-latest
     timeout-minutes: 25
     needs: runtime-smoke
+    if: github.event_name != 'pull_request'
+    concurrency:
+      group: aegisops-prod-deploy
+      cancel-in-progress: false
     environment:
       name: aegisops-prod
 
@@ -270,7 +301,10 @@ jobs:
         with:
           ref: ${{ env.RELEASE_REF }}
 
-      - name: Copy deployment descriptors
+      - name: Prepare candidate deployment descriptor
+        run: cp deploy/docker-compose.app.yml deploy/docker-compose.app.candidate.yml
+
+      - name: Copy candidate and deployment tooling
         uses: appleboy/scp-action@v1
         with:
           host: ${{ secrets.PERF_VM_HOST }}
@@ -278,7 +312,7 @@ jobs:
           key: ${{ secrets.PERF_VM_KEY }}
           password: ${{ secrets.PERF_VM_PASSWORD }}
           port: ${{ secrets.PERF_VM_SSH_PORT || '22' }}
-          source: "deploy/docker-compose.app.yml,deploy/scripts/deploy-app.sh,deploy/scripts/configure-docker-mirror.sh"
+          source: "deploy/docker-compose.app.candidate.yml,deploy/scripts/deploy-app.sh,deploy/scripts/configure-docker-mirror.sh,deploy/scripts/verify-service-auth-oauth.py,deploy/scripts/redact-runtime-output.py"
           target: "~/workspace/aegisops"
           overwrite: true
           timeout: 10m
@@ -308,8 +342,12 @@ jobs:
         env:
           IMAGE_PREFIX: ${{ env.IMAGE_PREFIX }}
           IMAGE_TAG: ${{ env.IMAGE_TAG }}
-          AIOPS_JAVA_TO_AGENT_TOKEN: ${{ secrets.AIOPS_JAVA_TO_AGENT_TOKEN }}
-          AIOPS_AGENT_TO_JAVA_TOKEN: ${{ secrets.AIOPS_AGENT_TO_JAVA_TOKEN }}
+          AIOPS_SERVICE_AUTH_ISSUER_URI: ${{ secrets.AIOPS_SERVICE_AUTH_ISSUER_URI }}
+          AIOPS_SERVICE_AUTH_JWK_SET_URI: ${{ secrets.AIOPS_SERVICE_AUTH_JWK_SET_URI }}
+          AIOPS_SERVICE_AUTH_TOKEN_URI: ${{ secrets.AIOPS_SERVICE_AUTH_TOKEN_URI }}
+          AIOPS_SERVER_OAUTH2_CLIENT_SECRET: ${{ secrets.AIOPS_SERVER_OAUTH2_CLIENT_SECRET }}
+          AIOPS_WORKER_OAUTH2_CLIENT_SECRET: ${{ secrets.AIOPS_WORKER_OAUTH2_CLIENT_SECRET }}
+          AIOPS_AGENT_OAUTH2_CLIENT_SECRET: ${{ secrets.AIOPS_AGENT_OAUTH2_CLIENT_SECRET }}
           AIOPS_DIAGNOSIS_GRANT_SECRET: ${{ secrets.AIOPS_DIAGNOSIS_GRANT_SECRET }}
           AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN: ${{ secrets.AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN }}
         with:
@@ -320,7 +358,7 @@ jobs:
           port: ${{ secrets.PERF_VM_SSH_PORT || '22' }}
           timeout: 10m
           command_timeout: 20m
-          envs: IMAGE_PREFIX,IMAGE_TAG,AIOPS_JAVA_TO_AGENT_TOKEN,AIOPS_AGENT_TO_JAVA_TOKEN,AIOPS_DIAGNOSIS_GRANT_SECRET,AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN
+          envs: IMAGE_PREFIX,IMAGE_TAG,AIOPS_SERVICE_AUTH_ISSUER_URI,AIOPS_SERVICE_AUTH_JWK_SET_URI,AIOPS_SERVICE_AUTH_TOKEN_URI,AIOPS_SERVER_OAUTH2_CLIENT_SECRET,AIOPS_WORKER_OAUTH2_CLIENT_SECRET,AIOPS_AGENT_OAUTH2_CLIENT_SECRET,AIOPS_DIAGNOSIS_GRANT_SECRET,AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN
           script: |
             bash -lc '
               set -Eeuo pipefail

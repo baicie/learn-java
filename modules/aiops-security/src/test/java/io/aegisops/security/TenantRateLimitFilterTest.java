@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.aegisops.common.exception.AppException;
 import io.aegisops.common.exception.ErrorCode;
+import io.aegisops.common.tenant.TenantContext;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
@@ -152,6 +153,34 @@ class TenantRateLimitFilterTest {
   }
 
   @Test
+  void unverifiedInternalTenantHeadersMustShareTheAnonymousIpBucket() throws Exception {
+    TenantContext.clear();
+    AiopsQuotaProperties properties = new AiopsQuotaProperties();
+    properties.setAnonymousRequestsPerMinute(1);
+    properties.setInternalAgentRequestsPerMinute(100);
+
+    TenantRateLimitFilter filter =
+        new TenantRateLimitFilter(
+            properties,
+            new InMemoryTenantRateLimiter(),
+            new SecurityErrorResponseWriter(objectMapper),
+            noopAudit());
+
+    MockHttpServletRequest first = internalRequest("tenant_forged_1", "203.0.113.40");
+    MockHttpServletResponse firstResponse = new MockHttpServletResponse();
+    filter.doFilter(first, firstResponse, noopChain());
+    assertThat(firstResponse.getStatus()).isEqualTo(200);
+
+    MockHttpServletRequest second = internalRequest("tenant_forged_2", "203.0.113.40");
+    MockHttpServletResponse secondResponse = new MockHttpServletResponse();
+    filter.doFilter(second, secondResponse, noopChain());
+
+    assertThat(secondResponse.getStatus()).isEqualTo(429);
+    JsonNode body = objectMapper.readTree(secondResponse.getContentAsByteArray());
+    assertThat(body.path("errorCode").asText()).isEqualTo("RATE_LIMITED");
+  }
+
+  @Test
   void shouldSetRateLimitResponseHeadersOnAllowedRequest() throws Exception {
     AiopsQuotaProperties properties = new AiopsQuotaProperties();
     properties.setAnonymousRequestsPerMinute(5);
@@ -178,6 +207,15 @@ class TenantRateLimitFilterTest {
     @SuppressWarnings("null")
     String address = remoteAddr;
     request.setRemoteAddr(address);
+    return request;
+  }
+
+  private MockHttpServletRequest internalRequest(String tenantId, String remoteAddr) {
+    MockHttpServletRequest request = new MockHttpServletRequest();
+    request.setMethod("POST");
+    request.setRequestURI("/internal/agent/memories/search");
+    request.setRemoteAddr(remoteAddr);
+    request.addHeader(SecurityConstants.HEADER_TENANT_ID, tenantId);
     return request;
   }
 

@@ -109,6 +109,11 @@ class HealthResponse(BaseModel):
     generationMode: str
 
 
+class ServiceAuthProbeResponse(BaseModel):
+    ok: bool
+    serviceId: str
+
+
 class ContractResponse(BaseModel):
     contractVersion: str
     requestSchema: dict[str, Any]

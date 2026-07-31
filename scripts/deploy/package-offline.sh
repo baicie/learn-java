@@ -20,6 +20,7 @@
 #   │   └── values-offline.yaml
 #   ├── scripts/
 #   │   ├── load-offline-images.sh
+#   │   ├── generate-secrets.sh
 #   │   ├── render-helm.sh
 #   │   └── verify-offline-package.sh
 #   └── README.md
@@ -101,6 +102,7 @@ echo "[4/5] 复制配置和脚本..."
 cp deploy/helm/aegisops/values-offline.yaml "$OUT_DIR/values/values-offline.yaml"
 cp deploy/offline/README.md "$OUT_DIR/README.md"
 cp scripts/deploy/load-offline-images.sh "$OUT_DIR/scripts/load-offline-images.sh"
+cp scripts/deploy/generate-secrets.sh "$OUT_DIR/scripts/generate-secrets.sh"
 cp scripts/deploy/render-helm.sh "$OUT_DIR/scripts/render-helm.sh"
 cp scripts/deploy/verify-offline-package.sh "$OUT_DIR/scripts/verify-offline-package.sh"
 

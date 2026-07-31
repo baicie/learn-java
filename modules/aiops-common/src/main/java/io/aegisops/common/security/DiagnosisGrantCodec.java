@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.UUID;
@@ -12,6 +13,7 @@ import javax.crypto.spec.SecretKeySpec;
 
 public final class DiagnosisGrantCodec {
   private static final String HMAC_ALGORITHM = "HmacSHA256";
+  private static final Duration MAX_GRANT_TTL = Duration.ofMinutes(5);
   private static final byte[] JWT_HEADER =
       "{\"alg\":\"HS256\",\"typ\":\"JWT\",\"kid\":\"diagnosis-grant-v1\"}"
           .getBytes(StandardCharsets.UTF_8);
@@ -131,7 +133,8 @@ public final class DiagnosisGrantCodec {
         || isBlank(claims.traceId())
         || claims.issuedAt() == null
         || claims.expiresAt() == null
-        || !claims.expiresAt().isAfter(claims.issuedAt())) {
+        || !claims.expiresAt().isAfter(claims.issuedAt())
+        || Duration.between(claims.issuedAt(), claims.expiresAt()).compareTo(MAX_GRANT_TTL) > 0) {
       throw new InvalidDiagnosisGrantException("Diagnosis grant claims are incomplete");
     }
   }

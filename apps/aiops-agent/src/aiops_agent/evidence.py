@@ -67,15 +67,19 @@ class HttpEvidenceClient:
             }
             headers.update(synchronous_service_credential_headers(self.settings))
             diagnosis_grant = get_diagnosis_grant()
-            if diagnosis_grant:
-                headers["X-AegisOps-Diagnosis-Grant"] = diagnosis_grant
+            if diagnosis_grant is None or not diagnosis_grant.strip():
+                raise ValueError("diagnosis grant is required for evidence query")
+            headers["X-AegisOps-Diagnosis-Grant"] = diagnosis_grant
 
-            response = httpx.post(
-                f"{base_url}/query",
-                headers=headers,
-                json=payload,
+            with httpx.Client(
                 timeout=self.settings.evidence_timeout_seconds,
-            )
+                trust_env=False,
+            ) as client:
+                response = client.post(
+                    f"{base_url}/query",
+                    headers=headers,
+                    json=payload,
+                )
             response.raise_for_status()
             data = response.json()
 

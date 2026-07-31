@@ -6,6 +6,8 @@ ROOT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 CHART_DIR="$ROOT_DIR/deploy/helm/aegisops"
 RELEASE="ci"
 
+cd "$ROOT_DIR"
+
 if ! command -v helm >/dev/null 2>&1; then
   echo "Helm is not found in PATH." >&2
   exit 1
@@ -18,7 +20,6 @@ HELM_VALUES=(
   --set security.jwtSecret=ci-jwt-secret-change-me
   --set security.zabbixWebhookSigningSecret=ci-webhook-secret
   --set security.diagnosisGrantSecret=ci-diagnosis-grant-secret-change-me
-  --set security.serviceAuth.mode=oauth2
   --set security.serviceAuth.issuerUri=https://idp.example.com/realms/aegisops
   --set security.serviceAuth.jwkSetUri=https://idp.example.com/realms/aegisops/certs
   --set security.serviceAuth.tokenUri=https://idp.example.com/realms/aegisops/token
@@ -30,11 +31,13 @@ HELM_VALUES=(
   --set security.serviceAuth.clients.agent.clientSecret=agent-secret
   --set external.postgres.password=ci-postgres
   --set networkPolicy.enabled=true
+  --set-string networkPolicy.egress.allowedCidrs[0]=10.0.0.0/8
   --set serviceMesh.istio.enabled=true
 )
 
 helm lint "$CHART_DIR" "${HELM_VALUES[@]}"
 helm template "$RELEASE" "$CHART_DIR" "${HELM_VALUES[@]}" >"$RENDERED"
+python3 -m pytest deploy/helm/aegisops/tests deploy/tests
 
 assert_contains() {
   local needle="$1"

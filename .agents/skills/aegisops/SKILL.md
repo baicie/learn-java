@@ -117,7 +117,7 @@ apps/
   aiops-worker        # 异步消费 / Outbox / 后台分析
   aiops-runner        # 执行隔离层 / Ansible / SSH / Webhook
 
-apps/aiops-agent      # Python LangGraph 诊断运行时, 与 Java 通过 HTTP + internal token 解耦
+apps/aiops-agent      # Python LangGraph 诊断运行时, 与 Java 通过 HTTP + OAuth2 解耦
 ```
 
 后端架构定性为:
@@ -317,8 +317,8 @@ runner 注入 ExecutionRepository / RollbackRepository (ArchUnit 守卫: RunnerA
 
 ```txt
 aiops-server      @SpringBootApplication(scanBasePackages = "io.aegisops")
-aiops-worker      @SpringBootApplication(scanBasePackages = "io.aegisops")
-aiops-runner      @SpringBootApplication(scanBasePackages = "io.aegisops")
+aiops-worker      全包扫描非 Controller Bean, 排除 @Controller / @RestController
+aiops-runner      全包扫描非 Controller Bean, 排除 @Controller / @RestController
 ```
 
 后果: 只要模块里放了 Spring Bean, 它就会进入所有三 app 的容器。规则:
@@ -326,6 +326,8 @@ aiops-runner      @SpringBootApplication(scanBasePackages = "io.aegisops")
 ```txt
 任何 RestController / @Configuration / @Service 必须明确归类到基础底座 / 领域模块的 api 包, 不要放进 domain 包
 AI 诊断上下文相关的轻量 controller (如 InternalAgentEvidenceController) 放在 modules 下, 不放进 apps/aiops-server, 避免污染 server 主入口
+共享业务 Controller 只允许 aiops-server 注册; worker / runner 仅显式 @Import 各自的 `/internal/*/status` Controller
+Controller 隔离必须由组件扫描边界保证, 不得依赖配置开关或缺失安全 Bean 阻止端点启动
 Runner 内部执行器 (ansible / ssh / webhook) 全部放进 io.aegisops.runner.executor.* 包, 与 aiops-execution 的 dto/service 分开
 ```
 

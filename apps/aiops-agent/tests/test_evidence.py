@@ -4,6 +4,7 @@ from aiops_agent.evidence import (
     build_evidence_query_payload,
     unavailable_bundle,
 )
+from aiops_agent.observability.context import diagnosis_grant_var
 from aiops_agent.schemas import AlertContext, DiagnoseRequest, IncidentContext
 from aiops_agent.settings import Settings
 
@@ -80,52 +81,128 @@ def test_build_evidence_query_payload():
 def test_http_evidence_client_posts_internal_request(monkeypatch):
     captured = {}
 
-    def fake_post(url, headers, json, timeout):
-        captured["url"] = url
-        captured["headers"] = headers
-        captured["json"] = json
-        captured["timeout"] = timeout
-        return FakeHttpxResponse(
-            {
-                "metrics": {"available": True, "series": []},
-                "logs": {"available": True, "patterns": []},
-                "changes": {"available": True, "events": []},
-            }
-        )
+    class FakeHttpxClient:
+        def __enter__(self):
+            return self
 
-    monkeypatch.setattr("aiops_agent.evidence.httpx.post", fake_post)
+        def __exit__(self, exc_type, exc_value, traceback):
+            return None
+
+        def post(self, url, headers, json):
+            captured["url"] = url
+            captured["headers"] = headers
+            captured["json"] = json
+            return FakeHttpxResponse(
+                {
+                    "metrics": {"available": True, "series": []},
+                    "logs": {"available": True, "patterns": []},
+                    "changes": {"available": True, "events": []},
+                }
+            )
+
+    def fake_client(*, timeout, trust_env):
+        captured["timeout"] = timeout
+        captured["trust_env"] = trust_env
+        return FakeHttpxClient()
+
+    monkeypatch.setattr("aiops_agent.evidence.httpx.Client", fake_client)
+    monkeypatch.setattr(
+        "aiops_agent.evidence.synchronous_service_credential_headers",
+        lambda _settings: {"Authorization": "Bearer oauth-service-token"},
+    )
 
     settings = Settings(
         evidence_enabled=True,
         evidence_base_url="http://server:8080/internal/agent/evidence/",
-        internal_agent_token="java-to-agent-token",
-        outbound_static_token="agent-to-java-token",
         evidence_timeout_seconds=3,
     )
 
-    bundle = HttpEvidenceClient(settings).query(request())
+    token = diagnosis_grant_var.set("diagnosis-grant")
+    try:
+        bundle = HttpEvidenceClient(settings).query(request())
+    finally:
+        diagnosis_grant_var.reset(token)
 
     assert captured["url"] == "http://server:8080/internal/agent/evidence/query"
-    assert captured["headers"]["X-AIOPS-INTERNAL-TOKEN"] == "agent-to-java-token"
+    assert captured["headers"]["Authorization"] == "Bearer oauth-service-token"
+    assert captured["headers"]["X-AegisOps-Diagnosis-Grant"] == "diagnosis-grant"
     assert captured["headers"]["X-Tenant-Id"] == "tenant_1"
     assert captured["json"]["traceId"] == "trace_1"
     assert captured["json"]["serviceNames"] == ["checkout-service"]
     assert captured["timeout"] == 3
+    assert captured["trust_env"] is False
     assert bundle.metrics["available"] is True
 
 
 def test_http_evidence_client_falls_back_on_error(monkeypatch):
-    def fake_post(url, headers, json, timeout):
-        raise RuntimeError("server down")
+    class FailingHttpxClient:
+        def __enter__(self):
+            return self
 
-    monkeypatch.setattr("aiops_agent.evidence.httpx.post", fake_post)
+        def __exit__(self, exc_type, exc_value, traceback):
+            return None
+
+        def post(self, url, headers, json):
+            raise RuntimeError("server down")
+
+    monkeypatch.setattr(
+        "aiops_agent.evidence.httpx.Client",
+        lambda *, timeout, trust_env: FailingHttpxClient(),
+    )
+    monkeypatch.setattr(
+        "aiops_agent.evidence.synchronous_service_credential_headers",
+        lambda _settings: {"Authorization": "Bearer oauth-service-token"},
+    )
 
     settings = Settings(
         evidence_enabled=True,
         evidence_base_url="http://server:8080/internal/agent/evidence",
     )
 
-    bundle = HttpEvidenceClient(settings).query(request())
+    token = diagnosis_grant_var.set("diagnosis-grant")
+    try:
+        bundle = HttpEvidenceClient(settings).query(request())
+    finally:
+        diagnosis_grant_var.reset(token)
 
     assert bundle.metrics["available"] is False
     assert "server down" in bundle.metrics["reason"]
+
+
+def test_http_evidence_client_rejects_blank_context_grant_before_request(monkeypatch):
+    called = False
+
+    class UnexpectedHttpxClient:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc_value, traceback):
+            return None
+
+        def post(self, url, headers, json):
+            nonlocal called
+            called = True
+            return FakeHttpxResponse({})
+
+    monkeypatch.setattr(
+        "aiops_agent.evidence.httpx.Client",
+        lambda *, timeout, trust_env: UnexpectedHttpxClient(),
+    )
+    monkeypatch.setattr(
+        "aiops_agent.evidence.synchronous_service_credential_headers",
+        lambda _settings: {"Authorization": "Bearer oauth-service-token"},
+    )
+    settings = Settings(
+        evidence_enabled=True,
+        evidence_base_url="http://server:8080/internal/agent/evidence",
+    )
+    token = diagnosis_grant_var.set(" \t ")
+
+    try:
+        bundle = HttpEvidenceClient(settings).query(request())
+    finally:
+        diagnosis_grant_var.reset(token)
+
+    assert called is False
+    assert bundle.metrics["available"] is False
+    assert "ValueError" in bundle.metrics["reason"]

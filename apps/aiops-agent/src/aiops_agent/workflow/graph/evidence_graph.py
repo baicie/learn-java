@@ -15,9 +15,17 @@ async def fetch_evidence_node(
 ) -> DiagnosisGraphState:
     tenant_id = state["tenant_id"]
     incident_id = state["incident_id"]
+    trace_id = state["trace_id"]
 
     try:
-        evidence = await context.evidence_client.fetch_evidence(tenant_id, incident_id)
+        evidence = await context.evidence_client.fetch_evidence(
+            tenant_id,
+            incident_id,
+            trace_id,
+            primary_asset_id=state.get("primary_asset_id"),
+            started_at=state.get("started_at"),
+            last_seen_at=state.get("last_seen_at"),
+        )
     except ToolError as exc:
         evidence = [
             EvidenceItem(

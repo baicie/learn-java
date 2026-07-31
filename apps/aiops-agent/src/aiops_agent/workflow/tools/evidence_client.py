@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime
 from typing import Any
 
 import httpx
@@ -26,17 +27,26 @@ class EvidenceClient:
         self.timeout = timeout or settings.workflow_request_timeout_seconds
         self.policy_guard = policy_guard or PluginToolPolicyGuard()
 
-    async def fetch_evidence(self, tenant_id: str, incident_id: str) -> list[EvidenceItem]:
+    async def fetch_evidence(
+        self,
+        tenant_id: str,
+        incident_id: str,
+        trace_id: str,
+        *,
+        primary_asset_id: str | None = None,
+        started_at: datetime | None = None,
+        last_seen_at: datetime | None = None,
+    ) -> list[EvidenceItem]:
         await self.policy_guard.require_allowed(tenant_id, EVIDENCE_FETCH)
         url = f"{self.base_url}/internal/agent/evidence/query"
         body = {
             "contractVersion": settings.contract_version,
             "tenantId": tenant_id,
             "incidentId": incident_id,
-            "traceId": f"agent-{incident_id}",
-            "primaryAssetId": None,
-            "startedAt": None,
-            "lastSeenAt": None,
+            "traceId": trace_id,
+            "primaryAssetId": primary_asset_id,
+            "startedAt": started_at.isoformat() if started_at else None,
+            "lastSeenAt": last_seen_at.isoformat() if last_seen_at else None,
             "alertFingerprints": [],
             "alertTitles": [],
             "serviceNames": [],

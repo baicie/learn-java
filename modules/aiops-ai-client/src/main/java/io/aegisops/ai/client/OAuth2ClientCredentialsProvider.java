@@ -12,11 +12,15 @@ import org.springframework.web.client.RestTemplate;
 
 public final class OAuth2ClientCredentialsProvider implements AgentCredentialProvider {
   private static final long REFRESH_SKEW_SECONDS = 30;
+  private static final long REFRESH_FAILURE_RETRY_SECONDS = 5;
+  private static final long MAX_TOKEN_LIFETIME_SECONDS = 300;
 
   private final AgentServiceAuthProperties properties;
   private final RestTemplate restTemplate;
   private final Clock clock;
-  private CachedToken cachedToken;
+  private final Object refreshLock = new Object();
+  private volatile CachedToken cachedToken;
+  private Instant retryAfter = Instant.EPOCH;
 
   public OAuth2ClientCredentialsProvider(
       AgentServiceAuthProperties properties, RestTemplate restTemplate, Clock clock) {
@@ -30,23 +34,52 @@ public final class OAuth2ClientCredentialsProvider implements AgentCredentialPro
     headers.setBearerAuth(accessToken());
   }
 
-  private synchronized String accessToken() {
+  private String accessToken() {
     Instant now = clock.instant();
-    if (cachedToken != null && cachedToken.refreshAfter().isAfter(now)) {
-      return cachedToken.value();
+    CachedToken snapshot = cachedToken;
+    if (isFresh(snapshot, now)) {
+      return snapshot.value();
     }
 
-    validateConfiguration();
+    synchronized (refreshLock) {
+      now = clock.instant();
+      snapshot = cachedToken;
+      if (isFresh(snapshot, now)) {
+        return snapshot.value();
+      }
+      if (retryAfter.isAfter(now)) {
+        if (isUnexpired(snapshot, now)) {
+          return snapshot.value();
+        }
+        throw new IllegalStateException("OAuth2 token refresh is temporarily unavailable");
+      }
+
+      try {
+        CachedToken refreshed = refresh(now);
+        cachedToken = refreshed;
+        retryAfter = Instant.EPOCH;
+        return refreshed.value();
+      } catch (RuntimeException exception) {
+        Instant failureNow = clock.instant();
+        retryAfter = failureNow.plusSeconds(REFRESH_FAILURE_RETRY_SECONDS);
+        if (isUnexpired(snapshot, failureNow)) {
+          return snapshot.value();
+        }
+        throw exception;
+      }
+    }
+  }
+
+  private CachedToken refresh(Instant now) {
+    properties.validate();
     HttpHeaders headers = new HttpHeaders();
     headers.setBasicAuth(properties.getClientId(), properties.getClientSecret());
     headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-
     MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
     form.add("grant_type", "client_credentials");
     if (properties.getScope() != null && !properties.getScope().isBlank()) {
       form.add("scope", properties.getScope().trim());
     }
-
     OAuthTokenResponse response =
         restTemplate.postForObject(
             properties.getTokenUri(), new HttpEntity<>(form, headers), OAuthTokenResponse.class);
@@ -55,24 +88,23 @@ public final class OAuth2ClientCredentialsProvider implements AgentCredentialPro
     }
 
     long expiresIn = response.expiresIn() == null ? 60 : Math.max(1, response.expiresIn());
+    if (expiresIn > MAX_TOKEN_LIFETIME_SECONDS) {
+      throw new IllegalStateException("OAuth2 access token must be short lived (<= 300 seconds)");
+    }
     long refreshIn = Math.max(1, expiresIn - REFRESH_SKEW_SECONDS);
-    cachedToken = new CachedToken(response.accessToken(), now.plusSeconds(refreshIn));
-    return cachedToken.value();
+    return new CachedToken(
+        response.accessToken(), now.plusSeconds(refreshIn), now.plusSeconds(expiresIn));
   }
 
-  private void validateConfiguration() {
-    if (properties.getTokenUri() == null || properties.getTokenUri().isBlank()) {
-      throw new IllegalStateException("aiops.agent.auth.token-uri is required");
-    }
-    if (properties.getClientId() == null || properties.getClientId().isBlank()) {
-      throw new IllegalStateException("aiops.agent.auth.client-id is required");
-    }
-    if (properties.getClientSecret() == null || properties.getClientSecret().isBlank()) {
-      throw new IllegalStateException("aiops.agent.auth.client-secret is required");
-    }
+  private boolean isFresh(CachedToken token, Instant now) {
+    return token != null && token.refreshAfter().isAfter(now);
   }
 
-  private record CachedToken(String value, Instant refreshAfter) {}
+  private boolean isUnexpired(CachedToken token, Instant now) {
+    return token != null && token.expiresAt().isAfter(now);
+  }
+
+  private record CachedToken(String value, Instant refreshAfter, Instant expiresAt) {}
 
   private record OAuthTokenResponse(
       @JsonProperty("access_token") String accessToken,

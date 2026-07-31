@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import asyncio
-import secrets
+import logging
+import time
 from dataclasses import dataclass
 from typing import Protocol
 
@@ -11,6 +12,10 @@ import jwt
 from fastapi import HTTPException, status
 
 from aiops_agent.settings import Settings
+
+MAX_SERVICE_TOKEN_LIFETIME_SECONDS = 300
+MAX_SERVICE_TOKEN_CLOCK_SKEW_SECONDS = 30
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -36,7 +41,7 @@ class PyJwkServiceJwtDecoder:
             algorithms=["RS256"],
             audience=self.settings.inbound_oauth2_audience,
             issuer=self.settings.inbound_oauth2_issuer,
-            options={"require": ["exp", "sub"]},
+            options={"require": ["exp", "sub"], "verify_iat": False},
         )
 
 
@@ -47,74 +52,129 @@ class ServiceAuthenticator:
         decoder: ServiceJwtDecoder | None = None,
     ):
         self.settings = current_settings
-        mode = (current_settings.inbound_auth_mode or "static").strip().lower()
         self.decoder = (
             decoder
             if decoder is not None
             else PyJwkServiceJwtDecoder(current_settings)
-            if mode == "oauth2" and current_settings.inbound_oauth2_jwks_url
-            else None
         )
 
     async def authenticate(
         self,
         authorization: str | None,
-        static_token: str | None,
         required_scope: str,
     ) -> ServicePrincipal:
-        mode = (self.settings.inbound_auth_mode or "static").strip().lower()
-        if mode == "static":
-            expected = self.settings.internal_agent_token
-            if not static_token or not secrets.compare_digest(static_token, expected):
+        verified_service_id: str | None = None
+        try:
+            scheme, separator, token = (authorization or "").partition(" ")
+            if scheme.lower() != "bearer" or not separator or not token.strip():
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="invalid internal service credentials",
+                    detail="bearer service token is required",
                 )
-            return ServicePrincipal("static:java", frozenset({"agent:*"}))
 
-        if mode != "oauth2":
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="unsupported service authentication mode",
-            )
-        if not authorization or not authorization.startswith("Bearer "):
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="bearer service token is required",
-            )
+            try:
+                claims = await self.decoder.decode(token.strip())
+            except HTTPException:
+                raise
+            except (
+                jwt.PyJWKClientConnectionError,
+                jwt.PyJWKError,
+                jwt.PyJWKSetError,
+            ) as exc:
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail="service authentication is temporarily unavailable",
+                ) from exc
+            except jwt.PyJWTError as exc:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="invalid service token",
+                ) from exc
+            except Exception as exc:
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail="service authentication is temporarily unavailable",
+                ) from exc
 
-        try:
-            decoder = self.decoder or PyJwkServiceJwtDecoder(self.settings)
-            claims = await decoder.decode(authorization.removeprefix("Bearer ").strip())
-        except HTTPException:
+            _validate_token_lifetime(claims)
+            audiences = _claim_values(claims.get("aud"))
+            if self.settings.inbound_oauth2_audience not in audiences:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="invalid service token audience",
+                )
+
+            subject_claim = claims.get("sub")
+            subject = subject_claim.strip() if isinstance(subject_claim, str) else ""
+            if not subject:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="service token subject is required",
+                )
+            verified_service_id = subject
+
+            scopes = _scopes(claims)
+            if required_scope not in scopes:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="service is not authorized for this endpoint",
+                )
+
+            return ServicePrincipal(subject, frozenset(scopes))
+        except HTTPException as exc:
+            _log_auth_rejection(exc.status_code, required_scope, verified_service_id)
             raise
-        except Exception as exc:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="invalid service token",
-            ) from exc
 
-        audiences = _claim_values(claims.get("aud"))
-        if self.settings.inbound_oauth2_audience not in audiences:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="invalid service token audience",
-            )
 
-        scopes = _scopes(claims)
-        if required_scope not in scopes:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"missing required service scope: {required_scope}",
-            )
+def _log_auth_rejection(
+    http_status: int,
+    required_scope: str,
+    service_id: str | None,
+) -> None:
+    events = {
+        status.HTTP_401_UNAUTHORIZED: ("internal_auth_failed", "critical", logging.WARNING),
+        status.HTTP_403_FORBIDDEN: ("internal_auth_forbidden", "critical", logging.WARNING),
+        status.HTTP_503_SERVICE_UNAVAILABLE: ("internal_auth_unavailable", "high", logging.ERROR),
+    }
+    event = events.get(http_status)
+    if event is None:
+        return
 
-        subject = str(claims.get("sub") or "").strip()
-        if not subject:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="service token subject is required",
-            )
-        return ServicePrincipal(subject, frozenset(scopes))
+    event_type, severity, level = event
+    fields: dict[str, object] = {
+        "eventType": event_type,
+        "severity": severity,
+        "httpStatus": http_status,
+        "requiredScope": required_scope,
+    }
+    if service_id:
+        fields["serviceId"] = service_id
+    logger.log(level, "Internal service authentication rejected", extra=fields)
+
+
+def _validate_token_lifetime(claims: dict[str, object]) -> None:
+    issued_at = claims.get("iat")
+    expires_at = claims.get("exp")
+    if not _numeric_date(issued_at) or not _numeric_date(expires_at):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="service token must contain numeric iat and exp claims",
+        )
+    lifetime = float(expires_at) - float(issued_at)
+    if lifetime <= 0 or lifetime > MAX_SERVICE_TOKEN_LIFETIME_SECONDS:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="invalid service token lifetime",
+        )
+    if float(issued_at) > time.time() + MAX_SERVICE_TOKEN_CLOCK_SKEW_SECONDS:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="service token issued too far in the future",
+        )
+
+
+def _numeric_date(value: object) -> bool:
+    return isinstance(value, (int, float)) and not isinstance(value, bool)
 
 
 def _claim_values(value: object) -> set[str]:

@@ -7,25 +7,37 @@ final class InternalAgentScopePolicy {
 
   static String requiredScope(HttpServletRequest request) {
     String path = request.getRequestURI();
-    if (path.startsWith("/internal/agent/evidence/")) {
+    String method = request.getMethod();
+    if ("POST".equalsIgnoreCase(method) && path.equals("/internal/agent/evidence/query")) {
       return "evidence:read";
     }
-    if (path.equals("/internal/agent/tools/search-cases")) {
+    if ("POST".equalsIgnoreCase(method) && path.equals("/internal/agent/auth/probe")) {
+      return "evidence:read";
+    }
+    if ("POST".equalsIgnoreCase(method) && path.equals("/internal/agent/tools/search-cases")) {
       return "cases:read";
     }
-    if (path.equals("/internal/agent/plugins/tools/authorize")) {
+    if ("POST".equalsIgnoreCase(method) && path.equals("/internal/agent/plugins/tools/authorize")) {
       return "plugin:authorize";
     }
-    if (path.equals("/internal/agent/memories/search")) {
+    if ("POST".equalsIgnoreCase(method) && path.equals("/internal/agent/memories/search")) {
       return "memory:read";
     }
-    if (path.equals("/internal/agent/memories")) {
+    if ("POST".equalsIgnoreCase(method) && path.equals("/internal/agent/memories")) {
       return "memory:write";
     }
     if (path.equals("/internal/agent/checkpoints")
         || path.startsWith("/internal/agent/checkpoints/")) {
-      return "GET".equalsIgnoreCase(request.getMethod()) ? "checkpoint:read" : "checkpoint:write";
+      if ("GET".equalsIgnoreCase(method)) {
+        return "checkpoint:read";
+      }
+      if ("POST".equalsIgnoreCase(method)
+          || "PUT".equalsIgnoreCase(method)
+          || "PATCH".equalsIgnoreCase(method)) {
+        return "checkpoint:write";
+      }
     }
-    return "internal:agent";
+    throw new InternalServiceAuthorizationException(
+        "Internal agent endpoint has no explicit scope policy");
   }
 }

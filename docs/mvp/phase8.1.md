@@ -1,15 +1,20 @@
 ---
 title: Phase8.1：Plugin System
 type: design
-status: accepted
+status: deprecated
 phase: global
 owner: ai
 created: 2026-06-30
-updated: 2026-06-30
-related: []
+updated: 2026-07-30
+related:
+  - docs/adr/0010-service-authentication-oauth2-only.md
 ---
 
 # Phase8.1：Plugin System
+
+> 历史设计（已废弃）：本文沿用了 Phase 8.0 的静态 Token 基线，其中认证配置和测试示例
+> 不得继续执行。当前服务鉴权只支持 OAuth2 Client Credentials，并强制使用 Diagnosis
+> Grant；以 `docs/adr/0010-service-authentication-oauth2-only.md` 为准。
 
 > Phase8.1 目标：给 AegisOps 增加 **安全插件系统 MVP**。
 > 这一阶段只做插件描述符、扩展点、租户启停、前端 manifest、Agent Tool allowlist。

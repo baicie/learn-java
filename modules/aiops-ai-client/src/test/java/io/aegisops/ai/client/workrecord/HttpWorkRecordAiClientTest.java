@@ -9,7 +9,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 class HttpWorkRecordAiClientTest {
   @Test
   void appliesConfiguredConnectAndReadTimeouts() {
-    var properties = new AgentClientProperties("http://agent:9008", "token", 4321, 90000);
+    var properties = new AgentClientProperties("http://agent:9008", 4321, 90000);
 
     var factory = HttpWorkRecordAiClient.createRequestFactory(properties);
 

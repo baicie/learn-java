@@ -59,6 +59,8 @@ export default defineConfig({
   test: {
     include: ['src/**/*.test.{ts,tsx}'],
     silent: 'passed-only',
+    // Keep browser contexts below the point where CPU contention causes random test timeouts.
+    maxWorkers: 2,
     unstubEnvs: true,
     setupFiles: ['./src/test-utils/vitest-setup.ts'],
     browser: {

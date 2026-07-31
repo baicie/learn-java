@@ -1,14 +1,20 @@
 ---
 title: Phase8.2：Private Deployment / Helm / Offline Package
 type: design
-status: accepted
+status: deprecated
 phase: global
 owner: ai
 created: 2026-06-30
-updated: 2026-06-30
-related: []
+updated: 2026-07-30
+related:
+  - docs/adr/0010-service-authentication-oauth2-only.md
 ---
+
 # Phase8.2：Private Deployment / Helm / Offline Package
+
+> 历史设计（已废弃）：本文中的静态 Token values、Secret 和 Helm 示例不得继续执行。
+> 当前私有化与离线部署只支持 OAuth2 Client Credentials，并强制使用 Diagnosis Grant；以
+> `docs/adr/0010-service-authentication-oauth2-only.md` 和 `deploy/offline/README.md` 为准。
 
 > Phase8.2 目标：把 AegisOps 做成可私有化交付的部署形态。
 > 这一阶段只做 **容器镜像、Helm Chart、私有化 values、离线镜像包、初始化 Secret、部署校验脚本**。
@@ -244,8 +250,8 @@ name: aegisops
 description: AegisOps private deployment chart
 type: application
 version: 0.1.0
-appVersion: "0.1.0"
-kubeVersion: ">=1.24.0"
+appVersion: '0.1.0'
+kubeVersion: '>=1.24.0'
 keywords:
   - aiops
   - observability
@@ -268,18 +274,18 @@ deploy/helm/aegisops/values.yaml
 
 ```yaml
 global:
-  imageRegistry: ""
+  imageRegistry: ''
   imagePullSecrets: []
   imagePullPolicy: IfNotPresent
-  storageClass: ""
+  storageClass: ''
   timezone: UTC
 
-nameOverride: ""
-fullnameOverride: ""
+nameOverride: ''
+fullnameOverride: ''
 
 serviceAccount:
   create: true
-  name: ""
+  name: ''
   annotations: {}
 
 podSecurityContext:
@@ -299,12 +305,12 @@ commonAnnotations: {}
 
 config:
   springProfilesActive: private
-  javaOpts: "-XX:MaxRAMPercentage=75 -XX:+ExitOnOutOfMemoryError"
+  javaOpts: '-XX:MaxRAMPercentage=75 -XX:+ExitOnOutOfMemoryError'
   logLevel: INFO
 
 security:
-  internalAgentToken: ""
-  jwtSecret: ""
+  internalAgentToken: ''
+  jwtSecret: ''
   internalAgentTokenRequired: true
   tenantRequired: true
   publicApiRequestsPerMinute: 600
@@ -312,37 +318,37 @@ security:
 
 external:
   postgres:
-    host: "postgresql.default.svc.cluster.local"
+    host: 'postgresql.default.svc.cluster.local'
     port: 5432
-    database: "aegisops"
-    username: "aegisops"
-    password: ""
+    database: 'aegisops'
+    username: 'aegisops'
+    password: ''
   redis:
-    host: "redis.default.svc.cluster.local"
+    host: 'redis.default.svc.cluster.local'
     port: 6379
-    password: ""
+    password: ''
   clickhouse:
-    host: "clickhouse.default.svc.cluster.local"
+    host: 'clickhouse.default.svc.cluster.local'
     httpPort: 8123
     tcpPort: 9000
-    database: "aegisops"
-    username: "default"
-    password: ""
+    database: 'aegisops'
+    username: 'default'
+    password: ''
   minio:
-    endpoint: "http://minio.default.svc.cluster.local:9000"
-    accessKey: ""
-    secretKey: ""
-    bucket: "aegisops"
+    endpoint: 'http://minio.default.svc.cluster.local:9000'
+    accessKey: ''
+    secretKey: ''
+    bucket: 'aegisops'
   victoriaMetrics:
-    baseUrl: "http://victoria-metrics.default.svc.cluster.local:8428"
+    baseUrl: 'http://victoria-metrics.default.svc.cluster.local:8428'
 
 apps:
   server:
     enabled: true
     replicaCount: 1
     image:
-      repository: "aegisops/aiops-server"
-      tag: "0.1.0"
+      repository: 'aegisops/aiops-server'
+      tag: '0.1.0'
     port: 8080
     env: {}
     resources:
@@ -350,14 +356,14 @@ apps:
         cpu: 200m
         memory: 512Mi
       limits:
-        cpu: "1"
+        cpu: '1'
         memory: 1Gi
   worker:
     enabled: true
     replicaCount: 1
     image:
-      repository: "aegisops/aiops-worker"
-      tag: "0.1.0"
+      repository: 'aegisops/aiops-worker'
+      tag: '0.1.0'
     port: 8080
     env: {}
     resources:
@@ -365,14 +371,14 @@ apps:
         cpu: 100m
         memory: 384Mi
       limits:
-        cpu: "1"
+        cpu: '1'
         memory: 768Mi
   runner:
     enabled: true
     replicaCount: 1
     image:
-      repository: "aegisops/aiops-runner"
-      tag: "0.1.0"
+      repository: 'aegisops/aiops-runner'
+      tag: '0.1.0'
     port: 8080
     env: {}
     resources:
@@ -380,14 +386,14 @@ apps:
         cpu: 100m
         memory: 384Mi
       limits:
-        cpu: "1"
+        cpu: '1'
         memory: 768Mi
   agent:
     enabled: true
     replicaCount: 1
     image:
-      repository: "aegisops/aiops-agent"
-      tag: "0.1.0"
+      repository: 'aegisops/aiops-agent'
+      tag: '0.1.0'
     port: 8000
     env: {}
     resources:
@@ -395,12 +401,12 @@ apps:
         cpu: 100m
         memory: 256Mi
       limits:
-        cpu: "1"
+        cpu: '1'
         memory: 512Mi
 
 ingress:
   enabled: false
-  className: ""
+  className: ''
   annotations: {}
   hosts:
     - host: aegisops.local
@@ -439,34 +445,34 @@ config:
   logLevel: INFO
 
 security:
-  internalAgentToken: "CHANGE_ME_INTERNAL_AGENT_TOKEN"
-  jwtSecret: "CHANGE_ME_JWT_SECRET"
+  internalAgentToken: 'CHANGE_ME_INTERNAL_AGENT_TOKEN'
+  jwtSecret: 'CHANGE_ME_JWT_SECRET'
 
 external:
   postgres:
-    host: "postgresql.aegisops-infra.svc.cluster.local"
+    host: 'postgresql.aegisops-infra.svc.cluster.local'
     port: 5432
-    database: "aegisops"
-    username: "aegisops"
-    password: "CHANGE_ME_POSTGRES_PASSWORD"
+    database: 'aegisops'
+    username: 'aegisops'
+    password: 'CHANGE_ME_POSTGRES_PASSWORD'
   redis:
-    host: "redis.aegisops-infra.svc.cluster.local"
+    host: 'redis.aegisops-infra.svc.cluster.local'
     port: 6379
-    password: "CHANGE_ME_REDIS_PASSWORD"
+    password: 'CHANGE_ME_REDIS_PASSWORD'
   clickhouse:
-    host: "clickhouse.aegisops-infra.svc.cluster.local"
+    host: 'clickhouse.aegisops-infra.svc.cluster.local'
     httpPort: 8123
     tcpPort: 9000
-    database: "aegisops"
-    username: "default"
-    password: "CHANGE_ME_CLICKHOUSE_PASSWORD"
+    database: 'aegisops'
+    username: 'default'
+    password: 'CHANGE_ME_CLICKHOUSE_PASSWORD'
   minio:
-    endpoint: "http://minio.aegisops-infra.svc.cluster.local:9000"
-    accessKey: "CHANGE_ME_MINIO_ACCESS_KEY"
-    secretKey: "CHANGE_ME_MINIO_SECRET_KEY"
-    bucket: "aegisops"
+    endpoint: 'http://minio.aegisops-infra.svc.cluster.local:9000'
+    accessKey: 'CHANGE_ME_MINIO_ACCESS_KEY'
+    secretKey: 'CHANGE_ME_MINIO_SECRET_KEY'
+    bucket: 'aegisops'
   victoriaMetrics:
-    baseUrl: "http://victoria-metrics.aegisops-infra.svc.cluster.local:8428"
+    baseUrl: 'http://victoria-metrics.aegisops-infra.svc.cluster.local:8428'
 
 apps:
   server:
@@ -502,33 +508,33 @@ deploy/helm/aegisops/values-offline.yaml
 
 ```yaml
 global:
-  imageRegistry: "registry.local/aegisops"
+  imageRegistry: 'registry.local/aegisops'
   imagePullPolicy: IfNotPresent
 
 offline:
   enabled: true
 
 security:
-  internalAgentToken: "CHANGE_ME_INTERNAL_AGENT_TOKEN"
-  jwtSecret: "CHANGE_ME_JWT_SECRET"
+  internalAgentToken: 'CHANGE_ME_INTERNAL_AGENT_TOKEN'
+  jwtSecret: 'CHANGE_ME_JWT_SECRET'
 
 apps:
   server:
     image:
-      repository: "aiops-server"
-      tag: "0.1.0"
+      repository: 'aiops-server'
+      tag: '0.1.0'
   worker:
     image:
-      repository: "aiops-worker"
-      tag: "0.1.0"
+      repository: 'aiops-worker'
+      tag: '0.1.0'
   runner:
     image:
-      repository: "aiops-runner"
-      tag: "0.1.0"
+      repository: 'aiops-runner'
+      tag: '0.1.0'
   agent:
     image:
-      repository: "aiops-agent"
-      tag: "0.1.0"
+      repository: 'aiops-agent'
+      tag: '0.1.0'
 
 ingress:
   enabled: false
@@ -1604,7 +1610,7 @@ helm-package:
         version: v3.15.4
     - uses: actions/setup-python@v5
       with:
-        python-version: "3.12"
+        python-version: '3.12'
     - run: pip install pyyaml
     - run: pytest -q deploy/helm/aegisops/tests tests/test_phase8_2_deploy_scripts.py
     - run: helm lint deploy/helm/aegisops

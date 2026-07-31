@@ -4,8 +4,8 @@ type: operation
 status: accepted
 phase: global
 owner: script
-created: 2026-07-30
-updated: 2026-07-30
+created: 2026-07-31
+updated: 2026-07-31
 related: []
 ---
 
@@ -30,7 +30,7 @@ Do not edit it manually.
 | 生产安全检查清单            | accepted | global  | 2026-07-30 | [docs/deployment/production-security-checklist.md](deployment/production-security-checklist.md) |
 | Agent Skill 管理            | accepted | global  | 2026-07-14 | [docs/operations/agent-skills.md](operations/agent-skills.md)                                   |
 | Git 工作流                  | accepted | phase-8 | 2026-07-22 | [docs/operations/git-workflow.md](operations/git-workflow.md)                                   |
-| AegisOps Production Runbook | accepted | global  | 2026-07-30 | [docs/operations/runbook.md](operations/runbook.md)                                             |
+| AegisOps Production Runbook | accepted | global  | 2026-08-01 | [docs/operations/runbook.md](operations/runbook.md)                                             |
 | 项目文档导航                | accepted | global  | 2026-07-14 | [docs/README.md](README.md)                                                                     |
 
 ## adr
@@ -44,6 +44,7 @@ Do not edit it manually.
 | Portal 采用面向路由的源码分层                                  | accepted | phase-21    | 2026-07-14 | [docs/adr/0007-portal-route-oriented-source-layout.md](adr/0007-portal-route-oriented-source-layout.md)           |
 | 统一 aiops-agent 运行端口                                      | accepted | global      | 2026-07-29 | [docs/adr/0008-standardize-aiops-agent-port.md](adr/0008-standardize-aiops-agent-port.md)                         |
 | Java 与 aiops-agent 服务间鉴权                                 | accepted | phase-8     | 2026-07-30 | [docs/adr/0009-service-to-service-authentication.md](adr/0009-service-to-service-authentication.md)               |
+| 服务间鉴权统一为 OAuth2                                        | accepted | phase-8     | 2026-07-30 | [docs/adr/0010-service-authentication-oauth2-only.md](adr/0010-service-authentication-oauth2-only.md)             |
 
 ## ai
 
@@ -60,7 +61,7 @@ Do not edit it manually.
 | AI 模型管理 API                  | accepted | phase-4        | 2026-07-18 | [docs/api/ai-models.md](api/ai-models.md)                                             |
 | 资源中心 API                     | accepted | phase-1        | 2026-07-16 | [docs/api/assets.md](api/assets.md)                                                   |
 | 数据源 API                       | accepted | phase-1        | 2026-07-29 | [docs/api/datasources.md](api/datasources.md)                                         |
-| 内部服务鉴权契约                 | accepted | phase-8        | 2026-07-30 | [docs/api/internal-service-authentication.md](api/internal-service-authentication.md) |
+| 内部服务鉴权契约                 | accepted | phase-8        | 2026-07-31 | [docs/api/internal-service-authentication.md](api/internal-service-authentication.md) |
 | 多来源可观测与变更接入 API       | accepted | phase-1        | 2026-07-18 | [docs/api/operations-ingestion.md](api/operations-ingestion.md)                       |
 | 平台用户与权限管理 API           | accepted | work-record-20 | 2026-07-18 | [docs/api/platform-iam.md](api/platform-iam.md)                                       |
 | 工作记录 Phase 20 异步与协作 API | accepted | work-record-20 | 2026-07-21 | [docs/api/work-record-phase20.md](api/work-record-phase20.md)                         |
@@ -86,8 +87,8 @@ Do not edit it manually.
 
 | Title                                                            | Status     | Phase          | Updated    | Path                                                                                                                                                                                    |
 | ---------------------------------------------------------------- | ---------- | -------------- | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| AegisOps Offline Package                                         | accepted   | global         | 2026-06-30 | [docs/deployment/offline-package.md](deployment/offline-package.md)                                                                                                                     |
-| AegisOps Private Deployment                                      | accepted   | global         | 2026-06-30 | [docs/deployment/private-deployment.md](deployment/private-deployment.md)                                                                                                               |
+| AegisOps Offline Package                                         | accepted   | global         | 2026-07-30 | [docs/deployment/offline-package.md](deployment/offline-package.md)                                                                                                                     |
+| AegisOps Private Deployment                                      | accepted   | global         | 2026-07-31 | [docs/deployment/private-deployment.md](deployment/private-deployment.md)                                                                                                               |
 | 统一资源来源与实体解析实施计划                                   | accepted   | phase-1        | 2026-07-16 | [docs/designs/phase-1/2026-07-16-resource-source-and-entity-resolution-implementation-plan.md](designs/phase-1/2026-07-16-resource-source-and-entity-resolution-implementation-plan.md) |
 | 多来源资源与证据后续实施计划                                     | accepted   | phase-1        | 2026-07-17 | [docs/designs/phase-1/2026-07-17-resource-intelligence-followups.md](designs/phase-1/2026-07-17-resource-intelligence-followups.md)                                                     |
 | 工作记录导入导出与详情交互修复计划                               | accepted   | phase-20       | 2026-07-19 | [docs/designs/phase-20/2026-07-19-work-record-fixes-plan.md](designs/phase-20/2026-07-19-work-record-fixes-plan.md)                                                                     |
@@ -97,10 +98,6 @@ Do not edit it manually.
 | DeepSeek 模型管理页面设计                                        | accepted   | phase-4        | 2026-07-18 | [docs/designs/phase-4/2026-07-18-deepseek-model-management.md](designs/phase-4/2026-07-18-deepseek-model-management.md)                                                                 |
 | Phase2：Incident 聚合与事故中心                                  | accepted   | global         | 2026-06-30 | [docs/mvp/design/phase2.md](mvp/design/phase2.md)                                                                                                                                       |
 | Phase3：RCA 规则引擎与证据链                                     | accepted   | global         | 2026-06-30 | [docs/mvp/design/phase3.md](mvp/design/phase3.md)                                                                                                                                       |
-| Phase4.1：Agent Context Contract & Safety Boundary               | accepted   | global         | 2026-06-30 | [docs/mvp/design/phase4.1.md](mvp/design/phase4.1.md)                                                                                                                                   |
-| Phase4.2：LangGraph Agent 可选真实 LLM Provider                  | accepted   | global         | 2026-06-30 | [docs/mvp/design/phase4.2.md](mvp/design/phase4.2.md)                                                                                                                                   |
-| Phase4.3：Evidence Tools 接入 Metrics / Logs / Changes           | accepted   | global         | 2026-06-30 | [docs/mvp/design/phase4.3.md](mvp/design/phase4.3.md)                                                                                                                                   |
-| Phase4.4：Agent Run Trace + Eval 可观测层                        | accepted   | global         | 2026-06-30 | [docs/mvp/design/phase4.4.md](mvp/design/phase4.4.md)                                                                                                                                   |
 | Phase4.5：jOOQ 持久层改造                                        | accepted   | global         | 2026-06-30 | [docs/mvp/design/phase4.5.md](mvp/design/phase4.5.md)                                                                                                                                   |
 | Phase4.6 jOOQ Codegen                                            | accepted   | global         | 2026-06-30 | [docs/mvp/design/phase4.6-jooq-codegen.md](mvp/design/phase4.6-jooq-codegen.md)                                                                                                         |
 | Phase4.6：jOOQ Codegen 正式化                                    | accepted   | global         | 2026-06-30 | [docs/mvp/design/phase4.6.md](mvp/design/phase4.6.md)                                                                                                                                   |
@@ -108,7 +105,6 @@ Do not edit it manually.
 | Phase4.7：迁移 AI / RCA Repository 到 generated Tables           | accepted   | global         | 2026-06-30 | [docs/mvp/design/phase4.7.md](mvp/design/phase4.7.md)                                                                                                                                   |
 | Phase4.8 Persistence Cleanup                                     | accepted   | global         | 2026-06-30 | [docs/mvp/design/phase4.8-persistence-cleanup.md](mvp/design/phase4.8-persistence-cleanup.md)                                                                                           |
 | Phase4.8：持久层收口与 Repository 命名治理                       | accepted   | global         | 2026-06-30 | [docs/mvp/design/phase4.8.md](mvp/design/phase4.8.md)                                                                                                                                   |
-| Phase4：Python LangGraph OSS Diagnosis Agent + Java Agent Client | accepted   | global         | 2026-06-30 | [docs/mvp/design/phase4.md](mvp/design/phase4.md)                                                                                                                                       |
 | Phase5.0 Runbook Recommendation and AutomationPlan               | accepted   | global         | 2026-06-30 | [docs/mvp/design/phase5.0-runbook-automation-plan.md](mvp/design/phase5.0-runbook-automation-plan.md)                                                                                   |
 | Phase5.1 Automation Approval                                     | accepted   | global         | 2026-06-30 | [docs/mvp/design/phase5.1-automation-approval.md](mvp/design/phase5.1-automation-approval.md)                                                                                           |
 | Phase5.2 Execution Runner                                        | accepted   | global         | 2026-06-30 | [docs/mvp/design/phase5.2-execution-runner.md](mvp/design/phase5.2-execution-runner.md)                                                                                                 |
@@ -122,7 +118,6 @@ Do not edit it manually.
 | Phase7.0 Agent Graph Modularization                              | accepted   | global         | 2026-06-30 | [docs/mvp/design/phase7.0-agent-graph-modularization.md](mvp/design/phase7.0-agent-graph-modularization.md)                                                                             |
 | Phase7.2 Multi-Agent Collaboration                               | accepted   | global         | 2026-06-30 | [docs/mvp/design/phase7.2-multi-agent-collaboration.md](mvp/design/phase7.2-multi-agent-collaboration.md)                                                                               |
 | Phase7.3 Agent Memory                                            | accepted   | global         | 2026-06-30 | [docs/mvp/design/phase7.3-agent-memory.md](mvp/design/phase7.3-agent-memory.md)                                                                                                         |
-| Phase8.0 SaaS Multi-tenant Hardening                             | accepted   | global         | 2026-06-30 | [docs/mvp/design/phase8.0-saas-multi-tenant-hardening.md](mvp/design/phase8.0-saas-multi-tenant-hardening.md)                                                                           |
 | Phase5.8 Rollback Plan 实现说明                                  | accepted   | global         | 2026-06-30 | [docs/mvp/phase5.8-rollback-plan.md](mvp/phase5.8-rollback-plan.md)                                                                                                                     |
 | Phase5.8：Execution Report & Audit                               | accepted   | global         | 2026-06-30 | [docs/mvp/phase5.8.md](mvp/phase5.8.md)                                                                                                                                                 |
 | Phase6.0：Postmortem Report                                      | accepted   | global         | 2026-06-30 | [docs/mvp/phase6.0.md](mvp/phase6.0.md)                                                                                                                                                 |
@@ -132,10 +127,8 @@ Do not edit it manually.
 | Phase7.2：Multi-Agent Collaboration                              | accepted   | global         | 2026-06-30 | [docs/mvp/phase7.2.md](mvp/phase7.2.md)                                                                                                                                                 |
 | Phase7.3：Agent Memory                                           | accepted   | global         | 2026-06-30 | [docs/mvp/phase7.3.md](mvp/phase7.3.md)                                                                                                                                                 |
 | Phase7.0：Agent Graph Modularization                             | accepted   | global         | 2026-06-30 | [docs/mvp/phase7.md](mvp/phase7.md)                                                                                                                                                     |
-| Phase8.1：Plugin System                                          | accepted   | global         | 2026-06-30 | [docs/mvp/phase8.1.md](mvp/phase8.1.md)                                                                                                                                                 |
-| Phase8.2：Private Deployment / Helm / Offline Package            | accepted   | global         | 2026-06-30 | [docs/mvp/phase8.2.md](mvp/phase8.2.md)                                                                                                                                                 |
 | AegisOps Observability                                           | accepted   | global         | 2026-06-30 | [docs/operations/observability.md](operations/observability.md)                                                                                                                         |
-| Phase8.0：SaaS Multi-tenant Hardening                            | accepted   | global         | 2026-06-30 | [docs/phase8.md](phase8.md)                                                                                                                                                             |
+| Phase 8.0：SaaS 多租户与生产安全加固                             | accepted   | phase-8        | 2026-07-30 | [docs/phase8.md](phase8.md)                                                                                                                                                             |
 | Phase Z3: Zabbix Alert Aggregation Strategy                      | accepted   | global         | 2026-06-30 | [docs/scenarios/phase-z3-zabbix-incident-aggregation.md](scenarios/phase-z3-zabbix-incident-aggregation.md)                                                                             |
 | Phase Z4: Zabbix Evidence Collector                              | accepted   | global         | 2026-07-27 | [docs/scenarios/phase-z4-zabbix-evidence-collector.md](scenarios/phase-z4-zabbix-evidence-collector.md)                                                                                 |
 | Phase Z5: Evidence-aware RCA Rules                               | accepted   | global         | 2026-06-30 | [docs/scenarios/phase-z5-rca-evidence-rules.md](scenarios/phase-z5-rca-evidence-rules.md)                                                                                               |
@@ -164,6 +157,14 @@ Do not edit it manually.
 | Formily 与 Shadcn 统一运行时完整代码                             | draft      | work-record    | 2026-07-14 | [docs/record/formily/04-formily-shadcn统一运行时完整代码.md](record/formily/04-formily-shadcn统一运行时完整代码.md)                                                                     |
 | DesignerDocument、编译器与设计器 V2 完整代码                     | draft      | work-record    | 2026-07-14 | [docs/record/formily/05-designer-document与设计器v2完整代码.md](record/formily/05-designer-document与设计器v2完整代码.md)                                                               |
 | Designer 后端编译、旧版本兼容与迁移代码                          | draft      | work-record    | 2026-07-14 | [docs/record/formily/06-designer后端编译兼容与迁移代码.md](record/formily/06-designer后端编译兼容与迁移代码.md)                                                                         |
+| Phase4.1：Agent Context Contract & Safety Boundary               | deprecated | global         | 2026-07-30 | [docs/mvp/design/phase4.1.md](mvp/design/phase4.1.md)                                                                                                                                   |
+| Phase4.2：LangGraph Agent 可选真实 LLM Provider                  | deprecated | global         | 2026-07-30 | [docs/mvp/design/phase4.2.md](mvp/design/phase4.2.md)                                                                                                                                   |
+| Phase4.3：Evidence Tools 接入 Metrics / Logs / Changes           | deprecated | global         | 2026-07-30 | [docs/mvp/design/phase4.3.md](mvp/design/phase4.3.md)                                                                                                                                   |
+| Phase4.4：Agent Run Trace + Eval 可观测层                        | deprecated | global         | 2026-07-30 | [docs/mvp/design/phase4.4.md](mvp/design/phase4.4.md)                                                                                                                                   |
+| Phase4：Python LangGraph OSS Diagnosis Agent + Java Agent Client | deprecated | global         | 2026-07-30 | [docs/mvp/design/phase4.md](mvp/design/phase4.md)                                                                                                                                       |
+| Phase8.0 SaaS Multi-tenant Hardening                             | deprecated | global         | 2026-07-30 | [docs/mvp/design/phase8.0-saas-multi-tenant-hardening.md](mvp/design/phase8.0-saas-multi-tenant-hardening.md)                                                                           |
+| Phase8.1：Plugin System                                          | deprecated | global         | 2026-07-30 | [docs/mvp/phase8.1.md](mvp/phase8.1.md)                                                                                                                                                 |
+| Phase8.2：Private Deployment / Helm / Offline Package            | deprecated | global         | 2026-07-30 | [docs/mvp/phase8.2.md](mvp/phase8.2.md)                                                                                                                                                 |
 | 可配置工作记录模块（终版设计 · pre-portal · 已废弃）             | deprecated | work-record    | 2026-07-07 | [docs/record/2026-07-06-record-index-pre-portal.md](record/2026-07-06-record-index-pre-portal.md)                                                                                       |
 | 工作记录模块 Phase 设计与代码包（已废弃）                        | deprecated | work-record    | 2026-07-07 | [docs/record/work-record-phases-design-code.md](record/work-record-phases-design-code.md)                                                                                               |
 | Scenario 01 - Zabbix Host & Service Incident Diagnosis           | deprecated | z0             | 2026-07-27 | [docs/scenarios/zabbix-host-service-incident.md](scenarios/zabbix-host-service-incident.md)                                                                                             |
@@ -175,7 +176,7 @@ Do not edit it manually.
 | 修复 Zabbix 真实端到端链路             | accepted | phase-1  | 2026-07-29 | [docs/fixes/phase-1/2026-07-27-zabbix-end-to-end-flow.md](fixes/phase-1/2026-07-27-zabbix-end-to-end-flow.md)               |
 | 工作记录模板与表单体验修复计划         | accepted | phase-21 | 2026-07-15 | [docs/fixes/phase-21/2026-07-15-work-record-template-form-ux.md](fixes/phase-21/2026-07-15-work-record-template-form-ux.md) |
 | PR2 - RuntimePhase + health phase 标签 | accepted | phase-5  | 2026-06-30 | [docs/fixes/phase-5/2026-06-30-runtime-phase.md](fixes/phase-5/2026-06-30-runtime-phase.md)                                 |
-| 第二轮回盘问题修复总记录               | draft    | phase-5  | 2026-06-30 | [docs/fixes/phase-5/2026-06-29-second-review-remediation.md](fixes/phase-5/2026-06-29-second-review-remediation.md)         |
+| 第二轮回盘问题修复总记录               | draft    | phase-5  | 2026-08-01 | [docs/fixes/phase-5/2026-06-29-second-review-remediation.md](fixes/phase-5/2026-06-29-second-review-remediation.md)         |
 
 ## integration
 

@@ -4,15 +4,20 @@ import pytest
 import respx
 from httpx import Response
 
-from aiops_agent.settings import settings
 from aiops_agent.workflow.tools.checkpoint_client import CheckpointClient
-from aiops_agent.workflow.tools.internal_auth import HEADER_INTERNAL_AGENT_TOKEN, HEADER_TENANT_ID
+from aiops_agent.workflow.tools.internal_auth import HEADER_TENANT_ID
 
 
 @pytest.mark.asyncio
 @respx.mock
 async def test_checkpoint_client_sends_internal_auth_headers(monkeypatch):
-    monkeypatch.setattr(settings, "internal_agent_token", "secret-token")
+    async def oauth_headers(_settings):
+        return {"Authorization": "Bearer oauth-service-token"}
+
+    monkeypatch.setattr(
+        "aiops_agent.workflow.tools.internal_auth.service_credential_headers",
+        oauth_headers,
+    )
 
     route = respx.post("http://java/internal/agent/checkpoints").mock(
         return_value=Response(
@@ -44,4 +49,7 @@ async def test_checkpoint_client_sends_internal_auth_headers(monkeypatch):
 
     assert route.called
     assert route.calls[0].request.headers[HEADER_TENANT_ID] == "tenant_1"
-    assert route.calls[0].request.headers[HEADER_INTERNAL_AGENT_TOKEN] == "secret-token"
+    assert (
+        route.calls[0].request.headers["Authorization"]
+        == "Bearer oauth-service-token"
+    )

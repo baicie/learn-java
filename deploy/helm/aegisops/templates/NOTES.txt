@@ -11,8 +11,8 @@ Services:
 {{- end }}
 
 Security:
-  - X-Tenant-Id is required for /api/** and /internal/agent/**
-  - X-AIOPS-INTERNAL-TOKEN is required for /internal/agent/**
+  - OAuth2 Bearer JWT is required for service-to-service APIs
+  - Diagnosis Grant supplies the tenant context for /internal/agent/**
 
 Next:
   kubectl get pods -n {{ .Release.Namespace }}

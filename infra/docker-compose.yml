@@ -1,4 +1,23 @@
 services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.1.4
+    container_name: aegisops-keycloak
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${AIOPS_KEYCLOAK_ADMIN_USERNAME:-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${AIOPS_KEYCLOAK_ADMIN_PASSWORD:-dev-keycloak-admin}
+      KC_HOSTNAME: http://localhost:8089
+      AIOPS_SERVER_OAUTH2_CLIENT_SECRET: ${AIOPS_SERVER_OAUTH2_CLIENT_SECRET:-dev-aiops-server-client-secret}
+      AIOPS_WORKER_OAUTH2_CLIENT_SECRET: ${AIOPS_WORKER_OAUTH2_CLIENT_SECRET:-dev-aiops-worker-client-secret}
+      AIOPS_AGENT_OAUTH2_CLIENT_SECRET: ${AIOPS_AGENT_OAUTH2_CLIENT_SECRET:-dev-aiops-agent-client-secret}
+    volumes:
+      - ./keycloak/aegisops-realm.json:/opt/keycloak/data/import/aegisops-realm.json:ro
+    ports:
+      - "8089:8080"
+    mem_limit: "${AIOPS_KEYCLOAK_MEMORY_LIMIT:-512m}"
+    mem_reservation: "${AIOPS_KEYCLOAK_MEMORY_RESERVATION:-256m}"
+    restart: unless-stopped
+
   postgres:
     image: postgres:16
     container_name: aegisops-postgres
@@ -165,11 +184,13 @@ services:
       dockerfile: Dockerfile
     container_name: aegisops-agent
     environment:
-      AIOPS_AGENT_INBOUND_AUTH_MODE: static
-      AIOPS_AGENT_INTERNAL_AGENT_TOKEN: ${AIOPS_JAVA_TO_AGENT_TOKEN:-dev-java-to-agent-token}
-      AIOPS_AGENT_OUTBOUND_AUTH_MODE: static
-      AIOPS_AGENT_OUTBOUND_STATIC_TOKEN: ${AIOPS_AGENT_TO_JAVA_TOKEN:-dev-agent-to-java-token}
-      AIOPS_AGENT_DIAGNOSIS_GRANT_REQUIRED: "true"
+      AIOPS_AGENT_INBOUND_OAUTH2_ISSUER: http://localhost:8089/realms/aegisops
+      AIOPS_AGENT_INBOUND_OAUTH2_JWKS_URL: http://keycloak:8080/realms/aegisops/protocol/openid-connect/certs
+      AIOPS_AGENT_INBOUND_OAUTH2_AUDIENCE: aiops-agent-api
+      AIOPS_AGENT_OUTBOUND_OAUTH2_TOKEN_URL: http://keycloak:8080/realms/aegisops/protocol/openid-connect/token
+      AIOPS_AGENT_OUTBOUND_OAUTH2_CLIENT_ID: aiops-agent
+      AIOPS_AGENT_OUTBOUND_OAUTH2_CLIENT_SECRET: ${AIOPS_AGENT_OAUTH2_CLIENT_SECRET:-dev-aiops-agent-client-secret}
+      AIOPS_AGENT_OUTBOUND_OAUTH2_SCOPE: "evidence:read cases:read checkpoint:read checkpoint:write memory:read memory:write plugin:authorize"
       AIOPS_AGENT_PROVIDER: aiops-agent
       AIOPS_AGENT_NAME: aegisops_diagnosis_graph
       AIOPS_AGENT_AGENT_NAME: aegisops_diagnosis_graph
@@ -210,6 +231,9 @@ services:
       AIOPS_AGENT_DIFY_USER_HMAC_SECRET: ${AIOPS_AGENT_DIFY_USER_HMAC_SECRET:-}
     ports:
       - "9008:9008"
+    depends_on:
+      keycloak:
+        condition: service_started
     restart: unless-stopped
 
 volumes:

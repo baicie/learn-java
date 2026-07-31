@@ -5,12 +5,25 @@ set -Eeuo pipefail
 : "${IMAGE_TAG:?IMAGE_TAG is required}"
 
 APP_DIR="${APP_DIR:-$HOME/workspace/aegisops}"
-COMPOSE_FILE="${COMPOSE_FILE:-$APP_DIR/deploy/docker-compose.app.yml}"
+ACTIVE_COMPOSE_FILE="${ACTIVE_COMPOSE_FILE:-${COMPOSE_FILE:-$APP_DIR/deploy/docker-compose.app.yml}}"
+CANDIDATE_COMPOSE_FILE="${CANDIDATE_COMPOSE_FILE:-$APP_DIR/deploy/docker-compose.app.candidate.yml}"
+PREVIOUS_COMPOSE_FILE="${PREVIOUS_COMPOSE_FILE:-$APP_DIR/deploy/docker-compose.app.previous.yml}"
+SELECTED_COMPOSE_FILE="$CANDIDATE_COMPOSE_FILE"
 APP_SERVICES=(aiops-server aiops-agent aiops-worker aiops-runner)
 APP_CONTAINERS=(aegisops-server aegisops-agent aegisops-worker aegisops-runner)
+SERVICE_AUTH_CONTAINERS=(aegisops-server aegisops-agent aegisops-worker)
+SERVICE_AUTH_PROBE_SCRIPT="${SERVICE_AUTH_PROBE_SCRIPT:-$APP_DIR/deploy/scripts/verify-service-auth-oauth.py}"
+RUNTIME_REDACTOR_SCRIPT="${RUNTIME_REDACTOR_SCRIPT:-$APP_DIR/deploy/scripts/redact-runtime-output.py}"
 
-if [ ! -f "$COMPOSE_FILE" ]; then
-  echo "Compose file not found: $COMPOSE_FILE" >&2
+if [ ! -f "$CANDIDATE_COMPOSE_FILE" ]; then
+  echo "Candidate Compose file not found: $CANDIDATE_COMPOSE_FILE" >&2
+  exit 1
+fi
+
+if [ "$ACTIVE_COMPOSE_FILE" = "$CANDIDATE_COMPOSE_FILE" ] \
+  || [ "$ACTIVE_COMPOSE_FILE" = "$PREVIOUS_COMPOSE_FILE" ] \
+  || [ "$CANDIDATE_COMPOSE_FILE" = "$PREVIOUS_COMPOSE_FILE" ]; then
+  echo "Active, candidate and previous Compose files must use distinct paths." >&2
   exit 1
 fi
 
@@ -25,6 +38,29 @@ require_command() {
 require_command bash
 require_command docker
 require_command mktemp
+require_command python3
+
+if [ "$(dirname "$ACTIVE_COMPOSE_FILE")" != "$(dirname "$CANDIDATE_COMPOSE_FILE")" ]; then
+  echo "Active and candidate Compose files must be in the same directory for atomic promotion." >&2
+  exit 1
+fi
+
+if [ ! -f "$SERVICE_AUTH_PROBE_SCRIPT" ]; then
+  echo "Service authentication probe not found: $SERVICE_AUTH_PROBE_SCRIPT" >&2
+  exit 1
+fi
+if [ ! -f "$RUNTIME_REDACTOR_SCRIPT" ]; then
+  echo "Runtime output redactor not found: $RUNTIME_REDACTOR_SCRIPT" >&2
+  exit 1
+fi
+
+run_service_auth_probe() {
+  python3 "$SERVICE_AUTH_PROBE_SCRIPT"
+}
+
+redact_runtime_output() {
+  python3 "$RUNTIME_REDACTOR_SCRIPT"
+}
 
 # 单个 Docker Hub 仓库承载四个服务，服务名编码在不可变标签中。
 export AIOPS_SERVER_IMAGE="${IMAGE_PREFIX}:${IMAGE_TAG}-server"
@@ -33,7 +69,32 @@ export AIOPS_WORKER_IMAGE="${IMAGE_PREFIX}:${IMAGE_TAG}-worker"
 export AIOPS_RUNNER_IMAGE="${IMAGE_PREFIX}:${IMAGE_TAG}-runner"
 
 compose() {
-  docker compose -f "$COMPOSE_FILE" "$@"
+  docker compose -f "$SELECTED_COMPOSE_FILE" "$@"
+}
+
+atomic_copy_descriptor() {
+  local source_file=$1
+  local target_file=$2
+  local temp_file
+
+  temp_file="$(mktemp "${target_file}.tmp.XXXXXX")"
+  if ! cp "$source_file" "$temp_file"; then
+    rm -f "$temp_file"
+    return 1
+  fi
+  if ! chmod 600 "$temp_file"; then
+    rm -f "$temp_file"
+    return 1
+  fi
+  if ! mv -f "$temp_file" "$target_file"; then
+    rm -f "$temp_file"
+    return 1
+  fi
+}
+
+promote_candidate_descriptor() {
+  chmod 600 "$CANDIDATE_COMPOSE_FILE"
+  mv -f "$CANDIDATE_COMPOSE_FILE" "$ACTIVE_COMPOSE_FILE"
 }
 
 container_exists() {
@@ -42,6 +103,29 @@ container_exists() {
 
 container_image() {
   docker inspect --format '{{.Config.Image}}' "$1" 2>/dev/null || true
+}
+
+container_env_value() {
+  local container_name=$1
+  local env_name=$2
+
+  {
+    docker inspect --format '{{range .Config.Env}}{{println .}}{{end}}' "$container_name" \
+      2>/dev/null || true
+  } | awk -v prefix="${env_name}=" \
+    'index($0, prefix) == 1 { print substr($0, length(prefix) + 1); exit }'
+}
+
+previous_service_auth_is_compatible() {
+  local container_name contract
+
+  for container_name in "${SERVICE_AUTH_CONTAINERS[@]}"; do
+    contract="$(container_env_value "$container_name" AIOPS_SERVICE_AUTH_CONTRACT)"
+    if [ "$contract" != "oauth2-v1" ]; then
+      echo "::warning::${container_name} has incompatible service-auth contract (${contract:-missing}); automatic rollback is disabled"
+      return 1
+    fi
+  done
 }
 
 container_name_by_id() {
@@ -69,12 +153,28 @@ PREVIOUS_WORKER_IMAGE="$(container_image aegisops-worker)"
 PREVIOUS_RUNNER_IMAGE="$(container_image aegisops-runner)"
 
 ROLLBACK_READY=0
-if [ -n "$PREVIOUS_SERVER_IMAGE" ] \
-  && [ -n "$PREVIOUS_AGENT_IMAGE" ] \
-  && [ -n "$PREVIOUS_WORKER_IMAGE" ] \
-  && [ -n "$PREVIOUS_RUNNER_IMAGE" ]; then
-  ROLLBACK_READY=1
-fi
+
+snapshot_active_descriptor() {
+  ROLLBACK_READY=0
+
+  if [ ! -f "$ACTIVE_COMPOSE_FILE" ]; then
+    echo "==> No active deployment descriptor found; treating this as the first release"
+    rm -f "$PREVIOUS_COMPOSE_FILE"
+    return
+  fi
+
+  atomic_copy_descriptor "$ACTIVE_COMPOSE_FILE" "$PREVIOUS_COMPOSE_FILE"
+
+  if [ -n "$PREVIOUS_SERVER_IMAGE" ] \
+    && [ -n "$PREVIOUS_AGENT_IMAGE" ] \
+    && [ -n "$PREVIOUS_WORKER_IMAGE" ] \
+    && [ -n "$PREVIOUS_RUNNER_IMAGE" ] \
+    && previous_service_auth_is_compatible; then
+    ROLLBACK_READY=1
+  else
+    echo "::warning::Active descriptor was preserved, but a complete OAuth2-compatible running release was not found; automatic rollback is disabled"
+  fi
+}
 
 DEPLOYMENT_STARTED=0
 DEPLOY_STAGE="initialization"
@@ -107,7 +207,8 @@ print_port_diagnostics() {
 print_diagnostics() {
   echo "==> Deployment diagnostics (stage=${DEPLOY_STAGE})"
   compose ps || true
-  compose logs --no-color --tail=120 "${APP_SERVICES[@]}" || true
+  compose logs --no-color --tail=120 "${APP_SERVICES[@]}" 2>&1 \
+    | redact_runtime_output || true
   for port in 5432 8080 8081 8092 9008; do
     print_port_diagnostics "$port"
   done
@@ -142,16 +243,32 @@ rollback() {
 
   if [ "$DEPLOYMENT_STARTED" = "1" ] && [ "$ROLLBACK_READY" = "1" ]; then
     DEPLOY_STAGE="rollback"
-    echo "==> Rolling back to the previously running images"
+    echo "==> Rolling back the previous OAuth2-compatible release"
     export AIOPS_SERVER_IMAGE="$PREVIOUS_SERVER_IMAGE"
     export AIOPS_AGENT_IMAGE="$PREVIOUS_AGENT_IMAGE"
     export AIOPS_WORKER_IMAGE="$PREVIOUS_WORKER_IMAGE"
     export AIOPS_RUNNER_IMAGE="$PREVIOUS_RUNNER_IMAGE"
 
+    SELECTED_COMPOSE_FILE="$PREVIOUS_COMPOSE_FILE"
+    if ! compose config --quiet; then
+      echo "::warning::Previous deployment descriptor is not valid with the recovered credentials; automatic rollback aborted"
+      exit "$exit_code"
+    fi
+
     # 先删除失败版本的无状态应用容器，避免旧 endpoint 继续占用宿主机端口，
     # PostgreSQL 容器与数据卷始终保留。
     remove_application_containers
     compose up -d --remove-orphans --no-build
+    if ! wait_release_health; then
+      echo "::error::Automatic rollback failed health checks; the active descriptor still identifies the last verified release"
+      compose ps
+      exit "$exit_code"
+    fi
+    if ! run_service_auth_probe; then
+      echo "::error::Automatic rollback failed the service-auth probe; the active descriptor still identifies the last verified release"
+      compose ps
+      exit "$exit_code"
+    fi
     compose ps
   else
     echo "::warning::Rollback skipped because a complete previous release was not found"
@@ -308,6 +425,14 @@ wait_container_health() {
   return 1
 }
 
+wait_release_health() {
+  wait_container_health aegisops-postgres 120 || return 1
+  wait_container_health aegisops-agent 120 || return 1
+  wait_container_health aegisops-server 240 || return 1
+  wait_container_health aegisops-worker 180 || return 1
+  wait_container_health aegisops-runner 180 || return 1
+}
+
 DEPLOY_STAGE="docker-preflight"
 echo "==> Docker versions"
 docker version --format 'Docker {{.Server.Version}}'
@@ -329,8 +454,12 @@ else
 fi
 
 DEPLOY_STAGE="compose-validation"
-echo "==> Validating deployment descriptor"
+echo "==> Validating candidate deployment descriptor"
 compose config --quiet
+
+DEPLOY_STAGE="descriptor-snapshot"
+echo "==> Preserving the active deployment descriptor"
+snapshot_active_descriptor
 
 DEPLOY_STAGE="image-pull"
 echo "==> Pulling immutable release images (${IMAGE_TAG})"
@@ -353,14 +482,20 @@ compose up -d --remove-orphans --no-build
 
 DEPLOY_STAGE="health-check"
 echo "==> Waiting for container health"
-wait_container_health aegisops-postgres 120
-wait_container_health aegisops-agent 120
-wait_container_health aegisops-server 240
-wait_container_health aegisops-worker 180
-wait_container_health aegisops-runner 180
+wait_release_health
+
+DEPLOY_STAGE="service-auth-probe"
+echo "==> Verifying OAuth2 service trust without writing business data"
+run_service_auth_probe
+
+DEPLOY_STAGE="pre-promotion"
+compose ps
+
+DEPLOY_STAGE="descriptor-promotion"
+echo "==> Promoting the verified candidate deployment descriptor"
+promote_candidate_descriptor
 
 DEPLOY_STAGE="complete"
 echo "==> Deployment succeeded"
-compose ps
 
 docker image prune -f --filter 'until=168h' >/dev/null 2>&1 || true

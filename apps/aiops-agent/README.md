@@ -30,14 +30,21 @@ pytest
 ## Env
 
 ```bash
-AIOPS_AGENT_INBOUND_AUTH_MODE=static
-AIOPS_AGENT_INTERNAL_AGENT_TOKEN=dev-java-to-agent-token
-AIOPS_AGENT_OUTBOUND_AUTH_MODE=static
-AIOPS_AGENT_OUTBOUND_STATIC_TOKEN=dev-agent-to-java-token
-AIOPS_AGENT_DIAGNOSIS_GRANT_REQUIRED=true
+AIOPS_AGENT_INBOUND_OAUTH2_ISSUER=http://localhost:8089/realms/aegisops
+AIOPS_AGENT_INBOUND_OAUTH2_JWKS_URL=http://localhost:8089/realms/aegisops/protocol/openid-connect/certs
+AIOPS_AGENT_INBOUND_OAUTH2_AUDIENCE=aiops-agent-api
+AIOPS_AGENT_OUTBOUND_OAUTH2_TOKEN_URL=http://localhost:8089/realms/aegisops/protocol/openid-connect/token
+AIOPS_AGENT_OUTBOUND_OAUTH2_CLIENT_ID=aiops-agent
+AIOPS_AGENT_OUTBOUND_OAUTH2_CLIENT_SECRET=dev-aiops-agent-client-secret
 AIOPS_AGENT_MODEL=langgraph-deterministic
 AIOPS_AGENT_PROVIDER=aiops-agent
 AIOPS_AGENT_NAME=aegisops_diagnosis_graph
+```
+
+本地 IdP 由仓库 Compose 自动初始化：
+
+```bash
+docker compose -f infra/docker-compose.yml up -d keycloak
 ```
 
 ## Phase4.2 OpenAI-compatible mode
@@ -85,9 +92,8 @@ AIOPS_AGENT_EVIDENCE_ENABLED=true
 AIOPS_AGENT_EVIDENCE_BASE_URL=http://localhost:8080/internal/agent/evidence
 ```
 
-生产环境使用 OAuth2 Client Credentials。静态模式只用于本地开发，入站与出站 token
-不得复用。诊断期间 Agent 会把 Java 签发的 `X-AegisOps-Diagnosis-Grant` 原样传播到
-内部工具调用。
+服务间鉴权只使用 OAuth2 Client Credentials。Diagnosis Grant 无法通过配置关闭；诊断期间
+Agent 会把 Java 签发的 `X-AegisOps-Diagnosis-Grant` 原样传播到内部工具调用。
 
 Evidence sections:
 
@@ -126,8 +132,8 @@ AIOPS_AGENT_WORKFLOW_MEMORY_ENABLED=false
 AIOPS_AGENT_WORKFLOW_MEMORY_WRITE_ENABLED=false
 ```
 
-Checkpoint continuation uses `POST /v1/diagnose/resume` and requires the same internal
-token and optional contract-version headers as `POST /v1/diagnose`.
+Checkpoint continuation uses `POST /v1/diagnose/resume` and requires the same OAuth2
+service JWT, Diagnosis Grant, and optional contract-version headers as `POST /v1/diagnose`.
 
 ## Work-record generation with Dify
 

@@ -2,12 +2,14 @@ package io.aegisops.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Clock;
+import java.time.Duration;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
 import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.JwtTimestampValidator;
 import org.springframework.security.oauth2.jwt.JwtValidators;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 
@@ -29,32 +31,22 @@ public class AiopsSecurityConfiguration {
 
   @Bean
   InternalServiceAuthenticator internalServiceAuthenticator(AiopsSecurityProperties properties) {
-    if (!properties.internalAgentOAuth2Enabled()) {
-      if (!"static".equalsIgnoreCase(properties.getInternalAgentAuthMode())) {
-        throw new IllegalStateException(
-            "Unsupported aiops.security.internal-agent-auth-mode: "
-                + properties.getInternalAgentAuthMode());
-      }
-      return new StaticInternalServiceAuthenticator(properties);
-    }
-
-    if (properties.getInternalAgentJwtJwkSetUri() == null
-        || properties.getInternalAgentJwtJwkSetUri().isBlank()) {
-      throw new IllegalStateException(
-          "aiops.security.internal-agent-jwt-jwk-set-uri is required in oauth2 mode");
-    }
-    if (properties.getInternalAgentJwtIssuerUri() == null
-        || properties.getInternalAgentJwtIssuerUri().isBlank()) {
-      throw new IllegalStateException(
-          "aiops.security.internal-agent-jwt-issuer-uri is required in oauth2 mode");
-    }
+    properties.validateInternalServiceAuthentication();
 
     NimbusJwtDecoder decoder =
         NimbusJwtDecoder.withJwkSetUri(properties.getInternalAgentJwtJwkSetUri()).build();
+    JwtTimestampValidator timestampValidator = strictServiceTokenTimestampValidator();
     decoder.setJwtValidator(
         new DelegatingOAuth2TokenValidator<Jwt>(
-            JwtValidators.createDefaultWithIssuer(properties.getInternalAgentJwtIssuerUri())));
+            JwtValidators.createDefaultWithIssuer(properties.getInternalAgentJwtIssuerUri()),
+            timestampValidator));
     return new JwtInternalServiceAuthenticator(properties, decoder);
+  }
+
+  static JwtTimestampValidator strictServiceTokenTimestampValidator() {
+    JwtTimestampValidator timestampValidator = new JwtTimestampValidator(Duration.ZERO);
+    timestampValidator.setAllowEmptyExpiryClaim(false);
+    return timestampValidator;
   }
 
   @Bean

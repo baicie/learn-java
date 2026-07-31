@@ -22,8 +22,7 @@ class HttpAiAgentClientTest {
     RestTemplate restTemplate = new RestTemplate();
     MockRestServiceServer server = MockRestServiceServer.bindTo(restTemplate).build();
 
-    AgentClientProperties properties =
-        new AgentClientProperties("http://agent:9008", "test-token", 1000, 1000);
+    AgentClientProperties properties = new AgentClientProperties("http://agent:9008", 1000, 1000);
 
     HttpAiAgentClient client =
         new HttpAiAgentClient(
@@ -31,12 +30,12 @@ class HttpAiAgentClientTest {
             objectMapper,
             restTemplate,
             new AgentContractValidator(),
-            headers -> headers.set(AgentContract.INTERNAL_TOKEN_HEADER, "test-token"),
+            headers -> headers.setBearerAuth("oauth-service-token"),
             request -> "test-diagnosis-grant");
 
     server
         .expect(requestTo("http://agent:9008/v1/diagnose"))
-        .andExpect(header(AgentContract.INTERNAL_TOKEN_HEADER, "test-token"))
+        .andExpect(header("Authorization", "Bearer oauth-service-token"))
         .andExpect(header("X-AegisOps-Diagnosis-Grant", "test-diagnosis-grant"))
         .andExpect(header(AgentContract.TRACE_ID_HEADER, "trace_1"))
         .andExpect(

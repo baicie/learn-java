@@ -37,6 +37,7 @@ spec:
             methods:
               - POST
             paths:
+              - /v1/auth/probe
               - /v1/diagnose
               - /v1/diagnose/*
               - /v1/work-record/generate

@@ -1,0 +1,2 @@
+# Generated secret values must never be included in a chart archive.
+generated-secrets*.yaml

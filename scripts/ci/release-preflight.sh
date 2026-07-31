@@ -86,7 +86,7 @@ echo "==> Validate remote deployment contract"
 grep -Fq "bash -lc '" .github/workflows/release-verify.yml
 grep -Fq 'name: Configure Tencent Cloud Docker mirror' .github/workflows/release-verify.yml
 grep -Fq 'deploy/scripts/configure-docker-mirror.sh' .github/workflows/release-verify.yml
-grep -Fq 'envs: IMAGE_PREFIX,IMAGE_TAG,AIOPS_JAVA_TO_AGENT_TOKEN,AIOPS_AGENT_TO_JAVA_TOKEN,AIOPS_DIAGNOSIS_GRANT_SECRET,AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN' \
+grep -Fq 'envs: IMAGE_PREFIX,IMAGE_TAG,AIOPS_SERVICE_AUTH_ISSUER_URI,AIOPS_SERVICE_AUTH_JWK_SET_URI,AIOPS_SERVICE_AUTH_TOKEN_URI,AIOPS_SERVER_OAUTH2_CLIENT_SECRET,AIOPS_WORKER_OAUTH2_CLIENT_SECRET,AIOPS_AGENT_OAUTH2_CLIENT_SECRET,AIOPS_DIAGNOSIS_GRANT_SECRET,AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN' \
   .github/workflows/release-verify.yml
 grep -Fq 'AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN: runtime-smoke-only' \
   .github/workflows/release-verify.yml
@@ -134,11 +134,18 @@ AIOPS_SERVER_IMAGE=example.invalid/aegisops:test \
 AIOPS_AGENT_IMAGE=example.invalid/aegisops/aiops-agent:test \
 AIOPS_WORKER_IMAGE=example.invalid/aegisops/aiops-worker:test \
 AIOPS_RUNNER_IMAGE=example.invalid/aegisops/aiops-runner:test \
-AIOPS_JAVA_TO_AGENT_TOKEN=preflight-java-to-agent \
-AIOPS_AGENT_TO_JAVA_TOKEN=preflight-agent-to-java \
+AIOPS_SERVICE_AUTH_ISSUER_URI=https://idp.example.com/realms/aegisops \
+AIOPS_SERVICE_AUTH_JWK_SET_URI=https://idp.example.com/realms/aegisops/protocol/openid-connect/certs \
+AIOPS_SERVICE_AUTH_TOKEN_URI=https://idp.example.com/realms/aegisops/protocol/openid-connect/token \
+AIOPS_SERVER_OAUTH2_CLIENT_SECRET=preflight-server-client-secret \
+AIOPS_WORKER_OAUTH2_CLIENT_SECRET=preflight-worker-client-secret \
+AIOPS_AGENT_OAUTH2_CLIENT_SECRET=preflight-agent-client-secret \
 AIOPS_DIAGNOSIS_GRANT_SECRET=preflight-diagnosis-grant-secret-change-me \
 AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN=preflight-only \
-  docker compose -f deploy/docker-compose.app.yml config --quiet
+  docker compose \
+    -f deploy/docker-compose.app.yml \
+    -f deploy/docker-compose.idp.yml \
+    config --quiet
 ZABBIX_DB_PASSWORD=preflight-only \
   docker compose -f deploy/docker-compose.zabbix.yml config --quiet
 

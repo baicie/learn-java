@@ -4,19 +4,10 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties(prefix = "aiops.agent.auth")
 public class AgentServiceAuthProperties {
-  private String mode = "static";
   private String tokenUri = "";
   private String clientId = "";
   private String clientSecret = "";
   private String scope = "agent:diagnose";
-
-  public String getMode() {
-    return mode;
-  }
-
-  public void setMode(String mode) {
-    this.mode = mode;
-  }
 
   public String getTokenUri() {
     return tokenUri;
@@ -50,7 +41,15 @@ public class AgentServiceAuthProperties {
     this.scope = scope;
   }
 
-  public boolean oauth2Enabled() {
-    return "oauth2".equalsIgnoreCase(mode == null ? "" : mode.trim());
+  void validate() {
+    if (tokenUri == null || tokenUri.isBlank()) {
+      throw new IllegalStateException("aiops.agent.auth.token-uri is required");
+    }
+    if (clientId == null || clientId.isBlank()) {
+      throw new IllegalStateException("aiops.agent.auth.client-id is required");
+    }
+    if (clientSecret == null || clientSecret.isBlank()) {
+      throw new IllegalStateException("aiops.agent.auth.client-secret is required");
+    }
   }
 }

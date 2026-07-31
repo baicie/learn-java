@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 from aiops_agent.schemas import AlertContext, DiagnoseRequest, IncidentContext, RcaContext
 from aiops_agent.settings import Settings
 from aiops_agent.workflow.compat import to_workflow_request
@@ -18,6 +20,8 @@ def test_to_workflow_request_derives_tags_from_incident_and_alerts():
             source="zabbix",
             primaryAssetId="svc_order",
             aggregationKey="zabbix:svc_order:timeout",
+            startedAt=datetime(2026, 7, 31, 4, 0, tzinfo=timezone.utc),
+            lastSeenAt=datetime(2026, 7, 31, 4, 5, tzinfo=timezone.utc),
         ),
         alerts=[
             AlertContext(
@@ -43,6 +47,10 @@ def test_to_workflow_request_derives_tags_from_incident_and_alerts():
 
     workflow_request = to_workflow_request(request, Settings())
 
+    assert workflow_request.trace_id == "trace_1"
+    assert workflow_request.primary_asset_id == "svc_order"
+    assert workflow_request.started_at == datetime(2026, 7, 31, 4, 0, tzinfo=timezone.utc)
+    assert workflow_request.last_seen_at == datetime(2026, 7, 31, 4, 5, tzinfo=timezone.utc)
     assert "zabbix" in workflow_request.tags
     assert "svc-order" in workflow_request.tags
     assert "service" in workflow_request.tags

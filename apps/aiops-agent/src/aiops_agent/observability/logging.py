@@ -14,6 +14,15 @@ from aiops_agent.observability.context import (
     get_trace_id,
 )
 
+SECURITY_EVENT_FIELDS = (
+    "eventType",
+    "httpStatus",
+    "requiredScope",
+    "serviceId",
+    "severity",
+    "requestPath",
+)
+
 
 class JsonLogFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
@@ -29,6 +38,11 @@ class JsonLogFormatter(logging.Formatter):
 
         if record.exc_info:
             payload["exception"] = self.formatException(record.exc_info)
+
+        for field in SECURITY_EVENT_FIELDS:
+            value = getattr(record, field, None)
+            if value is not None:
+                payload[field] = value
 
         return json.dumps(payload, ensure_ascii=False, default=str)
 

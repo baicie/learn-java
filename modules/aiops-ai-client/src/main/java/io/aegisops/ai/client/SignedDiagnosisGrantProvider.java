@@ -24,6 +24,7 @@ public class SignedDiagnosisGrantProvider implements DiagnosisGrantProvider {
 
   SignedDiagnosisGrantProvider(
       AgentGrantProperties properties, DiagnosisGrantCodec codec, Clock clock) {
+    properties.validate();
     this.properties = properties;
     this.codec = codec;
     this.clock = clock;

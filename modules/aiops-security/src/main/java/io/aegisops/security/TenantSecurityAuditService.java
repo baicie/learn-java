@@ -37,7 +37,7 @@ public class TenantSecurityAuditService {
               audit.tenantId(),
               audit.eventType(),
               audit.severity(),
-              "system",
+              actor(audit.request()),
               audit.request() == null ? null : audit.request().getRequestURI(),
               audit.request() == null ? null : remoteAddr(audit.request()),
               audit.summary(),
@@ -45,6 +45,17 @@ public class TenantSecurityAuditService {
     } catch (Exception ignored) {
       // Security audit failure must not break request handling.
     }
+  }
+
+  private String actor(HttpServletRequest request) {
+    if (request != null) {
+      Object principal =
+          request.getAttribute(SecurityConstants.REQUEST_ATTRIBUTE_SERVICE_PRINCIPAL);
+      if (principal instanceof InternalServicePrincipal servicePrincipal) {
+        return servicePrincipal.serviceId();
+      }
+    }
+    return "system";
   }
 
   private String remoteAddr(HttpServletRequest request) {

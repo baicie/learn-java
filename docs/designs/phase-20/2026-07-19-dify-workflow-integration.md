@@ -538,7 +538,8 @@ feat(ai): 持久化 Dify 工作流运行元数据
 实施步骤：
 
 - [ ] 在本地 Compose 中增加非敏感配置和可选 Dify Provider 开关。
-- [ ] 在生产 Compose 中补齐 Worker 的 `AIOPS_AGENT_BASE_URL` 和 internal token。
+- [ ] 在生产 Compose 中补齐 Worker 的 `AIOPS_AGENT_BASE_URL`、独立 OAuth2 client secret、
+      token endpoint 与最小 `agent:work-record` scope。
 - [ ] 拆分或新增 Agent 专属 Helm Secret，确认 server/worker/runner 环境中不存在 Dify Key。
 - [ ] 为 Helm ConfigMap、Secret 和 Deployment 渲染增加测试。
 - [ ] 将导出的 Dify Workflow DSL 保存到 `infra/dify/workflows/`，禁止包含 API Key。
