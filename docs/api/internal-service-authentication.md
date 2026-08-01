@@ -57,6 +57,11 @@ Agent 在执行诊断前验证 Grant，并在 Java 工具调用中原样传播�
 `TenantContext`；`X-Tenant-Id` 只用于兼容和可观测，不参与授权。Evidence 请求的
 `tenantId + incidentId + traceId` 必须与 Grant 完全一致。
 
+默认签发 scope 只有 `diagnosis:execute` 和 `diagnosis:resume`。启用表中某项内部工具能力时，
+部署方必须通过 `AIOPS_DIAGNOSIS_GRANT_SCOPES` 仅加入实际需要的 scope；未启用的工具不得固定
+授予。Resume 请求、Grant 与 checkpoint 状态必须同时匹配 tenant、Incident、diagnosis 与
+trace 四项上下文，仅租户相同不足以恢复任务。
+
 `POST /v1/work-record/generate` 不具备 Incident 诊断上下文，仅要求有效 App mTLS 身份；它不接收
 Diagnosis Grant。Checkpoint 路径目前只保留 scope 与客户端契约，在服务端接口落地前不应视为
 可调用的生产 API。
@@ -78,6 +83,7 @@ iat / exp / maxDurationSeconds
 审批 ID 与审批快照
 执行类型、回滚引用、重试次数与超时
 按 sequence 排序的全部不可变步骤字段 SHA-256
+live 审批状态为 approved，approvalId/planId 一致，approvedCount 达到 requiredApprovals 且至少为 1
 ```
 
 验证失败时 Runner 将执行标记为 failed，写入不含 Token、参数或完整 claims 的
@@ -93,6 +99,9 @@ aiops-runner: Grant public key
 
 Grant 私钥只能进入 App。证书私钥按组件分别挂载，Runner 不需要 mTLS 证书。密钥和证书不得
 进入镜像、Git、日志、trace attribute 或错误响应。
+
+轮换时接收方必须同时加载当前和前一把公钥；签发方只使用当前私钥。Compose `--force` 自动
+保存一代 previous 公钥与 `kid`，再次轮换前必须等待更早公钥签发的任务完成或过期。
 
 ## 错误语义
 

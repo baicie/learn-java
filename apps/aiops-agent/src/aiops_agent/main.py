@@ -75,14 +75,26 @@ def require_diagnosis_grant(scope: str) -> Callable:
             )
         payload = await request.json()
         is_resume = request.url.path.endswith("/resume")
+        context = (
+            {
+                "tenant_id": payload.get("tenant_id"),
+                "incident_id": payload.get("incident_id"),
+                "diagnosis_id": payload.get("diagnosis_id"),
+                "trace_id": payload.get("trace_id"),
+            }
+            if is_resume
+            else {
+                "tenant_id": payload.get("tenantId"),
+                "incident_id": payload.get("incidentId"),
+                "diagnosis_id": payload.get("diagnosisId"),
+                "trace_id": payload.get("traceId"),
+            }
+        )
         try:
             diagnosis_grant_verifier.verify(
                 x_aegisops_diagnosis_grant.strip(),
                 required_scope=scope,
-                tenant_id=payload.get("tenant_id") if is_resume else payload.get("tenantId"),
-                incident_id=None if is_resume else payload.get("incidentId"),
-                diagnosis_id=None if is_resume else payload.get("diagnosisId"),
-                trace_id=None if is_resume else payload.get("traceId"),
+                **context,
             )
         except DiagnosisGrantError as exc:
             forbidden = "scope" in str(exc) or "context" in str(exc)

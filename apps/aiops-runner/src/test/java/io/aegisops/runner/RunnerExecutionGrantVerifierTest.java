@@ -152,6 +152,26 @@ class RunnerExecutionGrantVerifierTest {
         () -> verifier().validate(signedRun(rollback, current, "task-grant-v2", steps), steps));
   }
 
+  @Test
+  void rejectsSignedLiveRunWhenApprovalSnapshotIsNotApproved() {
+    List<ExecutionStepRecord> steps = List.of(step("{}"));
+    ExecutionRunRecord liveRun =
+        liveRun(
+            "approval_1",
+            """
+            {
+              "approvalId": "approval_1",
+              "planId": "plan_1",
+              "status": "pending",
+              "requiredApprovals": 1,
+              "approvedCount": 0
+            }
+            """);
+    ExecutionRunRecord signed = signedRun(liveRun, current, "task-grant-v2", steps);
+
+    assertThrows(InvalidExecutionGrantException.class, () -> verifier().validate(signed, steps));
+  }
+
   private RunnerExecutionGrantVerifier verifier() {
     return verifierAt(NOW);
   }
@@ -222,6 +242,41 @@ class RunnerExecutionGrantVerifierTest {
 
   private ExecutionRunRecord unsignedRun() {
     return run("normal", null, null, null, NOW);
+  }
+
+  private ExecutionRunRecord liveRun(String approvalId, String approvalSnapshotJson) {
+    ExecutionRunRecord run = unsignedRun();
+    return new ExecutionRunRecord(
+        run.id(),
+        run.tenantId(),
+        run.incidentId(),
+        run.planId(),
+        run.status(),
+        "live",
+        run.requestedBy(),
+        run.runnerId(),
+        run.startedAt(),
+        run.finishedAt(),
+        run.errorMessage(),
+        run.summary(),
+        run.attempt(),
+        run.maxAttempts(),
+        run.retryOfExecutionId(),
+        run.leaseUntil(),
+        run.heartbeatAt(),
+        run.timeoutSeconds(),
+        approvalId,
+        approvalSnapshotJson,
+        run.planRiskLevel(),
+        run.liveGuardPassedAt(),
+        run.executionKind(),
+        run.rollbackPlanId(),
+        run.rollbackOfExecutionId(),
+        run.executionGrant(),
+        run.executionSnapshotSha256(),
+        run.executionGrantExpiresAt(),
+        run.createdAt(),
+        run.updatedAt());
   }
 
   private ExecutionRunRecord run(

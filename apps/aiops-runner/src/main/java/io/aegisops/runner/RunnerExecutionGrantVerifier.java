@@ -1,5 +1,6 @@
 package io.aegisops.runner;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.aegisops.common.security.Ed25519KeyLoader;
 import io.aegisops.common.security.ExecutionGrantClaims;
@@ -25,6 +26,7 @@ public class RunnerExecutionGrantVerifier implements ExecutionGrantValidator {
   private final RunnerExecutionGrantProperties properties;
   private final ExecutionGrantCodec codec;
   private final ExecutionSnapshotHasher snapshotHasher;
+  private final ObjectMapper objectMapper;
   private volatile Map<String, PublicKey> verificationKeys;
 
   @Autowired
@@ -34,6 +36,7 @@ public class RunnerExecutionGrantVerifier implements ExecutionGrantValidator {
         properties,
         new ExecutionGrantCodec(objectMapper, Clock.systemUTC()),
         new ExecutionSnapshotHasher(objectMapper),
+        objectMapper,
         null);
   }
 
@@ -42,10 +45,20 @@ public class RunnerExecutionGrantVerifier implements ExecutionGrantValidator {
       ExecutionGrantCodec codec,
       ExecutionSnapshotHasher snapshotHasher,
       Map<String, PublicKey> verificationKeys) {
+    this(properties, codec, snapshotHasher, new ObjectMapper(), verificationKeys);
+  }
+
+  RunnerExecutionGrantVerifier(
+      RunnerExecutionGrantProperties properties,
+      ExecutionGrantCodec codec,
+      ExecutionSnapshotHasher snapshotHasher,
+      ObjectMapper objectMapper,
+      Map<String, PublicKey> verificationKeys) {
     properties.validateMetadata();
     this.properties = properties;
     this.codec = codec;
     this.snapshotHasher = snapshotHasher;
+    this.objectMapper = objectMapper;
     this.verificationKeys = verificationKeys == null ? null : Map.copyOf(verificationKeys);
   }
 
@@ -54,6 +67,7 @@ public class RunnerExecutionGrantVerifier implements ExecutionGrantValidator {
     try {
       requirePersistedGrant(run);
       requireStepBindings(run, executionSteps);
+      requireLiveApprovalSnapshot(run);
 
       ExecutionGrantClaims claims =
           codec.verify(keys(), run.executionGrant(), properties.getAudience());
@@ -113,6 +127,34 @@ public class RunnerExecutionGrantVerifier implements ExecutionGrantValidator {
                     !Objects.equals(run.tenantId(), step.tenantId())
                         || !Objects.equals(run.id(), step.executionId()))) {
       reject();
+    }
+  }
+
+  private void requireLiveApprovalSnapshot(ExecutionRunRecord run) {
+    if (!"live".equals(run.mode())) {
+      return;
+    }
+    if (isBlank(run.approvalId()) || isBlank(run.approvalSnapshotJson())) {
+      reject();
+    }
+    try {
+      JsonNode snapshot = objectMapper.readTree(run.approvalSnapshotJson());
+      if (snapshot == null
+          || !snapshot.isObject()
+          || !run.approvalId().equals(snapshot.path("approvalId").asText())
+          || !snapshot.path("planId").asText().equals(run.planId())
+          || !"approved".equalsIgnoreCase(snapshot.path("status").asText())) {
+        reject();
+      }
+      int requiredApprovals = snapshot.path("requiredApprovals").asInt(-1);
+      int approvedCount = snapshot.path("approvedCount").asInt(-1);
+      if (requiredApprovals < 1 || approvedCount < requiredApprovals) {
+        reject();
+      }
+    } catch (InvalidExecutionGrantException exception) {
+      throw exception;
+    } catch (Exception exception) {
+      throw new InvalidExecutionGrantException("Execution grant validation failed", exception);
     }
   }
 

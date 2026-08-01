@@ -2,6 +2,7 @@ import logging
 
 from fastapi.testclient import TestClient
 
+from aiops_agent import main as main_module
 from aiops_agent.main import app
 from aiops_agent.settings import settings
 
@@ -171,3 +172,49 @@ def test_diagnose_resume_rejects_blank_diagnosis_grant():
     )
 
     assert response.status_code == 401
+
+
+def test_diagnose_resume_binds_grant_to_complete_task_context(monkeypatch):
+    captured = {}
+
+    def verify(token, **kwargs):
+        captured.update(kwargs)
+        return {"sub": "diagnosis:diag_1", "jti": "test"}
+
+    class ResumeService:
+        async def resume(self, request):
+            return {
+                "tenant_id": request.tenant_id,
+                "incident_id": request.incident_id,
+                "summary": "resumed",
+                "root_cause": "unknown",
+                "confidence": 0.1,
+                "severity": "medium",
+                "risk_level": "low",
+            }
+
+    monkeypatch.setattr("aiops_agent.main.diagnosis_grant_verifier.verify", verify)
+    app.dependency_overrides[main_module.diagnosis_service] = ResumeService
+    try:
+        response = client.post(
+            "/v1/diagnose/resume",
+            headers=DIAGNOSIS_HEADERS,
+            json={
+                "tenant_id": "tenant_1",
+                "incident_id": "inc_1",
+                "diagnosis_id": "diag_1",
+                "trace_id": "trace_1",
+                "checkpoint_id": "agcp_1",
+            },
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert captured == {
+        "required_scope": "diagnosis:resume",
+        "tenant_id": "tenant_1",
+        "incident_id": "inc_1",
+        "diagnosis_id": "diag_1",
+        "trace_id": "trace_1",
+    }

@@ -7,16 +7,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public class AgentGrantProperties {
   private String issuer = "aegisops-app";
   private List<String> audiences = List.of("aiops-agent-api", "aegisops-internal-api");
-  private List<String> scopes =
-      List.of(
-          "diagnosis:execute",
-          "evidence:read",
-          "cases:read",
-          "checkpoint:read",
-          "checkpoint:write",
-          "memory:read",
-          "memory:write",
-          "plugin:authorize");
+  private List<String> scopes = List.of("diagnosis:execute", "diagnosis:resume");
   private String keyId = "task-grant-v1";
   private String privateKeyFile = "";
   private long ttlSeconds = 300;

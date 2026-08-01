@@ -81,7 +81,7 @@ aiops:
     grant:
       issuer: ${AIOPS_AGENT_GRANT_ISSUER:aegisops-app}
       audiences: ${AIOPS_DIAGNOSIS_GRANT_AUDIENCES:aiops-agent-api,aegisops-internal-api}
-      scopes: ${AIOPS_DIAGNOSIS_GRANT_SCOPES:diagnosis:execute,evidence:read,cases:read,checkpoint:read,checkpoint:write,memory:read,memory:write,plugin:authorize}
+      scopes: ${AIOPS_DIAGNOSIS_GRANT_SCOPES:diagnosis:execute,diagnosis:resume}
       key-id: ${AIOPS_DIAGNOSIS_GRANT_KEY_ID:task-grant-v1}
       private-key-file: ${AIOPS_DIAGNOSIS_GRANT_PRIVATE_KEY_FILE:}
       ttl-seconds: ${AIOPS_DIAGNOSIS_GRANT_TTL_SECONDS:300}

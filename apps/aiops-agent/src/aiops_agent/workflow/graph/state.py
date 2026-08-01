@@ -17,6 +17,7 @@ from aiops_agent.workflow.contracts import (
 class DiagnosisGraphState(TypedDict, total=False):
     tenant_id: str
     incident_id: str
+    diagnosis_id: str
     trace_id: str
     title: str
     severity: str

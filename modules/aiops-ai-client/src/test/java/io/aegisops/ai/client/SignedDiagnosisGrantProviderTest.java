@@ -32,7 +32,10 @@ class SignedDiagnosisGrantProviderTest {
 
   @Test
   void defaultsGrantIssuerToControlPlaneIdentity() {
-    assertThat(new AgentGrantProperties().getIssuer()).isEqualTo("aegisops-app");
+    AgentGrantProperties properties = new AgentGrantProperties();
+
+    assertThat(properties.getIssuer()).isEqualTo("aegisops-app");
+    assertThat(properties.getScopes()).containsExactly("diagnosis:execute", "diagnosis:resume");
   }
 
   @Test
@@ -50,7 +53,7 @@ class SignedDiagnosisGrantProviderTest {
     assertThat(claims.subject()).isEqualTo("diagnosis:diag_1");
     assertThat(claims.audiences())
         .containsExactlyInAnyOrder("aiops-agent-api", "aegisops-internal-api");
-    assertThat(claims.scopes()).contains("diagnosis:execute", "evidence:read");
+    assertThat(claims.scopes()).containsExactly("diagnosis:execute", "diagnosis:resume");
     assertThat(claims.tenantId()).isEqualTo("tenant_1");
     assertThat(claims.incidentId()).isEqualTo("inc_1");
     assertThat(claims.diagnosisId()).isEqualTo("diag_1");
@@ -101,7 +104,7 @@ class SignedDiagnosisGrantProviderTest {
     AgentGrantProperties properties = new AgentGrantProperties();
     properties.setIssuer("aegisops-app");
     properties.setAudiences(List.of("aiops-agent-api", "aegisops-internal-api"));
-    properties.setScopes(List.of("diagnosis:execute", "evidence:read"));
+    properties.setScopes(List.of("diagnosis:execute", "diagnosis:resume"));
     properties.setKeyId("task-grant-v1");
     properties.setTtlSeconds(ttlSeconds);
     return properties;
