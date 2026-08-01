@@ -93,6 +93,10 @@ public class ExcelImportTemplateService {
         cell.setCellStyle(headerStyle);
         records.setColumnWidth(index, 20 * 256);
       }
+      var example = records.createRow(1);
+      for (int index = 0; index < columns.size(); index++) {
+        example.createCell(index).setCellValue(exampleValue(columns.get(index)));
+      }
       records.createFreezePane(0, 1);
       addDictionaryDropdowns(workbook, records, columns);
 
@@ -220,6 +224,30 @@ public class ExcelImportTemplateService {
       case MULTI_SELECT -> "多个有效选项值用逗号分隔";
       case USER -> "填写当前租户的用户 ID";
       case BOOLEAN -> "填写 true/false、1/0 或 是/否";
+    };
+  }
+
+  private static String exampleValue(ImportColumn column) {
+    if (!column.dictionaryValues().isEmpty()) {
+      return column.dictionaryValues().getFirst();
+    }
+    return switch (column.code()) {
+      case "title" -> "示例工作记录（请替换）";
+      case "recordTime" -> "2026-01-01T09:00:00+08:00";
+      case "status", "ownerId" -> "";
+      default -> exampleByType(column.type());
+    };
+  }
+
+  private static String exampleByType(String type) {
+    return switch (type) {
+      case "textarea", "select", "text", "user" -> "示例填写内容";
+      case "number" -> "1";
+      case "date" -> "2026-01-01";
+      case "datetime" -> "2026-01-01T09:00:00+08:00";
+      case "boolean" -> "true";
+      case "multi_select" -> "选项一,选项二";
+      default -> "";
     };
   }
 
