@@ -4,22 +4,21 @@
 
 所有本地进程端口必须登记, 避免和 docker-compose / 其它本地服务撞端口。
 
-| 进程                 | 默认端口         | 来源环境变量        | 备注                                                     |
-| -------------------- | ---------------- | ------------------- | -------------------------------------------------------- |
-| aiops-server         | 8080             | `AIOPS_SERVER_PORT` | 主 API + SSE, 默认前端访问入口                           |
-| aiops-worker         | 8081             | `AIOPS_WORKER_PORT` | 仅 actuator / `/internal/worker/status`, 不暴露业务 API  |
-| aiops-runner         | 8092             | `AIOPS_RUNNER_PORT` | actuator + `/internal/runner/status`, 不接收外部业务调用 |
-| aiops-agent (Python) | 9008             | `AIOPS_AGENT_PORT`  | FastAPI, 与 Java 通过 OAuth2 + Diagnosis Grant 解耦      |
-| zabbix-web (docker)  | 8081 → 容器 8080 | docker-compose      | ⚠️ 与 aiops-worker 默认端口冲突                          |
+| 进程                 | 默认端口 | 来源环境变量          | 备注                                                        |
+| -------------------- | -------- | --------------------- | ----------------------------------------------------------- |
+| aegisops-app         | 8080     | `AIOPS_SERVER_PORT`   | 公共 API + SSE，唯一宿主机业务入口                          |
+| aegisops-app         | 8443     | `AIOPS_INTERNAL_PORT` | 仅 Agent 回调的 mTLS Connector，不暴露到宿主机              |
+| aiops-runner         | 8092     | `AIOPS_RUNNER_PORT`   | 仅内部 actuator/status，不接收外部业务调用且不映射宿主机端口 |
+| aiops-agent (Python) | 9008     | `AIOPS_AGENT_PORT`    | 内网 FastAPI，mTLS + Diagnosis Grant，不映射宿主机端口       |
 
 冲突处理:
 
 ```txt
-- 本地同时启动 zabbix-web + aiops-worker 时, 把 worker 端口改成 8091
-  AIOPS_WORKER_PORT=8091 mvn -pl apps/aiops-worker -am spring-boot:run
-- 或者 docker compose 不暴露 zabbix-web 宿主机端口, 仅 docker 网络内访问
-- AI server 默认端口 8080, 不要随意改动, OpenAPI / 前端代理都按 8080 写死
-- AI runner / agent 一旦确定, 改端口必须同步更新:
+- `aegisops-app` 公共端口 8080 保持稳定，OpenAPI / 前端代理按此入口配置。
+- 公共 8080 不启用 `client-auth=want` 代替强认证；Agent 回调只允许进入 8443，且 TLS 握手
+  强制客户端证书。
+- Agent / Runner 端口不得映射到宿主机或公网。
+- App 内部端口、Runner / Agent 端口一旦调整, 必须同步更新:
     - SKILL.md §3.1
     - references/architecture-boundaries.md §1
     - infra/docker-compose.yml
@@ -28,11 +27,15 @@
     - docs/api/ 与前端代理配置
 ```
 
-## 2. 三个后端应用 + 一个 Agent
+## 2. 单 App + Agent + Runner
 
-后端定性: **模块化单体 (Java) + 外挂 Python Agent + 独立 Runner**。三 app 共享同一 Maven 多模块仓库与同一 PostgreSQL, 但运行时独立部署。
+后端定性: **单一 Java 模块化单体 App + 外挂 Python Agent + 独立 Runner**。这是三个运行时与
+权限边界，不是按业务域拆分的微服务。
 
-### 2.1 aiops-server
+### 2.1 aegisops-app
+
+代码启动模块当前位于 `apps/aiops-server`。生产镜像、容器和 Spring 应用身份统一为
+`aegisops-app`，并加载 `modules/aiops-worker-runtime`。
 
 为前端暴露 REST API 与 SSE 流式响应。
 
@@ -50,6 +53,8 @@
 - 将执行日志流回客户端
 - 查询并展示审计日志
 - 通过 SSE 推送实时更新
+- 运行 Zabbix 同步、Incident 聚合、Outbox、RCA、Postmortem 等后台作业
+- 签发 Diagnosis Grant 与 Execution Grant；只允许本进程持有 Grant 私钥
 ```
 
 **禁止:**
@@ -58,16 +63,14 @@
 - 直接执行 Shell 命令
 - 直接执行 Ansible
 - 直接执行 SSH
-- 执行长时间数据同步 (worker 的活)
-- 执行大规模批分析 (worker 的活)
-- 为 ETL 重负载直接访问 PostgreSQL 连接池
-- 代表 Worker 向 VictoriaMetrics / ClickHouse 发起分析查询
 - 引入 aiops-runner 任何代码
 ```
 
-### 2.2 aiops-worker
+后台作业仍必须经过 Adapter、ApplicationService、租约和 Outbox 边界，不得进入 Controller。
 
-执行后台接入、分析与编排。
+### 2.2 aiops-worker-runtime
+
+这是装入 `aegisops-app` 的 Java 模块，不是独立部署进程。
 
 **允许:**
 
@@ -89,7 +92,7 @@
 **禁止:**
 
 ```txt
-- 直接暴露 HTTP 端点给互联网 (仅 actuator / internal)
+- 暴露 HTTP Controller
 - 执行 Ansible / SSH / Webhook (runner 的活)
 - 处理审批流逻辑 (server 的活)
 - 向客户端流式日志 (runner / server 的活)
@@ -116,11 +119,15 @@
 
 ```txt
 - 暴露业务 API 端点 (仅 actuator + `/internal/runner/status`)
-- 主动连接 aiops-server 获取指令
+- 主动连接 aegisops-app 获取指令
 - 在没有有效 AutomationJob 记录的情况下执行任务
 - 执行未处于审批通过状态的任务
+- 在 Execution Grant、审批快照或步骤摘要验证通过前调用任何 StepExecutor
 - 直接注入 `ExecutionRepository` 或 `RollbackRepository`; 对 `io.aegisops.execution` 的跨模块写入必须经过 `io.aegisops.execution.service.ExecutionApplicationService` 或 `io.aegisops.execution.service.RollbackApplicationService` (ArchUnit 守卫: `RunnerArchUnitGuardTest`)
 ```
+
+Runner 只持有 Grant 公钥，并使用独立 `aegisops_runner` 数据库账号。数据库权限仅覆盖领取、
+心跳、步骤状态、执行产物、执行审计以及必要的回滚状态表。
 
 ### 2.4 apps/aiops-agent (Python)
 
@@ -128,56 +135,51 @@
 
 ```txt
 - HTTP 接口: /health, /v1/diagnose, /v1/diagnose/resume, /v1/contracts/diagnosis
-- 通过 OAuth2 服务凭据和 Diagnosis Grant 调用 aiops-server 的 /internal/agent/*
+- 通过 mTLS 和原始 Diagnosis Grant 调用 aegisops-app:8443 的 /internal/agent/*
 - 不直连 PostgreSQL / MinIO / ClickHouse
 - 不触发 Runner 执行
 - contract version 由 Java 端 AgentContractValidator 校验
 ```
 
-### 2.5 Java 与 Agent 服务间鉴权
+### 2.5 App 与 Agent 的内部鉴权
 
-生产环境使用企业 IdP / Keycloak 的 OAuth2 Client Credentials，不新建业务
-`auth-service`。server、worker、agent 使用独立 client、短期 JWT、目标 audience 和端点
-scope。
+生产环境使用工作负载 mTLS 证明固定组件身份，并使用 Ed25519 Diagnosis Grant 约束每个诊断
+任务。内部通信不依赖 Keycloak、OAuth2 Client Credentials 或 JWKS。
 
 ```txt
-server -> agent:
+app -> agent:
+  client identity: spiffe://aegisops.local/service/aegisops-app
   audience: aiops-agent-api
-  scopes: agent:diagnose / agent:resume / agent:work-record
+  scopes: diagnosis:execute 以及该任务需要的最小工具 scope
 
-worker -> agent:
-  audience: aiops-agent-api
-  scopes: agent:diagnose / agent:work-record
-
-agent -> server:
+agent -> app:
+  client identity: spiffe://aegisops.local/service/aiops-agent
   audience: aegisops-internal-api
   scopes: evidence:read / cases:read / plugin:authorize
           memory:read / memory:write / checkpoint:read / checkpoint:write
 ```
 
-每次 Incident 诊断由 Java 签发短期 Diagnosis Grant，绑定 `tenantId + incidentId +
-traceId`。Agent 只传播 Grant，不持有签名密钥；Java 从有效 Grant 恢复 `TenantContext`，不得
-信任 `X-Tenant-Id` 作为内部 API 的授权来源。
+每次 Incident 诊断由 App 签发最长 300 秒的 Diagnosis Grant，绑定 `tenantId + incidentId +
+diagnosisId + traceId`。Agent 只传播 Grant，不持有签名密钥；App 从有效 Grant 恢复
+`TenantContext`，不得信任 `X-Tenant-Id` 作为授权来源。
 
-Kubernetes 中四个组件使用独立 ServiceAccount 和 Secret，并以 NetworkPolicy 限制调用
-方向；启用 Istio 时使用 STRICT mTLS 和 AuthorizationPolicy。服务间鉴权只支持 OAuth2
-Client Credentials，不保留静态 Token 兼容模式。完整决策见
-`docs/adr/0010-service-authentication-oauth2-only.md`。
+证书信任链按角色隔离：Agent 只信任签发 App 证书的 control-plane CA；App 只信任签发 Agent
+证书的 agent CA。轮换可短期并存新旧 CA，但不得使用信任所有证书或明文 HTTP 兼容模式。
+完整决策见 `docs/adr/0012-internal-mtls-task-grants.md`。
 
 ### 2.6 默认部署档位
 
-部署默认值不等于完整产品能力。最小 Core 拓扑固定为：
+默认诊断拓扑固定为：
 
 ```txt
-aiops-server（内嵌 Portal）
-aiops-worker
+aegisops-app（内嵌 Portal + Worker runtime）
+aiops-agent
 PostgreSQL
 ```
 
 以下能力必须显式启用，不得成为 Core 强依赖：
 
 ```txt
-AI:             aiops-agent + Keycloak/企业 IdP
 Automation:     aiops-runner
 Demo Zabbix:    Zabbix Server/Web/PostgreSQL/Agent2
 Observability:  VictoriaMetrics
@@ -185,12 +187,12 @@ Object Storage: MinIO
 Shared Cache:   Redis
 ```
 
-Java 与 Agent 的 OAuth2-only 和 Diagnosis Grant 规则不变，但只在 AI 档启用。Agent 关闭时
-不得创建 Agent HTTP Client、OAuth2 Client Credentials 或 JWKS Decoder，也不得注册
-`/internal/agent/**`。Runner 关闭时只是不启动执行进程，严禁把执行能力合并进 Server。
+`automation` profile 只增加 Runner。Agent 与 App 始终按 mTLS + Diagnosis Grant 通信；Runner
+关闭时只是不启动执行进程，严禁把执行能力合并进 App。Redis、MinIO、VictoriaMetrics 与内置
+Zabbix 仍是按需 profile。
 
 Compose 契约与开关见 `deploy/docker-compose.core.yml` 和
-`docs/designs/phase-8/2026-08-01-core-deployment-profiles.md`。
+`docs/designs/phase-8/2026-08-01-mtls-task-grants.md`。
 
 ## 3. 模块四分类
 
@@ -207,7 +209,7 @@ Compose 契约与开关见 `deploy/docker-compose.core.yml` 和
 
 执行体系 (execution):
   aiops-execution / plugin / work-record
-  apps/aiops-runner / apps/aiops-worker
+  apps/aiops-runner / aiops-worker-runtime
 
 AI 体系 (ai):
   aiops-ai-client
@@ -301,7 +303,7 @@ worker   -> OutboxApplicationService / IncidentAggregationService     (推荐, �
 ```txt
 frontend (web/)
   ↑
-apps/aiops-server
+apps/aiops-server (运行身份 aegisops-app)
   ↑
 modules/ (domain, adapters, infrastructure)
   ↑
@@ -309,15 +311,15 @@ modules/ (domain, adapters, infrastructure)
 infra/ (docker-compose, external systems)
 ```
 
-禁止反向依赖: domain 不得依赖 adapter; server 不得引入 runner 代码。
+禁止反向依赖: domain 不得依赖 adapter; app 不得引入 runner 代码。
 
 ## 外部系统访问矩阵
 
 | 调用方 | Zabbix  | VictoriaMetrics | ClickHouse | MinIO   | PostgreSQL   | Redis      | Ansible  |
 | ------ | ------- | --------------- | ---------- | ------- | ------------ | ---------- | -------- |
-| server | —       | —               | —          | —       | write + read | read+write | —        |
-| worker | adapter | adapter         | adapter    | adapter | write + read | read+write | —        |
-| runner | —       | —               | —          | read    | write        | read       | executor |
+| app    | adapter | adapter         | adapter    | adapter | write + read | read+write | —        |
+| agent  | —       | —               | —          | —       | —            | —          | —        |
+| runner | —       | —               | —          | read    | restricted   | read       | executor |
 
 一律通过对应 Adapter / Client, 不允许直连。
 

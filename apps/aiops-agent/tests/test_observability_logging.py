@@ -49,7 +49,7 @@ def test_json_log_formatter_whitelists_security_event_fields():
             "severity": "critical",
             "httpStatus": 403,
             "requiredScope": "agent:work-record",
-            "serviceId": "svc:aiops-worker",
+            "serviceId": "spiffe://aegisops.local/service/aegisops-app",
             "requestPath": "/v1/diagnose",
             "token": "service-token-must-not-leak",
             "authorization": "Bearer service-token-must-not-leak",
@@ -65,7 +65,7 @@ def test_json_log_formatter_whitelists_security_event_fields():
     assert payload["severity"] == "critical"
     assert payload["httpStatus"] == 403
     assert payload["requiredScope"] == "agent:work-record"
-    assert payload["serviceId"] == "svc:aiops-worker"
+    assert payload["serviceId"] == "spiffe://aegisops.local/service/aegisops-app"
     assert payload["requestPath"] == "/v1/diagnose"
     for forbidden_field in ("token", "authorization", "claims", "diagnosisGrant"):
         assert forbidden_field not in payload

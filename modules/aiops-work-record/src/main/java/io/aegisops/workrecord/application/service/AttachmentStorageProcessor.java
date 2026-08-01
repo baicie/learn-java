@@ -13,7 +13,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 @Service
-@ConditionalOnProperty(prefix = "aiops.runtime", name = "app", havingValue = "worker")
+@ConditionalOnProperty(prefix = "aiops.runtime", name = "app", havingValue = "app")
 public class AttachmentStorageProcessor {
   private final WorkRecordAttachmentRepository attachments;
   private final ObjectStoragePort storage;

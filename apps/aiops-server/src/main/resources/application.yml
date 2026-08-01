@@ -1,6 +1,6 @@
 spring:
   application:
-    name: aiops-server
+    name: aegisops-app
   datasource:
     url: ${AIOPS_DB_URL:jdbc:postgresql://localhost:5432/aegisops}
     username: ${AIOPS_DB_USERNAME:aegisops}
@@ -35,7 +35,7 @@ management:
       enabled: ${AIOPS_REDIS_HEALTH_ENABLED:false}
   metrics:
     tags:
-      application: ${AIOPS_APP_NAME:aiops-server}
+      application: ${AIOPS_APP_NAME:aegisops-app}
   prometheus:
     metrics:
       export:
@@ -47,23 +47,24 @@ aiops:
       max-body-bytes: ${AIOPS_MAX_REQUEST_BODY_BYTES:6291456}
   observability:
     enabled: ${AIOPS_OBSERVABILITY_ENABLED:true}
-    service-name: ${AIOPS_APP_NAME:aiops-server}
+    service-name: ${AIOPS_APP_NAME:aegisops-app}
     request-id-header: ${AIOPS_REQUEST_ID_HEADER:X-Request-Id}
     trace-id-header: ${AIOPS_TRACE_ID_HEADER:X-Trace-Id}
     http-metrics-enabled: ${AIOPS_HTTP_METRICS_ENABLED:true}
   runtime:
-    app: server
+    app: app
     phase: ${AIOPS_RUNTIME_PHASE:phase5}
   jwt:
     secret: ${AIOPS_JWT_SECRET:dev-secret-change-me-change-me-change-me}
     ttl-seconds: ${AIOPS_JWT_TTL_SECONDS:86400}
   security:
-    internal-agent-jwt-issuer-uri: ${AIOPS_INTERNAL_AGENT_JWT_ISSUER_URI:http://localhost:8089/realms/aegisops}
-    internal-agent-jwt-jwk-set-uri: ${AIOPS_INTERNAL_AGENT_JWT_JWK_SET_URI:http://localhost:8089/realms/aegisops/protocol/openid-connect/certs}
-    internal-agent-jwt-audience: ${AIOPS_INTERNAL_AGENT_JWT_AUDIENCE:aegisops-internal-api}
-    diagnosis-grant-secret: ${AIOPS_DIAGNOSIS_GRANT_SECRET:dev-diagnosis-grant-secret-change-me}
     diagnosis-grant-audience: ${AIOPS_DIAGNOSIS_GRANT_AUDIENCE:aegisops-internal-api}
-    diagnosis-grant-issuers: ${AIOPS_DIAGNOSIS_GRANT_ISSUERS:aiops-server,aiops-worker}
+    diagnosis-grant-issuers: ${AIOPS_DIAGNOSIS_GRANT_ISSUERS:aegisops-app}
+    diagnosis-grant-key-id: ${AIOPS_DIAGNOSIS_GRANT_KEY_ID:task-grant-v1}
+    diagnosis-grant-public-key-file: ${AIOPS_DIAGNOSIS_GRANT_PUBLIC_KEY_FILE:}
+    diagnosis-grant-previous-key-id: ${AIOPS_DIAGNOSIS_GRANT_PREVIOUS_KEY_ID:}
+    diagnosis-grant-previous-public-key-file: ${AIOPS_DIAGNOSIS_GRANT_PREVIOUS_PUBLIC_KEY_FILE:}
+    internal-agent-certificate-identities: ${AIOPS_INTERNAL_AGENT_CERTIFICATE_IDENTITIES:spiffe://aegisops.local/service/aiops-agent}
     tenant-required: true
   quota:
     public-api-requests-per-minute: ${AIOPS_PUBLIC_API_RPM:600}
@@ -73,27 +74,38 @@ aiops:
     backend: ${AIOPS_QUOTA_BACKEND:memory}
   agent:
     enabled: ${AIOPS_AGENT_ENABLED:false}
-    base-url: ${AIOPS_AGENT_BASE_URL:http://localhost:9008}
+    base-url: ${AIOPS_AGENT_BASE_URL:https://localhost:9008}
     connect-timeout-millis: ${AIOPS_AGENT_CONNECT_TIMEOUT:3000}
     read-timeout-millis: ${AIOPS_AGENT_READ_TIMEOUT:30000}
-    auth:
-      token-uri: ${AIOPS_AGENT_OAUTH2_TOKEN_URI:http://localhost:8089/realms/aegisops/protocol/openid-connect/token}
-      client-id: ${AIOPS_AGENT_OAUTH2_CLIENT_ID:aiops-server}
-      client-secret: ${AIOPS_AGENT_OAUTH2_CLIENT_SECRET:dev-aiops-server-client-secret}
-      scope: ${AIOPS_AGENT_OAUTH2_SCOPE:agent:diagnose agent:resume agent:work-record}
+    ssl-bundle-name: ${AIOPS_AGENT_SSL_BUNDLE_NAME:agent-client}
     grant:
-      issuer: ${AIOPS_AGENT_GRANT_ISSUER:aiops-server}
-      audience: ${AIOPS_DIAGNOSIS_GRANT_AUDIENCE:aegisops-internal-api}
-      secret: ${AIOPS_DIAGNOSIS_GRANT_SECRET:dev-diagnosis-grant-secret-change-me}
+      issuer: ${AIOPS_AGENT_GRANT_ISSUER:aegisops-app}
+      audiences: ${AIOPS_DIAGNOSIS_GRANT_AUDIENCES:aiops-agent-api,aegisops-internal-api}
+      scopes: ${AIOPS_DIAGNOSIS_GRANT_SCOPES:diagnosis:execute,evidence:read,cases:read,checkpoint:read,checkpoint:write,memory:read,memory:write,plugin:authorize}
+      key-id: ${AIOPS_DIAGNOSIS_GRANT_KEY_ID:task-grant-v1}
+      private-key-file: ${AIOPS_DIAGNOSIS_GRANT_PRIVATE_KEY_FILE:}
       ttl-seconds: ${AIOPS_DIAGNOSIS_GRANT_TTL_SECONDS:300}
     evidence:
       default-lookback-minutes: ${AIOPS_AGENT_EVIDENCE_DEFAULT_LOOKBACK_MINUTES:60}
       max-log-patterns: ${AIOPS_AGENT_EVIDENCE_MAX_LOG_PATTERNS:20}
       max-changes: ${AIOPS_AGENT_EVIDENCE_MAX_CHANGES:20}
+  execution:
+    grant:
+      issuer: ${AIOPS_EXECUTION_GRANT_ISSUER:aegisops-app}
+      audience: ${AIOPS_EXECUTION_GRANT_AUDIENCE:aiops-runner}
+      scope: ${AIOPS_EXECUTION_GRANT_SCOPE:runbook:execute}
+      key-id: ${AIOPS_EXECUTION_GRANT_KEY_ID:task-grant-v1}
+      private-key-file: ${AIOPS_EXECUTION_GRANT_PRIVATE_KEY_FILE:}
+      queue-wait-seconds: ${AIOPS_EXECUTION_GRANT_QUEUE_WAIT_SECONDS:1800}
   ai:
     model-secret: ${AIOPS_JWT_SECRET:dev-secret-change-me-change-me-change-me}
   internal-agent-api:
     enabled: ${AIOPS_INTERNAL_AGENT_API_ENABLED:false}
+  internal-mtls:
+    port: ${AIOPS_INTERNAL_MTLS_PORT:8443}
+    certificate-file: ${AIOPS_TLS_CERT_FILE:}
+    private-key-file: ${AIOPS_TLS_KEY_FILE:}
+    client-ca-file: ${AIOPS_TLS_CLIENT_CA_FILE:}
   evidence:
     victoria:
       enabled: ${AIOPS_EVIDENCE_VICTORIA_ENABLED:false}
@@ -116,6 +128,17 @@ aiops:
     region: ${AIOPS_MINIO_REGION:us-east-1}
     attachment-max-bytes: ${AIOPS_ATTACHMENT_MAX_BYTES:20971520}
     download-url-expiry-seconds: ${AIOPS_DOWNLOAD_URL_EXPIRY_SECONDS:300}
+  outbox:
+    enabled: ${AIOPS_OUTBOX_ENABLED:true}
+    poll-delay-ms: ${AIOPS_OUTBOX_POLL_MS:5000}
+    batch-size: ${AIOPS_OUTBOX_BATCH:10}
+    target-app: ${AIOPS_OUTBOX_TARGET_APP:worker}
+    lease-duration-ms: ${AIOPS_OUTBOX_LEASE_MS:300000}
+  zabbix-sync:
+    enabled: ${AIOPS_ZABBIX_SYNC_ENABLED:true}
+    poll-delay-ms: ${AIOPS_ZABBIX_SYNC_POLL_MS:5000}
+    cadence-ms: ${AIOPS_ZABBIX_SYNC_CADENCE_MS:60000}
+    batch-size: ${AIOPS_ZABBIX_SYNC_BATCH:50}
 
 springdoc:
   swagger-ui:

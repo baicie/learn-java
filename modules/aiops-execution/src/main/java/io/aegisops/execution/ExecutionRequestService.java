@@ -19,6 +19,7 @@ import io.aegisops.execution.dto.TimelineCreateCommand;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -30,10 +31,27 @@ public class ExecutionRequestService {
   private final RollbackRepository rollbackRepository;
   private final ExecutionProperties properties;
   private final ExecutionJson json;
+  private final ExecutionGrantProvider executionGrantProvider;
 
   public ExecutionRequestService(
       ExecutionRepository repository, ExecutionProperties properties, ObjectMapper objectMapper) {
-    this(repository, null, properties, objectMapper);
+    this(repository, null, properties, objectMapper, (ExecutionGrantProvider) null);
+  }
+
+  public ExecutionRequestService(
+      ExecutionRepository repository,
+      RollbackRepository rollbackRepository,
+      ExecutionProperties properties,
+      ObjectMapper objectMapper) {
+    this(repository, rollbackRepository, properties, objectMapper, (ExecutionGrantProvider) null);
+  }
+
+  public ExecutionRequestService(
+      ExecutionRepository repository,
+      ExecutionProperties properties,
+      ObjectMapper objectMapper,
+      ExecutionGrantProvider executionGrantProvider) {
+    this(repository, null, properties, objectMapper, executionGrantProvider);
   }
 
   @Autowired
@@ -41,11 +59,27 @@ public class ExecutionRequestService {
       ExecutionRepository repository,
       RollbackRepository rollbackRepository,
       ExecutionProperties properties,
-      ObjectMapper objectMapper) {
+      ObjectMapper objectMapper,
+      Optional<ExecutionGrantProvider> executionGrantProvider) {
+    this(
+        repository,
+        rollbackRepository,
+        properties,
+        objectMapper,
+        executionGrantProvider.orElse(null));
+  }
+
+  ExecutionRequestService(
+      ExecutionRepository repository,
+      RollbackRepository rollbackRepository,
+      ExecutionProperties properties,
+      ObjectMapper objectMapper,
+      ExecutionGrantProvider executionGrantProvider) {
     this.repository = repository;
     this.rollbackRepository = rollbackRepository;
     this.properties = properties;
     this.json = new ExecutionJson(objectMapper);
+    this.executionGrantProvider = executionGrantProvider;
   }
 
   @Transactional
@@ -255,10 +289,8 @@ public class ExecutionRequestService {
     if (planSteps.isEmpty()) {
       throw new AppException("AUTOMATION_PLAN_STEP_EMPTY", "Automation plan has no steps");
     }
-
     String executionId = newId("exec");
-
-    repository.createRun(
+    ExecutionRunCreateCommand unsignedRun =
         new ExecutionRunCreateCommand(
             executionId,
             tenantId,
@@ -276,13 +308,18 @@ public class ExecutionRequestService {
             plan.riskLevel(),
             "normal",
             null,
-            null));
-
-    repository.createSteps(
+            null,
+            null,
+            null,
+            null);
+    List<ExecutionStepCreateCommand> executionSteps =
         planSteps.stream()
             .map(step -> toExecutionStep(tenantId, executionId, step, context.attempt()))
-            .toList());
-
+            .toList();
+    IssuedExecutionGrant grant = grantProvider().issue(unsignedRun, executionSteps);
+    repository.createRun(
+        unsignedRun.withGrant(grant.token(), grant.snapshotSha256(), grant.expiresAt()));
+    repository.createSteps(executionSteps);
     ensureUpdated(
         repository.updatePlanStatus(tenantId, plan.id(), "executing"),
         "AUTOMATION_PLAN_UPDATE_FAILED",
@@ -350,6 +387,14 @@ public class ExecutionRequestService {
         .findPlan(tenantId, planId)
         .orElseThrow(
             () -> new AppException("AUTOMATION_PLAN_NOT_FOUND", "Automation plan not found"));
+  }
+
+  private ExecutionGrantProvider grantProvider() {
+    if (executionGrantProvider == null) {
+      throw new AppException(
+          "EXECUTION_GRANT_SIGNER_UNAVAILABLE", "Execution grant signer is not configured");
+    }
+    return executionGrantProvider;
   }
 
   private ExecutionRunResponse toResponse(

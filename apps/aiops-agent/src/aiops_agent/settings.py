@@ -10,21 +10,15 @@ class Settings(BaseSettings):
         populate_by_name=True,
     )
 
-    # Phase 8.0 SaaS multi-tenant hardening.
-    inbound_oauth2_issuer: str = "http://localhost:8089/realms/aegisops"
-    inbound_oauth2_jwks_url: str = (
-        "http://localhost:8089/realms/aegisops/protocol/openid-connect/certs"
-    )
-    inbound_oauth2_audience: str = "aiops-agent-api"
-    outbound_oauth2_token_url: str = (
-        "http://localhost:8089/realms/aegisops/protocol/openid-connect/token"
-    )
-    outbound_oauth2_client_id: str = "aiops-agent"
-    outbound_oauth2_client_secret: str = "dev-aiops-agent-client-secret"
-    outbound_oauth2_scope: str = (
-        "evidence:read cases:read checkpoint:read checkpoint:write "
-        "memory:read memory:write plugin:authorize"
-    )
+    diagnosis_grant_issuer: str = "aegisops-app"
+    diagnosis_grant_audience: str = "aiops-agent-api"
+    diagnosis_grant_key_id: str = "task-grant-v1"
+    diagnosis_grant_public_key_file: str = ""
+    diagnosis_grant_previous_key_id: str = ""
+    diagnosis_grant_previous_public_key_file: str = ""
+    tls_certificate_file: str = ""
+    tls_private_key_file: str = ""
+    tls_client_ca_file: str = ""
 
     provider: str = "aiops-agent"
     model: str = "langgraph-deterministic"

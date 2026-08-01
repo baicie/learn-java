@@ -56,7 +56,7 @@ docker load -i "$IMG_ARCHIVE"
 # ── re-tag + push ─────────────────────────────────────────────────────────
 if [[ -n "$TARGET_REGISTRY" ]]; then
   echo "打 tag 并推送到: ${TARGET_REGISTRY}"
-  for image in aiops-server aiops-worker aiops-runner aiops-agent; do
+  for image in aegisops-app aiops-agent aiops-runner; do
     docker tag "${REGISTRY:-aegisops}/${image}:${VERSION}" \
                "${TARGET_REGISTRY}/${image}:${VERSION}"
     docker push "${TARGET_REGISTRY}/${image}:${VERSION}"

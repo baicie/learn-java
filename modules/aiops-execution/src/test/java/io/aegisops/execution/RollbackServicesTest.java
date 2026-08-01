@@ -311,7 +311,12 @@ class RollbackServicesTest {
             repo,
             new RollbackTestSupport.FakeExecutionRequestService(repo),
             new ExecutionProperties(),
-            mapper);
+            mapper,
+            (run, steps) ->
+                new IssuedExecutionGrant(
+                    "rollback.execution.grant",
+                    "d".repeat(64),
+                    OffsetDateTime.parse("2026-08-01T12:30:00Z")));
 
     assertThrows(Exception.class, () -> service.createExecution("tenant_1", "rbp_1", null));
   }
@@ -334,7 +339,12 @@ class RollbackServicesTest {
             repo,
             new RollbackTestSupport.FakeExecutionRequestService(repo),
             new ExecutionProperties(),
-            mapper);
+            mapper,
+            (run, steps) ->
+                new IssuedExecutionGrant(
+                    "rollback-approval.execution.grant",
+                    "e".repeat(64),
+                    OffsetDateTime.parse("2026-08-01T12:30:00Z")));
 
     ExecutionRunResponse response =
         service.createExecution(
@@ -410,7 +420,12 @@ class RollbackServicesTest {
             repo,
             new RollbackTestSupport.FakeExecutionRequestService(repo),
             new ExecutionProperties(),
-            mapper);
+            mapper,
+            (run, steps) ->
+                new IssuedExecutionGrant(
+                    "rollback-snapshot.execution.grant",
+                    "f".repeat(64),
+                    OffsetDateTime.parse("2026-08-01T12:30:00Z")));
 
     service.createExecution("tenant_1", "rbp_1", new RollbackExecutionCreateRequest("alice", 1));
 
@@ -421,6 +436,36 @@ class RollbackServicesTest {
     assertTrue(run.approvalSnapshotJson().contains("\"status\":\"approved\""));
     assertTrue(run.approvalSnapshotJson().contains("\"planId\":\"plan_1\""));
     assertTrue(run.approvalSnapshotJson().contains("\"sourceExecutionId\":\"exec_1\""));
+  }
+
+  @Test
+  void rollbackExecutionPersistsSignedGrantAndSnapshotMetadata() {
+    RollbackTestSupport.FakeExecutionRepository repo =
+        new RollbackTestSupport.FakeExecutionRepository();
+    RollbackTestSupport.FakeRollbackRepository rollback =
+        new RollbackTestSupport.FakeRollbackRepository();
+    rollback.planById =
+        Optional.of(RollbackTestSupport.rollbackPlanWithRequiredApprovals(1, 1, "approved"));
+    rollback.steps.add(
+        RollbackTestSupport.rollbackStep("rbps_1", 1, "shell", "host", "{\"command\":\"undo\"}"));
+    OffsetDateTime expiresAt = OffsetDateTime.parse("2026-08-01T12:30:00Z");
+
+    RollbackExecutionService service =
+        new RollbackExecutionService(
+            rollback,
+            repo,
+            new RollbackTestSupport.FakeExecutionRequestService(repo),
+            new ExecutionProperties(),
+            mapper,
+            (run, steps) ->
+                new IssuedExecutionGrant("rollback.execution.grant", "c".repeat(64), expiresAt));
+
+    service.createExecution("tenant_1", "rbp_1", new RollbackExecutionCreateRequest("alice", 1));
+
+    var run = repo.createdRuns.get(0);
+    assertEquals("rollback.execution.grant", run.executionGrant());
+    assertEquals("c".repeat(64), run.executionSnapshotSha256());
+    assertEquals(expiresAt, run.executionGrantExpiresAt());
   }
 
   private Exception assertRejects(RollbackPlanService service) {

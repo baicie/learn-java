@@ -10,18 +10,22 @@ fullnameOverride: ""
 
 serviceAccount:
   create: true
-  # When create=false, all four names are required, must be distinct, and cannot be "default".
+  # When create=false, enabled components need distinct non-default names.
   names: {}
   annotations: {}
 
 podSecurityContext:
   runAsNonRoot: true
+  runAsUser: 10001
+  runAsGroup: 10001
+  fsGroup: 10001
+  fsGroupChangePolicy: OnRootMismatch
   seccompProfile:
     type: RuntimeDefault
 
 containerSecurityContext:
   allowPrivilegeEscalation: false
-  readOnlyRootFilesystem: false
+  readOnlyRootFilesystem: true
   capabilities:
     drop:
       - ALL
@@ -37,30 +41,28 @@ config:
 security:
   jwtSecret: ""
   zabbixWebhookSigningSecret: ""
-  diagnosisGrantSecret: ""
   diagnosisGrantTtlSeconds: 300
   tenantRequired: true
   publicApiRequestsPerMinute: 600
   internalAgentRequestsPerMinute: 1200
-  serviceAuth:
-    issuerUri: ""
-    jwkSetUri: ""
-    tokenUri: ""
-    agentAudience: aiops-agent-api
-    internalAudience: aegisops-internal-api
-    clients:
-      server:
-        clientId: aiops-server
-        clientSecret: ""
-        scope: "agent:diagnose agent:resume agent:work-record"
-      worker:
-        clientId: aiops-worker
-        clientSecret: ""
-        scope: "agent:diagnose agent:work-record"
-      agent:
-        clientId: aiops-agent
-        clientSecret: ""
-        scope: "evidence:read cases:read checkpoint:read checkpoint:write memory:read memory:write plugin:authorize"
+  existingSecrets:
+    app: ""
+    agent: ""
+    runner: ""
+  taskGrant:
+    keyId: task-grant-v1
+    privateKey: ""
+    publicKey: ""
+    previousKeyId: ""
+    previousPublicKey: ""
+    executionQueueWaitSeconds: 1800
+  mtls:
+    appCertificate: ""
+    appPrivateKey: ""
+    controlPlaneCaCertificate: ""
+    agentCertificate: ""
+    agentPrivateKey: ""
+    agentCaCertificate: ""
 
 dify:
   workRecordProvider: deterministic
@@ -78,19 +80,10 @@ external:
     host: "postgresql.default.svc.cluster.local"
     port: 5432
     database: "aegisops"
-    username: "aegisops"
-    password: ""
-  redis:
-    host: "redis.default.svc.cluster.local"
-    port: 6379
-    password: ""
-  clickhouse:
-    host: "clickhouse.default.svc.cluster.local"
-    httpPort: 8123
-    tcpPort: 9000
-    database: "aegisops"
-    username: "default"
-    password: ""
+    appUsername: "aegisops_app"
+    appPassword: ""
+    runnerUsername: "aegisops_runner"
+    runnerPassword: ""
   minio:
     endpoint: "http://minio.default.svc.cluster.local:9000"
     accessKey: ""
@@ -100,14 +93,21 @@ external:
   victoriaMetrics:
     baseUrl: "http://victoria-metrics.default.svc.cluster.local:8428"
 
+features:
+  objectStorageEnabled: false
+  victoriaMetricsEnabled: false
+  redisHealthEnabled: false
+  quotaBackend: memory
+
 apps:
-  server:
+  app:
     enabled: true
     replicaCount: 1
     image:
-      repository: "aegisops/aiops-server"
+      repository: "aegisops/aegisops-app"
       tag: "0.1.0"
     port: 8080
+    internalMtlsPort: 8443
     env: {}
     resources:
       requests:
@@ -116,36 +116,6 @@ apps:
       limits:
         cpu: "1"
         memory: 1Gi
-  worker:
-    enabled: true
-    replicaCount: 1
-    image:
-      repository: "aegisops/aiops-worker"
-      tag: "0.1.0"
-    port: 8081
-    env: {}
-    resources:
-      requests:
-        cpu: 100m
-        memory: 384Mi
-      limits:
-        cpu: "1"
-        memory: 768Mi
-  runner:
-    enabled: true
-    replicaCount: 1
-    image:
-      repository: "aegisops/aiops-runner"
-      tag: "0.1.0"
-    port: 8092
-    env: {}
-    resources:
-      requests:
-        cpu: 100m
-        memory: 384Mi
-      limits:
-        cpu: "1"
-        memory: 768Mi
   agent:
     enabled: true
     replicaCount: 1
@@ -161,6 +131,21 @@ apps:
       limits:
         cpu: "1"
         memory: 512Mi
+  runner:
+    enabled: false
+    replicaCount: 1
+    image:
+      repository: "aegisops/aiops-runner"
+      tag: "0.1.0"
+    port: 8092
+    env: {}
+    resources:
+      requests:
+        cpu: 100m
+        memory: 384Mi
+      limits:
+        cpu: "1"
+        memory: 768Mi
 
 ingress:
   enabled: false
@@ -171,13 +156,10 @@ ingress:
       paths:
         - path: /
           pathType: Prefix
-          service: server
-          port: 8080
   tls: []
 
 networkPolicy:
   enabled: false
-  # Override this selector when the ingress controller runs in another namespace.
   ingressNamespaceSelector:
     matchLabels:
       kubernetes.io/metadata.name: ingress-nginx
@@ -185,31 +167,21 @@ networkPolicy:
     dnsNamespaceSelector:
       matchLabels:
         kubernetes.io/metadata.name: kube-system
-    # Standard NetworkPolicy cannot match DNS names. When enabled, explicitly set restricted
-    # CIDRs for the IdP and external data services; world-open CIDRs are rejected.
+    # Standard NetworkPolicy cannot match DNS names. Production profiles must set
+    # restricted CIDRs for PostgreSQL, model providers and execution targets.
     allowedCidrs: []
     externalPorts:
-      server:
-        - 443
-        - 5432
-        - 6379
-      worker:
+      app:
         - 80
         - 443
         - 5432
-        - 6379
-        - 8123
-        - 8428
-        - 9000
+      agent:
+        - 443
       runner:
         - 22
         - 80
         - 443
         - 5432
-        - 6379
-        - 9000
-      agent:
-        - 443
 
 serviceMesh:
   istio:

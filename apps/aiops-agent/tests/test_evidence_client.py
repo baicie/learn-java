@@ -14,14 +14,7 @@ from aiops_agent.workflow.tools.evidence_client import EvidenceClient
 
 
 @pytest.fixture(autouse=True)
-def oauth_service_headers(monkeypatch):
-    async def headers(_settings):
-        return {"Authorization": "Bearer oauth-service-token"}
-
-    monkeypatch.setattr(
-        "aiops_agent.workflow.tools.internal_auth.service_credential_headers",
-        headers,
-    )
+def diagnosis_grant_context():
     token = diagnosis_grant_var.set("diagnosis-grant")
     yield
     diagnosis_grant_var.reset(token)
@@ -29,7 +22,7 @@ def oauth_service_headers(monkeypatch):
 
 @pytest.mark.asyncio
 @respx.mock
-async def test_evidence_client_queries_java_contract_with_oauth2_token():
+async def test_evidence_client_queries_java_contract_with_diagnosis_grant():
     route = respx.post("http://java/internal/agent/evidence/query").mock(
         return_value=Response(
             200,
@@ -59,7 +52,7 @@ async def test_evidence_client_queries_java_contract_with_oauth2_token():
     assert len(evidence) == 1
     assert evidence[0].evidence_type == "metric"
     request = route.calls[0].request
-    assert request.headers["Authorization"] == "Bearer oauth-service-token"
+    assert "Authorization" not in request.headers
     assert request.headers["X-AegisOps-Diagnosis-Grant"] == "diagnosis-grant"
     assert b'"tenantId":"tenant_1"' in request.content
     assert b'"traceId":"trace_1"' in request.content

@@ -11,7 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-@ConditionalOnProperty(prefix = "aiops.runtime", name = "app", havingValue = "worker")
+@ConditionalOnProperty(prefix = "aiops.runtime", name = "app", havingValue = "app")
 public class IdempotentImportRowService {
   private final AsyncJobItemRepository items;
   private final WorkRecordService records;

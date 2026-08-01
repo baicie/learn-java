@@ -4,65 +4,55 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import java.time.Clock;
-import java.time.Instant;
-import java.time.ZoneOffset;
-import java.util.Map;
+import java.util.List;
 import org.junit.jupiter.api.Test;
-import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.security.oauth2.jwt.JwtTimestampValidator;
 
 class AiopsSecurityConfigurationTest {
   @Test
-  void alwaysUsesJwtForInternalServiceAuthentication() {
-    AiopsSecurityProperties properties = validProperties();
+  void alwaysUsesMtlsForInternalServiceAuthentication() {
+    AiopsSecurityProperties properties = new AiopsSecurityProperties();
 
     InternalServiceAuthenticator authenticator =
         new AiopsSecurityConfiguration().internalServiceAuthenticator(properties);
 
-    assertThat(authenticator).isInstanceOf(JwtInternalServiceAuthenticator.class);
+    assertThat(authenticator).isInstanceOf(MtlsInternalServiceAuthenticator.class);
   }
 
   @Test
-  void rejectsWeakDiagnosisGrantSecretAtStartup() {
-    AiopsSecurityProperties properties = validProperties();
-    properties.setDiagnosisGrantSecret("x".repeat(31));
+  void rejectsBlankInternalAgentCertificateIdentityAtStartup() {
+    AiopsSecurityProperties properties = new AiopsSecurityProperties();
+    properties.setInternalAgentCertificateIdentities(List.of(" "));
 
     assertThatThrownBy(
             () -> new AiopsSecurityConfiguration().internalServiceAuthenticator(properties))
         .isInstanceOf(IllegalStateException.class)
-        .hasMessageContaining("diagnosis-grant-secret");
-
-    AiopsSecurityProperties blankSecret = validProperties();
-    blankSecret.setDiagnosisGrantSecret(" ".repeat(32));
-    assertThatThrownBy(
-            () -> new AiopsSecurityConfiguration().internalServiceAuthenticator(blankSecret))
-        .isInstanceOf(IllegalStateException.class)
-        .hasMessageContaining("diagnosis-grant-secret");
+        .hasMessageContaining("certificate-identities");
   }
 
   @Test
-  void rejectsBlankIssuerAndAudienceConfigurationAtStartup() {
-    AiopsSecurityProperties blankIssuer = validProperties();
-    blankIssuer.setInternalAgentJwtIssuerUri(" ");
-    assertThatThrownBy(
-            () -> new AiopsSecurityConfiguration().internalServiceAuthenticator(blankIssuer))
-        .isInstanceOf(IllegalStateException.class)
-        .hasMessageContaining("issuer-uri");
-
-    AiopsSecurityProperties blankJwtAudience = validProperties();
-    blankJwtAudience.setInternalAgentJwtAudience("");
-    assertThatThrownBy(
-            () -> new AiopsSecurityConfiguration().internalServiceAuthenticator(blankJwtAudience))
-        .isInstanceOf(IllegalStateException.class)
-        .hasMessageContaining("jwt-audience");
-
-    AiopsSecurityProperties blankGrantAudience = validProperties();
-    blankGrantAudience.setDiagnosisGrantAudience(" ");
-    assertThatThrownBy(
-            () -> new AiopsSecurityConfiguration().internalServiceAuthenticator(blankGrantAudience))
+  void validatesDiagnosisGrantAudienceAndIssuerAllowlist() {
+    AiopsSecurityProperties blankAudience = new AiopsSecurityProperties();
+    blankAudience.setDiagnosisGrantAudience(" ");
+    assertThatThrownBy(blankAudience::validateDiagnosisGrant)
         .isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("diagnosis-grant-audience");
+
+    AiopsSecurityProperties blankIssuer = new AiopsSecurityProperties();
+    blankIssuer.setDiagnosisGrantIssuers(List.of(" "));
+    assertThatThrownBy(blankIssuer::validateDiagnosisGrant)
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("diagnosis-grant-issuers");
+  }
+
+  @Test
+  void doesNotShipLegacyInternalJwtAuthenticator() {
+    assertThatThrownBy(
+            () ->
+                Class.forName(
+                    "io.aegisops.security.JwtInternalServiceAuthenticator",
+                    true,
+                    getClass().getClassLoader()))
+        .isInstanceOf(ClassNotFoundException.class);
   }
 
   @Test
@@ -74,30 +64,5 @@ class AiopsSecurityConfigurationTest {
                     true,
                     getClass().getClassLoader()))
         .doesNotThrowAnyException();
-  }
-
-  @Test
-  void rejectsServiceTokenImmediatelyAfterExpiration() {
-    Instant now = Instant.parse("2026-08-01T08:00:00Z");
-    JwtTimestampValidator validator =
-        AiopsSecurityConfiguration.strictServiceTokenTimestampValidator();
-    validator.setClock(Clock.fixed(now, ZoneOffset.UTC));
-    Jwt expired =
-        new Jwt(
-            "service-token",
-            now.minusSeconds(61),
-            now.minusSeconds(1),
-            Map.of("alg", "RS256"),
-            Map.of("sub", "svc:aiops-agent"));
-
-    assertThat(validator.validate(expired).hasErrors()).isTrue();
-  }
-
-  private static AiopsSecurityProperties validProperties() {
-    AiopsSecurityProperties properties = new AiopsSecurityProperties();
-    properties.setInternalAgentJwtIssuerUri("http://localhost:8089/realms/aegisops");
-    properties.setInternalAgentJwtJwkSetUri(
-        "http://localhost:8089/realms/aegisops/protocol/openid-connect/certs");
-    return properties;
   }
 }

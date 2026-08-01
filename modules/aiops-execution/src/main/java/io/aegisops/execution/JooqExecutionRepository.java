@@ -170,6 +170,9 @@ public class JooqExecutionRepository implements ExecutionRepository {
         .set(EXECUTION_RUN.EXECUTION_KIND, command.executionKind())
         .set(EXECUTION_RUN.ROLLBACK_PLAN_ID, command.rollbackPlanId())
         .set(EXECUTION_RUN.ROLLBACK_OF_EXECUTION_ID, command.rollbackOfExecutionId())
+        .set(EXECUTION_RUN.EXECUTION_GRANT, command.executionGrant())
+        .set(EXECUTION_RUN.EXECUTION_SNAPSHOT_SHA256, command.executionSnapshotSha256())
+        .set(EXECUTION_RUN.EXECUTION_GRANT_EXPIRES_AT, command.executionGrantExpiresAt())
         .set(EXECUTION_RUN.CREATED_AT, DSL.currentOffsetDateTime())
         .set(EXECUTION_RUN.UPDATED_AT, DSL.currentOffsetDateTime())
         .execute();
@@ -464,6 +467,9 @@ public class JooqExecutionRepository implements ExecutionRepository {
             EXECUTION_RUN.EXECUTION_KIND,
             EXECUTION_RUN.ROLLBACK_PLAN_ID,
             EXECUTION_RUN.ROLLBACK_OF_EXECUTION_ID,
+            EXECUTION_RUN.EXECUTION_GRANT,
+            EXECUTION_RUN.EXECUTION_SNAPSHOT_SHA256,
+            EXECUTION_RUN.EXECUTION_GRANT_EXPIRES_AT,
             EXECUTION_RUN.CREATED_AT,
             EXECUTION_RUN.UPDATED_AT)
         .from(EXECUTION_RUN);

@@ -13,7 +13,7 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
  * connection.
  *
  * <p>This is the Phase 1.0 stop-gap. The real fix lives in Phase 1.1, when the sync path moves to
- * {@code aiops-worker} with persistent run state.
+ * the {@code aiops-worker-runtime} module with persistent run state inside {@code aegisops-app}.
  */
 @Configuration
 public class DatasourceSyncExecutorConfig {

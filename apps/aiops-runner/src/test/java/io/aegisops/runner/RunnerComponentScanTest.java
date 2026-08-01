@@ -2,6 +2,8 @@ package io.aegisops.runner;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import io.aegisops.execution.ExecutionGrantProperties;
+import io.aegisops.execution.SignedExecutionGrantProvider;
 import java.util.Arrays;
 import java.util.Set;
 import java.util.TreeSet;
@@ -9,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Import;
 import org.springframework.core.annotation.AnnotatedElementUtils;
@@ -36,11 +39,14 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandl
 class RunnerComponentScanTest {
 
   private final RequestMappingHandlerMapping handlerMapping;
+  private final ApplicationContext applicationContext;
 
   @Autowired
   RunnerComponentScanTest(
-      @Qualifier("requestMappingHandlerMapping") RequestMappingHandlerMapping handlerMapping) {
+      @Qualifier("requestMappingHandlerMapping") RequestMappingHandlerMapping handlerMapping,
+      ApplicationContext applicationContext) {
     this.handlerMapping = handlerMapping;
+    this.applicationContext = applicationContext;
   }
 
   @Test
@@ -74,6 +80,12 @@ class RunnerComponentScanTest {
     assertThat(aegisopsPaths)
         .noneMatch(path -> path.equals("/api") || path.startsWith("/api/"))
         .noneMatch(path -> path.equals("/internal/agent") || path.startsWith("/internal/agent/"));
+  }
+
+  @Test
+  void runnerDoesNotCreateExecutionGrantSignerOrPrivateKeyProperties() {
+    assertThat(applicationContext.getBeansOfType(SignedExecutionGrantProvider.class)).isEmpty();
+    assertThat(applicationContext.getBeansOfType(ExecutionGrantProperties.class)).isEmpty();
   }
 
   private static Set<String> paths(RequestMappingInfo mapping) {

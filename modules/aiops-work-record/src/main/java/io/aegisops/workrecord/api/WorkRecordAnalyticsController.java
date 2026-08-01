@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 @ConditionalOnProperty(
     prefix = "aiops.runtime",
     name = "app",
-    havingValue = "server",
+    havingValue = "app",
     matchIfMissing = true)
 public class WorkRecordAnalyticsController {
   private final WorkRecordStatisticsService service;

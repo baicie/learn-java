@@ -2,7 +2,7 @@
 set -u
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-COMPOSE_FILE="${COMPOSE_FILE:-deploy/docker-compose.app.yml}"
+COMPOSE_FILE="${COMPOSE_FILE:-deploy/docker-compose.core.yml}"
 COMPOSE_OVERLAY_FILE="${COMPOSE_OVERLAY_FILE:-}"
 OUTPUT_DIR="${OUTPUT_DIR:-runtime-diagnostics}"
 RUNTIME_REDACTOR_SCRIPT="${RUNTIME_REDACTOR_SCRIPT:-$SCRIPT_DIR/../../deploy/scripts/redact-runtime-output.py}"
@@ -42,7 +42,7 @@ capture "$OUTPUT_DIR/network/list.txt" docker network ls
 
 INSPECT_FORMAT='{"name":{{json .Name}},"image":{{json .Config.Image}},"status":{{json .State.Status}},"running":{{json .State.Running}},"exitCode":{{json .State.ExitCode}},"health":{{if .State.Health}}{{json .State.Health.Status}}{{else}}null{{end}}}'
 
-for container in aegisops-postgres aegisops-redis aegisops-keycloak aegisops-agent aegisops-server aegisops-worker aegisops-runner; do
+for container in aegisops-postgres aegisops-app aegisops-agent aegisops-runner; do
   capture "$OUTPUT_DIR/inspect/${container}.json" docker inspect --format "$INSPECT_FORMAT" "$container"
 done
 

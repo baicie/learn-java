@@ -6,8 +6,8 @@ import java.util.Map;
 import org.springframework.stereotype.Service;
 
 /**
- * Server-side helper that hands work off to the {@code worker} process via the {@code
- * automation_outbox} table.
+ * App-side helper that hands work to the internal {@code worker} queue via the {@code
+ * automation_outbox} table. The queue is consumed by the Worker runtime in this same JVM.
  *
  * <p>Three jobs are dispatched today:
  *
@@ -18,8 +18,9 @@ import org.springframework.stereotype.Service;
  *       (Phase 6)
  * </ul>
  *
- * <p>The matching {@code OutboxJob} skeleton implementations live in {@code apps/aiops-worker.job}.
- * They are intentionally no-ops for now; real logic lands in the dedicated phase.
+ * <p>The matching {@code OutboxJob} implementations live in {@code modules/aiops-worker-runtime}.
+ * The target value remains {@code worker} as a durable queue routing key; it is not a process
+ * identity.
  */
 @Service
 public class IncidentPostmortemDispatcher {

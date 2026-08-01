@@ -9,40 +9,20 @@ data:
   JAVA_OPTS: {{ .Values.config.javaOpts | quote }}
   LOG_LEVEL: {{ .Values.config.logLevel | quote }}
   TZ: {{ .Values.global.timezone | quote }}
-
-  AIOPS_DB_URL: {{ printf "jdbc:postgresql://%s:%v/%s" .Values.external.postgres.host .Values.external.postgres.port .Values.external.postgres.database | quote }}
-  AIOPS_DB_USERNAME: {{ .Values.external.postgres.username | quote }}
-
-  POSTGRES_HOST: {{ .Values.external.postgres.host | quote }}
-  POSTGRES_PORT: {{ .Values.external.postgres.port | quote }}
-  POSTGRES_DB: {{ .Values.external.postgres.database | quote }}
-  POSTGRES_USER: {{ .Values.external.postgres.username | quote }}
-
-  REDIS_HOST: {{ .Values.external.redis.host | quote }}
-  REDIS_PORT: {{ .Values.external.redis.port | quote }}
-
-  CLICKHOUSE_HOST: {{ .Values.external.clickhouse.host | quote }}
-  CLICKHOUSE_HTTP_PORT: {{ .Values.external.clickhouse.httpPort | quote }}
-  CLICKHOUSE_TCP_PORT: {{ .Values.external.clickhouse.tcpPort | quote }}
-  CLICKHOUSE_DB: {{ .Values.external.clickhouse.database | quote }}
-  CLICKHOUSE_USER: {{ .Values.external.clickhouse.username | quote }}
-
-  AIOPS_MINIO_ENDPOINT: {{ .Values.external.minio.endpoint | quote }}
-  AIOPS_MINIO_BUCKET: {{ .Values.external.minio.bucket | quote }}
-  AIOPS_MINIO_REGION: {{ .Values.external.minio.region | quote }}
-
-  VICTORIA_METRICS_BASE_URL: {{ .Values.external.victoriaMetrics.baseUrl | quote }}
-  AIOPS_EVIDENCE_VICTORIA_BASE_URL: {{ .Values.external.victoriaMetrics.baseUrl | quote }}
-
-  AIOPS_AGENT_BASE_URL: "http://{{ include "aegisops.fullname" . }}-agent:{{ .Values.apps.agent.port }}"
-
+  AIOPS_AGENT_BASE_URL: "https://{{ include "aegisops.fullname" . }}-agent:{{ .Values.apps.agent.port }}"
+  AIOPS_AGENT_WORKFLOW_API_BASE_URL: "https://{{ include "aegisops.fullname" . }}-app:{{ .Values.apps.app.internalMtlsPort }}"
+  AIOPS_AGENT_EVIDENCE_BASE_URL: "https://{{ include "aegisops.fullname" . }}-app:{{ .Values.apps.app.internalMtlsPort }}/internal/agent/evidence"
   AIOPS_PUBLIC_API_RPM: {{ .Values.security.publicApiRequestsPerMinute | quote }}
   AIOPS_INTERNAL_AGENT_RPM: {{ .Values.security.internalAgentRequestsPerMinute | quote }}
   AIOPS_TENANT_REQUIRED: {{ .Values.security.tenantRequired | quote }}
-
-  AIOPS_AGENT_WORKFLOW_API_BASE_URL: "http://{{ include "aegisops.fullname" . }}-server:{{ .Values.apps.server.port }}"
-  AIOPS_AGENT_EVIDENCE_BASE_URL: "http://{{ include "aegisops.fullname" . }}-server:{{ .Values.apps.server.port }}/internal/agent/evidence"
-
+  AIOPS_OBJECT_STORAGE_ENABLED: {{ .Values.features.objectStorageEnabled | quote }}
+  AIOPS_EVIDENCE_VICTORIA_ENABLED: {{ .Values.features.victoriaMetricsEnabled | quote }}
+  AIOPS_EVIDENCE_VICTORIA_BASE_URL: {{ .Values.external.victoriaMetrics.baseUrl | quote }}
+  AIOPS_REDIS_HEALTH_ENABLED: {{ .Values.features.redisHealthEnabled | quote }}
+  AIOPS_QUOTA_BACKEND: {{ .Values.features.quotaBackend | quote }}
+  AIOPS_MINIO_ENDPOINT: {{ .Values.external.minio.endpoint | quote }}
+  AIOPS_MINIO_BUCKET: {{ .Values.external.minio.bucket | quote }}
+  AIOPS_MINIO_REGION: {{ .Values.external.minio.region | quote }}
   AIOPS_OBSERVABILITY_ENABLED: {{ .Values.observability.enabled | quote }}
   AIOPS_HTTP_METRICS_ENABLED: {{ .Values.observability.metrics.enabled | quote }}
   AIOPS_AGENT_OBSERVABILITY_ENABLED: {{ .Values.observability.enabled | quote }}
@@ -51,7 +31,7 @@ data:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ include "aegisops.fullname" . }}-agent-dify
+  name: {{ include "aegisops.fullname" . }}-agent-config
   labels:
     {{- include "aegisops.labels" . | nindent 4 }}
 data:

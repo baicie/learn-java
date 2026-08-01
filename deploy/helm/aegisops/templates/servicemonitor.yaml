@@ -1,12 +1,17 @@
-{{ if and .Values.observability.enabled .Values.observability.serviceMonitor.enabled }}
-{{- range $component := list "server" "worker" "runner" }}
+{{- if and .Values.observability.enabled .Values.observability.serviceMonitor.enabled }}
+{{- $root := . }}
+{{- /* Agent HTTPS requires a client identity; do not reuse the App private key for monitoring. */ -}}
+{{- range $component := list "app" "runner" }}
+{{- $app := index $root.Values.apps $component }}
+{{- if $app.enabled }}
+---
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-  name: {{ include "aegisops.fullname" $ }}-{{ $component }}
+  name: {{ include "aegisops.fullname" $root }}-{{ $component }}
   labels:
-    {{- include "aegisops.labels" $ | nindent 4 }}
-    {{- with $.Values.observability.serviceMonitor.labels }}
+    {{- include "aegisops.labels" $root | nindent 4 }}
+    {{- with $root.Values.observability.serviceMonitor.labels }}
     {{- toYaml . | nindent 4 }}
     {{- end }}
 spec:
@@ -16,26 +21,8 @@ spec:
   endpoints:
     - port: http
       path: /actuator/prometheus
-      interval: {{ $.Values.observability.serviceMonitor.interval }}
-      scrapeTimeout: {{ $.Values.observability.serviceMonitor.scrapeTimeout }}
----
+      interval: {{ $root.Values.observability.serviceMonitor.interval }}
+      scrapeTimeout: {{ $root.Values.observability.serviceMonitor.scrapeTimeout }}
 {{- end }}
-apiVersion: monitoring.coreos.com/v1
-kind: ServiceMonitor
-metadata:
-  name: {{ include "aegisops.fullname" . }}-agent
-  labels:
-    {{- include "aegisops.labels" . | nindent 4 }}
-    {{- with .Values.observability.serviceMonitor.labels }}
-    {{- toYaml . | nindent 4 }}
-    {{- end }}
-spec:
-  selector:
-    matchLabels:
-      app.kubernetes.io/component: agent
-  endpoints:
-    - port: http
-      path: /metrics
-      interval: {{ .Values.observability.serviceMonitor.interval }}
-      scrapeTimeout: {{ .Values.observability.serviceMonitor.scrapeTimeout }}
-{{ end }}
+{{- end }}
+{{- end }}

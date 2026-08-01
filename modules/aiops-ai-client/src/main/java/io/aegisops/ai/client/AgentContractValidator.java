@@ -18,6 +18,7 @@ public class AgentContractValidator {
     requireText("incidentId", request.incidentId());
     requireText("locale", request.locale());
     requireText("traceId", request.traceId());
+    requireText("diagnosisId", request.diagnosisId());
 
     if (request.incident() == null) {
       throw violation("incident is required");

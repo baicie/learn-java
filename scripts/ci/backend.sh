@@ -22,11 +22,11 @@ elif ! command -v mvn >/dev/null 2>&1; then
   exit 1
 fi
 
-echo "==> Verify platform, work-record and server"
+echo "==> Verify platform, work-record, worker runtime and app"
 
 "${MAVEN}" \
   -B \
   -ntp \
-  -pl modules/aiops-platform,modules/aiops-work-record,apps/aiops-server,apps/aiops-worker \
+  -pl modules/aiops-platform,modules/aiops-work-record,modules/aiops-worker-runtime,apps/aiops-server \
   -am \
   verify

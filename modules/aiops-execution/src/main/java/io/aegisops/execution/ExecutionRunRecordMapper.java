@@ -37,6 +37,9 @@ final class ExecutionRunRecordMapper {
         record.get(EXECUTION_RUN.EXECUTION_KIND),
         record.get(EXECUTION_RUN.ROLLBACK_PLAN_ID),
         record.get(EXECUTION_RUN.ROLLBACK_OF_EXECUTION_ID),
+        record.get(EXECUTION_RUN.EXECUTION_GRANT),
+        record.get(EXECUTION_RUN.EXECUTION_SNAPSHOT_SHA256),
+        record.get(EXECUTION_RUN.EXECUTION_GRANT_EXPIRES_AT),
         record.get(EXECUTION_RUN.CREATED_AT),
         record.get(EXECUTION_RUN.UPDATED_AT));
   }

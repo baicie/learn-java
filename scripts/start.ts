@@ -29,12 +29,6 @@ const APPS = {
     portEnv: 'AIOPS_SERVER_PORT',
     dir: 'apps/aiops-server',
   },
-  worker: {
-    name: 'aiops-worker',
-    port: 8091,
-    portEnv: 'AIOPS_WORKER_PORT',
-    dir: 'apps/aiops-worker',
-  },
   runner: {
     name: 'aiops-runner',
     port: 8092,
@@ -610,22 +604,22 @@ Usage:
   tsx scripts/start.ts [command]
 
 Commands:
-  dev        Start infra + aiops-server + aiops-worker + frontend (recommended for local UI dev)
-  server     Build & start only the aiops-server module
+  dev        Start infra + aegisops-app + frontend (recommended for local UI dev)
+  server     Build & start the aegisops-app startup module (apps/aiops-server)
   infra      Start Docker Compose (PostgreSQL, Redis, ClickHouse, VictoriaMetrics, MinIO)
-  backend    Build Maven project and start all three backend apps (server + worker + runner)
+  backend    Build Maven project and start aegisops-app + aiops-runner
   frontend   Start frontend dev server
   all        Start infra + all backends (default; same as no argument)
   stop       Stop all backend apps (not infra)
   infra-stop Stop infrastructure containers
   clean      Stop apps and remove all volumes (DESTROYS DATA)
   status     Show system requirements and service status
-  logs [app] Tail logs for an app (server | worker | runner)
+  logs [app] Tail logs for an app (server | runner)
   help       Show this help
 
 Examples:
-  pnpm dev                          # one-command local dev (infra + server + worker + frontend)
-  pnpm dev:server                   # only aiops-server, no worker/runner
+  pnpm dev                          # one-command local dev (infra + aegisops-app + frontend)
+  pnpm dev:server                   # only aegisops-app, no agent/runner
   pnpm dev:frontend                 # only the frontend dev server
   tsx scripts/start.ts status
   tsx scripts/start.ts all
@@ -656,8 +650,7 @@ async function main(): Promise<void> {
       console.log(`    cd web/portal && npm install && npm run dev`)
       console.log()
       console.log('  URLs:')
-      console.log('    Server:  http://localhost:8080')
-      console.log('    Worker:  http://localhost:8091/actuator/health')
+      console.log('    App:     http://localhost:8080')
       console.log(
         `    Runner:  http://localhost:${APPS.runner.port}/actuator/health`
       )
@@ -685,16 +678,15 @@ async function main(): Promise<void> {
 
     case 'dev':
       printStatus()
-      printHeader('Dev Startup Sequence (server + worker + frontend)')
+      printHeader('Dev Startup Sequence (aegisops-app + frontend)')
       console.log('  1. Starting infrastructure (Docker Compose)...')
       await startInfra()
-      console.log('\n  2. Building & starting aiops-server and aiops-worker...')
-      await startSelectedBackends(['server', 'worker'])
+      console.log('\n  2. Building & starting aegisops-app...')
+      await startSelectedBackends(['server'])
       console.log('\n  3. Starting frontend dev server...')
       await startFrontend(() => {
         printHeader('Dev Stack Ready')
-        console.log('  Server:    http://localhost:8080')
-        console.log('  Worker:    http://localhost:8091/actuator/health')
+        console.log('  App:       http://localhost:8080')
         console.log('  Swagger:   http://localhost:8080/swagger-ui.html')
         console.log('  Frontend:  http://localhost:5173 (Portal)')
         console.log()

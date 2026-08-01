@@ -6,8 +6,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.aegisops.common.exception.AppException;
+import io.aegisops.common.security.InvalidExecutionGrantException;
 import io.aegisops.execution.ExecutionProperties;
 import io.aegisops.execution.dto.ExecutionArtifactCreateCommand;
+import io.aegisops.execution.dto.ExecutionAuditEventCreateCommand;
 import io.aegisops.execution.dto.ExecutionRunRecord;
 import io.aegisops.execution.dto.ExecutionRunStatusUpdateCommand;
 import io.aegisops.execution.dto.ExecutionStepRecord;
@@ -16,6 +18,9 @@ import io.aegisops.execution.service.ExecutionApplicationService;
 import io.aegisops.execution.service.RollbackApplicationService;
 import io.aegisops.runner.executor.ManualStepExecutor;
 import io.aegisops.runner.executor.ShellDryRunStepExecutor;
+import io.aegisops.runner.executor.StepExecutionContext;
+import io.aegisops.runner.executor.StepExecutionResult;
+import io.aegisops.runner.executor.StepExecutor;
 import io.aegisops.runner.executor.UnsupportedStepExecutor;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
@@ -40,6 +45,68 @@ class RunnerExecutionServiceTest {
     assertEquals("succeeded", harness.execution.planStatus);
     assertEquals(1, harness.execution.artifacts.size());
     assertEquals(1, harness.execution.artifactIncrementCount);
+  }
+
+  @Test
+  void missingExecutionGrantFailsBeforeAnyStepExecutorRuns() {
+    Harness harness = new Harness();
+    harness.execution.claimed =
+        harness.withGrant(
+            harness.run(
+                "exec_1",
+                new RunState("dry_run", "running"),
+                "normal",
+                new RollbackRef(null, null)),
+            "super-secret.execution.grant");
+    harness.execution.steps.add(harness.step("step_1", 1, "manual", "{}"));
+    CountingStepExecutor executor = new CountingStepExecutor();
+
+    harness
+        .buildWithValidatorAndExecutors(
+            (run, steps) -> {
+              throw new InvalidExecutionGrantException("signature contained sensitive detail");
+            },
+            executor)
+        .processNext();
+
+    assertEquals("failed", harness.execution.runStatus);
+    assertEquals("Execution grant validation failed.", harness.execution.runErrorMessage);
+    assertEquals("failed", harness.execution.planStatus);
+    assertEquals(1, harness.execution.auditEvents.size());
+    assertEquals("execution_grant_rejected", harness.execution.auditEvents.get(0).eventType());
+    assertEquals("aiops-runner", harness.execution.auditEvents.get(0).actor());
+    assertEquals(
+        "{\"reason\":\"grant_validation_failed\"}",
+        harness.execution.auditEvents.get(0).payloadJson());
+    assertTrue(
+        !harness.execution.auditEvents.get(0).toString().contains("super-secret.execution.grant"));
+    assertEquals(0, executor.calls);
+    assertEquals(0, harness.execution.heartbeatCount);
+    assertEquals(0, harness.execution.artifacts.size());
+  }
+
+  @Test
+  void invalidRollbackGrantFailsRollbackPlanAndWritesAuditWithoutUpdatingAutomationPlan() {
+    Harness harness = new Harness();
+    harness.execution.claimed =
+        harness.run(
+            "exec_1",
+            new RunState("live", "running"),
+            "rollback",
+            new RollbackRef("rbp_1", "exec_src"));
+    harness.execution.steps.add(harness.step("step_1", 1, "manual", "{}"));
+
+    harness
+        .buildWithValidator(
+            (run, steps) -> {
+              throw new InvalidExecutionGrantException("expired");
+            })
+        .processNext();
+
+    assertEquals("failed", harness.execution.runStatus);
+    assertTrue(harness.rollback.rollbackFailed);
+    assertEquals(null, harness.execution.planStatus);
+    assertEquals(1, harness.execution.auditEvents.size());
   }
 
   @Test
@@ -167,7 +234,16 @@ class RunnerExecutionServiceTest {
     final FakeRollbackApplicationService rollback = new FakeRollbackApplicationService();
 
     RunnerExecutionService build() {
-      return buildWithExecutors(
+      return buildWithValidatorAndExecutors(
+          (run, steps) -> {},
+          new ManualStepExecutor(new ObjectMapper()),
+          new ShellDryRunStepExecutor(new ObjectMapper()),
+          new UnsupportedStepExecutor(new ObjectMapper()));
+    }
+
+    RunnerExecutionService buildWithValidator(ExecutionGrantValidator validator) {
+      return buildWithValidatorAndExecutors(
+          validator,
           new ManualStepExecutor(new ObjectMapper()),
           new ShellDryRunStepExecutor(new ObjectMapper()),
           new UnsupportedStepExecutor(new ObjectMapper()));
@@ -175,12 +251,22 @@ class RunnerExecutionServiceTest {
 
     RunnerExecutionService buildWithExecutors(
         io.aegisops.runner.executor.StepExecutor... executors) {
+      return buildWithValidatorAndExecutors((run, steps) -> {}, executors);
+    }
+
+    RunnerExecutionService buildWithValidatorAndExecutors(
+        ExecutionGrantValidator validator, StepExecutor... executors) {
       ExecutionProperties executionProperties = new ExecutionProperties();
       executionProperties.setLeaseSeconds(60);
       RunnerProperties runnerProperties = new RunnerProperties();
       runnerProperties.setRunnerId("runner_1");
       return new RunnerExecutionService(
-          execution, rollback, executionProperties, runnerProperties, List.of(executors));
+          execution,
+          rollback,
+          executionProperties,
+          runnerProperties,
+          List.of(executors),
+          validator);
     }
 
     ExecutionRunRecord run(String id, RunState state, String executionKind, RollbackRef rollback) {
@@ -210,6 +296,9 @@ class RunnerExecutionServiceTest {
           executionKind,
           rollback.rollbackPlanId(),
           rollback.rollbackOfExecutionId(),
+          null,
+          null,
+          null,
           OffsetDateTime.now(), // createdAt
           OffsetDateTime.now()); // updatedAt
     }
@@ -237,6 +326,55 @@ class RunnerExecutionServiceTest {
           OffsetDateTime.now(),
           OffsetDateTime.now());
     }
+
+    ExecutionRunRecord withGrant(ExecutionRunRecord run, String token) {
+      return new ExecutionRunRecord(
+          run.id(),
+          run.tenantId(),
+          run.incidentId(),
+          run.planId(),
+          run.status(),
+          run.mode(),
+          run.requestedBy(),
+          run.runnerId(),
+          run.startedAt(),
+          run.finishedAt(),
+          run.errorMessage(),
+          run.summary(),
+          run.attempt(),
+          run.maxAttempts(),
+          run.retryOfExecutionId(),
+          run.leaseUntil(),
+          run.heartbeatAt(),
+          run.timeoutSeconds(),
+          run.approvalId(),
+          run.approvalSnapshotJson(),
+          run.planRiskLevel(),
+          run.liveGuardPassedAt(),
+          run.executionKind(),
+          run.rollbackPlanId(),
+          run.rollbackOfExecutionId(),
+          token,
+          "a".repeat(64),
+          OffsetDateTime.now().plusHours(1),
+          run.createdAt(),
+          run.updatedAt());
+    }
+  }
+
+  private static final class CountingStepExecutor implements StepExecutor {
+    int calls;
+
+    @Override
+    public boolean supports(String actionType) {
+      return true;
+    }
+
+    @Override
+    public StepExecutionResult execute(StepExecutionContext context, ExecutionStepRecord step) {
+      calls++;
+      return StepExecutionResult.success("ok");
+    }
   }
 
   /** In-memory stand-in for {@link ExecutionApplicationService} used by runner unit tests. */
@@ -246,10 +384,12 @@ class RunnerExecutionServiceTest {
     final List<ExecutionStepRecord> steps = new ArrayList<>();
     final List<ExecutionRunRecord> expiredRuns = new ArrayList<>();
     final List<ExecutionArtifactCreateCommand> artifacts = new ArrayList<>();
+    final List<ExecutionAuditEventCreateCommand> auditEvents = new ArrayList<>();
     final List<String> stepStatuses = new ArrayList<>();
     int heartbeatCount;
     int artifactIncrementCount;
     String runStatus;
+    String runErrorMessage;
     String planStatus;
     String timeoutRunStatus;
     boolean stepsTimedOut;
@@ -323,12 +463,18 @@ class RunnerExecutionServiceTest {
     @Override
     public boolean updateRunStatus(ExecutionRunStatusUpdateCommand command) {
       runStatus = command.status();
+      runErrorMessage = command.errorMessage();
       return true;
     }
 
     @Override
     public boolean markLiveGuardPassed(String tenantId, String executionId) {
       return true;
+    }
+
+    @Override
+    public void appendAuditEvent(ExecutionAuditEventCreateCommand command) {
+      auditEvents.add(command);
     }
   }
 

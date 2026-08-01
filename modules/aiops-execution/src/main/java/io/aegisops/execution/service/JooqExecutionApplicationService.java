@@ -1,7 +1,9 @@
 package io.aegisops.execution.service;
 
+import io.aegisops.execution.ExecutionReportRepository;
 import io.aegisops.execution.ExecutionRepository;
 import io.aegisops.execution.dto.ExecutionArtifactCreateCommand;
+import io.aegisops.execution.dto.ExecutionAuditEventCreateCommand;
 import io.aegisops.execution.dto.ExecutionRunRecord;
 import io.aegisops.execution.dto.ExecutionRunStatusUpdateCommand;
 import io.aegisops.execution.dto.ExecutionStepRecord;
@@ -28,9 +30,13 @@ import org.springframework.transaction.annotation.Transactional;
 public class JooqExecutionApplicationService implements ExecutionApplicationService {
 
   private final ExecutionRepository executionRepository;
+  private final ExecutionReportRepository executionReportRepository;
 
-  public JooqExecutionApplicationService(ExecutionRepository executionRepository) {
+  public JooqExecutionApplicationService(
+      ExecutionRepository executionRepository,
+      ExecutionReportRepository executionReportRepository) {
     this.executionRepository = executionRepository;
+    this.executionReportRepository = executionReportRepository;
   }
 
   @Override
@@ -67,6 +73,12 @@ public class JooqExecutionApplicationService implements ExecutionApplicationServ
   @Transactional
   public void createArtifact(ExecutionArtifactCreateCommand command) {
     executionRepository.createArtifact(command);
+  }
+
+  @Override
+  @Transactional
+  public void appendAuditEvent(ExecutionAuditEventCreateCommand command) {
+    executionReportRepository.createAuditEvent(command);
   }
 
   @Override

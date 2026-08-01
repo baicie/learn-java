@@ -18,7 +18,7 @@ cd apps/aiops-agent
 python -m venv .venv
 . .venv/Scripts/activate
 pip install -e ".[test]"
-uvicorn aiops_agent.main:app --reload --port 9008
+python -m aiops_agent.serve
 ```
 
 ## Test
@@ -30,21 +30,16 @@ pytest
 ## Env
 
 ```bash
-AIOPS_AGENT_INBOUND_OAUTH2_ISSUER=http://localhost:8089/realms/aegisops
-AIOPS_AGENT_INBOUND_OAUTH2_JWKS_URL=http://localhost:8089/realms/aegisops/protocol/openid-connect/certs
-AIOPS_AGENT_INBOUND_OAUTH2_AUDIENCE=aiops-agent-api
-AIOPS_AGENT_OUTBOUND_OAUTH2_TOKEN_URL=http://localhost:8089/realms/aegisops/protocol/openid-connect/token
-AIOPS_AGENT_OUTBOUND_OAUTH2_CLIENT_ID=aiops-agent
-AIOPS_AGENT_OUTBOUND_OAUTH2_CLIENT_SECRET=dev-aiops-agent-client-secret
+AIOPS_AGENT_TLS_CERTIFICATE_FILE=/run/secrets/tls/agent.crt
+AIOPS_AGENT_TLS_PRIVATE_KEY_FILE=/run/secrets/tls/agent.key
+AIOPS_AGENT_TLS_CLIENT_CA_FILE=/run/secrets/tls/control-plane-ca.crt
+AIOPS_AGENT_DIAGNOSIS_GRANT_KEY_ID=task-grant-v1
+AIOPS_AGENT_DIAGNOSIS_GRANT_PUBLIC_KEY_FILE=/run/secrets/task-grant/public.pem
+AIOPS_AGENT_DIAGNOSIS_GRANT_ISSUER=aegisops-app
+AIOPS_AGENT_DIAGNOSIS_GRANT_AUDIENCE=aiops-agent-api
 AIOPS_AGENT_MODEL=langgraph-deterministic
 AIOPS_AGENT_PROVIDER=aiops-agent
 AIOPS_AGENT_NAME=aegisops_diagnosis_graph
-```
-
-本地 IdP 由仓库 Compose 自动初始化：
-
-```bash
-docker compose -f infra/docker-compose.yml up -d keycloak
 ```
 
 ## Phase4.2 OpenAI-compatible mode
@@ -89,11 +84,12 @@ It queries Java internal evidence API:
 
 ```bash
 AIOPS_AGENT_EVIDENCE_ENABLED=true
-AIOPS_AGENT_EVIDENCE_BASE_URL=http://localhost:8080/internal/agent/evidence
+AIOPS_AGENT_EVIDENCE_BASE_URL=https://localhost:8443/internal/agent/evidence
 ```
 
-服务间鉴权只使用 OAuth2 Client Credentials。Diagnosis Grant 无法通过配置关闭；诊断期间
-Agent 会把 Java 签发的 `X-AegisOps-Diagnosis-Grant` 原样传播到内部工具调用。
+服务间工作负载身份由 mTLS 建立。Diagnosis Grant 无法通过配置关闭；诊断期间 Agent 会把
+`aegisops-app` 签发的 `X-AegisOps-Diagnosis-Grant` 原样传播到内部工具调用，不发送内部
+Bearer Token。
 
 Evidence sections:
 
@@ -123,7 +119,7 @@ Java-facing `agent-diagnosis.v1` request and response contract stable. Optional 
 capabilities are configured with:
 
 ```bash
-AIOPS_AGENT_WORKFLOW_API_BASE_URL=http://localhost:8080
+AIOPS_AGENT_WORKFLOW_API_BASE_URL=https://localhost:8443
 AIOPS_AGENT_WORKFLOW_EVIDENCE_ENABLED=false
 AIOPS_AGENT_WORKFLOW_CASE_RETRIEVAL_ENABLED=false
 AIOPS_AGENT_WORKFLOW_HUMAN_CHECKPOINT_ENABLED=false
@@ -132,8 +128,8 @@ AIOPS_AGENT_WORKFLOW_MEMORY_ENABLED=false
 AIOPS_AGENT_WORKFLOW_MEMORY_WRITE_ENABLED=false
 ```
 
-Checkpoint continuation uses `POST /v1/diagnose/resume` and requires the same OAuth2
-service JWT, Diagnosis Grant, and optional contract-version headers as `POST /v1/diagnose`.
+Checkpoint continuation uses `POST /v1/diagnose/resume` and requires the same mTLS workload
+identity, Diagnosis Grant, and optional contract-version headers as `POST /v1/diagnose`.
 
 ## Work-record generation with Dify
 

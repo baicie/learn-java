@@ -8,7 +8,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 @Component
-@ConditionalOnProperty(prefix = "aiops.runtime", name = "app", havingValue = "worker")
+@ConditionalOnProperty(prefix = "aiops.runtime", name = "app", havingValue = "app")
 public class MissingDailyReminderScheduler {
   private final MissingDailyReminderService service;
   private final Clock clock;

@@ -28,5 +28,8 @@ public record ExecutionRunRecord(
     String executionKind,
     String rollbackPlanId,
     String rollbackOfExecutionId,
+    String executionGrant,
+    String executionSnapshotSha256,
+    OffsetDateTime executionGrantExpiresAt,
     OffsetDateTime createdAt,
     OffsetDateTime updatedAt) {}

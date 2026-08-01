@@ -160,6 +160,7 @@ public class AiDiagnosisService {
     List<AiEvidenceRecord> evidence = repository.listDiagnosisEvidence(tenantId, incidentId);
     List<AiTimelineRecord> timeline = repository.listIncidentTimeline(tenantId, incidentId, 50);
 
+    String diagnosisId = newId("diag");
     AgentDiagnosisRequest agentRequest =
         new AgentDiagnosisRequest(
             AgentContract.DIAGNOSIS_CONTRACT_VERSION,
@@ -171,7 +172,8 @@ public class AiDiagnosisService {
             evidence.stream().map(record -> toAgentEvidence(record)).toList(),
             timeline.stream().map(record -> toAgentTimeline(record)).toList(),
             normalized.normalizedLocale(),
-            UUID.randomUUID().toString());
+            UUID.randomUUID().toString(),
+            diagnosisId);
 
     contractValidator.validateRequest(agentRequest);
 
@@ -179,7 +181,6 @@ public class AiDiagnosisService {
         sanitizeAgentResponse(agentClient.diagnose(agentRequest));
     contractValidator.validateResponse(agentResponse);
 
-    String diagnosisId = newId("diag");
     persistDiagnosisAndTimeline(tenantId, incidentId, diagnosisId, agentRequest, agentResponse);
 
     return repository

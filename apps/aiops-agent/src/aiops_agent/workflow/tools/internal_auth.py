@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from aiops_agent.observability.context import get_diagnosis_grant
 from aiops_agent.observability.headers import observability_headers
-from aiops_agent.service_credentials import service_credential_headers
-from aiops_agent.settings import Settings, settings
 
 HEADER_TENANT_ID = "X-Tenant-Id"
 HEADER_DIAGNOSIS_GRANT = "X-AegisOps-Diagnosis-Grant"
@@ -13,11 +11,9 @@ HEADER_DIAGNOSIS_GRANT = "X-AegisOps-Diagnosis-Grant"
 
 async def internal_tool_headers(
     tenant_id: str,
-    current_settings: Settings | None = None,
+    *,
     diagnosis_grant: str | None = None,
 ) -> dict[str, str]:
-    cfg = current_settings or settings
-
     if not tenant_id or not tenant_id.strip():
         raise ValueError("tenant_id is required for internal tool call")
 
@@ -28,7 +24,6 @@ async def internal_tool_headers(
         raise ValueError("diagnosis grant is required for internal tool call")
 
     headers = {HEADER_TENANT_ID: tenant_id.strip()}
-    headers.update(await service_credential_headers(cfg))
     headers[HEADER_DIAGNOSIS_GRANT] = resolved_grant
     headers.update(observability_headers())
     return headers

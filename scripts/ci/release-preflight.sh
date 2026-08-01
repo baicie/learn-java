@@ -1,166 +1,94 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -Eeuo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
-
 cd "$ROOT_DIR"
 
 echo "==> Release preflight"
 
+require_command() {
+  command -v "$1" >/dev/null 2>&1 || {
+    echo "Required command is not available: $1" >&2
+    exit 1
+  }
+}
+
 MAVEN="mvn"
 if [ -x "./mvnw" ]; then
   MAVEN="./mvnw"
-elif ! command -v mvn >/dev/null 2>&1; then
-  echo "Maven is not found in PATH." >&2
-  exit 1
+else
+  require_command mvn
 fi
-
-if ! command -v node >/dev/null 2>&1; then
-  echo "Node.js is not found in PATH." >&2
-  exit 1
-fi
-
-if ! command -v docker >/dev/null 2>&1; then
-  echo "Docker is not found in PATH." >&2
-  exit 1
-fi
+for command_name in node docker openssl python3; do
+  require_command "$command_name"
+done
 
 echo "==> Parse release POMs"
 "$MAVEN" -B -ntp -f web/portal/pom.xml validate
-"$MAVEN" -B -ntp -f apps/aiops-worker/pom.xml validate
+"$MAVEN" -B -ntp -f apps/aiops-server/pom.xml validate
 "$MAVEN" -B -ntp -f apps/aiops-runner/pom.xml validate
 
-echo "==> Validate observability dependency boundary"
+echo "==> Validate process and module boundaries"
 if grep -Fq '<artifactId>aiops-security</artifactId>' modules/aiops-observability/pom.xml; then
-  echo "aiops-observability must not pull the complete aiops-security runtime into worker/runner." >&2
+  echo "aiops-observability must not pull the complete security runtime into Runner." >&2
   exit 1
 fi
+grep -Fq '<artifactId>aiops-worker-runtime</artifactId>' apps/aiops-server/pom.xml
 "$MAVEN" -B -ntp -pl modules/aiops-observability -am test
 
-echo "==> Validate executable Spring Boot JAR contract"
-grep -Fq '<goal>repackage</goal>' apps/aiops-worker/pom.xml
+echo "==> Validate executable image entrypoints"
+grep -Fq '<goal>repackage</goal>' apps/aiops-server/pom.xml
 grep -Fq '<goal>repackage</goal>' apps/aiops-runner/pom.xml
-grep -Fq 'Main-Class: org.springframework.boot.loader.launch.JarLauncher' \
-  deploy/docker/java-app.Dockerfile
-grep -Fq 'Main-Class: org.springframework.boot.loader.launch.JarLauncher' \
-  apps/aiops-runner/Dockerfile
+grep -Fq 'apps/aiops-server' apps/aiops-server/Dockerfile
+grep -Fq 'apps/aiops-runner' apps/aiops-runner/Dockerfile
+grep -Fq 'aiops_agent.serve' apps/aiops-agent/Dockerfile
 
 echo "==> Validate deployment shell"
-bash -n deploy/scripts/deploy-app.sh
-bash -n deploy/scripts/deploy-zabbix.sh
-bash -n deploy/scripts/configure-docker-mirror.sh
-bash -n scripts/ci/test-deploy-app.sh
-bash -n scripts/ci/test-deploy-zabbix.sh
-bash -n scripts/ci/test-configure-docker-mirror.sh
-bash -n scripts/ci/prepare-docker.sh
-bash -n scripts/ci/test-prepare-docker.sh
-bash -n scripts/ci/test-workflow-resource-policy.sh
-bash scripts/ci/test-deploy-app.sh
+for script in \
+  deploy/install.sh \
+  deploy/scripts/deploy-app.sh \
+  deploy/scripts/deploy-zabbix.sh \
+  deploy/scripts/configure-docker-mirror.sh \
+  scripts/deploy/build-images.sh \
+  scripts/deploy/deploy-app.sh \
+  scripts/ci/test-deploy-zabbix.sh \
+  scripts/ci/test-configure-docker-mirror.sh \
+  scripts/ci/test-workflow-resource-policy.sh; do
+  bash -n "$script"
+done
 bash scripts/ci/test-deploy-zabbix.sh
 bash scripts/ci/test-configure-docker-mirror.sh
-bash scripts/ci/test-prepare-docker.sh
 bash scripts/ci/test-workflow-resource-policy.sh
-grep -Fq 'DEPLOY_STAGE="port-preflight"' deploy/scripts/deploy-app.sh
-grep -Fq 'DEPLOY_STAGE="application-recreate"' deploy/scripts/deploy-app.sh
-grep -Fq 'remove_application_containers' deploy/scripts/deploy-app.sh
-grep -Fq 'wait_container_health aegisops-agent' deploy/scripts/deploy-app.sh
-grep -Fq 'wait_container_health aegisops-server' deploy/scripts/deploy-app.sh
-grep -Fq 'Registry login skipped; using existing Docker credentials or public images' deploy/scripts/deploy-app.sh
-grep -Fq 'refusing to stop it automatically' scripts/ci/test-deploy-app.sh
-grep -Fq 'https://mirror.ccs.tencentyun.com' deploy/scripts/configure-docker-mirror.sh
-grep -Fq 'restoring the previous daemon configuration' deploy/scripts/configure-docker-mirror.sh
 
-echo "==> Validate container health contract"
-grep -Fq 'urllib.request.urlopen' deploy/docker-compose.app.yml
-grep -Fq 'urllib.request.urlopen' apps/aiops-agent/Dockerfile
-grep -Fq 'image: redis:7-alpine' deploy/docker-compose.app.yml
-grep -Fq 'SPRING_DATA_REDIS_HOST: redis' deploy/docker-compose.app.yml
-grep -Fq 'condition: service_healthy' deploy/docker-compose.app.yml
-if grep -Fq 'wget -q -O - http://localhost:9008/health' deploy/docker-compose.app.yml; then
-  echo "Agent health check still depends on wget, which is absent from python:3.12-slim." >&2
-  exit 1
-fi
-
-echo "==> Validate remote deployment contract"
-grep -Fq "bash -lc '" .github/workflows/release-verify.yml
-grep -Fq 'name: Configure Tencent Cloud Docker mirror' .github/workflows/release-verify.yml
-grep -Fq 'deploy/scripts/configure-docker-mirror.sh' .github/workflows/release-verify.yml
-grep -Fq 'envs: IMAGE_PREFIX,IMAGE_TAG,AIOPS_SERVICE_AUTH_ISSUER_URI,AIOPS_SERVICE_AUTH_JWK_SET_URI,AIOPS_SERVICE_AUTH_TOKEN_URI,AIOPS_SERVER_OAUTH2_CLIENT_SECRET,AIOPS_WORKER_OAUTH2_CLIENT_SECRET,AIOPS_AGENT_OAUTH2_CLIENT_SECRET,AIOPS_DIAGNOSIS_GRANT_SECRET,AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN' \
-  .github/workflows/release-verify.yml
-grep -Fq 'name: Generate masked runtime credentials' \
-  .github/workflows/release-verify.yml
-grep -Fq 'echo "::add-mask::$value"' \
-  .github/workflows/release-verify.yml
-grep -Fq '>> "$GITHUB_ENV"' \
-  .github/workflows/release-verify.yml
-grep -Fq 'AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN: ${{ secrets.AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN }}' \
-  .github/workflows/release-verify.yml
-grep -Fq 'needs: runtime-smoke' .github/workflows/release-verify.yml
-grep -Fq 'name: Build, smoke and publish' .github/workflows/release-verify.yml
-grep -Fq 'needs.preflight.outputs.release_required' .github/workflows/release-verify.yml
-grep -Fq 'group: ops-scripts-${{ github.workflow }}-${{ github.ref }}' \
-  .github/workflows/ops-scripts.yml
-grep -Fq 'type: choice' .github/workflows/deploy-component.yml
-grep -Fq -- '- zabbix' .github/workflows/deploy-component.yml
-grep -Fq "if: inputs.component == 'zabbix'" .github/workflows/deploy-component.yml
-grep -Fq 'group: deploy-aegisops-mvp' .github/workflows/deploy-component.yml
-grep -Fq 'deploy/scripts/deploy-zabbix.sh' .github/workflows/deploy-component.yml
-if sed -n '/^  pull_request:/,/^  workflow_run:/p' \
-  .github/workflows/release-verify.yml | grep -Fq '    paths:'; then
-  echo "Release Verify preflight must run on every pull request to mvp." >&2
-  exit 1
-fi
-if grep -Fq '      - "fix/**"' .github/workflows/release-verify.yml; then
-  echo "Release Verify must not run heavy validation on fix branch pushes." >&2
-  exit 1
-fi
-if grep -Fq 'envs: IMAGE_PREFIX,IMAGE_TAG,DOCKERHUB_USERNAME,DOCKERHUB_TOKEN' \
-  .github/workflows/release-verify.yml; then
-  echo "Tencent Cloud VM must not receive Docker Hub credentials." >&2
-  exit 1
-fi
-for fixed_runtime_credential in \
-  runtime-smoke-server-client-secret \
-  runtime-smoke-worker-client-secret \
-  runtime-smoke-agent-client-secret \
-  runtime-smoke-diagnosis-grant-secret \
-  runtime-smoke-only; do
-  if grep -Fq "$fixed_runtime_credential" .github/workflows/release-verify.yml; then
-    echo "Release Verify must generate and mask ephemeral runtime credentials." >&2
-    exit 1
-  fi
-done
-if grep -Fq ':latest' .github/workflows/release-verify.yml; then
-  echo "Production deployment must use immutable commit tags instead of :latest." >&2
-  exit 1
-fi
-
-echo "==> Validate jOOQ DDL preparation"
+echo "==> Validate jOOQ migration input"
 TMP_SCHEMA="$(mktemp)"
-trap 'rm -f "$TMP_SCHEMA"' EXIT
+TMP_RUNTIME_ROOT="$(mktemp -d)"
+cleanup() {
+  rm -f "$TMP_SCHEMA"
+  rm -rf "$TMP_RUNTIME_ROOT"
+}
+trap cleanup EXIT
 node scripts/prepare-jooq-ddl.mjs \
   apps/aiops-server/src/main/resources/db/migration \
   "$TMP_SCHEMA"
 test -s "$TMP_SCHEMA"
 
-echo "==> Validate Docker Compose interpolation and structure"
-AIOPS_SERVER_IMAGE=example.invalid/aegisops:test \
-AIOPS_AGENT_IMAGE=example.invalid/aegisops/aiops-agent:test \
-AIOPS_WORKER_IMAGE=example.invalid/aegisops/aiops-worker:test \
-AIOPS_RUNNER_IMAGE=example.invalid/aegisops/aiops-runner:test \
-AIOPS_SERVICE_AUTH_ISSUER_URI=https://idp.example.com/realms/aegisops \
-AIOPS_SERVICE_AUTH_JWK_SET_URI=https://idp.example.com/realms/aegisops/protocol/openid-connect/certs \
-AIOPS_SERVICE_AUTH_TOKEN_URI=https://idp.example.com/realms/aegisops/protocol/openid-connect/token \
-AIOPS_SERVER_OAUTH2_CLIENT_SECRET=preflight-server-client-secret \
-AIOPS_WORKER_OAUTH2_CLIENT_SECRET=preflight-worker-client-secret \
-AIOPS_AGENT_OAUTH2_CLIENT_SECRET=preflight-agent-client-secret \
-AIOPS_DIAGNOSIS_GRANT_SECRET=preflight-diagnosis-grant-secret-change-me \
-AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN=preflight-only \
+echo "==> Generate and validate the canonical Compose deployment"
+bash deploy/install.sh \
+  --mode automation \
+  --runtime-dir "$TMP_RUNTIME_ROOT/runtime" \
+  --no-start
+AIOPS_APP_IMAGE=example.invalid/aegisops:test-app \
+AIOPS_AGENT_IMAGE=example.invalid/aegisops:test-agent \
+AIOPS_RUNNER_IMAGE=example.invalid/aegisops:test-runner \
   docker compose \
-    -f deploy/docker-compose.app.yml \
-    -f deploy/docker-compose.idp.yml \
+    --env-file "$TMP_RUNTIME_ROOT/runtime/.env" \
+    -f deploy/docker-compose.core.yml \
+    --profile ai \
+    --profile automation \
     config --quiet
+
 ZABBIX_DB_PASSWORD=preflight-only \
   docker compose -f deploy/docker-compose.zabbix.yml config --quiet
 

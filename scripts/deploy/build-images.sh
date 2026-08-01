@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 #
-# 本地打 AegisOps 全部镜像。
-#   - server  必须用 apps/aiops-server/Dockerfile（自带 pnpm portal-build 阶段）
-#   - worker  / runner 用 deploy/docker/java-app.Dockerfile + ARG 通用模板
-#   - agent   用 apps/aiops-agent/Dockerfile（Python 独立栈）
+# 本地构建 AegisOps 的三个业务进程镜像。
+#   - aegisops-app 合并公共 API 与后台 Worker runtime
+#   - aiops-agent 保持独立 Python AI runtime
+#   - aiops-runner 保持独立高权限执行边界
 #
 # 用法：
 #   VERSION=0.1.0 REGISTRY=aegisops ./scripts/deploy/build-images.sh
@@ -11,7 +11,7 @@
 #
 # 注意：portal 与 console 已切换，console 不再打包；本脚本不依赖 web/console
 
-set -euo pipefail
+set -Eeuo pipefail
 
 VERSION="${VERSION:-0.1.0}"
 REGISTRY="${REGISTRY:-aegisops}"
@@ -19,19 +19,11 @@ REGISTRY="${REGISTRY:-aegisops}"
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT_DIR"
 
-# aiops-server：专用 Dockerfile（含 portal-build 阶段，产出 static/portal 嵌入 jar）
+# aegisops-app：沿用启动模块路径，镜像身份统一为 aegisops-app。
 docker build \
   -f apps/aiops-server/Dockerfile \
   --build-arg BUILD_VERSION="${VERSION}" \
-  -t "${REGISTRY}/aiops-server:${VERSION}" .
-
-# aiops-worker：通用 Java 模板
-docker build \
-  -f deploy/docker/java-app.Dockerfile \
-  --build-arg APP_MODULE=apps/aiops-worker \
-  --build-arg APP_NAME=aiops-worker \
-  --build-arg APP_PORT=8081 \
-  -t "${REGISTRY}/aiops-worker:${VERSION}" .
+  -t "${REGISTRY}/aegisops-app:${VERSION}" .
 
 # aiops-runner：专用 Dockerfile（需要装 ansible / sshpass / tini）
 docker build \

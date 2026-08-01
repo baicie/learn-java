@@ -92,7 +92,7 @@ def test_runtime_diagnostics_never_persist_secrets_or_full_container_config(tmp_
 
             case "$args" in
               *"compose"*"config --services"*)
-                printf 'aiops-server\\naiops-agent\\n'
+                printf 'aegisops-app\\naiops-agent\\n'
                 ;;
               *"compose"*"config --images"*)
                 printf 'local/aegisops:server\\nlocal/aegisops:agent\\n'
@@ -132,7 +132,7 @@ def test_runtime_diagnostics_never_persist_secrets_or_full_container_config(tmp_
                 printf 'NETWORK ID NAME\\nnetwork-id runtime-network\\n'
                 ;;
               *"compose"*"ps -a"*)
-                printf 'aegisops-server running\\n'
+                printf 'aegisops-app running\\n'
                 ;;
               *)
                 printf 'unexpected docker invocation: %s\\n' "$args" >&2
@@ -156,14 +156,14 @@ def test_runtime_diagnostics_never_persist_secrets_or_full_container_config(tmp_
         **canaries,
         "PATH": f"{fake_bin}{os.pathsep}{os.environ['PATH']}",
         "OUTPUT_DIR": str(output_dir),
-        "COMPOSE_FILE": "deploy/docker-compose.app.yml",
+        "COMPOSE_FILE": "deploy/docker-compose.core.yml",
     }
 
     subprocess.run(["bash", str(SCRIPT)], cwd=ROOT, env=env, check=True)
 
     assert not (output_dir / "compose-config.yml").exists()
     assert (output_dir / "compose-services.txt").read_text(encoding="utf-8") == (
-        "aiops-server\naiops-agent\n"
+        "aegisops-app\naiops-agent\n"
     )
     assert (output_dir / "compose-images.txt").read_text(encoding="utf-8") == (
         "local/aegisops:server\nlocal/aegisops:agent\n"

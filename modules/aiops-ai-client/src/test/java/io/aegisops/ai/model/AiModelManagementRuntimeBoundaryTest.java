@@ -23,9 +23,9 @@ class AiModelManagementRuntimeBoundaryTest {
               JdbcAiModelStore.class);
 
   @Test
-  void workerDoesNotLoadServerSideAiModelManagement() {
+  void runnerDoesNotLoadServerSideAiModelManagement() {
     contextRunner
-        .withPropertyValues("aiops.runtime.app=worker")
+        .withPropertyValues("aiops.runtime.app=runner")
         .run(
             context -> {
               assertThat(context).hasNotFailed();

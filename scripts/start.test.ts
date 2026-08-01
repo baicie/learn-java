@@ -7,15 +7,12 @@ import { fileURLToPath } from 'node:url'
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..')
 
-test('dev command starts the worker required by queued datasource syncs', () => {
+test('dev command starts the app that contains the worker runtime', () => {
   const source = readFileSync(join(repoRoot, 'scripts/start.ts'), 'utf8')
 
-  assert.match(
-    source,
-    /startSelectedBackends\(\[["']server["'], ["']worker["']\]\)/
-  )
+  assert.match(source, /startSelectedBackends\(\[["']server["']\]\)/)
   assert.match(source, /-am clean package/)
-  assert.match(source, /Worker:\s+http:\/\/localhost:8091/)
+  assert.doesNotMatch(source, /apps\/aiops-worker|localhost:8091/)
 })
 
 test('local backend startup does not inject an AI model key', () => {

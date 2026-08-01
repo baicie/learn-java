@@ -5,7 +5,7 @@ status: accepted
 phase: global
 owner: ai
 created: 2026-06-30
-updated: 2026-07-29
+updated: 2026-08-02
 related:
   - docs/api/operations-ingestion.md
   - docs/integrations/zabbix-webhook.md
@@ -24,7 +24,7 @@ Phase Z9 固化 Zabbix 主机与服务异常诊断 MVP 的完整链路。
 ```text
 Zabbix trapper / history.push
   -> Zabbix trigger / problem
-  -> aiops-worker scheduled polling
+  -> aegisops-app Worker runtime scheduled polling
   -> Alert Event
   -> Incident
   -> Evidence
@@ -65,7 +65,7 @@ Git/CI Change ────────┘
 前置条件：
 
 ```text
-1. 使用 `pnpm dev` 启动基础设施、aiops-server、aiops-worker 和 Portal。
+1. 使用 `pnpm dev` 启动基础设施、aegisops-app（内含 Worker runtime）和 Portal。
 2. 在 Portal 创建 Zabbix 数据源，endpoint 为 http://localhost:8081，凭据为本地 Zabbix 凭据。
 3. 对数据源执行连接测试，使其状态成为 active；周期同步只处理 active 数据源。
 ```
@@ -235,7 +235,7 @@ export AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN="$(openssl rand -base64 32)"
 
 ### 2. 真实注入后没有 Alert 或 Incident
 
-先运行 `--action state` 只读确认 Zabbix trigger 已进入 PROBLEM，再确认数据源状态为 `active`、aiops-worker 正在运行且 `AIOPS_ZABBIX_SYNC_ENABLED` 未被关闭。周期同步默认每 60 秒为符合条件的数据源排队一次同步任务。
+先运行 `--action state` 只读确认 Zabbix trigger 已进入 PROBLEM，再确认数据源状态为 `active`、aegisops-app 健康且 `AIOPS_ZABBIX_SYNC_ENABLED` 未被关闭。App 内 Worker runtime 默认每 60 秒为符合条件的数据源排队一次同步任务。
 
 ### 3. AI Diagnosis 失败
 

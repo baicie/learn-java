@@ -11,6 +11,8 @@ import io.aegisops.common.security.DiagnosisGrantClaims;
 import io.aegisops.plugin.dto.AgentToolAuthorizeRequest;
 import io.aegisops.plugin.dto.AgentToolAuthorizeResponse;
 import java.time.Instant;
+import java.util.List;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 class InternalAgentPluginControllerTest {
@@ -47,12 +49,16 @@ class InternalAgentPluginControllerTest {
 
   private DiagnosisGrantClaims grant() {
     return new DiagnosisGrantClaims(
-        "aiops-server",
-        "aegisops-internal-api",
+        "aegisops-app",
+        "diagnosis:diag_1",
+        Set.of("aegisops-internal-api"),
+        List.of("plugin:authorize"),
         "tenant_grant",
         "inc_1",
+        "diag_1",
         "trace_1",
         Instant.parse("2026-07-30T08:00:00Z"),
-        Instant.parse("2026-07-30T08:05:00Z"));
+        Instant.parse("2026-07-30T08:05:00Z"),
+        "grant_1");
   }
 }

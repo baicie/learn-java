@@ -5,7 +5,7 @@ status: accepted
 phase: global
 owner: ai
 created: 2026-06-30
-updated: 2026-06-30
+updated: 2026-08-02
 related:
   - .agents/skills/aegisops/SKILL.md
   - .agents/skills/aegisops/references/automation-safety.md
@@ -75,7 +75,7 @@ AutomationJob created
   ↓
 approval if required
   ↓
-runner execution   ← aiops-runner 进程，AGENTS §3.6 禁止 server / worker 直跑 SSH/Ansible
+runner execution   ← aiops-runner 进程，禁止 aegisops-app 直跑 SSH/Ansible
   ↓
 stream logs
   ↓
@@ -92,16 +92,16 @@ Incident timeline update
 - 任何 HTTP 出口必须设置 connectTimeout 与 readTimeout，缺省值 ≤ 10s
 - 任何写接口必须经 TenantGuard / PermissionGuard 双层校验；缺一即不合规
 - 写操作必须经 AuditLogger 落库 audit_log；缺失即视为绕过审计
-- 自动化执行类动作必须走 aiops-runner；禁止 aiops-server / aiops-worker 直接 SSH / Ansible
+- 自动化执行类动作必须走 aiops-runner；禁止 aegisops-app 直接 SSH / Ansible
 - 凭据类字段（password、apiToken、secret）禁止写入普通日志；Logback Filter 必须 mask
 ```
 
 ## 4. Outbox + Worker 派单（PR5 落地）
 
 ```txt
-aiops-server（写 outbox）  →  automation_outbox 表
+aegisops-app（写 outbox）  →  automation_outbox 表
                               ↓
-                            aiops-worker（OutboxPoller）
+                            App 内 Worker runtime（OutboxPoller）
                               ↓
                             OutboxJob.handle()        ← 业务执行
                               ↓

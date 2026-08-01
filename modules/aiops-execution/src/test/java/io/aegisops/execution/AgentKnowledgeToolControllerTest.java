@@ -43,13 +43,17 @@ class AgentKnowledgeToolControllerTest {
 
   private DiagnosisGrantClaims grant() {
     return new DiagnosisGrantClaims(
-        "aiops-server",
-        "aegisops-internal-api",
+        "aegisops-app",
+        "diagnosis:diag_1",
+        java.util.Set.of("aegisops-internal-api"),
+        List.of("cases:read"),
         "tenant_real",
         "inc_1",
+        "diag_1",
         "trace_1",
         Instant.parse("2026-07-30T08:00:00Z"),
-        Instant.parse("2026-07-30T08:05:00Z"));
+        Instant.parse("2026-07-30T08:05:00Z"),
+        "grant_1");
   }
 
   private static class FakeKnowledgeBaseSearchService extends KnowledgeBaseSearchService {

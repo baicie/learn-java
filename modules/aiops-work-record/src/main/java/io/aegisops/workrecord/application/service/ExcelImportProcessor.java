@@ -27,7 +27,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
 @Service
-@ConditionalOnProperty(prefix = "aiops.runtime", name = "app", havingValue = "worker")
+@ConditionalOnProperty(prefix = "aiops.runtime", name = "app", havingValue = "app")
 public class ExcelImportProcessor {
   private static final int PROGRESS_INTERVAL = 25;
 

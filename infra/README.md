@@ -16,6 +16,7 @@ deploy/   ── Helm chart + Dockerfile + 离线包（生产 / 预发部署）
 ## 包含内容
 
 - `docker-compose.yml`：PostgreSQL / Redis / ClickHouse / VictoriaMetrics / MinIO / Zabbix 的本地编排
+- App、Agent 与 Runner 不放入 `infra/`；完整诊断或自动化拓扑使用 `deploy/install.sh`
 - `env.example`：环境变量样例（**所有值为占位符或样例值**，禁止提交真实密钥）
 - `.env`（**本地维护，不入库**）：开发者本机的真实环境变量
 - `checkstyle/checkstyle.xml`：后端 Checkstyle 配置，被根 `pom.xml` 通过 `${maven.multiModuleProjectDirectory}/infra/checkstyle/checkstyle.xml` 引用

@@ -1,175 +1,302 @@
 {{- include "aegisops.validateComponentServiceAccounts" . -}}
 {{- $root := . -}}
-{{- $auth := .Values.security.serviceAuth -}}
-{{- range $appName, $app := .Values.apps }}
+{{- range $component, $app := .Values.apps }}
 {{- if $app.enabled }}
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "aegisops.fullname" $root }}-{{ $appName }}
+  name: {{ include "aegisops.fullname" $root }}-{{ $component }}
   labels:
     {{- include "aegisops.labels" $root | nindent 4 }}
-    app.kubernetes.io/component: {{ $appName }}
+    app.kubernetes.io/component: {{ $component }}
 spec:
   replicas: {{ $app.replicaCount }}
   selector:
     matchLabels:
       {{- include "aegisops.selectorLabels" $root | nindent 6 }}
-      app.kubernetes.io/component: {{ $appName }}
+      app.kubernetes.io/component: {{ $component }}
   template:
     metadata:
       labels:
         {{- include "aegisops.selectorLabels" $root | nindent 8 }}
-        app.kubernetes.io/component: {{ $appName }}
+        app.kubernetes.io/component: {{ $component }}
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") $root | sha256sum }}
-        checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") $root | sha256sum }}
-        {{- if eq $appName "server" }}
-        checksum/server-secret: {{ include (print $.Template.BasePath "/server-secret.yaml") $root | sha256sum }}
-        {{- end }}
-        {{- if or (eq $appName "server") (eq $appName "worker") (eq $appName "agent") }}
-        checksum/component-auth-secret: {{ include (printf "aegisops.%sAuthSecretData" $appName) $root | sha256sum }}
-        {{- end }}
+        checksum/security: {{ include (print $.Template.BasePath "/component-secrets.yaml") $root | sha256sum }}
     spec:
-      serviceAccountName: {{ include "aegisops.componentServiceAccountName" (list $root $appName) }}
+      serviceAccountName: {{ include "aegisops.componentServiceAccountName" (list $root $component) }}
+      {{- with $root.Values.global.imagePullSecrets }}
       imagePullSecrets:
-        {{- toYaml $root.Values.global.imagePullSecrets | nindent 8 }}
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       securityContext:
         {{- toYaml $root.Values.podSecurityContext | nindent 8 }}
       containers:
-        - name: {{ $appName }}
+        - name: {{ $component }}
           image: {{ include "aegisops.image" (list $root $app.image) | quote }}
           imagePullPolicy: {{ $root.Values.global.imagePullPolicy }}
           securityContext:
             {{- toYaml $root.Values.containerSecurityContext | nindent 12 }}
           ports:
+            {{- if eq $component "agent" }}
+            - name: https
+              containerPort: {{ $app.port }}
+            {{- else }}
             - name: http
               containerPort: {{ $app.port }}
+            {{- end }}
+            {{- if eq $component "app" }}
+            - name: internal-mtls
+              containerPort: {{ $app.internalMtlsPort }}
+            {{- end }}
           envFrom:
             - configMapRef:
                 name: {{ include "aegisops.fullname" $root }}-config
-            {{- if ne $appName "agent" }}
-            - secretRef:
-                name: {{ include "aegisops.fullname" $root }}-secret
-            {{- end }}
-            {{- if or (eq $appName "server") (eq $appName "worker") (eq $appName "agent") }}
-            - secretRef:
-                name: {{ include "aegisops.fullname" $root }}-{{ $appName }}-auth
-            {{- end }}
-            {{- if eq $appName "agent" }}
+            {{- if eq $component "agent" }}
             - configMapRef:
-                name: {{ include "aegisops.fullname" $root }}-agent-dify
+                name: {{ include "aegisops.fullname" $root }}-agent-config
             {{- end }}
           env:
             - name: AIOPS_APP_NAME
-              value: {{ $appName | quote }}
-            {{- if eq $appName "server" }}
-            - name: AIOPS_AGENT_ENABLED
-              value: {{ $root.Values.apps.agent.enabled | quote }}
-            - name: AIOPS_INTERNAL_AGENT_API_ENABLED
-              value: {{ $root.Values.apps.agent.enabled | quote }}
-            - name: AIOPS_OBJECT_STORAGE_ENABLED
-              value: "true"
-            - name: AIOPS_REDIS_HEALTH_ENABLED
-              value: "true"
-            - name: AIOPS_INTERNAL_AGENT_JWT_ISSUER_URI
-              value: {{ required "security.serviceAuth.issuerUri is required" $auth.issuerUri | quote }}
-            - name: AIOPS_INTERNAL_AGENT_JWT_JWK_SET_URI
-              value: {{ required "security.serviceAuth.jwkSetUri is required" $auth.jwkSetUri | quote }}
-            - name: AIOPS_INTERNAL_AGENT_JWT_AUDIENCE
-              value: {{ $auth.internalAudience | quote }}
-            - name: AIOPS_AGENT_OAUTH2_TOKEN_URI
-              value: {{ required "security.serviceAuth.tokenUri is required" $auth.tokenUri | quote }}
-            - name: AIOPS_AGENT_OAUTH2_CLIENT_ID
-              value: {{ required "security.serviceAuth.clients.server.clientId is required" $auth.clients.server.clientId | quote }}
-            - name: AIOPS_AGENT_OAUTH2_SCOPE
-              value: {{ $auth.clients.server.scope | quote }}
-            - name: AIOPS_DIAGNOSIS_GRANT_AUDIENCE
-              value: {{ $auth.internalAudience | quote }}
-            - name: AIOPS_AGENT_GRANT_ISSUER
-              value: "aiops-server"
-            - name: AIOPS_DIAGNOSIS_GRANT_TTL_SECONDS
-              value: {{ $root.Values.security.diagnosisGrantTtlSeconds | quote }}
+              value: {{ ternary "aegisops-app" (printf "aiops-%s" $component) (eq $component "app") | quote }}
+            {{- if eq $component "app" }}
+            - name: AIOPS_DB_URL
+              value: {{ printf "jdbc:postgresql://%s:%v/%s" $root.Values.external.postgres.host $root.Values.external.postgres.port $root.Values.external.postgres.database | quote }}
+            - name: AIOPS_DB_USERNAME
+              value: {{ $root.Values.external.postgres.appUsername | quote }}
+            - name: AIOPS_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "aegisops.componentSecretName" (list $root "app") }}
+                  key: AIOPS_DB_PASSWORD
+            - name: AIOPS_SERVER_PORT
+              value: {{ $app.port | quote }}
+            - name: AIOPS_JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "aegisops.componentSecretName" (list $root "app") }}
+                  key: AIOPS_JWT_SECRET
             - name: AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "aegisops.fullname" $root }}-server-secret
+                  name: {{ include "aegisops.componentSecretName" (list $root "app") }}
                   key: AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN
-            {{- end }}
-            {{- if eq $appName "worker" }}
             - name: AIOPS_AGENT_ENABLED
               value: {{ $root.Values.apps.agent.enabled | quote }}
             - name: AIOPS_INTERNAL_AGENT_API_ENABLED
-              value: "false"
-            - name: AIOPS_OBJECT_STORAGE_ENABLED
-              value: "true"
-            - name: AIOPS_REDIS_HEALTH_ENABLED
-              value: "true"
-            - name: AIOPS_INTERNAL_AGENT_JWT_ISSUER_URI
-              value: {{ required "security.serviceAuth.issuerUri is required" $auth.issuerUri | quote }}
-            - name: AIOPS_INTERNAL_AGENT_JWT_JWK_SET_URI
-              value: {{ required "security.serviceAuth.jwkSetUri is required" $auth.jwkSetUri | quote }}
-            - name: AIOPS_INTERNAL_AGENT_JWT_AUDIENCE
-              value: {{ $auth.internalAudience | quote }}
-            - name: AIOPS_AGENT_OAUTH2_TOKEN_URI
-              value: {{ required "security.serviceAuth.tokenUri is required" $auth.tokenUri | quote }}
-            - name: AIOPS_AGENT_OAUTH2_CLIENT_ID
-              value: {{ required "security.serviceAuth.clients.worker.clientId is required" $auth.clients.worker.clientId | quote }}
-            - name: AIOPS_AGENT_OAUTH2_SCOPE
-              value: {{ $auth.clients.worker.scope | quote }}
+              value: {{ $root.Values.apps.agent.enabled | quote }}
+            - name: AIOPS_AGENT_BASE_URL
+              value: {{ printf "https://%s-agent:%v" (include "aegisops.fullname" $root) $root.Values.apps.agent.port | quote }}
+            - name: AIOPS_AGENT_SSL_BUNDLE_NAME
+              value: agentclient
+            - name: SPRING_SSL_BUNDLE_PEM_AGENTCLIENT_KEYSTORE_CERTIFICATE
+              value: /run/secrets/app.crt
+            - name: SPRING_SSL_BUNDLE_PEM_AGENTCLIENT_KEYSTORE_PRIVATE_KEY
+              value: /run/secrets/app.key
+            - name: SPRING_SSL_BUNDLE_PEM_AGENTCLIENT_TRUSTSTORE_CERTIFICATE
+              value: /run/secrets/agent-ca.crt
+            - name: AIOPS_INTERNAL_MTLS_PORT
+              value: {{ $app.internalMtlsPort | quote }}
+            - name: AIOPS_TLS_CERT_FILE
+              value: /run/secrets/app.crt
+            - name: AIOPS_TLS_KEY_FILE
+              value: /run/secrets/app.key
+            - name: AIOPS_TLS_CLIENT_CA_FILE
+              value: /run/secrets/agent-ca.crt
+            - name: AIOPS_INTERNAL_AGENT_CERTIFICATE_IDENTITIES
+              value: spiffe://aegisops.local/service/aiops-agent
             - name: AIOPS_DIAGNOSIS_GRANT_AUDIENCE
-              value: {{ $auth.internalAudience | quote }}
+              value: aegisops-internal-api
+            - name: AIOPS_DIAGNOSIS_GRANT_ISSUERS
+              value: aegisops-app
+            - name: AIOPS_DIAGNOSIS_GRANT_AUDIENCES
+              value: aiops-agent-api,aegisops-internal-api
+            - name: AIOPS_DIAGNOSIS_GRANT_SCOPES
+              value: diagnosis:execute,evidence:read,cases:read,checkpoint:read,checkpoint:write,memory:read,memory:write,plugin:authorize
             - name: AIOPS_AGENT_GRANT_ISSUER
-              value: "aiops-worker"
+              value: aegisops-app
+            - name: AIOPS_DIAGNOSIS_GRANT_KEY_ID
+              value: {{ $root.Values.security.taskGrant.keyId | quote }}
+            - name: AIOPS_DIAGNOSIS_GRANT_PRIVATE_KEY_FILE
+              value: /run/secrets/grant-private.pem
+            - name: AIOPS_DIAGNOSIS_GRANT_PUBLIC_KEY_FILE
+              value: /run/secrets/grant-public.pem
             - name: AIOPS_DIAGNOSIS_GRANT_TTL_SECONDS
               value: {{ $root.Values.security.diagnosisGrantTtlSeconds | quote }}
+            {{- if $root.Values.security.taskGrant.previousKeyId }}
+            - name: AIOPS_DIAGNOSIS_GRANT_PREVIOUS_KEY_ID
+              value: {{ $root.Values.security.taskGrant.previousKeyId | quote }}
+            - name: AIOPS_DIAGNOSIS_GRANT_PREVIOUS_PUBLIC_KEY_FILE
+              value: /run/secrets/grant-previous-public.pem
             {{- end }}
-            {{- if eq $appName "agent" }}
-            - name: AIOPS_AGENT_INBOUND_OAUTH2_ISSUER
-              value: {{ required "security.serviceAuth.issuerUri is required" $auth.issuerUri | quote }}
-            - name: AIOPS_AGENT_INBOUND_OAUTH2_JWKS_URL
-              value: {{ required "security.serviceAuth.jwkSetUri is required" $auth.jwkSetUri | quote }}
-            - name: AIOPS_AGENT_INBOUND_OAUTH2_AUDIENCE
-              value: {{ $auth.agentAudience | quote }}
-            - name: AIOPS_AGENT_OUTBOUND_OAUTH2_TOKEN_URL
-              value: {{ required "security.serviceAuth.tokenUri is required" $auth.tokenUri | quote }}
-            - name: AIOPS_AGENT_OUTBOUND_OAUTH2_CLIENT_ID
-              value: {{ required "security.serviceAuth.clients.agent.clientId is required" $auth.clients.agent.clientId | quote }}
-            - name: AIOPS_AGENT_OUTBOUND_OAUTH2_SCOPE
-              value: {{ $auth.clients.agent.scope | quote }}
+            - name: AIOPS_EXECUTION_GRANT_ISSUER
+              value: aegisops-app
+            - name: AIOPS_EXECUTION_GRANT_AUDIENCE
+              value: aiops-runner
+            - name: AIOPS_EXECUTION_GRANT_SCOPE
+              value: runbook:execute
+            - name: AIOPS_EXECUTION_GRANT_KEY_ID
+              value: {{ $root.Values.security.taskGrant.keyId | quote }}
+            - name: AIOPS_EXECUTION_GRANT_PRIVATE_KEY_FILE
+              value: /run/secrets/grant-private.pem
+            - name: AIOPS_EXECUTION_GRANT_QUEUE_WAIT_SECONDS
+              value: {{ $root.Values.security.taskGrant.executionQueueWaitSeconds | quote }}
+            - name: AIOPS_OBJECT_STORAGE_ENABLED
+              value: {{ $root.Values.features.objectStorageEnabled | quote }}
+            - name: AIOPS_EVIDENCE_VICTORIA_ENABLED
+              value: {{ $root.Values.features.victoriaMetricsEnabled | quote }}
+            - name: AIOPS_EVIDENCE_VICTORIA_BASE_URL
+              value: {{ $root.Values.external.victoriaMetrics.baseUrl | quote }}
+            - name: AIOPS_QUOTA_BACKEND
+              value: {{ $root.Values.features.quotaBackend | quote }}
+            - name: AIOPS_REDIS_HEALTH_ENABLED
+              value: {{ $root.Values.features.redisHealthEnabled | quote }}
+            {{- if $root.Values.features.objectStorageEnabled }}
+            - name: AIOPS_MINIO_ENDPOINT
+              value: {{ $root.Values.external.minio.endpoint | quote }}
+            - name: AIOPS_MINIO_BUCKET
+              value: {{ $root.Values.external.minio.bucket | quote }}
+            - name: AIOPS_MINIO_REGION
+              value: {{ $root.Values.external.minio.region | quote }}
+            - name: AIOPS_MINIO_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "aegisops.componentSecretName" (list $root "app") }}
+                  key: AIOPS_MINIO_ACCESS_KEY
+            - name: AIOPS_MINIO_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "aegisops.componentSecretName" (list $root "app") }}
+                  key: AIOPS_MINIO_SECRET_KEY
             {{- end }}
-            {{- if and (eq $appName "agent") (eq $root.Values.dify.workRecordProvider "dify") }}
+            {{- end }}
+            {{- if eq $component "agent" }}
+            - name: AIOPS_AGENT_WORKFLOW_API_BASE_URL
+              value: {{ printf "https://%s-app:%v" (include "aegisops.fullname" $root) $root.Values.apps.app.internalMtlsPort | quote }}
+            - name: AIOPS_AGENT_EVIDENCE_BASE_URL
+              value: {{ printf "https://%s-app:%v/internal/agent/evidence" (include "aegisops.fullname" $root) $root.Values.apps.app.internalMtlsPort | quote }}
+            - name: AIOPS_AGENT_TLS_CERTIFICATE_FILE
+              value: /run/secrets/agent.crt
+            - name: AIOPS_AGENT_TLS_PRIVATE_KEY_FILE
+              value: /run/secrets/agent.key
+            - name: AIOPS_AGENT_TLS_CLIENT_CA_FILE
+              value: /run/secrets/control-plane-ca.crt
+            - name: AIOPS_AGENT_DIAGNOSIS_GRANT_ISSUER
+              value: aegisops-app
+            - name: AIOPS_AGENT_DIAGNOSIS_GRANT_AUDIENCE
+              value: aiops-agent-api
+            - name: AIOPS_AGENT_DIAGNOSIS_GRANT_KEY_ID
+              value: {{ $root.Values.security.taskGrant.keyId | quote }}
+            - name: AIOPS_AGENT_DIAGNOSIS_GRANT_PUBLIC_KEY_FILE
+              value: /run/secrets/grant-public.pem
+            {{- if $root.Values.security.taskGrant.previousKeyId }}
+            - name: AIOPS_AGENT_DIAGNOSIS_GRANT_PREVIOUS_KEY_ID
+              value: {{ $root.Values.security.taskGrant.previousKeyId | quote }}
+            - name: AIOPS_AGENT_DIAGNOSIS_GRANT_PREVIOUS_PUBLIC_KEY_FILE
+              value: /run/secrets/grant-previous-public.pem
+            {{- end }}
+            {{- if eq $root.Values.dify.workRecordProvider "dify" }}
             - name: AIOPS_AGENT_DIFY_WORK_RECORD_API_KEY
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "aegisops.fullname" $root }}-agent-dify
+                  name: {{ include "aegisops.componentSecretName" (list $root "agent") }}
                   key: AIOPS_AGENT_DIFY_WORK_RECORD_API_KEY
             - name: AIOPS_AGENT_DIFY_USER_HMAC_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "aegisops.fullname" $root }}-agent-dify
+                  name: {{ include "aegisops.componentSecretName" (list $root "agent") }}
                   key: AIOPS_AGENT_DIFY_USER_HMAC_SECRET
+            {{- end }}
+            {{- end }}
+            {{- if eq $component "runner" }}
+            - name: AIOPS_DB_URL
+              value: {{ printf "jdbc:postgresql://%s:%v/%s" $root.Values.external.postgres.host $root.Values.external.postgres.port $root.Values.external.postgres.database | quote }}
+            - name: AIOPS_DB_USERNAME
+              value: {{ $root.Values.external.postgres.runnerUsername | quote }}
+            - name: AIOPS_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "aegisops.componentSecretName" (list $root "runner") }}
+                  key: AIOPS_DB_PASSWORD
+            - name: AIOPS_RUNNER_PORT
+              value: {{ $app.port | quote }}
+            - name: SPRING_FLYWAY_ENABLED
+              value: "false"
+            - name: AIOPS_RUNNER_EXECUTION_GRANT_ISSUER
+              value: aegisops-app
+            - name: AIOPS_RUNNER_EXECUTION_GRANT_AUDIENCE
+              value: aiops-runner
+            - name: AIOPS_RUNNER_EXECUTION_GRANT_SCOPE
+              value: runbook:execute
+            - name: AIOPS_RUNNER_EXECUTION_GRANT_CURRENT_KEY_ID
+              value: {{ $root.Values.security.taskGrant.keyId | quote }}
+            - name: AIOPS_RUNNER_EXECUTION_GRANT_CURRENT_PUBLIC_KEY_FILE
+              value: /run/secrets/grant-public.pem
+            {{- if $root.Values.security.taskGrant.previousKeyId }}
+            - name: AIOPS_RUNNER_EXECUTION_GRANT_PREVIOUS_KEY_ID
+              value: {{ $root.Values.security.taskGrant.previousKeyId | quote }}
+            - name: AIOPS_RUNNER_EXECUTION_GRANT_PREVIOUS_PUBLIC_KEY_FILE
+              value: /run/secrets/grant-previous-public.pem
+            {{- end }}
             {{- end }}
             {{- range $key, $value := $app.env }}
             - name: {{ $key }}
               value: {{ $value | quote }}
             {{- end }}
+          {{- if eq $component "agent" }}
+          readinessProbe:
+            tcpSocket:
+              port: https
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 6
+          livenessProbe:
+            tcpSocket:
+              port: https
+            initialDelaySeconds: 20
+            periodSeconds: 20
+            failureThreshold: 6
+          {{- else }}
           readinessProbe:
             httpGet:
-              path: {{ ternary "/health" "/actuator/health" (eq $appName "agent") }}
+              path: /actuator/health/readiness
               port: http
             initialDelaySeconds: 20
             periodSeconds: 10
             failureThreshold: 6
           livenessProbe:
             httpGet:
-              path: {{ ternary "/health" "/actuator/health" (eq $appName "agent") }}
+              path: /actuator/health/liveness
               port: http
             initialDelaySeconds: 60
             periodSeconds: 20
             failureThreshold: 6
+          {{- end }}
           resources:
             {{- toYaml $app.resources | nindent 12 }}
+          volumeMounts:
+            - name: security-material
+              mountPath: /run/secrets
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+            {{- if eq $component "runner" }}
+            - name: runner-runtime
+              mountPath: /app/.runtime
+            {{- end }}
+      volumes:
+        - name: security-material
+          secret:
+            secretName: {{ include "aegisops.componentSecretName" (list $root $component) }}
+            defaultMode: 0440
+        - name: tmp
+          emptyDir:
+            sizeLimit: 128Mi
+        {{- if eq $component "runner" }}
+        - name: runner-runtime
+          emptyDir:
+            sizeLimit: 512Mi
+        {{- end }}
 {{- end }}
 {{- end }}
