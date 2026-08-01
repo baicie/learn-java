@@ -1,15 +1,16 @@
 # deploy — 生产 / 预发部署
 
-本目录承载 AegisOps 在 Kubernetes / 离线环境下的部署产物。
+本目录承载 AegisOps 的 Core Compose、Kubernetes 与离线部署产物。
 
 ## 边界
 
 ```text
-infra/    ── docker-compose + env.example（本地开发）
-deploy/   ── Helm chart + Dockerfile + 离线包（生产 / 预发部署）
+infra/    ── 完整本地演示基础设施
+deploy/   ── Core Compose + Helm chart + Dockerfile + 离线包
 
 两个目录职责严格分离，绝不互相替代：
-- 本地开发用 infra/docker-compose.yml
+- 最小部署与基础开发用 deploy/docker-compose.core.yml
+- 完整演示基础设施用 infra/docker-compose.yml
 - 生产部署用 deploy/helm/aegisops/
 - 离线交付用 deploy/offline/
 ```
@@ -45,7 +46,8 @@ deploy/
 │     ├─ test_observability_values.py
 │     └─ test_offline_values.py
 │
-├─ docker-compose.app.yml           # 腾讯云 VM 部署用的 compose（postgres + server + agent + worker + runner）
+├─ docker-compose.core.yml          # 默认三容器 Core；可选能力使用 profiles
+├─ docker-compose.app.yml           # 现有腾讯云完整 AI/Automation 发布描述符
 ├─ docker-compose.zabbix.yml        # 腾讯云 VM 可选 Zabbix 测试环境（Web 端口 8083）
 │
 ├─ tests/                           # 跨 helm chart 与 dockerfile 的 Python 测试
@@ -57,7 +59,52 @@ deploy/
    └─ *.tar / *.tgz                 # 实际产物（构建期生成，git 忽略）
 ```
 
-## 运行时拓扑
+## Core 与可选档位
+
+默认 Core 不需要 Keycloak、Redis、MinIO、VictoriaMetrics、Agent、Runner 或内置 Zabbix：
+
+```bash
+docker compose -f deploy/docker-compose.core.yml up -d --wait
+```
+
+本地首次构建镜像时增加 `--build`。Server 镜像已经内嵌 Portal，Core 不启动独立前端容器。
+
+可选能力必须同时启动对应 profile 并打开应用开关：
+
+```bash
+# AI：OAuth2 Client Credentials + Diagnosis Grant + 内部 Agent API
+AIOPS_AGENT_ENABLED=true \
+AIOPS_INTERNAL_AGENT_API_ENABLED=true \
+docker compose -f deploy/docker-compose.core.yml --profile ai up -d --wait
+
+# Automation：Runner 继续保持独立进程
+docker compose -f deploy/docker-compose.core.yml --profile automation up -d --wait
+
+# 对象存储 / 观测 / Redis 分别按需启用
+AIOPS_OBJECT_STORAGE_ENABLED=true \
+docker compose -f deploy/docker-compose.core.yml --profile object-storage up -d --wait
+
+AIOPS_EVIDENCE_VICTORIA_ENABLED=true \
+docker compose -f deploy/docker-compose.core.yml --profile observability up -d --wait
+
+AIOPS_QUOTA_BACKEND=redis \
+AIOPS_REDIS_HEALTH_ENABLED=true \
+docker compose -f deploy/docker-compose.core.yml --profile distributed-cache up -d --wait
+
+# 完整 Demo：Core + AI + Runner + Redis + MinIO + VictoriaMetrics + Zabbix
+AIOPS_AGENT_ENABLED=true \
+AIOPS_INTERNAL_AGENT_API_ENABLED=true \
+AIOPS_OBJECT_STORAGE_ENABLED=true \
+AIOPS_EVIDENCE_VICTORIA_ENABLED=true \
+AIOPS_QUOTA_BACKEND=redis \
+AIOPS_REDIS_HEALTH_ENABLED=true \
+docker compose -f deploy/docker-compose.core.yml --profile demo up -d --wait
+```
+
+生产启用 AI 时应把 Compose 内的开发 Keycloak 替换为企业 IdP，并注入独立 client secret。
+关闭能力时应用使用 fail-closed 实现，不会降级为静态 token、无鉴权 HTTP 或本地文件存储。
+
+## 完整发布拓扑
 
 ```text
 生产 VM（部署单元）：
@@ -69,11 +116,13 @@ deploy/
   aiops-agent  (9008, Python LangGraph) ── 通过服务 JWT + Diagnosis Grant 调用 Java internal API
 ```
 
+`docker-compose.app.yml` 保留为现有腾讯云完整 AI/Automation 发布描述符，不再代表默认安装。
+
 说明：
 
 - worker / runner 跟 server 共享同一 Postgres（独立 schema 与表，互不耦合）
 - runner 镜像额外装了 `ansible-playbook` / `sshpass` / `openssh-client` 与 `tini`
-- worker 会调用 agent 执行诊断与工作记录生成，Compose 启动时等待 agent 健康；runner 不依赖
+- 完整发布档的 worker 会调用 agent 执行诊断与工作记录生成；runner 不依赖
   agent（agent 的 canonical workflow 只查 server，不直接调 runner）
 
 ## 低内存 VM 配置

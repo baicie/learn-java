@@ -1,13 +1,15 @@
-# AegisOps / FaultLens Phase0
+# AegisOps / FaultLens
 
-Phase0 是 AIOps MVP 的工程地基，目标是先把可持续迭代的工程骨架、基础设施、登录权限、租户/RBAC、审计、OpenAPI 与前端控制台跑通。
+AegisOps / FaultLens 是围绕 Incident 的可观测、智能排障与受控自动化平台。后端采用模块化
+单体代码库，并按职责隔离 Server、Worker、Runner 进程；Python Agent 为可选能力。
 
 ## 技术栈
 
-* Backend: Java 21 + Spring Boot 3.x + Spring Security + Flyway + JdbcTemplate
-* Frontend: React + Vite + TypeScript + Tailwind CSS + TanStack Query
-* Infra: PostgreSQL + Redis + ClickHouse + VictoriaMetrics + MinIO
-* Build: Maven multi-module + pnpm
+- Backend: Java 21 + Spring Boot 3.x + Spring Security + Flyway + JdbcTemplate
+- Frontend: React + Vite + TypeScript + Tailwind CSS + TanStack Query
+- Core Infra: PostgreSQL
+- Optional Infra: Redis + VictoriaMetrics + MinIO + Zabbix
+- Build: Maven multi-module + pnpm
 
 ## 本阶段交付
 
@@ -26,33 +28,45 @@ OpenAPI
 
 ## 快速启动
 
-### 0. 安装前端依赖
+### 默认 Core
 
 ```bash
-# 安装 pnpm，如未安装
-npm install -g pnpm@9
-
-# 安装前端依赖
-cd web/console
-pnpm install
-cd ../..
+docker compose -f deploy/docker-compose.core.yml up --build -d --wait
 ```
 
-### 1. 启动基础设施
+默认只启动：
+
+```text
+aiops-server（内嵌 Portal）
+aiops-worker
+PostgreSQL
+```
+
+AI、Runner、Redis、MinIO、VictoriaMetrics 与内置 Zabbix 的 profile 命令见
+`deploy/README.md`。
+
+### 源码开发
+
+安装依赖：
 
 ```bash
-docker compose -f infra/docker-compose.yml up -d
+npm install -g pnpm@10
+pnpm install --frozen-lockfile
 ```
 
-### 2. 初始化后端模块
-
-仅首次运行或模块有变更时需要：
+只启动 PostgreSQL：
 
 ```bash
-mvn install -DskipTests
+docker compose -f deploy/docker-compose.core.yml up -d postgres
 ```
 
-### 3. 启动后端
+初始化后端模块：
+
+```bash
+JAVA_HOME=$(/usr/libexec/java_home -v 21) mvn install -DskipTests
+```
+
+启动后端：
 
 在仓库根目录执行：
 
@@ -61,18 +75,17 @@ mvn install -DskipTests
 mvn -pl apps/aiops-server -am spring-boot:run
 ```
 
-Worker / Runner 可分别启动：
+Worker 可独立启动；Runner 仅在开发自动化能力时启动：
 
 ```bash
 mvn -pl apps/aiops-worker -am spring-boot:run
 mvn -pl apps/aiops-runner -am spring-boot:run
 ```
 
-### 4. 启动前端
+启动 Portal：
 
 ```bash
-cd web/console
-pnpm dev
+pnpm -C web/portal dev
 ```
 
 ### 5. 默认账号
@@ -84,14 +97,14 @@ password: admin123
 
 ## API
 
-* Server: http://localhost:8080
-* Swagger UI: http://localhost:8080/swagger-ui/index.html
-* Health: http://localhost:8080/actuator/health
+- Server: http://localhost:8080
+- Swagger UI: http://localhost:8080/swagger-ui/index.html
+- Health: http://localhost:8080/actuator/health
 
-## Phase0 验收
+## Core 验收
 
 ```txt
-本地一键启动基础设施
+Core 三容器可以一键启动
 后端可以启动并自动迁移数据库
 首次启动自动创建默认租户与 admin 用户
 可以登录
@@ -99,7 +112,8 @@ password: admin123
 可以查看租户、用户、角色
 可以查看空 Dashboard
 可以访问 OpenAPI 文档
-Worker / Runner 可以独立启动并暴露健康检查
+Worker 可以独立启动并暴露健康检查
+Agent 关闭时不要求 Keycloak/JWKS，也不暴露内部 Agent API
 ```
 
 ## 推荐验证命令
@@ -112,9 +126,8 @@ mvn -pl apps/aiops-worker -am test
 mvn -pl apps/aiops-runner -am test
 ```
 
-前端：
+Portal：
 
 ```bash
-cd web/console
-pnpm build
+pnpm -C web/portal build
 ```

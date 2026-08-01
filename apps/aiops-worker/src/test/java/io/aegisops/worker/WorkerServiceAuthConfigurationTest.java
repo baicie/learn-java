@@ -58,20 +58,35 @@ class WorkerServiceAuthConfigurationTest {
 
   @Test
   void startsMinimumServiceAuthContextFromWorkerConfiguration() {
+    contextRunner
+        .withPropertyValues("aiops.agent.enabled=true", "aiops.internal-agent-api.enabled=true")
+        .run(
+            context -> {
+              assertThat(context.getStartupFailure()).isNull();
+              assertThat(context.getBean(InternalServiceAuthenticator.class))
+                  .isInstanceOf(JwtInternalServiceAuthenticator.class);
+              assertThat(context.getBean(AgentCredentialProvider.class))
+                  .isInstanceOf(OAuth2ClientCredentialsProvider.class);
+              assertThat(context.getBean(DiagnosisGrantProvider.class))
+                  .isInstanceOf(SignedDiagnosisGrantProvider.class);
+              assertThat(
+                      context.getEnvironment().getProperty("aiops.outbox.enabled", Boolean.class))
+                  .isFalse();
+              assertThat(
+                      context
+                          .getEnvironment()
+                          .getProperty("aiops.zabbix-sync.enabled", Boolean.class))
+                  .isFalse();
+            });
+  }
+
+  @Test
+  void doesNotCreateServiceAuthBeansWhenAgentCapabilitiesAreDisabled() {
     contextRunner.run(
         context -> {
-          assertThat(context.getStartupFailure()).isNull();
-          assertThat(context.getBean(InternalServiceAuthenticator.class))
-              .isInstanceOf(JwtInternalServiceAuthenticator.class);
-          assertThat(context.getBean(AgentCredentialProvider.class))
-              .isInstanceOf(OAuth2ClientCredentialsProvider.class);
-          assertThat(context.getBean(DiagnosisGrantProvider.class))
-              .isInstanceOf(SignedDiagnosisGrantProvider.class);
-          assertThat(context.getEnvironment().getProperty("aiops.outbox.enabled", Boolean.class))
-              .isFalse();
-          assertThat(
-                  context.getEnvironment().getProperty("aiops.zabbix-sync.enabled", Boolean.class))
-              .isFalse();
+          assertThat(context).doesNotHaveBean(InternalServiceAuthenticator.class);
+          assertThat(context).doesNotHaveBean(AgentCredentialProvider.class);
+          assertThat(context).doesNotHaveBean(DiagnosisGrantProvider.class);
         });
   }
 

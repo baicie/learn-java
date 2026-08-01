@@ -36,6 +36,13 @@ class TenantRequiredFilterTest {
   }
 
   @Test
+  void shouldSkipInternalAgentPathsOwnedByInternalAgentAuthentication() {
+    TestableTenantRequiredFilter filter = newFilter();
+
+    assertThat(filter.shouldSkip("/internal/agent/auth/probe")).isTrue();
+  }
+
+  @Test
   void shouldNotFilterWhenTenantRequiredDisabled() {
     AiopsSecurityProperties properties = new AiopsSecurityProperties();
     properties.setTenantRequired(false);

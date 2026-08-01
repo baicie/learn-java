@@ -3,6 +3,7 @@ package io.aegisops.security;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Clock;
 import java.time.Duration;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
@@ -30,6 +31,10 @@ public class AiopsSecurityConfiguration {
   }
 
   @Bean
+  @ConditionalOnProperty(
+      prefix = "aiops.internal-agent-api",
+      name = "enabled",
+      havingValue = "true")
   InternalServiceAuthenticator internalServiceAuthenticator(AiopsSecurityProperties properties) {
     properties.validateInternalServiceAuthentication();
 
@@ -50,6 +55,10 @@ public class AiopsSecurityConfiguration {
   }
 
   @Bean
+  @ConditionalOnProperty(
+      prefix = "aiops.internal-agent-api",
+      name = "enabled",
+      havingValue = "true")
   InternalAgentAuthFilter internalAgentAuthFilter(
       AiopsSecurityProperties properties,
       SecurityErrorResponseWriter responseWriter,
@@ -85,6 +94,10 @@ public class AiopsSecurityConfiguration {
   }
 
   @Bean
+  @ConditionalOnProperty(
+      prefix = "aiops.internal-agent-api",
+      name = "enabled",
+      havingValue = "true")
   FilterRegistrationBean<InternalAgentAuthFilter> disableInternalAgentAuthFilterAutoRegistration(
       InternalAgentAuthFilter filter) {
     FilterRegistrationBean<InternalAgentAuthFilter> registration =

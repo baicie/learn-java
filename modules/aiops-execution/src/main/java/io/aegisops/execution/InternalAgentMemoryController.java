@@ -7,6 +7,7 @@ import io.aegisops.execution.dto.AgentMemoryCreateRequest;
 import io.aegisops.execution.dto.AgentMemoryResponse;
 import io.aegisops.execution.dto.AgentMemorySearchRequest;
 import io.aegisops.execution.dto.AgentMemorySearchResponse;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
  * <p>This API does not execute actions and must be protected by internal network/security policy.
  */
 @RestController
+@ConditionalOnProperty(prefix = "aiops.internal-agent-api", name = "enabled", havingValue = "true")
 public class InternalAgentMemoryController {
   private final AgentMemoryService service;
 

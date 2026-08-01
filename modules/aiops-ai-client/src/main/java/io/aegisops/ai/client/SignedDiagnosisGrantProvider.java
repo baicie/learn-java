@@ -7,10 +7,12 @@ import io.aegisops.common.security.DiagnosisGrantCodec;
 import java.time.Clock;
 import java.time.Instant;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.stereotype.Component;
 
 @Component
+@ConditionalOnProperty(prefix = "aiops.agent", name = "enabled", havingValue = "true")
 @EnableConfigurationProperties(AgentGrantProperties.class)
 public class SignedDiagnosisGrantProvider implements DiagnosisGrantProvider {
   private final AgentGrantProperties properties;

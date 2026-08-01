@@ -5,9 +5,11 @@ import io.minio.GetPresignedObjectUrlArgs;
 import io.minio.MinioClient;
 import io.minio.http.Method;
 import java.time.Duration;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 @Component
+@ConditionalOnProperty(prefix = "aiops.object-storage", name = "enabled", havingValue = "true")
 public class MinioObjectStorageUrlSigner implements ObjectStorageUrlSigner {
   private static final Duration MAX_EXPIRY = Duration.ofDays(7);
 

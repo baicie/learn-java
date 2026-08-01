@@ -24,6 +24,7 @@ import org.springframework.stereotype.Component;
 
 @Component
 @ConditionalOnProperty(prefix = "aiops.runtime", name = "app", havingValue = "worker")
+@ConditionalOnProperty(prefix = "aiops.object-storage", name = "enabled", havingValue = "true")
 public class MinioObjectStorageAdapter implements ObjectStoragePort {
   private static final long UNKNOWN_PART_SIZE = 10L * 1024L * 1024L;
 
