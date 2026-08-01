@@ -32,7 +32,9 @@ bash deploy/install.sh --no-start
 ```
 
 安装器可重复执行并复用现有材料。`--force` 会轮换 mTLS/Grant 材料并保留数据库密码；旧材料
-移动到带时间戳的备份目录。运行状态默认位于 `deploy/runtime/`，已被 Git 忽略。
+移动到带时间戳的备份目录，上一把 Grant 公钥和 `kid` 会保留在当前运行目录供在途任务验证。
+连续执行第二次 `--force` 前，必须确认使用更早公钥签发的诊断与执行任务已经完成或过期。运行
+状态默认位于 `deploy/runtime/`，已被 Git 忽略。
 
 ## 部署档位
 
@@ -56,6 +58,27 @@ App -- execution row + Execution Grant --> PostgreSQL <-- restricted Runner
 App 是唯一任务授权签发者，持有 Ed25519 私钥。Agent 和 Runner 只持有公钥；Runner 还使用
 `aegisops_runner` 最小权限数据库账号。Grant 或审批快照校验失败时必须在执行器调用前失败关闭。
 
+默认 Diagnosis Grant 只包含 `diagnosis:execute` 和 `diagnosis:resume`。启用 Agent 的 evidence、
+case、plugin、memory 或 checkpoint 能力时，必须按实际启用项显式扩展
+`AIOPS_DIAGNOSIS_GRANT_SCOPES`，不得直接授予未使用的全部工具 scope。
+
+## 从旧 Compose 升级
+
+直接运行默认安装命令即可触发一次升级探测：
+
+```bash
+bash deploy/install.sh
+```
+
+当安装器发现旧 `aegisops-postgres` 或 `aegisops-core` PostgreSQL 服务时，会先执行 `pg_dump`
+到 `deploy/runtime/backups/`，再创建 `aegisops_admin`、`aegisops_app`、`aegisops_runner` 角色，
+转移数据库对象所有权，并把旧命名卷写入 `AIOPS_POSTGRES_VOLUME_NAME`。只有备份和事务迁移均
+成功后才会删除被替代的旧业务容器；命名卷和备份不会删除。
+
+升级前必须保留旧 Compose 文件、镜像标签和外部备份。升级失败时不要删除旧卷；先查看安装器
+错误并继续使用旧栈。新栈已经写入 Flyway migration 后，回滚必须基于数据库兼容性评估，必要
+时从 `pre-mtls-*.dump` 恢复，不能只切回旧镜像。
+
 ## Compose
 
 主要文件：
@@ -65,6 +88,8 @@ deploy/docker-compose.core.yml
 deploy/install.sh
 deploy/init/001-create-roles.sql
 deploy/init/002-grant-runner.sql
+deploy/init/003-migrate-legacy-owner.sql
+deploy/scripts/migrate-legacy-compose.sh
 deploy/scripts/verify-internal-mtls.py
 ```
 

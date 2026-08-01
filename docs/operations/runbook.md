@@ -33,8 +33,9 @@ bash deploy/install.sh
 bash deploy/install.sh --mode automation
 ```
 
-安装器默认拒绝覆盖已有安全材料。证书/密钥轮换必须先验证数据库凭据、当前/前一把公钥窗口和
-回滚材料，不能直接删除 `deploy/runtime`。
+安装器默认复用已有安全材料。证书/密钥轮换必须先验证数据库凭据、当前/前一把公钥窗口和回滚
+材料，不能直接删除 `deploy/runtime`。`--force` 只保留一代 previous Grant 公钥；再次轮换前
+必须确认更早公钥对应的任务均已完成或过期。
 
 ## 2. 容器未就绪
 
@@ -72,6 +73,11 @@ AIOPS_AGENT_EVIDENCE_BASE_URL
 `401` 通常表示缺失/无效/过期 Grant；`403` 通常表示 scope 或资源上下文不匹配；TLS 握手失败
 应检查证书链、DNS SAN/URI SAN、时间同步和角色 CA，不会表现为业务 HTTP 状态码。
 
+默认 Grant 只包含 `diagnosis:execute` 和 `diagnosis:resume`。若启用了 evidence、case、plugin、
+memory 或 checkpoint 功能，检查 `AIOPS_DIAGNOSIS_GRANT_SCOPES` 是否只增加了对应 scope，并与
+Agent 功能开关一致。Resume 请求和 checkpoint 状态中的 tenant、Incident、diagnosis、trace
+必须全部一致。
+
 ## 4. Internal Agent 401/403
 
 依次检查：
@@ -92,6 +98,8 @@ AIOPS_AGENT_EVIDENCE_BASE_URL
 - Grant 是否缺失、过期、`kid` 未加载或 issuer/audience/scope 错误。
 - `execution_snapshot_sha256` 是否与当前执行行及按 sequence 排序的步骤一致。
 - 审批 ID/快照、mode、执行类型、回滚引用、重试次数或 timeout 是否被修改。
+- live 审批快照是否为 `approved`，`approvalId`/`planId` 是否一致，批准数是否达到至少一次审批
+  和 `requiredApprovals` 门槛。
 - Runner 是否使用独立账号，且权限覆盖领取、心跳、状态、产物和审计所需表。
 
 Grant 拒绝时不得手工改状态绕过验证，也不得把私钥挂入 Runner。应停止领取新任务，修复 App
@@ -113,3 +121,17 @@ VM 发布不得在验证前覆盖 active 描述符或现有安全材料。新镜
 回滚必须使用同一次已验证发布的镜像、Compose/Helm 描述符、证书信任窗口和 Grant 公钥集合。
 如果新版本已经写入不可逆 migration，先按 migration 兼容性评估，不得只回滚镜像。Runner 已
 领取的任务保留审计记录，不得删除数据库行来伪造回滚成功。
+
+## 8. 旧 Compose 升级
+
+运行 `bash deploy/install.sh` 时，安装器会在启动新栈前探测旧 PostgreSQL 服务。发现旧栈后应
+在输出中确认：
+
+1. `deploy/runtime/backups/pre-mtls-*.dump` 已生成且非空。
+2. `deploy/runtime/.env` 的 `AIOPS_POSTGRES_VOLUME_NAME` 指向旧命名卷。
+3. 新 PostgreSQL 使用 `aegisops_admin`，App 与 Runner 分别使用最小权限账号。
+4. App 健康、Flyway 完成、Agent mTLS 探针通过后，才把新栈视为可用。
+
+备份或角色迁移失败时，旧容器与命名卷不得删除。自动迁移成功后旧业务容器会被移除，但 dump
+和原卷保留；回滚需要旧 Compose/镜像以及数据库兼容性评估，必要时从 dump 恢复。不要为了
+重试而执行 `docker volume rm`、`docker compose down -v` 或手工删除备份。

@@ -258,7 +258,7 @@ jobs:
           key: ${{ secrets.PERF_VM_KEY }}
           password: ${{ secrets.PERF_VM_PASSWORD }}
           port: ${{ secrets.PERF_VM_SSH_PORT || '22' }}
-          source: "deploy/docker-compose.core.yml,deploy/install.sh,deploy/init,deploy/scripts/deploy-app.sh,deploy/scripts/configure-docker-mirror.sh,deploy/scripts/verify-internal-mtls.py"
+          source: "deploy/docker-compose.core.yml,deploy/install.sh,deploy/init,deploy/scripts/deploy-app.sh,deploy/scripts/configure-docker-mirror.sh,deploy/scripts/migrate-legacy-compose.sh,deploy/scripts/verify-internal-mtls.py"
           target: "~/workspace/aegisops"
           overwrite: true
           timeout: 10m
@@ -269,7 +269,7 @@ jobs:
         env:
           IMAGE_PREFIX: ${{ env.IMAGE_PREFIX }}
           IMAGE_TAG: ${{ env.IMAGE_TAG }}
-          AIOPS_DEPLOY_MODE: ${{ vars.AIOPS_DEPLOY_MODE || 'automation' }}
+          AIOPS_DEPLOY_MODE: ${{ vars.AIOPS_DEPLOY_MODE || 'diagnostic' }}
           AIOPS_AGENT_OPENAI_API_KEY: ${{ secrets.AIOPS_AGENT_OPENAI_API_KEY }}
         with:
           host: ${{ secrets.PERF_VM_HOST }}

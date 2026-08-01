@@ -10,7 +10,8 @@ INSTALL_SCRIPT="${INSTALL_SCRIPT:-$APP_DIR/deploy/install.sh}"
 MTLS_PROBE_SCRIPT="${MTLS_PROBE_SCRIPT:-$APP_DIR/deploy/scripts/verify-internal-mtls.py}"
 RUNTIME_DIR="${AIOPS_RUNTIME_DIR:-$APP_DIR/deploy/runtime}"
 ENV_FILE="$RUNTIME_DIR/.env"
-DEPLOY_MODE="${AIOPS_DEPLOY_MODE:-automation}"
+DEPLOY_MODE="${AIOPS_DEPLOY_MODE:-diagnostic}"
+LEGACY_MIGRATION_SCRIPT="${LEGACY_MIGRATION_SCRIPT:-$APP_DIR/deploy/scripts/migrate-legacy-compose.sh}"
 
 export AIOPS_APP_IMAGE="${IMAGE_PREFIX}:${IMAGE_TAG}-app"
 export AIOPS_AGENT_IMAGE="${IMAGE_PREFIX}:${IMAGE_TAG}-agent"
@@ -27,7 +28,11 @@ for command_name in bash docker python3; do
   require_command "$command_name"
 done
 
-for required_file in "$COMPOSE_FILE" "$INSTALL_SCRIPT" "$MTLS_PROBE_SCRIPT"; do
+for required_file in \
+  "$COMPOSE_FILE" \
+  "$INSTALL_SCRIPT" \
+  "$MTLS_PROBE_SCRIPT" \
+  "$LEGACY_MIGRATION_SCRIPT"; do
   if [ ! -f "$required_file" ]; then
     echo "Required deployment file is missing: $required_file" >&2
     exit 1
@@ -65,6 +70,8 @@ if [ ! -f "$ENV_FILE" ] || [ ! -d "$RUNTIME_DIR/secrets" ]; then
 else
   echo "==> Reusing deployment credentials from $RUNTIME_DIR"
 fi
+
+AIOPS_RUNTIME_DIR="$RUNTIME_DIR" bash "$LEGACY_MIGRATION_SCRIPT"
 
 required_runtime_files=(
   .env
@@ -112,5 +119,8 @@ if [ "$DEPLOY_MODE" != "core" ]; then
 fi
 
 compose ps
+AIOPS_RUNTIME_DIR="$RUNTIME_DIR" \
+  AIOPS_TARGET_STACK_HEALTHY=true \
+  bash "$LEGACY_MIGRATION_SCRIPT" --finalize
 docker image prune -f --filter 'until=168h' >/dev/null 2>&1 || true
 echo "==> Deployment succeeded ($IMAGE_TAG)"

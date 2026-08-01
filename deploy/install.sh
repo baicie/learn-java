@@ -139,6 +139,18 @@ read_env_value() {
   awk -F= -v expected="$key" '$1 == expected {sub(/^[^=]*=/, ""); print; exit}' "$ENV_FILE"
 }
 
+CURRENT_GRANT_KEY_ID="${AIOPS_TASK_GRANT_KEY_ID:-task-grant-v1}"
+PREVIOUS_GRANT_KEY_ID="${AIOPS_TASK_GRANT_PREVIOUS_KEY_ID:-}"
+POSTGRES_VOLUME_NAME="${AIOPS_POSTGRES_VOLUME_NAME:-aegisops_postgres_data}"
+if [ -s "$ENV_FILE" ]; then
+  stored_value="$(read_env_value AIOPS_TASK_GRANT_KEY_ID)"
+  CURRENT_GRANT_KEY_ID="${stored_value:-$CURRENT_GRANT_KEY_ID}"
+  stored_value="$(read_env_value AIOPS_TASK_GRANT_PREVIOUS_KEY_ID)"
+  PREVIOUS_GRANT_KEY_ID="${stored_value:-$PREVIOUS_GRANT_KEY_ID}"
+  stored_value="$(read_env_value AIOPS_POSTGRES_VOLUME_NAME)"
+  POSTGRES_VOLUME_NAME="${stored_value:-$POSTGRES_VOLUME_NAME}"
+fi
+
 REUSE=0
 PRESERVED_SECRETS_DIR=""
 TEMP_DIR=""
@@ -155,7 +167,7 @@ random_hex() {
 
 if [ -d "$SECRETS_DIR" ]; then
   if [ "$FORCE" = "1" ]; then
-    require_files "$SECRETS_DIR" "${DATABASE_PASSWORD_FILES[@]}"
+    require_files "$SECRETS_DIR" "${DATABASE_PASSWORD_FILES[@]}" grant-public.pem
     BACKUP_DIR="$RUNTIME_DIR/secrets.backup.$(date -u +%Y%m%dT%H%M%SZ).$$"
     mv "$SECRETS_DIR" "$BACKUP_DIR"
     PRESERVED_SECRETS_DIR="$BACKUP_DIR"
@@ -301,10 +313,20 @@ generate_leaf agent aiops-agent agent 2002
 
 openssl genpkey -algorithm ED25519 \
   -out "$GENERATED_SECRETS/grant-private.pem" >/dev/null 2>&1
-openssl pkey \
+  openssl pkey \
   -in "$GENERATED_SECRETS/grant-private.pem" \
-  -pubout \
-  -out "$GENERATED_SECRETS/grant-public.pem" >/dev/null 2>&1
+    -pubout \
+    -out "$GENERATED_SECRETS/grant-public.pem" >/dev/null 2>&1
+
+  if [ -n "$PRESERVED_SECRETS_DIR" ]; then
+    PREVIOUS_GRANT_KEY_ID="$CURRENT_GRANT_KEY_ID"
+    CURRENT_GRANT_KEY_ID="task-grant-$(date -u +%Y%m%dT%H%M%SZ)-$$"
+    cp "$PRESERVED_SECRETS_DIR/grant-public.pem" \
+      "$GENERATED_SECRETS/grant-previous-public.pem"
+  else
+    PREVIOUS_GRANT_KEY_ID=""
+    : > "$GENERATED_SECRETS/grant-previous-public.pem"
+  fi
 
 chmod 0600 "$GENERATED_SECRETS"/*
 chmod 0644 \
@@ -313,11 +335,22 @@ chmod 0644 \
   "$GENERATED_SECRETS/agent_ca.crt" \
   "$GENERATED_SECRETS/app.crt" \
   "$GENERATED_SECRETS/agent.crt" \
-  "$GENERATED_SECRETS/grant-public.pem"
+  "$GENERATED_SECRETS/grant-public.pem" \
+  "$GENERATED_SECRETS/grant-previous-public.pem"
 
   mv "$GENERATED_SECRETS" "$SECRETS_DIR"
   chmod 0700 "$RUNTIME_DIR" "$SECRETS_DIR"
   echo "Generated deployment material at $RUNTIME_DIR"
+fi
+
+if [ ! -e "$SECRETS_DIR/grant-previous-public.pem" ]; then
+  : > "$SECRETS_DIR/grant-previous-public.pem"
+  chmod 0644 "$SECRETS_DIR/grant-previous-public.pem"
+fi
+if [ -n "$PREVIOUS_GRANT_KEY_ID" ] \
+  && [ ! -s "$SECRETS_DIR/grant-previous-public.pem" ]; then
+  echo "Previous Grant key id is configured but its public key is missing." >&2
+  exit 1
 fi
 
 case "$MODE" in
@@ -329,6 +362,11 @@ case "$MODE" in
     ;;
 esac
 
+PREVIOUS_GRANT_PUBLIC_KEY_FILE=""
+if [ -n "$PREVIOUS_GRANT_KEY_ID" ]; then
+  PREVIOUS_GRANT_PUBLIC_KEY_FILE=/run/secrets/task_grant_previous_public_key
+fi
+
 ENV_TEMP="$(mktemp "$RUNTIME_DIR/.env.XXXXXX")"
 cat > "$ENV_TEMP" <<EOF
 AIOPS_SECRETS_DIR=$SECRETS_DIR
@@ -336,6 +374,10 @@ AIOPS_JWT_SECRET=$JWT_SECRET
 AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN=$WEBHOOK_SECRET
 AIOPS_AGENT_ENABLED=$AGENT_ENABLED
 AIOPS_INTERNAL_AGENT_API_ENABLED=$AGENT_ENABLED
+AIOPS_POSTGRES_VOLUME_NAME=$POSTGRES_VOLUME_NAME
+AIOPS_TASK_GRANT_KEY_ID=$CURRENT_GRANT_KEY_ID
+AIOPS_TASK_GRANT_PREVIOUS_KEY_ID=$PREVIOUS_GRANT_KEY_ID
+AIOPS_TASK_GRANT_PREVIOUS_PUBLIC_KEY_FILE=$PREVIOUS_GRANT_PUBLIC_KEY_FILE
 EOF
 chmod 0600 "$ENV_TEMP"
 mv "$ENV_TEMP" "$ENV_FILE"
@@ -344,6 +386,8 @@ chmod 0700 "$RUNTIME_DIR" "$SECRETS_DIR"
 if [ "$START" = "0" ]; then
   exit 0
 fi
+
+AIOPS_RUNTIME_DIR="$RUNTIME_DIR" bash "$SCRIPT_DIR/scripts/migrate-legacy-compose.sh"
 
 compose_args=(--env-file "$ENV_FILE" -f "$COMPOSE_FILE")
 case "$MODE" in
@@ -357,3 +401,6 @@ esac
 
 docker compose "${compose_args[@]}" up -d --build --wait
 docker compose "${compose_args[@]}" ps
+AIOPS_RUNTIME_DIR="$RUNTIME_DIR" \
+  AIOPS_TARGET_STACK_HEALTHY=true \
+  bash "$SCRIPT_DIR/scripts/migrate-legacy-compose.sh" --finalize

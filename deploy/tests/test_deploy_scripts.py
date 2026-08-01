@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 import shutil
 import stat
 import subprocess
@@ -23,6 +22,7 @@ ROOT = Path(__file__).resolve().parents[2]
         "scripts/deploy/render-helm.sh",
         "scripts/deploy/verify-offline-package.sh",
         "deploy/install.sh",
+        "deploy/scripts/migrate-legacy-compose.sh",
     ],
 )
 def test_deploy_scripts_exist_and_use_strict_shell_mode(relative_path: str):
@@ -55,6 +55,7 @@ def test_generate_secrets_emits_mtls_task_grants_and_separate_db_passwords(
     postgres = values["external"]["postgres"]
 
     assert stat.S_IMODE(output.stat().st_mode) == 0o600
+    assert values["fullnameOverride"] == "aegisops"
     assert task_grant["privateKey"].startswith("-----BEGIN PRIVATE KEY-----")
     assert task_grant["publicKey"].startswith("-----BEGIN PUBLIC KEY-----")
     assert mtls["appCertificate"].startswith("-----BEGIN CERTIFICATE-----")
@@ -177,5 +178,32 @@ def test_release_workflow_uses_new_installer_and_mtls_probe():
     assert "deploy/install.sh" in workflow
     assert "verify-internal-mtls.py" in workflow
     assert "docker-compose.core.yml" in workflow
+    assert "vars.AIOPS_DEPLOY_MODE || 'diagnostic'" in workflow
     for forbidden in ("aiops-worker", "keycloak", "jwks", "oauth2"):
         assert forbidden not in lowered
+
+
+def test_deployment_entrypoints_default_to_diagnostic_mode():
+    release_script = (ROOT / "deploy/scripts/deploy-app.sh").read_text(
+        encoding="utf-8"
+    )
+    operator_script = (ROOT / "scripts/deploy/deploy-app.sh").read_text(
+        encoding="utf-8"
+    )
+
+    assert 'DEPLOY_MODE="${AIOPS_DEPLOY_MODE:-diagnostic}"' in release_script
+    assert 'DEPLOY_MODE="${AIOPS_DEPLOY_MODE:-diagnostic}"' in operator_script
+
+
+def test_legacy_database_migration_transfers_ownership_to_app_role():
+    sql = (ROOT / "deploy/init/003-migrate-legacy-owner.sql").read_text(
+        encoding="utf-8"
+    ).lower()
+
+    assert "pg_namespace" in sql
+    assert "pg_class" in sql
+    assert "pg_proc" in sql
+    assert "pg_type" in sql
+    assert "reassign owned by" not in sql
+    assert "alter database" in sql
+    assert "owner to aegisops_app" in sql

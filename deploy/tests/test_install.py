@@ -232,7 +232,12 @@ def test_start_builds_latest_sources_and_waits_for_health(tmp_path):
     docker_log = tmp_path / "docker.log"
     fake_docker = fake_bin / "docker"
     fake_docker.write_text(
-        "#!/bin/sh\nprintf '%s\\n' \"$*\" >> \"$AIOPS_TEST_DOCKER_LOG\"\n",
+        """#!/bin/sh
+printf '%s\\n' "$*" >> "$AIOPS_TEST_DOCKER_LOG"
+# A successful Docker CLI invocation with no inspect payload means no such legacy
+# container to the migration script.
+exit 0
+""",
         encoding="utf-8",
     )
     fake_docker.chmod(0o755)
@@ -264,6 +269,43 @@ def test_start_builds_latest_sources_and_waits_for_health(tmp_path):
     assert "--profile automation" in up
     assert "up -d --build --wait" in up
 
+    install_text = INSTALL.read_text(encoding="utf-8")
+    assert install_text.index('up -d --build --wait') < install_text.index(
+        'AIOPS_TARGET_STACK_HEALTHY=true'
+    )
+    assert '--finalize' in install_text
+
+
+def test_force_rotation_preserves_previous_grant_verification_key(tmp_path):
+    if os.name == "nt":
+        pytest.skip("deployment installer targets POSIX hosts")
+    if shutil.which("openssl") is None or shutil.which("bash") is None:
+        pytest.skip("bash and openssl are required")
+
+    runtime = tmp_path / "runtime"
+    _run_install(runtime, "diagnostic")
+    previous_public_key = (runtime / "secrets/grant-public.pem").read_bytes()
+    previous_key_id = _env_value(runtime, "AIOPS_TASK_GRANT_KEY_ID")
+
+    subprocess.run(
+        [
+            "bash",
+            str(INSTALL),
+            "--no-start",
+            "--force",
+            "--runtime-dir",
+            str(runtime),
+        ],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    assert (runtime / "secrets/grant-previous-public.pem").read_bytes() == previous_public_key
+    assert _env_value(runtime, "AIOPS_TASK_GRANT_PREVIOUS_KEY_ID") == previous_key_id
+    assert _env_value(runtime, "AIOPS_TASK_GRANT_KEY_ID") != previous_key_id
+
 
 def _run_install(runtime: Path, mode: str) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
@@ -289,6 +331,14 @@ def _security_material(runtime: Path) -> dict[str, bytes]:
         for path in (runtime / "secrets").iterdir()
         if path.is_file()
     }
+
+
+def _env_value(runtime: Path, key: str) -> str:
+    for line in (runtime / ".env").read_text(encoding="utf-8").splitlines():
+        name, _, value = line.partition("=")
+        if name == key:
+            return value
+    raise AssertionError(f"missing env value: {key}")
 
 
 def test_generated_runtime_directory_is_git_ignored():

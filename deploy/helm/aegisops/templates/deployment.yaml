@@ -113,7 +113,7 @@ spec:
             - name: AIOPS_DIAGNOSIS_GRANT_AUDIENCES
               value: aiops-agent-api,aegisops-internal-api
             - name: AIOPS_DIAGNOSIS_GRANT_SCOPES
-              value: diagnosis:execute,evidence:read,cases:read,checkpoint:read,checkpoint:write,memory:read,memory:write,plugin:authorize
+              value: diagnosis:execute,diagnosis:resume
             - name: AIOPS_AGENT_GRANT_ISSUER
               value: aegisops-app
             - name: AIOPS_DIAGNOSIS_GRANT_KEY_ID

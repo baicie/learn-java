@@ -65,13 +65,15 @@ services:
       AIOPS_DIAGNOSIS_GRANT_ISSUERS: aegisops-app
       AIOPS_AGENT_GRANT_ISSUER: aegisops-app
       AIOPS_DIAGNOSIS_GRANT_AUDIENCES: aiops-agent-api,aegisops-internal-api
-      AIOPS_DIAGNOSIS_GRANT_KEY_ID: task-grant-v1
+      AIOPS_DIAGNOSIS_GRANT_KEY_ID: ${AIOPS_TASK_GRANT_KEY_ID:-task-grant-v1}
+      AIOPS_DIAGNOSIS_GRANT_PREVIOUS_KEY_ID: ${AIOPS_TASK_GRANT_PREVIOUS_KEY_ID:-}
+      AIOPS_DIAGNOSIS_GRANT_PREVIOUS_PUBLIC_KEY_FILE: ${AIOPS_TASK_GRANT_PREVIOUS_PUBLIC_KEY_FILE:-}
       AIOPS_DIAGNOSIS_GRANT_PRIVATE_KEY_FILE: /run/secrets/task_grant_private_key
       AIOPS_DIAGNOSIS_GRANT_TTL_SECONDS: 300
       AIOPS_EXECUTION_GRANT_ISSUER: aegisops-app
       AIOPS_EXECUTION_GRANT_AUDIENCE: aiops-runner
       AIOPS_EXECUTION_GRANT_SCOPE: runbook:execute
-      AIOPS_EXECUTION_GRANT_KEY_ID: task-grant-v1
+      AIOPS_EXECUTION_GRANT_KEY_ID: ${AIOPS_TASK_GRANT_KEY_ID:-task-grant-v1}
       AIOPS_EXECUTION_GRANT_PRIVATE_KEY_FILE: /run/secrets/task_grant_private_key
       AIOPS_OBJECT_STORAGE_ENABLED: ${AIOPS_OBJECT_STORAGE_ENABLED:-false}
       AIOPS_EVIDENCE_VICTORIA_ENABLED: ${AIOPS_EVIDENCE_VICTORIA_ENABLED:-false}
@@ -86,6 +88,7 @@ services:
       - agent_ca_cert
       - task_grant_private_key
       - task_grant_public_key
+      - task_grant_previous_public_key
     ports:
       - "${AIOPS_APP_PORT:-8080}:8080"
     expose:
@@ -125,13 +128,16 @@ services:
       AIOPS_AGENT_TLS_CLIENT_CA_FILE: /run/secrets/control_plane_ca_cert
       AIOPS_AGENT_DIAGNOSIS_GRANT_ISSUER: aegisops-app
       AIOPS_AGENT_DIAGNOSIS_GRANT_AUDIENCE: aiops-agent-api
-      AIOPS_AGENT_DIAGNOSIS_GRANT_KEY_ID: task-grant-v1
+      AIOPS_AGENT_DIAGNOSIS_GRANT_KEY_ID: ${AIOPS_TASK_GRANT_KEY_ID:-task-grant-v1}
       AIOPS_AGENT_DIAGNOSIS_GRANT_PUBLIC_KEY_FILE: /run/secrets/task_grant_public_key
+      AIOPS_AGENT_DIAGNOSIS_GRANT_PREVIOUS_KEY_ID: ${AIOPS_TASK_GRANT_PREVIOUS_KEY_ID:-}
+      AIOPS_AGENT_DIAGNOSIS_GRANT_PREVIOUS_PUBLIC_KEY_FILE: ${AIOPS_TASK_GRANT_PREVIOUS_PUBLIC_KEY_FILE:-}
     secrets:
       - agent_tls_cert
       - agent_tls_key
       - control_plane_ca_cert
       - task_grant_public_key
+      - task_grant_previous_public_key
     expose:
       - 9008
     depends_on:
@@ -202,14 +208,17 @@ services:
       AIOPS_RUNNER_EXECUTION_GRANT_ISSUER: aegisops-app
       AIOPS_RUNNER_EXECUTION_GRANT_AUDIENCE: aiops-runner
       AIOPS_RUNNER_EXECUTION_GRANT_SCOPE: runbook:execute
-      AIOPS_RUNNER_EXECUTION_GRANT_CURRENT_KEY_ID: task-grant-v1
+      AIOPS_RUNNER_EXECUTION_GRANT_CURRENT_KEY_ID: ${AIOPS_TASK_GRANT_KEY_ID:-task-grant-v1}
       AIOPS_RUNNER_EXECUTION_GRANT_CURRENT_PUBLIC_KEY_FILE: /run/secrets/task_grant_public_key
+      AIOPS_RUNNER_EXECUTION_GRANT_PREVIOUS_KEY_ID: ${AIOPS_TASK_GRANT_PREVIOUS_KEY_ID:-}
+      AIOPS_RUNNER_EXECUTION_GRANT_PREVIOUS_PUBLIC_KEY_FILE: ${AIOPS_TASK_GRANT_PREVIOUS_PUBLIC_KEY_FILE:-}
       SPRING_FLYWAY_ENABLED: "false"
       SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: ${AIOPS_RUNNER_DB_POOL_MAX:-4}
       SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE: ${AIOPS_RUNNER_DB_POOL_MIN_IDLE:-1}
     secrets:
       - runner_db_password
       - task_grant_public_key
+      - task_grant_previous_public_key
     depends_on:
       postgres:
         condition: service_healthy
@@ -237,6 +246,7 @@ networks:
 
 volumes:
   core_postgres_data:
+    name: ${AIOPS_POSTGRES_VOLUME_NAME:-aegisops_postgres_data}
 
 secrets:
   postgres_admin_password:
@@ -261,3 +271,5 @@ secrets:
     file: ${AIOPS_SECRETS_DIR:-./runtime/secrets}/grant-private.pem
   task_grant_public_key:
     file: ${AIOPS_SECRETS_DIR:-./runtime/secrets}/grant-public.pem
+  task_grant_previous_public_key:
+    file: ${AIOPS_SECRETS_DIR:-./runtime/secrets}/grant-previous-public.pem

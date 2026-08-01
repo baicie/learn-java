@@ -11,6 +11,25 @@ ENV_FILE="$RUNTIME_DIR/.env"
 VERSION="${VERSION:-0.1.0}"
 REGISTRY="${REGISTRY:-aegisops}"
 ACTION="${1:-up}"
+DEPLOY_MODE="${AIOPS_DEPLOY_MODE:-diagnostic}"
+
+case "$DEPLOY_MODE" in
+  core|diagnostic|automation) ;;
+  *)
+    echo "Unsupported AIOPS_DEPLOY_MODE: $DEPLOY_MODE" >&2
+    exit 2
+    ;;
+esac
+
+compose_profiles=()
+case "$DEPLOY_MODE" in
+  diagnostic)
+    compose_profiles+=(--profile ai)
+    ;;
+  automation)
+    compose_profiles+=(--profile ai --profile automation)
+    ;;
+esac
 
 export AIOPS_APP_IMAGE="${AIOPS_APP_IMAGE:-${REGISTRY}/aegisops-app:${VERSION}}"
 export AIOPS_AGENT_IMAGE="${AIOPS_AGENT_IMAGE:-${REGISTRY}/aiops-agent:${VERSION}}"
@@ -20,8 +39,7 @@ compose() {
   docker compose \
     --env-file "$ENV_FILE" \
     -f "$COMPOSE_FILE" \
-    --profile ai \
-    --profile automation \
+    "${compose_profiles[@]}" \
     "$@"
 }
 
@@ -34,7 +52,7 @@ require_runtime() {
 
 case "$ACTION" in
   up)
-    exec bash "$INSTALL_SCRIPT" --mode automation --runtime-dir "$RUNTIME_DIR"
+    exec bash "$INSTALL_SCRIPT" --mode "$DEPLOY_MODE" --runtime-dir "$RUNTIME_DIR"
     ;;
   down)
     require_runtime

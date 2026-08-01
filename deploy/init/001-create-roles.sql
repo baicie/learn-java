@@ -1,6 +1,19 @@
 \set ON_ERROR_STOP on
 
 select format(
+  'create role aegisops_admin login superuser createdb createrole inherit noreplication password %L',
+  :'admin_password'
+)
+where not exists (select 1 from pg_roles where rolname = 'aegisops_admin')
+\gexec
+
+select format(
+  'alter role aegisops_admin with login superuser createdb createrole inherit noreplication password %L',
+  :'admin_password'
+)
+\gexec
+
+select format(
   'create role aegisops_app login nosuperuser nocreatedb nocreaterole noinherit noreplication password %L',
   :'app_password'
 )

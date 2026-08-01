@@ -2,8 +2,9 @@
 set -Eeuo pipefail
 
 OUT="${1:-deploy/generated-secrets.values.yaml}"
-APP_DNS_NAME="${AIOPS_APP_DNS_NAME:-aegisops-app}"
-AGENT_DNS_NAME="${AIOPS_AGENT_DNS_NAME:-aegisops-agent}"
+HELM_FULLNAME="${AIOPS_HELM_FULLNAME:-aegisops}"
+APP_DNS_NAME="${AIOPS_APP_DNS_NAME:-${HELM_FULLNAME}-app}"
+AGENT_DNS_NAME="${AIOPS_AGENT_DNS_NAME:-${HELM_FULLNAME}-agent}"
 
 umask 077
 mkdir -p "$(dirname "$OUT")"
@@ -104,6 +105,7 @@ openssl genpkey -algorithm ED25519 -out "$WORK_DIR/grant-private.pem"
 openssl pkey -in "$WORK_DIR/grant-private.pem" -pubout -out "$WORK_DIR/grant-public.pem"
 
 {
+  echo "fullnameOverride: \"$HELM_FULLNAME\""
   echo "security:"
   echo "  jwtSecret: \"$(gen_secret)\""
   echo "  zabbixWebhookSigningSecret: \"$(gen_secret)\""
