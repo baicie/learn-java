@@ -4,8 +4,8 @@ type: operation
 status: accepted
 phase: global
 owner: script
-created: 2026-07-31
-updated: 2026-07-31
+created: 2026-08-01
+updated: 2026-08-01
 related: []
 ---
 
@@ -45,6 +45,7 @@ Do not edit it manually.
 | 统一 aiops-agent 运行端口                                      | accepted | global      | 2026-07-29 | [docs/adr/0008-standardize-aiops-agent-port.md](adr/0008-standardize-aiops-agent-port.md)                         |
 | Java 与 aiops-agent 服务间鉴权                                 | accepted | phase-8     | 2026-07-30 | [docs/adr/0009-service-to-service-authentication.md](adr/0009-service-to-service-authentication.md)               |
 | 服务间鉴权统一为 OAuth2                                        | accepted | phase-8     | 2026-07-30 | [docs/adr/0010-service-authentication-oauth2-only.md](adr/0010-service-authentication-oauth2-only.md)             |
+| 默认采用 Core 最小部署                                         | accepted | phase-8     | 2026-08-01 | [docs/adr/0011-default-core-deployment.md](adr/0011-default-core-deployment.md)                                   |
 
 ## ai
 
@@ -96,6 +97,7 @@ Do not edit it manually.
 | Portal shadcn/ui 使用审计实施计划                                | accepted   | phase-21       | 2026-07-19 | [docs/designs/phase-21/2026-07-19-portal-shadcn-usage-audit-plan.md](designs/phase-21/2026-07-19-portal-shadcn-usage-audit-plan.md)                                                     |
 | Portal 顶部页面页签布局实现计划                                  | accepted   | phase-21       | 2026-07-19 | [docs/designs/phase-21/2026-07-19-portal-top-page-tabs.md](designs/phase-21/2026-07-19-portal-top-page-tabs.md)                                                                         |
 | DeepSeek 模型管理页面设计                                        | accepted   | phase-4        | 2026-07-18 | [docs/designs/phase-4/2026-07-18-deepseek-model-management.md](designs/phase-4/2026-07-18-deepseek-model-management.md)                                                                 |
+| Core 与可选能力部署模式                                          | accepted   | phase-8        | 2026-08-01 | [docs/designs/phase-8/2026-08-01-core-deployment-profiles.md](designs/phase-8/2026-08-01-core-deployment-profiles.md)                                                                   |
 | Phase2：Incident 聚合与事故中心                                  | accepted   | global         | 2026-06-30 | [docs/mvp/design/phase2.md](mvp/design/phase2.md)                                                                                                                                       |
 | Phase3：RCA 规则引擎与证据链                                     | accepted   | global         | 2026-06-30 | [docs/mvp/design/phase3.md](mvp/design/phase3.md)                                                                                                                                       |
 | Phase4.5：jOOQ 持久层改造                                        | accepted   | global         | 2026-06-30 | [docs/mvp/design/phase4.5.md](mvp/design/phase4.5.md)                                                                                                                                   |

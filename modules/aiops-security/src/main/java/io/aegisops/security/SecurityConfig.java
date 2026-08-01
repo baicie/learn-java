@@ -3,6 +3,7 @@ package io.aegisops.security;
 import io.aegisops.common.exception.ErrorCode;
 import io.aegisops.user.UserService;
 import java.util.List;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -33,7 +34,7 @@ public class SecurityConfig {
     JwtAuthenticationFilter jwtAuthenticationFilter =
         new JwtAuthenticationFilter(tokenService, userService, principalFactory);
 
-    return http.csrf(AbstractHttpConfigurer::disable)
+    http.csrf(AbstractHttpConfigurer::disable)
         .cors(cors -> {})
         .sessionManagement(
             session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -73,12 +74,15 @@ public class SecurityConfig {
                                 ErrorCode.FORBIDDEN.httpStatus(),
                                 ErrorCode.FORBIDDEN.name(),
                                 "access denied")))
-        .addFilterBefore(
-            filters.internalAgentAuthFilter, UsernamePasswordAuthenticationFilter.class)
         .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
         .addFilterAfter(filters.tenantRequiredFilter, JwtAuthenticationFilter.class)
-        .addFilterAfter(filters.tenantRateLimitFilter, TenantRequiredFilter.class)
-        .build();
+        .addFilterAfter(filters.tenantRateLimitFilter, TenantRequiredFilter.class);
+
+    if (filters.internalAgentAuthFilter != null) {
+      http.addFilterBefore(
+          filters.internalAgentAuthFilter, UsernamePasswordAuthenticationFilter.class);
+    }
+    return http.build();
   }
 
   public record SecurityFilters(
@@ -88,11 +92,11 @@ public class SecurityConfig {
 
   @Bean
   public SecurityFilters securityFilters(
-      InternalAgentAuthFilter internalAgentAuthFilter,
+      ObjectProvider<InternalAgentAuthFilter> internalAgentAuthFilter,
       TenantRequiredFilter tenantRequiredFilter,
       TenantRateLimitFilter tenantRateLimitFilter) {
     return new SecurityFilters(
-        internalAgentAuthFilter, tenantRequiredFilter, tenantRateLimitFilter);
+        internalAgentAuthFilter.getIfAvailable(), tenantRequiredFilter, tenantRateLimitFilter);
   }
 
   @Bean

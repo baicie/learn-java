@@ -19,6 +19,9 @@ management:
       probes:
         enabled: true
       show-details: when_authorized
+  health:
+    redis:
+      enabled: ${AIOPS_REDIS_HEALTH_ENABLED:false}
   metrics:
     tags:
       application: ${AIOPS_APP_NAME:aiops-worker}
@@ -28,6 +31,8 @@ management:
         enabled: true
 
 aiops:
+  internal-agent-api:
+    enabled: ${AIOPS_INTERNAL_AGENT_API_ENABLED:false}
   security:
     internal-agent-jwt-issuer-uri: ${AIOPS_INTERNAL_AGENT_JWT_ISSUER_URI:http://localhost:8089/realms/aegisops}
     internal-agent-jwt-jwk-set-uri: ${AIOPS_INTERNAL_AGENT_JWT_JWK_SET_URI:http://localhost:8089/realms/aegisops/protocol/openid-connect/certs}
@@ -42,6 +47,7 @@ aiops:
     app: worker
     phase: ${AIOPS_RUNTIME_PHASE:phase5}
   agent:
+    enabled: ${AIOPS_AGENT_ENABLED:false}
     base-url: ${AIOPS_AGENT_BASE_URL:http://localhost:9008}
     connect-timeout-millis: ${AIOPS_AGENT_CONNECT_TIMEOUT:3000}
     read-timeout-millis: ${AIOPS_AGENT_READ_TIMEOUT:90000}
@@ -56,6 +62,7 @@ aiops:
       secret: ${AIOPS_DIAGNOSIS_GRANT_SECRET:dev-diagnosis-grant-secret-change-me}
       ttl-seconds: ${AIOPS_DIAGNOSIS_GRANT_TTL_SECONDS:300}
   object-storage:
+    enabled: ${AIOPS_OBJECT_STORAGE_ENABLED:false}
     endpoint: ${AIOPS_MINIO_ENDPOINT:http://localhost:9002}
     access-key: ${AIOPS_MINIO_ACCESS_KEY:minioadmin}
     secret-key: ${AIOPS_MINIO_SECRET_KEY:minioadmin}

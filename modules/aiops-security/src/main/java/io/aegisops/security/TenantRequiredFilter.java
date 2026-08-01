@@ -38,7 +38,9 @@ public class TenantRequiredFilter extends OncePerRequestFilter {
         || path.startsWith("/v3/api-docs")
         || path.startsWith("/error")
         || path.startsWith("/api/auth/")
-        || path.startsWith("/api/integrations/zabbix/");
+        || path.startsWith("/api/integrations/zabbix/")
+        || path.equals("/internal/agent")
+        || path.startsWith("/internal/agent/");
   }
 
   @Override

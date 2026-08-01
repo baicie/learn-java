@@ -4,6 +4,7 @@ import io.aegisops.common.security.DiagnosisGrantAuthorization;
 import io.aegisops.common.security.DiagnosisGrantClaims;
 import io.aegisops.evidence.dto.EvidenceQueryRequest;
 import io.aegisops.evidence.dto.EvidenceQueryResponse;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/internal/agent/evidence")
+@ConditionalOnProperty(prefix = "aiops.internal-agent-api", name = "enabled", havingValue = "true")
 public class AgentEvidenceInternalController {
   private final AgentEvidenceService service;
 

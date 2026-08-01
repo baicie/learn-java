@@ -5,6 +5,7 @@ import io.aegisops.ai.client.dto.AgentDiagnosisRequest;
 import io.aegisops.ai.client.dto.AgentDiagnosisResponse;
 import io.aegisops.common.exception.AppException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -16,6 +17,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
 @Component
+@ConditionalOnProperty(prefix = "aiops.agent", name = "enabled", havingValue = "true")
 @EnableConfigurationProperties(AgentClientProperties.class)
 public class HttpAiAgentClient implements AiAgentClient {
   private final AgentClientProperties properties;

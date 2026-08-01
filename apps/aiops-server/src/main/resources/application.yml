@@ -30,6 +30,9 @@ management:
       probes:
         enabled: true
       show-details: when_authorized
+  health:
+    redis:
+      enabled: ${AIOPS_REDIS_HEALTH_ENABLED:false}
   metrics:
     tags:
       application: ${AIOPS_APP_NAME:aiops-server}
@@ -69,6 +72,7 @@ aiops:
     rate-limit-enabled: true
     backend: ${AIOPS_QUOTA_BACKEND:memory}
   agent:
+    enabled: ${AIOPS_AGENT_ENABLED:false}
     base-url: ${AIOPS_AGENT_BASE_URL:http://localhost:9008}
     connect-timeout-millis: ${AIOPS_AGENT_CONNECT_TIMEOUT:3000}
     read-timeout-millis: ${AIOPS_AGENT_READ_TIMEOUT:30000}
@@ -88,6 +92,8 @@ aiops:
       max-changes: ${AIOPS_AGENT_EVIDENCE_MAX_CHANGES:20}
   ai:
     model-secret: ${AIOPS_JWT_SECRET:dev-secret-change-me-change-me-change-me}
+  internal-agent-api:
+    enabled: ${AIOPS_INTERNAL_AGENT_API_ENABLED:false}
   evidence:
     victoria:
       enabled: ${AIOPS_EVIDENCE_VICTORIA_ENABLED:false}
@@ -102,6 +108,7 @@ aiops:
     export:
       max-rows: ${AIOPS_WORK_RECORD_EXPORT_MAX_ROWS:5000}
   object-storage:
+    enabled: ${AIOPS_OBJECT_STORAGE_ENABLED:false}
     endpoint: ${AIOPS_MINIO_ENDPOINT:http://localhost:9002}
     access-key: ${AIOPS_MINIO_ACCESS_KEY:minioadmin}
     secret-key: ${AIOPS_MINIO_SECRET_KEY:minioadmin}

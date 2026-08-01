@@ -5,12 +5,14 @@ import io.aegisops.common.security.DiagnosisGrantAuthorization;
 import io.aegisops.common.security.DiagnosisGrantClaims;
 import io.aegisops.plugin.dto.AgentToolAuthorizeRequest;
 import io.aegisops.plugin.dto.AgentToolAuthorizeResponse;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@ConditionalOnProperty(prefix = "aiops.internal-agent-api", name = "enabled", havingValue = "true")
 public class InternalAgentPluginController {
   private final PluginService service;
 

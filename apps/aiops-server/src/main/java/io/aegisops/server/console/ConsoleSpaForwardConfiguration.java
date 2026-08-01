@@ -20,7 +20,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
  * precedence to run after the Spring Security chain and other application filters.
  *
  * <p>The forward is only triggered when {@code classpath:/static/index.html} exists, which means
- * the console dist was bundled into the jar via the {@code with-console} Maven profile. In plain
+ * the Portal dist was bundled into the jar via the {@code with-portal} Maven profile. In plain
  * backend builds the filter is a no-op.
  */
 @Configuration

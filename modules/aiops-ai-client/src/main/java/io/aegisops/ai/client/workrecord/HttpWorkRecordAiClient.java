@@ -4,6 +4,8 @@ import io.aegisops.ai.client.AgentClientProperties;
 import io.aegisops.ai.client.AgentContract;
 import io.aegisops.ai.client.AgentCredentialProvider;
 import io.aegisops.common.exception.AppException;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
@@ -11,6 +13,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
 @Component
+@ConditionalOnProperty(prefix = "aiops.agent", name = "enabled", havingValue = "true")
+@EnableConfigurationProperties(AgentClientProperties.class)
 public class HttpWorkRecordAiClient implements WorkRecordAiClient {
   private final AgentClientProperties properties;
   private final RestClient restClient;

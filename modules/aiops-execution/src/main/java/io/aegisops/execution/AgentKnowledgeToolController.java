@@ -8,6 +8,7 @@ import io.aegisops.execution.dto.AgentSearchCasesRequest;
 import io.aegisops.execution.dto.KnowledgeBaseSearchRequest;
 import io.aegisops.execution.dto.KnowledgeBaseSearchResponse;
 import java.util.List;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -21,6 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
  * <p>Tenant boundary is bound to the verified Diagnosis Grant.
  */
 @RestController
+@ConditionalOnProperty(prefix = "aiops.internal-agent-api", name = "enabled", havingValue = "true")
 public class AgentKnowledgeToolController {
   private final KnowledgeBaseSearchService searchService;
 

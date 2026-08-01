@@ -65,6 +65,14 @@ spec:
             - name: AIOPS_APP_NAME
               value: {{ $appName | quote }}
             {{- if eq $appName "server" }}
+            - name: AIOPS_AGENT_ENABLED
+              value: {{ $root.Values.apps.agent.enabled | quote }}
+            - name: AIOPS_INTERNAL_AGENT_API_ENABLED
+              value: {{ $root.Values.apps.agent.enabled | quote }}
+            - name: AIOPS_OBJECT_STORAGE_ENABLED
+              value: "true"
+            - name: AIOPS_REDIS_HEALTH_ENABLED
+              value: "true"
             - name: AIOPS_INTERNAL_AGENT_JWT_ISSUER_URI
               value: {{ required "security.serviceAuth.issuerUri is required" $auth.issuerUri | quote }}
             - name: AIOPS_INTERNAL_AGENT_JWT_JWK_SET_URI
@@ -90,6 +98,14 @@ spec:
                   key: AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN
             {{- end }}
             {{- if eq $appName "worker" }}
+            - name: AIOPS_AGENT_ENABLED
+              value: {{ $root.Values.apps.agent.enabled | quote }}
+            - name: AIOPS_INTERNAL_AGENT_API_ENABLED
+              value: "false"
+            - name: AIOPS_OBJECT_STORAGE_ENABLED
+              value: "true"
+            - name: AIOPS_REDIS_HEALTH_ENABLED
+              value: "true"
             - name: AIOPS_INTERNAL_AGENT_JWT_ISSUER_URI
               value: {{ required "security.serviceAuth.issuerUri is required" $auth.issuerUri | quote }}
             - name: AIOPS_INTERNAL_AGENT_JWT_JWK_SET_URI

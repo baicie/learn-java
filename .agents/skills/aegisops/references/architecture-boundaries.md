@@ -23,6 +23,7 @@
     - SKILL.md §3.1
     - references/architecture-boundaries.md §1
     - infra/docker-compose.yml
+    - deploy/docker-compose.core.yml
     - deploy/helm/aegisops/values.yaml
     - docs/api/ 与前端代理配置
 ```
@@ -162,6 +163,34 @@ Kubernetes 中四个组件使用独立 ServiceAccount 和 Secret，并以 Networ
 方向；启用 Istio 时使用 STRICT mTLS 和 AuthorizationPolicy。服务间鉴权只支持 OAuth2
 Client Credentials，不保留静态 Token 兼容模式。完整决策见
 `docs/adr/0010-service-authentication-oauth2-only.md`。
+
+### 2.6 默认部署档位
+
+部署默认值不等于完整产品能力。最小 Core 拓扑固定为：
+
+```txt
+aiops-server（内嵌 Portal）
+aiops-worker
+PostgreSQL
+```
+
+以下能力必须显式启用，不得成为 Core 强依赖：
+
+```txt
+AI:             aiops-agent + Keycloak/企业 IdP
+Automation:     aiops-runner
+Demo Zabbix:    Zabbix Server/Web/PostgreSQL/Agent2
+Observability:  VictoriaMetrics
+Object Storage: MinIO
+Shared Cache:   Redis
+```
+
+Java 与 Agent 的 OAuth2-only 和 Diagnosis Grant 规则不变，但只在 AI 档启用。Agent 关闭时
+不得创建 Agent HTTP Client、OAuth2 Client Credentials 或 JWKS Decoder，也不得注册
+`/internal/agent/**`。Runner 关闭时只是不启动执行进程，严禁把执行能力合并进 Server。
+
+Compose 契约与开关见 `deploy/docker-compose.core.yml` 和
+`docs/designs/phase-8/2026-08-01-core-deployment-profiles.md`。
 
 ## 3. 模块四分类
 

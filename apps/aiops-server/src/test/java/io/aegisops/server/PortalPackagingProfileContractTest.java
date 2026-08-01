@@ -9,15 +9,15 @@ import org.junit.jupiter.api.Test;
 class PortalPackagingProfileContractTest {
 
   @Test
-  void serverPomShouldKeepPortalAndConsolePackagingProfiles() throws Exception {
+  void serverPomShouldPackageOnlyPortal() throws Exception {
     String pom = Files.readString(Path.of("pom.xml"));
 
     assertThat(pom).contains("<id>with-portal</id>");
-    assertThat(pom).contains("<id>with-console</id>");
     assertThat(pom).contains("web/portal/dist");
-    assertThat(pom).contains("web/console/dist");
     assertThat(pom).contains("<id>run-portal-pom</id>");
-    assertThat(pom).contains("<id>run-console-pom</id>");
+    assertThat(pom).doesNotContain("<id>with-console</id>");
+    assertThat(pom).doesNotContain("web/console/dist");
+    assertThat(pom).doesNotContain("<id>run-console-pom</id>");
   }
 
   @Test
