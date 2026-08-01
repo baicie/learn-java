@@ -19,6 +19,9 @@ class Settings(BaseSettings):
     tls_certificate_file: str = ""
     tls_private_key_file: str = ""
     tls_client_ca_file: str = ""
+    tls_expected_client_spiffe_uri: str = (
+        "spiffe://aegisops.local/service/aegisops-app"
+    )
 
     provider: str = "aiops-agent"
     model: str = "langgraph-deterministic"
