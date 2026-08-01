@@ -5,7 +5,9 @@ from typing import Any, Protocol
 import httpx
 from pydantic import BaseModel, Field
 
+from aiops_agent.observability.context import get_diagnosis_grant
 from aiops_agent.schemas import DiagnoseRequest
+from aiops_agent.service_credentials import synchronous_service_credential_headers
 from aiops_agent.settings import Settings
 
 
@@ -59,15 +61,25 @@ class HttpEvidenceClient:
         payload = build_evidence_query_payload(request)
 
         try:
-            response = httpx.post(
-                f"{base_url}/query",
-                headers={
-                    "Content-Type": "application/json",
-                    "X-AegisOps-Internal-Token": self.settings.evidence_internal_token,
-                },
-                json=payload,
+            headers = {
+                "Content-Type": "application/json",
+                "X-Tenant-Id": request.tenantId,
+            }
+            headers.update(synchronous_service_credential_headers(self.settings))
+            diagnosis_grant = get_diagnosis_grant()
+            if diagnosis_grant is None or not diagnosis_grant.strip():
+                raise ValueError("diagnosis grant is required for evidence query")
+            headers["X-AegisOps-Diagnosis-Grant"] = diagnosis_grant
+
+            with httpx.Client(
                 timeout=self.settings.evidence_timeout_seconds,
-            )
+                trust_env=False,
+            ) as client:
+                response = client.post(
+                    f"{base_url}/query",
+                    headers=headers,
+                    json=payload,
+                )
             response.raise_for_status()
             data = response.json()
 

@@ -22,21 +22,37 @@ public class HttpAiAgentClient implements AiAgentClient {
   private final ObjectMapper objectMapper;
   private final RestTemplate restTemplate;
   private final AgentContractValidator contractValidator;
+  private final AgentCredentialProvider credentialProvider;
+  private final DiagnosisGrantProvider diagnosisGrantProvider;
 
   @Autowired
-  public HttpAiAgentClient(AgentClientProperties properties, ObjectMapper objectMapper) {
-    this(properties, objectMapper, createRestTemplate(properties), new AgentContractValidator());
+  public HttpAiAgentClient(
+      AgentClientProperties properties,
+      ObjectMapper objectMapper,
+      AgentCredentialProvider credentialProvider,
+      DiagnosisGrantProvider diagnosisGrantProvider) {
+    this(
+        properties,
+        objectMapper,
+        createRestTemplate(properties),
+        new AgentContractValidator(),
+        credentialProvider,
+        diagnosisGrantProvider);
   }
 
   HttpAiAgentClient(
       AgentClientProperties properties,
       ObjectMapper objectMapper,
       RestTemplate restTemplate,
-      AgentContractValidator contractValidator) {
+      AgentContractValidator contractValidator,
+      AgentCredentialProvider credentialProvider,
+      DiagnosisGrantProvider diagnosisGrantProvider) {
     this.properties = properties;
     this.objectMapper = objectMapper;
     this.restTemplate = restTemplate;
     this.contractValidator = contractValidator;
+    this.credentialProvider = credentialProvider;
+    this.diagnosisGrantProvider = diagnosisGrantProvider;
   }
 
   @Override
@@ -46,9 +62,10 @@ public class HttpAiAgentClient implements AiAgentClient {
 
       HttpHeaders headers = new HttpHeaders();
       headers.setContentType(MediaType.APPLICATION_JSON);
-      headers.set(AgentContract.INTERNAL_TOKEN_HEADER, properties.normalizedInternalToken());
+      credentialProvider.apply(headers);
       headers.set(AgentContract.TRACE_ID_HEADER, request.traceId());
       headers.set(AgentContract.CONTRACT_VERSION_HEADER, AgentContract.DIAGNOSIS_CONTRACT_VERSION);
+      headers.set(AgentContract.DIAGNOSIS_GRANT_HEADER, diagnosisGrantProvider.issue(request));
 
       HttpEntity<String> entity =
           new HttpEntity<>(objectMapper.writeValueAsString(request), headers);

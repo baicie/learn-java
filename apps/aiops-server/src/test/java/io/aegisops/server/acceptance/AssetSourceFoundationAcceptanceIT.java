@@ -32,7 +32,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 @SpringBootTest(classes = AiOpsServerApplication.class)
 @ActiveProfiles("acceptance")
-@Testcontainers
+@Testcontainers(disabledWithoutDocker = true)
 class AssetSourceFoundationAcceptanceIT {
 
   private static final String TENANT_A = "tenant_asset_acceptance_a";

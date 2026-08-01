@@ -1,0 +1,180 @@
+{
+  "realm": "aegisops",
+  "enabled": true,
+  "sslRequired": "none",
+  "displayName": "AegisOps Service Identity",
+  "accessTokenLifespan": 300,
+  "ssoSessionIdleTimeout": 1800,
+  "ssoSessionMaxLifespan": 36000,
+  "clientScopes": [
+    {
+      "name": "agent:diagnose",
+      "protocol": "openid-connect",
+      "attributes": {
+        "display.on.consent.screen": "false",
+        "include.in.token.scope": "true"
+      }
+    },
+    {
+      "name": "agent:resume",
+      "protocol": "openid-connect",
+      "attributes": {
+        "display.on.consent.screen": "false",
+        "include.in.token.scope": "true"
+      }
+    },
+    {
+      "name": "agent:work-record",
+      "protocol": "openid-connect",
+      "attributes": {
+        "display.on.consent.screen": "false",
+        "include.in.token.scope": "true"
+      }
+    },
+    {
+      "name": "evidence:read",
+      "protocol": "openid-connect",
+      "attributes": {
+        "display.on.consent.screen": "false",
+        "include.in.token.scope": "true"
+      }
+    },
+    {
+      "name": "cases:read",
+      "protocol": "openid-connect",
+      "attributes": {
+        "display.on.consent.screen": "false",
+        "include.in.token.scope": "true"
+      }
+    },
+    {
+      "name": "plugin:authorize",
+      "protocol": "openid-connect",
+      "attributes": {
+        "display.on.consent.screen": "false",
+        "include.in.token.scope": "true"
+      }
+    },
+    {
+      "name": "memory:read",
+      "protocol": "openid-connect",
+      "attributes": {
+        "display.on.consent.screen": "false",
+        "include.in.token.scope": "true"
+      }
+    },
+    {
+      "name": "memory:write",
+      "protocol": "openid-connect",
+      "attributes": {
+        "display.on.consent.screen": "false",
+        "include.in.token.scope": "true"
+      }
+    },
+    {
+      "name": "checkpoint:read",
+      "protocol": "openid-connect",
+      "attributes": {
+        "display.on.consent.screen": "false",
+        "include.in.token.scope": "true"
+      }
+    },
+    {
+      "name": "checkpoint:write",
+      "protocol": "openid-connect",
+      "attributes": {
+        "display.on.consent.screen": "false",
+        "include.in.token.scope": "true"
+      }
+    }
+  ],
+  "clients": [
+    {
+      "clientId": "aiops-server",
+      "name": "AegisOps Server",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "${AIOPS_SERVER_OAUTH2_CLIENT_SECRET}",
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "publicClient": false,
+      "optionalClientScopes": [
+        "agent:diagnose",
+        "agent:resume",
+        "agent:work-record"
+      ],
+      "protocolMappers": [
+        {
+          "name": "aiops-agent-api-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.custom.audience": "aiops-agent-api",
+            "access.token.claim": "true",
+            "id.token.claim": "false"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "aiops-worker",
+      "name": "AegisOps Worker",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "${AIOPS_WORKER_OAUTH2_CLIENT_SECRET}",
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "publicClient": false,
+      "optionalClientScopes": ["agent:diagnose", "agent:work-record"],
+      "protocolMappers": [
+        {
+          "name": "aiops-agent-api-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.custom.audience": "aiops-agent-api",
+            "access.token.claim": "true",
+            "id.token.claim": "false"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "aiops-agent",
+      "name": "AegisOps Agent",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "${AIOPS_AGENT_OAUTH2_CLIENT_SECRET}",
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "publicClient": false,
+      "optionalClientScopes": [
+        "evidence:read",
+        "cases:read",
+        "plugin:authorize",
+        "memory:read",
+        "memory:write",
+        "checkpoint:read",
+        "checkpoint:write"
+      ],
+      "protocolMappers": [
+        {
+          "name": "aegisops-internal-api-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.custom.audience": "aegisops-internal-api",
+            "access.token.claim": "true",
+            "id.token.claim": "false"
+          }
+        }
+      ]
+    }
+  ]
+}

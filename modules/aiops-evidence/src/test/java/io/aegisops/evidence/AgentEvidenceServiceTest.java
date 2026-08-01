@@ -20,7 +20,7 @@ import org.junit.jupiter.api.Test;
 class AgentEvidenceServiceTest {
   @Test
   void queryNormalizesWindowAndReturnsEvidence() {
-    AgentEvidenceProperties properties = new AgentEvidenceProperties("token", 60, 10, 10);
+    AgentEvidenceProperties properties = new AgentEvidenceProperties(60, 10, 10);
 
     AgentEvidenceService service =
         new AgentEvidenceService(
@@ -54,7 +54,7 @@ class AgentEvidenceServiceTest {
 
   @Test
   void queryKeepsMetricsWhenLogsAndChangesFail() {
-    AgentEvidenceProperties properties = new AgentEvidenceProperties("token", 60, 10, 10);
+    AgentEvidenceProperties properties = new AgentEvidenceProperties(60, 10, 10);
 
     AgentEvidenceService service =
         new AgentEvidenceService(
@@ -89,7 +89,7 @@ class AgentEvidenceServiceTest {
 
   @Test
   void queryKeepsLogsAndChangesWhenMetricsFail() {
-    AgentEvidenceProperties properties = new AgentEvidenceProperties("token", 60, 10, 10);
+    AgentEvidenceProperties properties = new AgentEvidenceProperties(60, 10, 10);
 
     AgentEvidenceService service =
         new AgentEvidenceService(

@@ -1,19 +1,24 @@
 ---
-title: Production Security Checklist
-type: design
+title: 生产安全检查清单
+type: operation
 status: accepted
 phase: global
 owner: ai
 created: 2026-06-30
-updated: 2026-06-30
-related: []
+updated: 2026-07-30
+related:
+  - docs/adr/0010-service-authentication-oauth2-only.md
+  - docs/api/internal-service-authentication.md
 ---
-# Production Security Checklist
+
+# 生产安全检查清单
 
 ## 必须修改
 
-- [ ] security.internalAgentToken
 - [ ] security.jwtSecret
+- [ ] security.diagnosisGrantSecret（至少 32 字节）
+- [ ] security.serviceAuth.issuerUri / jwkSetUri / tokenUri
+- [ ] server / worker / agent 使用不同 OAuth2 client secret
 - [ ] external.postgres.password
 - [ ] external.redis.password
 - [ ] external.clickhouse.password
@@ -23,6 +28,12 @@ related: []
 ## Kubernetes
 
 - [ ] 开启 NetworkPolicy
+- [ ] 出站 `allowedCidrs` 仅包含 IdP 与外部依赖的受限网段，不使用全网 CIDR
+- [ ] server / worker / runner / agent 使用独立 ServiceAccount
+- [ ] server / worker / agent 使用独立认证 Secret
+- [ ] Agent 不接收数据库 Secret 与 Diagnosis Grant 签名密钥
+- [ ] Runner 不接收 Agent 服务凭据
+- [ ] 使用 Service Mesh 时开启 STRICT mTLS 与 AuthorizationPolicy
 - [ ] 开启 Ingress TLS
 - [ ] 使用私有镜像仓库
 - [ ] 禁止使用 latest tag
@@ -32,7 +43,10 @@ related: []
 
 ## AegisOps
 
-- [ ] internal agent token required
+- [ ] 服务间鉴权只使用 OAuth2 Client Credentials，不存在静态 Token 兼容模式
+- [ ] 服务 JWT 校验 issuer、audience、subject、expiry 与 endpoint scope
+- [ ] Diagnosis Grant required，TTL 不超过 300 秒
+- [ ] 内部租户上下文只从有效 Diagnosis Grant 恢复
 - [ ] tenant required
 - [ ] public API rate limit enabled
 - [ ] internal agent rate limit enabled

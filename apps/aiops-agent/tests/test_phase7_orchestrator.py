@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 import pytest
 
 from aiops_agent.workflow.contracts import (
@@ -24,18 +26,19 @@ from tests.fakes import (
 
 @pytest.mark.asyncio
 async def test_orchestrator_runs_all_graph_modules():
+    evidence_client = FakeEvidenceClient(
+        [
+            EvidenceItem(
+                evidence_id="ev_1",
+                evidence_type="log",
+                title="Redis timeout",
+                summary="redis dependency timeout happened",
+                source="test",
+            )
+        ]
+    )
     context = GraphContext(
-        evidence_client=FakeEvidenceClient(
-            [
-                EvidenceItem(
-                    evidence_id="ev_1",
-                    evidence_type="log",
-                    title="Redis timeout",
-                    summary="redis dependency timeout happened",
-                    source="test",
-                )
-            ]
-        ),
+        evidence_client=evidence_client,
         knowledge_client=FakeKnowledgeClient(
             [
                 SimilarCase(
@@ -55,11 +58,15 @@ async def test_orchestrator_runs_all_graph_modules():
         DiagnosisRequest(
             tenant_id="tenant_1",
             incident_id="inc_1",
+            trace_id="trace_1",
             title="Order service timeout",
             severity="high",
             description="Order service returned 5xx",
             alert_summary="Redis timeout",
             tags=["order-service", "redis"],
+            primary_asset_id="asset_order",
+            started_at=datetime(2026, 7, 31, 4, 0, tzinfo=timezone.utc),
+            last_seen_at=datetime(2026, 7, 31, 4, 5, tzinfo=timezone.utc),
         ),
         context,
     )
@@ -71,6 +78,7 @@ async def test_orchestrator_runs_all_graph_modules():
     assert len(response.evidence) == 1
     assert len(response.similar_cases) == 1
     assert response.metadata["graph_version"] == "phase8.0-saas-tenant-hardening"
+    assert evidence_client.query_context["primary_asset_id"] == "asset_order"
 
 
 @pytest.mark.asyncio
@@ -95,6 +103,7 @@ async def test_orchestrator_without_case_retrieval():
         DiagnosisRequest(
             tenant_id="tenant_1",
             incident_id="inc_1",
+            trace_id="trace_1",
             title="Order service timeout",
             severity="medium",
             enable_case_retrieval=False,
@@ -139,6 +148,7 @@ async def test_orchestrator_runs_multi_agent_collaboration():
         DiagnosisRequest(
             tenant_id="tenant_1",
             incident_id="inc_1",
+            trace_id="trace_1",
             title="Order service timeout",
             severity="high",
             tags=["redis"],
@@ -231,6 +241,7 @@ async def test_orchestrator_retrieves_and_writes_memory():
         DiagnosisRequest(
             tenant_id="tenant_1",
             incident_id="inc_1",
+            trace_id="trace_1",
             title="Order service redis timeout",
             severity="high",
             tags=["redis"],

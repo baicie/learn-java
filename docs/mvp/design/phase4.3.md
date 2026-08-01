@@ -1,15 +1,20 @@
 ---
 title: Phase4.3：Evidence Tools 接入 Metrics / Logs / Changes
 type: design
-status: accepted
+status: deprecated
 phase: global
 owner: ai
 created: 2026-06-30
-updated: 2026-06-30
-related: []
+updated: 2026-07-30
+related:
+  - docs/adr/0010-service-authentication-oauth2-only.md
 ---
 
 # Phase4.3：Evidence Tools 接入 Metrics / Logs / Changes
+
+> 历史设计（已废弃）：本文的 internal Token 配置、Header 和测试示例仅供溯源，不得继续
+> 执行。当前 Agent 到 Java internal API 的鉴权以
+> `docs/adr/0010-service-authentication-oauth2-only.md` 为准。
 
 基于当前 `mvp` 最新实现，Phase4.3 不改 Java → Python 的 `AgentDiagnosisRequest v1` 协议，而是在 **Python LangGraph Agent 内部新增 evidence tool 调用**。
 
@@ -2066,7 +2071,7 @@ class VictoriaMetricsEvidenceClientTest {
 `aiops-agent.environment` 追加：
 
 ```yaml
-AIOPS_AGENT_EVIDENCE_ENABLED: "true"
+AIOPS_AGENT_EVIDENCE_ENABLED: 'true'
 AIOPS_AGENT_EVIDENCE_BASE_URL: http://aiops-server:8080/internal/agent/evidence
 AIOPS_AGENT_EVIDENCE_INTERNAL_TOKEN: dev-internal-token
 AIOPS_AGENT_EVIDENCE_TIMEOUT_SECONDS: 5
@@ -2076,7 +2081,7 @@ AIOPS_AGENT_EVIDENCE_TIMEOUT_SECONDS: 5
 
 ```yaml
 AIOPS_AGENT_EVIDENCE_INTERNAL_TOKEN: dev-internal-token
-AIOPS_EVIDENCE_VICTORIA_ENABLED: "true"
+AIOPS_EVIDENCE_VICTORIA_ENABLED: 'true'
 AIOPS_EVIDENCE_VICTORIA_BASE_URL: http://victoria-metrics:8428
 AIOPS_EVIDENCE_VICTORIA_STEP: 60s
 ```

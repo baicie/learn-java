@@ -38,6 +38,7 @@ class KnowledgeClient:
         await self.policy_guard.require_allowed(tenant_id, KNOWLEDGE_SEARCH_CASES)
         url = f"{self.base_url}/internal/agent/tools/search-cases"
         body = {
+            "tenantId": tenant_id,
             "query": query,
             "tags": tags,
             "topK": top_k,
@@ -45,7 +46,7 @@ class KnowledgeClient:
 
         try:
             async with httpx.AsyncClient(timeout=self.timeout, trust_env=False) as client:
-                headers = internal_tool_headers(tenant_id)
+                headers = await internal_tool_headers(tenant_id)
                 response = await client.post(url, json=body, headers=headers)
                 if response.status_code == 404:
                     return []

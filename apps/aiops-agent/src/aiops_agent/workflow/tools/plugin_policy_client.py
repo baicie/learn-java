@@ -37,7 +37,7 @@ class PluginPolicyClient:
             response = await client.post(
                 url,
                 json=body,
-                headers=internal_tool_headers(tenant_id, settings),
+                headers=await internal_tool_headers(tenant_id, settings),
             )
             response.raise_for_status()
             payload = response.json()

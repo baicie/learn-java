@@ -274,7 +274,8 @@ def work_record_generation_service() -> WorkRecordGenerationService:
 @app.post(
     "/v1/work-record/generate",
     response_model=WorkRecordGenerateResponse,
-    dependencies=[Depends(verify_internal_token)],
+    responses=SERVICE_AUTH_RESPONSES,
+    dependencies=[Depends(require_service_scope("agent:work-record"))],
 )
 async def generate_work_record(
     request: WorkRecordGenerateRequest,
@@ -450,6 +451,7 @@ package io.aegisops.ai.client.workrecord;
 
 import io.aegisops.ai.client.AgentClientProperties;
 import io.aegisops.ai.client.AgentContract;
+import io.aegisops.ai.client.AgentCredentialProvider;
 import io.aegisops.common.exception.AppException;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -462,11 +464,14 @@ public class HttpWorkRecordAiClient implements WorkRecordAiClient {
 
   private final AgentClientProperties properties;
   private final RestClient restClient;
+  private final AgentCredentialProvider credentialProvider;
 
   public HttpWorkRecordAiClient(
       AgentClientProperties properties,
-      RestClient.Builder builder) {
+      RestClient.Builder builder,
+      AgentCredentialProvider credentialProvider) {
     this.properties = properties;
+    this.credentialProvider = credentialProvider;
     this.restClient =
         builder
             .baseUrl(properties.normalizedBaseUrl())
@@ -484,9 +489,7 @@ public class HttpWorkRecordAiClient implements WorkRecordAiClient {
           restClient
               .post()
               .uri("/v1/work-record/generate")
-              .header(
-                  AgentContract.INTERNAL_TOKEN_HEADER,
-                  properties.normalizedInternalToken())
+              .headers(credentialProvider::apply)
               .header(AgentContract.TRACE_ID_HEADER, request.traceId())
               .body(request)
               .retrieve()

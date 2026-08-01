@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import datetime
+
 from aiops_agent.eval import evaluate_diagnosis
 from aiops_agent.evidence import EvidenceClient as LegacyEvidenceClient
 from aiops_agent.evidence_diagnosis import deterministic_diagnose
@@ -121,7 +123,16 @@ class _RequestEvidenceClient:
     def __init__(self, request: DiagnoseRequest | None):
         self.request = request
 
-    async def fetch_evidence(self, tenant_id: str, incident_id: str) -> list[EvidenceItem]:
+    async def fetch_evidence(
+        self,
+        tenant_id: str,
+        incident_id: str,
+        trace_id: str,
+        *,
+        primary_asset_id: str | None = None,
+        started_at: datetime | None = None,
+        last_seen_at: datetime | None = None,
+    ) -> list[EvidenceItem]:
         if self.request is None:
             return []
 

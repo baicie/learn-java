@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any, TypedDict
 
 from aiops_agent.workflow.contracts import (
@@ -16,11 +17,15 @@ from aiops_agent.workflow.contracts import (
 class DiagnosisGraphState(TypedDict, total=False):
     tenant_id: str
     incident_id: str
+    trace_id: str
     title: str
     severity: str
     description: str | None
     alert_summary: str | None
     tags: list[str]
+    primary_asset_id: str | None
+    started_at: datetime | None
+    last_seen_at: datetime | None
     enable_case_retrieval: bool
     enable_runbook_recommendation: bool
     enable_human_checkpoint: bool

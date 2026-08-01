@@ -1,14 +1,20 @@
 ---
 title: Phase8.0 SaaS Multi-tenant Hardening
 type: design
-status: accepted
+status: deprecated
 phase: global
 owner: ai
 created: 2026-06-30
-updated: 2026-06-30
-related: []
+updated: 2026-07-30
+related:
+  - docs/adr/0010-service-authentication-oauth2-only.md
 ---
+
 # Phase8.0 SaaS Multi-tenant Hardening
+
+> 历史设计（已废弃）：本文记录最初的静态 Token 方案，其中配置和 Header 示例不得继续
+> 执行。当前服务鉴权只支持 OAuth2 Client Credentials，并强制使用 Diagnosis Grant；以
+> `docs/adr/0010-service-authentication-oauth2-only.md` 为准。
 
 ## 目标
 

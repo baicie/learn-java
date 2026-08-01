@@ -28,6 +28,10 @@ management:
         enabled: true
 
 aiops:
+  security:
+    internal-agent-jwt-issuer-uri: ${AIOPS_INTERNAL_AGENT_JWT_ISSUER_URI:http://localhost:8089/realms/aegisops}
+    internal-agent-jwt-jwk-set-uri: ${AIOPS_INTERNAL_AGENT_JWT_JWK_SET_URI:http://localhost:8089/realms/aegisops/protocol/openid-connect/certs}
+    internal-agent-jwt-audience: ${AIOPS_INTERNAL_AGENT_JWT_AUDIENCE:aegisops-internal-api}
   observability:
     enabled: ${AIOPS_OBSERVABILITY_ENABLED:true}
     service-name: ${AIOPS_APP_NAME:aiops-worker}
@@ -39,9 +43,18 @@ aiops:
     phase: ${AIOPS_RUNTIME_PHASE:phase5}
   agent:
     base-url: ${AIOPS_AGENT_BASE_URL:http://localhost:9008}
-    internal-token: ${AIOPS_AGENT_INTERNAL_TOKEN:dev-internal-agent-token}
     connect-timeout-millis: ${AIOPS_AGENT_CONNECT_TIMEOUT:3000}
     read-timeout-millis: ${AIOPS_AGENT_READ_TIMEOUT:90000}
+    auth:
+      token-uri: ${AIOPS_AGENT_OAUTH2_TOKEN_URI:http://localhost:8089/realms/aegisops/protocol/openid-connect/token}
+      client-id: ${AIOPS_AGENT_OAUTH2_CLIENT_ID:aiops-worker}
+      client-secret: ${AIOPS_AGENT_OAUTH2_CLIENT_SECRET:dev-aiops-worker-client-secret}
+      scope: ${AIOPS_AGENT_OAUTH2_SCOPE:agent:diagnose agent:work-record}
+    grant:
+      issuer: ${AIOPS_AGENT_GRANT_ISSUER:aiops-worker}
+      audience: ${AIOPS_DIAGNOSIS_GRANT_AUDIENCE:aegisops-internal-api}
+      secret: ${AIOPS_DIAGNOSIS_GRANT_SECRET:dev-diagnosis-grant-secret-change-me}
+      ttl-seconds: ${AIOPS_DIAGNOSIS_GRANT_TTL_SECONDS:300}
   object-storage:
     endpoint: ${AIOPS_MINIO_ENDPOINT:http://localhost:9002}
     access-key: ${AIOPS_MINIO_ACCESS_KEY:minioadmin}

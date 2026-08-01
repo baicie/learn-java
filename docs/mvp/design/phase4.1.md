@@ -1,15 +1,20 @@
 ---
 title: Phase4.1：Agent Context Contract & Safety Boundary
 type: design
-status: accepted
+status: deprecated
 phase: global
 owner: ai
 created: 2026-06-30
-updated: 2026-06-30
-related: []
+updated: 2026-07-30
+related:
+  - docs/adr/0010-service-authentication-oauth2-only.md
 ---
 
 # Phase4.1：Agent Context Contract & Safety Boundary
+
+> 历史设计（已废弃）：本文的静态 Token Header、配置和测试示例仅供溯源，不得继续
+> 执行。当前 Java/Agent 服务鉴权以
+> `docs/adr/0010-service-authentication-oauth2-only.md` 为准。
 
 默认前提：**Phase4.0 已经完成**，也就是现在已经有：
 

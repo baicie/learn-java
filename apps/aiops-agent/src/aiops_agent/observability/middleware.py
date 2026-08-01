@@ -10,6 +10,7 @@ from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from aiops_agent.observability.context import (
+    diagnosis_grant_var,
     request_id_var,
     tenant_id_var,
     trace_id_var,
@@ -19,6 +20,7 @@ from aiops_agent.observability.metrics import REQUEST_COUNT, REQUEST_DURATION
 REQUEST_ID_HEADER = "X-Request-Id"
 TRACE_ID_HEADER = "X-Trace-Id"
 TENANT_ID_HEADER = "X-Tenant-Id"
+DIAGNOSIS_GRANT_HEADER = "X-AegisOps-Diagnosis-Grant"
 
 
 class RequestContextMiddleware(BaseHTTPMiddleware):
@@ -30,10 +32,12 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
         request_id = request.headers.get(REQUEST_ID_HEADER) or "req_" + uuid.uuid4().hex
         trace_id = request.headers.get(TRACE_ID_HEADER) or request_id
         tenant_id = request.headers.get(TENANT_ID_HEADER)
+        diagnosis_grant = request.headers.get(DIAGNOSIS_GRANT_HEADER)
 
         token_request = request_id_var.set(request_id)
         token_trace = trace_id_var.set(trace_id)
         token_tenant = tenant_id_var.set(tenant_id)
+        token_diagnosis_grant = diagnosis_grant_var.set(diagnosis_grant)
 
         started = time.perf_counter()
         status = "500"
@@ -66,6 +70,7 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
             request_id_var.reset(token_request)
             trace_id_var.reset(token_trace)
             tenant_id_var.reset(token_tenant)
+            diagnosis_grant_var.reset(token_diagnosis_grant)
 
 
 def normalize_path(path: str) -> str:

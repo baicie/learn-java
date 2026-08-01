@@ -1,14 +1,19 @@
 ---
 title: Phase4.4：Agent Run Trace + Eval 可观测层
 type: design
-status: accepted
+status: deprecated
 phase: global
 owner: ai
 created: 2026-06-30
-updated: 2026-06-30
-related: []
+updated: 2026-07-30
+related:
+  - docs/adr/0010-service-authentication-oauth2-only.md
 ---
+
 # Phase4.4：Agent Run Trace + Eval 可观测层
+
+> 历史设计（已废弃）：本文保留的静态 Token Settings 示例不得继续执行。当前 Java/Agent
+> 服务鉴权以 `docs/adr/0010-service-authentication-oauth2-only.md` 为准。
 
 基于当前 `mvp` 最新实现，Phase4.4 不继续增强诊断逻辑，而是给 Agent 增加 **运行追踪、节点耗时、工具证据、LLM/fallback、安全结果、基础评测**。
 
@@ -2122,15 +2127,15 @@ class AiDiagnosisServiceObservabilityTest {
 在 `aiops-agent.environment` 追加：
 
 ```yaml id="uidcjj"
-AIOPS_AGENT_TRACE_ENABLED: "true"
-AIOPS_AGENT_EVAL_ENABLED: "true"
+AIOPS_AGENT_TRACE_ENABLED: 'true'
+AIOPS_AGENT_EVAL_ENABLED: 'true'
 ```
 
 完整建议：
 
 ```yaml id="c2p774"
-AIOPS_AGENT_TRACE_ENABLED: "true"
-AIOPS_AGENT_EVAL_ENABLED: "true"
+AIOPS_AGENT_TRACE_ENABLED: 'true'
+AIOPS_AGENT_EVAL_ENABLED: 'true'
 ```
 
 ---

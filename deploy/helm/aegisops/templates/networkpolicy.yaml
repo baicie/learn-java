@@ -1,8 +1,10 @@
 {{- if .Values.networkPolicy.enabled }}
+{{- include "aegisops.validateIngressNamespaceSelector" . }}
+{{- include "aegisops.validateNetworkPolicyEgressCidrs" . }}
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: {{ include "aegisops.fullname" . }}
+  name: {{ include "aegisops.fullname" . }}-default-deny
   labels:
     {{- include "aegisops.labels" . | nindent 4 }}
 spec:
@@ -11,20 +13,123 @@ spec:
       {{- include "aegisops.selectorLabels" . | nindent 6 }}
   policyTypes:
     - Ingress
-    {{- if .Values.networkPolicy.egressEnabled }}
     - Egress
-    {{- end }}
+{{- if .Values.apps.agent.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "aegisops.fullname" . }}-agent-ingress
+  labels:
+    {{- include "aegisops.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "aegisops.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: agent
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- include "aegisops.selectorLabels" . | nindent 14 }}
+            matchExpressions:
+              - key: app.kubernetes.io/component
+                operator: In
+                values:
+                  - server
+                  - worker
+      ports:
+        - protocol: TCP
+          port: {{ .Values.apps.agent.port }}
+{{- end }}
+{{- if .Values.apps.server.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "aegisops.fullname" . }}-server-ingress
+  labels:
+    {{- include "aegisops.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "aegisops.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: server
+  policyTypes:
+    - Ingress
   ingress:
     - from:
         - namespaceSelector:
             {{- toYaml .Values.networkPolicy.ingressNamespaceSelector | nindent 12 }}
+        - podSelector:
+            matchLabels:
+              {{- include "aegisops.selectorLabels" . | nindent 14 }}
+              app.kubernetes.io/component: agent
       ports:
         - protocol: TCP
-          port: 8080
-        - protocol: TCP
-          port: {{ .Values.apps.agent.port }}
-  {{- if .Values.networkPolicy.egressEnabled }}
+          port: {{ .Values.apps.server.port }}
+{{- end }}
+{{- $root := . }}
+{{- range $component := list "server" "worker" "runner" "agent" }}
+{{- $app := index $root.Values.apps $component }}
+{{- if $app.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "aegisops.fullname" $root }}-{{ $component }}-egress
+  labels:
+    {{- include "aegisops.labels" $root | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "aegisops.selectorLabels" $root | nindent 6 }}
+      app.kubernetes.io/component: {{ $component }}
+  policyTypes:
+    - Egress
   egress:
-    - {}
-  {{- end }}
+    - to:
+        - namespaceSelector:
+            {{- toYaml $root.Values.networkPolicy.egress.dnsNamespaceSelector | nindent 12 }}
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    {{- if or (eq $component "server") (eq $component "worker") }}
+    {{- if $root.Values.apps.agent.enabled }}
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "aegisops.selectorLabels" $root | nindent 14 }}
+              app.kubernetes.io/component: agent
+      ports:
+        - protocol: TCP
+          port: {{ $root.Values.apps.agent.port }}
+    {{- end }}
+    {{- end }}
+    {{- if and (eq $component "agent") $root.Values.apps.server.enabled }}
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "aegisops.selectorLabels" $root | nindent 14 }}
+              app.kubernetes.io/component: server
+      ports:
+        - protocol: TCP
+          port: {{ $root.Values.apps.server.port }}
+    {{- end }}
+    - to:
+        {{- range $cidr := $root.Values.networkPolicy.egress.allowedCidrs }}
+        - ipBlock:
+            cidr: {{ $cidr | quote }}
+        {{- end }}
+      ports:
+        {{- range $port := index $root.Values.networkPolicy.egress.externalPorts $component }}
+        - protocol: TCP
+          port: {{ $port }}
+        {{- end }}
+{{- end }}
+{{- end }}
 {{- end }}

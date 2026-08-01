@@ -1,6 +1,21 @@
 from aiops_agent.settings import Settings
 
 
+def test_static_service_token_settings_do_not_exist():
+    settings = Settings()
+
+    assert not hasattr(settings, "internal_agent_token")
+    assert not hasattr(settings, "outbound_static_token")
+    assert not hasattr(settings, "inbound_auth_mode")
+    assert not hasattr(settings, "outbound_auth_mode")
+
+
+def test_diagnosis_grant_cannot_be_disabled_by_configuration():
+    settings = Settings()
+
+    assert not hasattr(settings, "diagnosis_grant_required")
+
+
 def test_agent_name_accepts_short_env_alias(monkeypatch):
     monkeypatch.setenv("AIOPS_AGENT_NAME", "custom_short_name")
 
@@ -28,6 +43,12 @@ def test_generation_mode_accepts_openai_compatible():
     settings = Settings(generation_mode="openai-compatible")
 
     assert settings.normalized_generation_mode() == "openai-compatible"
+
+
+def test_generation_mode_accepts_phase7_workflow():
+    settings = Settings(generation_mode="workflow")
+
+    assert settings.normalized_generation_mode() == "workflow"
 
 
 def test_openai_base_url_trims_trailing_slashes():

@@ -2,12 +2,14 @@ package io.aegisops.execution;
 
 import io.aegisops.common.api.ApiResponse;
 import io.aegisops.common.exception.AppException;
-import io.aegisops.common.tenant.TenantContext;
+import io.aegisops.common.security.DiagnosisGrantAuthorization;
+import io.aegisops.common.security.DiagnosisGrantClaims;
 import io.aegisops.execution.dto.AgentSearchCasesRequest;
 import io.aegisops.execution.dto.KnowledgeBaseSearchRequest;
 import io.aegisops.execution.dto.KnowledgeBaseSearchResponse;
 import java.util.List;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -16,7 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
  *
  * <p>This endpoint does not trigger execution, rollback, runbook, or approval.
  *
- * <p>Tenant boundary must come from TenantContext, not request body.
+ * <p>Tenant boundary is bound to the verified Diagnosis Grant.
  */
 @RestController
 public class AgentKnowledgeToolController {
@@ -28,13 +30,15 @@ public class AgentKnowledgeToolController {
 
   @PostMapping("/internal/agent/tools/search-cases")
   public ApiResponse<KnowledgeBaseSearchResponse> searchCases(
-      @RequestBody AgentSearchCasesRequest request) {
+      @RequestBody AgentSearchCasesRequest request,
+      @RequestAttribute(DiagnosisGrantAuthorization.REQUEST_ATTRIBUTE)
+          DiagnosisGrantClaims claims) {
     if (request == null) {
       throw new AppException(
           "AGENT_SEARCH_CASES_REQUEST_REQUIRED", "Search cases request is required");
     }
 
-    String tenantId = TenantContext.requireTenantId();
+    String tenantId = DiagnosisGrantAuthorization.requireTenant(claims, request.tenantId());
 
     return ApiResponse.ok(
         searchService.search(

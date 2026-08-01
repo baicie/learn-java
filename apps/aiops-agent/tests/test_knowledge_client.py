@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+
 import pytest
 import respx
 from httpx import Response
@@ -10,10 +12,21 @@ from aiops_agent.workflow.errors import ToolError
 from aiops_agent.workflow.tools.knowledge_client import KnowledgeClient
 
 
+@pytest.fixture(autouse=True)
+def oauth_service_headers(monkeypatch):
+    async def headers(_settings):
+        return {"Authorization": "Bearer oauth-service-token"}
+
+    monkeypatch.setattr(
+        "aiops_agent.workflow.tools.internal_auth.service_credential_headers",
+        headers,
+    )
+
+
 @pytest.mark.asyncio
 @respx.mock
 async def test_knowledge_client_extracts_root_cause_from_phase6_chunk_content():
-    respx.post("http://java/internal/agent/tools/search-cases").mock(
+    route = respx.post("http://java/internal/agent/tools/search-cases").mock(
         return_value=Response(
             200,
             json={
@@ -55,6 +68,7 @@ async def test_knowledge_client_extracts_root_cause_from_phase6_chunk_content():
     assert cases[0].root_cause == "redis timeout"
     assert cases[0].resolution == "restart service"
     assert cases[0].tags == ["redis", "timeout"]
+    assert json.loads(route.calls.last.request.content)["tenantId"] == "tenant_1"
 
 
 @pytest.mark.asyncio

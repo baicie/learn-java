@@ -1,10 +1,17 @@
 package io.aegisops.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.Clock;
+import java.time.Duration;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.JwtTimestampValidator;
+import org.springframework.security.oauth2.jwt.JwtValidators;
+import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 
 @Configuration
 @EnableConfigurationProperties({AiopsSecurityProperties.class, AiopsQuotaProperties.class})
@@ -23,11 +30,33 @@ public class AiopsSecurityConfiguration {
   }
 
   @Bean
+  InternalServiceAuthenticator internalServiceAuthenticator(AiopsSecurityProperties properties) {
+    properties.validateInternalServiceAuthentication();
+
+    NimbusJwtDecoder decoder =
+        NimbusJwtDecoder.withJwkSetUri(properties.getInternalAgentJwtJwkSetUri()).build();
+    JwtTimestampValidator timestampValidator = strictServiceTokenTimestampValidator();
+    decoder.setJwtValidator(
+        new DelegatingOAuth2TokenValidator<Jwt>(
+            JwtValidators.createDefaultWithIssuer(properties.getInternalAgentJwtIssuerUri()),
+            timestampValidator));
+    return new JwtInternalServiceAuthenticator(properties, decoder);
+  }
+
+  static JwtTimestampValidator strictServiceTokenTimestampValidator() {
+    JwtTimestampValidator timestampValidator = new JwtTimestampValidator(Duration.ZERO);
+    timestampValidator.setAllowEmptyExpiryClaim(false);
+    return timestampValidator;
+  }
+
+  @Bean
   InternalAgentAuthFilter internalAgentAuthFilter(
       AiopsSecurityProperties properties,
       SecurityErrorResponseWriter responseWriter,
-      TenantSecurityAuditService auditService) {
-    return new InternalAgentAuthFilter(properties, responseWriter, auditService);
+      TenantSecurityAuditService auditService,
+      InternalServiceAuthenticator authenticator) {
+    return new InternalAgentAuthFilter(
+        properties, responseWriter, auditService, authenticator, Clock.systemUTC());
   }
 
   @Bean

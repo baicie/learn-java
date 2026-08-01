@@ -5,7 +5,7 @@ status: draft
 phase: phase-5
 owner: ai
 created: 2026-06-29
-updated: 2026-06-30
+updated: 2026-08-01
 related:
   - .agents/skills/aegisops/SKILL.md
   - .agents/skills/aegisops/references/architecture-boundaries.md
@@ -475,6 +475,9 @@ public Map<String, Object> health() {
    - 决策：保留 Python 栈 / 不直接访问主库 / contract version 稳定性 / 不参与调度执行
 2. 同步更新 §12 表格 PR9 状态
 ```
+
+> 历史说明：以上内容记录 ADR 0003 当时的决策。Agent 端口随后由 ADR 0008 统一为 9008；
+> 静态 internal token 鉴权随后由 ADR 0010 替换为 OAuth2 Client Credentials + Diagnosis Grant。
 
 ### 状态
 

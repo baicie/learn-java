@@ -86,9 +86,13 @@ echo "==> Validate remote deployment contract"
 grep -Fq "bash -lc '" .github/workflows/release-verify.yml
 grep -Fq 'name: Configure Tencent Cloud Docker mirror' .github/workflows/release-verify.yml
 grep -Fq 'deploy/scripts/configure-docker-mirror.sh' .github/workflows/release-verify.yml
-grep -Fq 'envs: IMAGE_PREFIX,IMAGE_TAG,AIOPS_AGENT_INTERNAL_TOKEN,AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN' \
+grep -Fq 'envs: IMAGE_PREFIX,IMAGE_TAG,AIOPS_SERVICE_AUTH_ISSUER_URI,AIOPS_SERVICE_AUTH_JWK_SET_URI,AIOPS_SERVICE_AUTH_TOKEN_URI,AIOPS_SERVER_OAUTH2_CLIENT_SECRET,AIOPS_WORKER_OAUTH2_CLIENT_SECRET,AIOPS_AGENT_OAUTH2_CLIENT_SECRET,AIOPS_DIAGNOSIS_GRANT_SECRET,AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN' \
   .github/workflows/release-verify.yml
-grep -Fq 'AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN: runtime-smoke-only' \
+grep -Fq 'name: Generate masked runtime credentials' \
+  .github/workflows/release-verify.yml
+grep -Fq 'echo "::add-mask::$value"' \
+  .github/workflows/release-verify.yml
+grep -Fq '>> "$GITHUB_ENV"' \
   .github/workflows/release-verify.yml
 grep -Fq 'AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN: ${{ secrets.AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN }}' \
   .github/workflows/release-verify.yml
@@ -116,6 +120,17 @@ if grep -Fq 'envs: IMAGE_PREFIX,IMAGE_TAG,DOCKERHUB_USERNAME,DOCKERHUB_TOKEN' \
   echo "Tencent Cloud VM must not receive Docker Hub credentials." >&2
   exit 1
 fi
+for fixed_runtime_credential in \
+  runtime-smoke-server-client-secret \
+  runtime-smoke-worker-client-secret \
+  runtime-smoke-agent-client-secret \
+  runtime-smoke-diagnosis-grant-secret \
+  runtime-smoke-only; do
+  if grep -Fq "$fixed_runtime_credential" .github/workflows/release-verify.yml; then
+    echo "Release Verify must generate and mask ephemeral runtime credentials." >&2
+    exit 1
+  fi
+done
 if grep -Fq ':latest' .github/workflows/release-verify.yml; then
   echo "Production deployment must use immutable commit tags instead of :latest." >&2
   exit 1
@@ -134,9 +149,18 @@ AIOPS_SERVER_IMAGE=example.invalid/aegisops:test \
 AIOPS_AGENT_IMAGE=example.invalid/aegisops/aiops-agent:test \
 AIOPS_WORKER_IMAGE=example.invalid/aegisops/aiops-worker:test \
 AIOPS_RUNNER_IMAGE=example.invalid/aegisops/aiops-runner:test \
-AIOPS_AGENT_INTERNAL_TOKEN=preflight-only \
+AIOPS_SERVICE_AUTH_ISSUER_URI=https://idp.example.com/realms/aegisops \
+AIOPS_SERVICE_AUTH_JWK_SET_URI=https://idp.example.com/realms/aegisops/protocol/openid-connect/certs \
+AIOPS_SERVICE_AUTH_TOKEN_URI=https://idp.example.com/realms/aegisops/protocol/openid-connect/token \
+AIOPS_SERVER_OAUTH2_CLIENT_SECRET=preflight-server-client-secret \
+AIOPS_WORKER_OAUTH2_CLIENT_SECRET=preflight-worker-client-secret \
+AIOPS_AGENT_OAUTH2_CLIENT_SECRET=preflight-agent-client-secret \
+AIOPS_DIAGNOSIS_GRANT_SECRET=preflight-diagnosis-grant-secret-change-me \
 AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN=preflight-only \
-  docker compose -f deploy/docker-compose.app.yml config --quiet
+  docker compose \
+    -f deploy/docker-compose.app.yml \
+    -f deploy/docker-compose.idp.yml \
+    config --quiet
 ZABBIX_DB_PASSWORD=preflight-only \
   docker compose -f deploy/docker-compose.zabbix.yml config --quiet
 

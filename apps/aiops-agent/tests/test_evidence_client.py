@@ -2,18 +2,34 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 import pytest
 import respx
 from httpx import Response
 
+from aiops_agent.observability.context import diagnosis_grant_var
 from aiops_agent.workflow.errors import ToolError
 from aiops_agent.workflow.tools.evidence_client import EvidenceClient
-from aiops_agent.workflow.tools.internal_auth import HEADER_INTERNAL_AGENT_TOKEN
+
+
+@pytest.fixture(autouse=True)
+def oauth_service_headers(monkeypatch):
+    async def headers(_settings):
+        return {"Authorization": "Bearer oauth-service-token"}
+
+    monkeypatch.setattr(
+        "aiops_agent.workflow.tools.internal_auth.service_credential_headers",
+        headers,
+    )
+    token = diagnosis_grant_var.set("diagnosis-grant")
+    yield
+    diagnosis_grant_var.reset(token)
 
 
 @pytest.mark.asyncio
 @respx.mock
-async def test_evidence_client_queries_java_contract_with_internal_token():
+async def test_evidence_client_queries_java_contract_with_oauth2_token():
     route = respx.post("http://java/internal/agent/evidence/query").mock(
         return_value=Response(
             200,
@@ -31,13 +47,25 @@ async def test_evidence_client_queries_java_contract_with_internal_token():
 
     client = EvidenceClient(base_url="http://java")
 
-    evidence = await client.fetch_evidence("tenant_1", "inc_1")
+    evidence = await client.fetch_evidence(
+        "tenant_1",
+        "inc_1",
+        "trace_1",
+        primary_asset_id="asset_order",
+        started_at=datetime(2026, 7, 31, 4, 0, tzinfo=timezone.utc),
+        last_seen_at=datetime(2026, 7, 31, 4, 5, tzinfo=timezone.utc),
+    )
 
     assert len(evidence) == 1
     assert evidence[0].evidence_type == "metric"
     request = route.calls[0].request
-    assert request.headers[HEADER_INTERNAL_AGENT_TOKEN] == "dev-internal-agent-token"
+    assert request.headers["Authorization"] == "Bearer oauth-service-token"
+    assert request.headers["X-AegisOps-Diagnosis-Grant"] == "diagnosis-grant"
     assert b'"tenantId":"tenant_1"' in request.content
+    assert b'"traceId":"trace_1"' in request.content
+    assert b'"primaryAssetId":"asset_order"' in request.content
+    assert b'"startedAt":"2026-07-31T04:00:00+00:00"' in request.content
+    assert b'"lastSeenAt":"2026-07-31T04:05:00+00:00"' in request.content
 
 
 @pytest.mark.asyncio
@@ -64,7 +92,7 @@ async def test_evidence_client_maps_logs_and_changes():
 
     client = EvidenceClient(base_url="http://java")
 
-    evidence = await client.fetch_evidence("tenant_1", "inc_1")
+    evidence = await client.fetch_evidence("tenant_1", "inc_1", "trace_1")
 
     assert [item.evidence_type for item in evidence] == ["log", "change"]
 
@@ -80,7 +108,7 @@ async def test_evidence_client_rejects_invalid_response_shape():
     client = EvidenceClient(base_url="http://java")
 
     with pytest.raises(ToolError) as exc_info:
-        await client.fetch_evidence("tenant_1", "inc_1")
+        await client.fetch_evidence("tenant_1", "inc_1", "trace_1")
 
     assert exc_info.value.code == "EVIDENCE_TOOL_RESPONSE_INVALID"
 
@@ -95,7 +123,7 @@ async def test_evidence_client_wraps_invalid_json_response():
     client = EvidenceClient(base_url="http://java")
 
     with pytest.raises(ToolError):
-        await client.fetch_evidence("tenant_1", "inc_1")
+        await client.fetch_evidence("tenant_1", "inc_1", "trace_1")
 
 
 @pytest.mark.asyncio
@@ -113,6 +141,6 @@ async def test_evidence_client_rejects_non_object_items():
     client = EvidenceClient(base_url="http://java")
 
     with pytest.raises(ToolError) as exc_info:
-        await client.fetch_evidence("tenant_1", "inc_1")
+        await client.fetch_evidence("tenant_1", "inc_1", "trace_1")
 
     assert exc_info.value.code == "EVIDENCE_TOOL_RESPONSE_INVALID"

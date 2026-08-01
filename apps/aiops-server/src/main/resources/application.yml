@@ -55,8 +55,12 @@ aiops:
     secret: ${AIOPS_JWT_SECRET:dev-secret-change-me-change-me-change-me}
     ttl-seconds: ${AIOPS_JWT_TTL_SECONDS:86400}
   security:
-    internal-agent-token: ${AIOPS_INTERNAL_AGENT_TOKEN:dev-internal-agent-token}
-    internal-agent-token-required: true
+    internal-agent-jwt-issuer-uri: ${AIOPS_INTERNAL_AGENT_JWT_ISSUER_URI:http://localhost:8089/realms/aegisops}
+    internal-agent-jwt-jwk-set-uri: ${AIOPS_INTERNAL_AGENT_JWT_JWK_SET_URI:http://localhost:8089/realms/aegisops/protocol/openid-connect/certs}
+    internal-agent-jwt-audience: ${AIOPS_INTERNAL_AGENT_JWT_AUDIENCE:aegisops-internal-api}
+    diagnosis-grant-secret: ${AIOPS_DIAGNOSIS_GRANT_SECRET:dev-diagnosis-grant-secret-change-me}
+    diagnosis-grant-audience: ${AIOPS_DIAGNOSIS_GRANT_AUDIENCE:aegisops-internal-api}
+    diagnosis-grant-issuers: ${AIOPS_DIAGNOSIS_GRANT_ISSUERS:aiops-server,aiops-worker}
     tenant-required: true
   quota:
     public-api-requests-per-minute: ${AIOPS_PUBLIC_API_RPM:600}
@@ -66,11 +70,19 @@ aiops:
     backend: ${AIOPS_QUOTA_BACKEND:memory}
   agent:
     base-url: ${AIOPS_AGENT_BASE_URL:http://localhost:9008}
-    internal-token: ${AIOPS_AGENT_INTERNAL_TOKEN:dev-internal-agent-token}
     connect-timeout-millis: ${AIOPS_AGENT_CONNECT_TIMEOUT:3000}
     read-timeout-millis: ${AIOPS_AGENT_READ_TIMEOUT:30000}
+    auth:
+      token-uri: ${AIOPS_AGENT_OAUTH2_TOKEN_URI:http://localhost:8089/realms/aegisops/protocol/openid-connect/token}
+      client-id: ${AIOPS_AGENT_OAUTH2_CLIENT_ID:aiops-server}
+      client-secret: ${AIOPS_AGENT_OAUTH2_CLIENT_SECRET:dev-aiops-server-client-secret}
+      scope: ${AIOPS_AGENT_OAUTH2_SCOPE:agent:diagnose agent:resume agent:work-record}
+    grant:
+      issuer: ${AIOPS_AGENT_GRANT_ISSUER:aiops-server}
+      audience: ${AIOPS_DIAGNOSIS_GRANT_AUDIENCE:aegisops-internal-api}
+      secret: ${AIOPS_DIAGNOSIS_GRANT_SECRET:dev-diagnosis-grant-secret-change-me}
+      ttl-seconds: ${AIOPS_DIAGNOSIS_GRANT_TTL_SECONDS:300}
     evidence:
-      internal-token: ${AIOPS_AGENT_EVIDENCE_INTERNAL_TOKEN:dev-internal-token}
       default-lookback-minutes: ${AIOPS_AGENT_EVIDENCE_DEFAULT_LOOKBACK_MINUTES:60}
       max-log-patterns: ${AIOPS_AGENT_EVIDENCE_MAX_LOG_PATTERNS:20}
       max-changes: ${AIOPS_AGENT_EVIDENCE_MAX_CHANGES:20}

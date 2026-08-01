@@ -39,12 +39,9 @@ data:
   AIOPS_PUBLIC_API_RPM: {{ .Values.security.publicApiRequestsPerMinute | quote }}
   AIOPS_INTERNAL_AGENT_RPM: {{ .Values.security.internalAgentRequestsPerMinute | quote }}
   AIOPS_TENANT_REQUIRED: {{ .Values.security.tenantRequired | quote }}
-  AIOPS_INTERNAL_AGENT_TOKEN_REQUIRED: {{ .Values.security.internalAgentTokenRequired | quote }}
 
-  AIOPS_AGENT_EVIDENCE_API_BASE_URL: "http://{{ include "aegisops.fullname" . }}-server:8080"
-  AIOPS_AGENT_KNOWLEDGE_API_BASE_URL: "http://{{ include "aegisops.fullname" . }}-server:8080"
-  AIOPS_AGENT_CHECKPOINT_API_BASE_URL: "http://{{ include "aegisops.fullname" . }}-server:8080"
-  AIOPS_AGENT_MEMORY_API_BASE_URL: "http://{{ include "aegisops.fullname" . }}-server:8080"
+  AIOPS_AGENT_WORKFLOW_API_BASE_URL: "http://{{ include "aegisops.fullname" . }}-server:{{ .Values.apps.server.port }}"
+  AIOPS_AGENT_EVIDENCE_BASE_URL: "http://{{ include "aegisops.fullname" . }}-server:{{ .Values.apps.server.port }}/internal/agent/evidence"
 
   AIOPS_OBSERVABILITY_ENABLED: {{ .Values.observability.enabled | quote }}
   AIOPS_HTTP_METRICS_ENABLED: {{ .Values.observability.metrics.enabled | quote }}

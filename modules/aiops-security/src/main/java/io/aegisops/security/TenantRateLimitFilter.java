@@ -18,7 +18,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
  *
  * <ol>
  *   <li>{@code /api/auth/**}：认证路径，必须忽略可伪造的 {@code X-Tenant-Id} 头， 按客户端 IP 计入匿名限流，防止暴力破解登录。
- *   <li>已有 {@link TenantContext}（通常来自内部 Agent 调用）：按租户 + internal/public 桶计数。
+ *   <li>已有经过认证链建立的 {@link TenantContext}：按租户 + internal/public 桶计数。
  *   <li>其他请求：按请求 IP 计入匿名限流。
  * </ol>
  *
@@ -111,9 +111,6 @@ public class TenantRateLimitFilter extends OncePerRequestFilter {
     }
 
     String tenantId = TenantContext.getTenantId();
-    if ((tenantId == null || tenantId.isBlank()) && path.startsWith("/internal/agent/")) {
-      tenantId = request.getHeader(SecurityConstants.HEADER_TENANT_ID);
-    }
 
     if (tenantId != null && !tenantId.isBlank()) {
       boolean internal = path.startsWith("/internal/agent/");

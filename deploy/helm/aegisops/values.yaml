@@ -10,7 +10,8 @@ fullnameOverride: ""
 
 serviceAccount:
   create: true
-  name: ""
+  # When create=false, all four names are required, must be distinct, and cannot be "default".
+  names: {}
   annotations: {}
 
 podSecurityContext:
@@ -34,13 +35,32 @@ config:
   logLevel: INFO
 
 security:
-  internalAgentToken: ""
   jwtSecret: ""
   zabbixWebhookSigningSecret: ""
-  internalAgentTokenRequired: true
+  diagnosisGrantSecret: ""
+  diagnosisGrantTtlSeconds: 300
   tenantRequired: true
   publicApiRequestsPerMinute: 600
   internalAgentRequestsPerMinute: 1200
+  serviceAuth:
+    issuerUri: ""
+    jwkSetUri: ""
+    tokenUri: ""
+    agentAudience: aiops-agent-api
+    internalAudience: aegisops-internal-api
+    clients:
+      server:
+        clientId: aiops-server
+        clientSecret: ""
+        scope: "agent:diagnose agent:resume agent:work-record"
+      worker:
+        clientId: aiops-worker
+        clientSecret: ""
+        scope: "agent:diagnose agent:work-record"
+      agent:
+        clientId: aiops-agent
+        clientSecret: ""
+        scope: "evidence:read cases:read checkpoint:read checkpoint:write memory:read memory:write plugin:authorize"
 
 dify:
   workRecordProvider: deterministic
@@ -157,8 +177,43 @@ ingress:
 
 networkPolicy:
   enabled: false
-  ingressNamespaceSelector: {}
-  egressEnabled: true
+  # Override this selector when the ingress controller runs in another namespace.
+  ingressNamespaceSelector:
+    matchLabels:
+      kubernetes.io/metadata.name: ingress-nginx
+  egress:
+    dnsNamespaceSelector:
+      matchLabels:
+        kubernetes.io/metadata.name: kube-system
+    # Standard NetworkPolicy cannot match DNS names. When enabled, explicitly set restricted
+    # CIDRs for the IdP and external data services; world-open CIDRs are rejected.
+    allowedCidrs: []
+    externalPorts:
+      server:
+        - 443
+        - 5432
+        - 6379
+      worker:
+        - 80
+        - 443
+        - 5432
+        - 6379
+        - 8123
+        - 8428
+        - 9000
+      runner:
+        - 22
+        - 80
+        - 443
+        - 5432
+        - 6379
+        - 9000
+      agent:
+        - 443
+
+serviceMesh:
+  istio:
+    enabled: false
 
 offline:
   enabled: false

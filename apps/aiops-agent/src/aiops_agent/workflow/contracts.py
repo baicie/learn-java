@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field
@@ -78,11 +79,15 @@ class AgentMemory(BaseModel):
 class DiagnosisRequest(BaseModel):
     tenant_id: str
     incident_id: str
+    trace_id: str
     title: str
     severity: Severity = "medium"
     description: str | None = None
     alert_summary: str | None = None
     tags: list[str] = Field(default_factory=list)
+    primary_asset_id: str | None = None
+    started_at: datetime | None = None
+    last_seen_at: datetime | None = None
     enable_case_retrieval: bool = True
     enable_runbook_recommendation: bool = True
     enable_human_checkpoint: bool = False
