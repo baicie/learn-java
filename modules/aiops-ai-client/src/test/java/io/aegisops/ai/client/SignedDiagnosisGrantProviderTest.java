@@ -7,36 +7,56 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.aegisops.ai.client.dto.AgentDiagnosisRequest;
 import io.aegisops.common.security.DiagnosisGrantClaims;
 import io.aegisops.common.security.DiagnosisGrantCodec;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Map;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 class SignedDiagnosisGrantProviderTest {
-  private static final String SECRET = "test-diagnosis-grant-secret-with-32-bytes";
-  private static final String AUDIENCE = "aegisops-internal-api";
   private static final Instant NOW = Instant.parse("2026-07-30T08:00:00Z");
+  private static KeyPair signingKeys;
+
   private final Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
   private final DiagnosisGrantCodec codec = new DiagnosisGrantCodec(new ObjectMapper(), clock);
 
-  @Test
-  void defaultsGrantIssuerToServerIdentity() {
-    assertThat(new AgentGrantProperties().getIssuer()).isEqualTo("aiops-server");
+  @BeforeAll
+  static void generateKeys() throws Exception {
+    signingKeys = KeyPairGenerator.getInstance("Ed25519").generateKeyPair();
   }
 
   @Test
-  void mapsDiagnosisRequestIdentityAndConfiguredTtlIntoSignedGrant() {
+  void defaultsGrantIssuerToControlPlaneIdentity() {
+    AgentGrantProperties properties = new AgentGrantProperties();
+
+    assertThat(properties.getIssuer()).isEqualTo("aegisops-app");
+    assertThat(properties.getScopes()).containsExactly("diagnosis:execute", "diagnosis:resume");
+  }
+
+  @Test
+  void mapsDiagnosisRequestIdentityScopesAndConfiguredTtlIntoSignedGrant() {
     AgentGrantProperties properties = propertiesWithTtl(300);
     SignedDiagnosisGrantProvider provider =
-        new SignedDiagnosisGrantProvider(properties, codec, clock);
+        new SignedDiagnosisGrantProvider(properties, codec, clock, signingKeys.getPrivate());
 
-    String token = provider.issue(request("tenant_1", "inc_1", "trace_1"));
+    String token = provider.issue(request("tenant_1", "inc_1", "diag_1", "trace_1"));
 
-    DiagnosisGrantClaims claims = codec.verify(SECRET, token, AUDIENCE);
+    DiagnosisGrantClaims claims =
+        codec.verify(
+            Map.of(properties.getKeyId(), signingKeys.getPublic()), token, "aiops-agent-api");
+    assertThat(claims.issuer()).isEqualTo("aegisops-app");
+    assertThat(claims.subject()).isEqualTo("diagnosis:diag_1");
+    assertThat(claims.audiences())
+        .containsExactlyInAnyOrder("aiops-agent-api", "aegisops-internal-api");
+    assertThat(claims.scopes()).containsExactly("diagnosis:execute", "diagnosis:resume");
     assertThat(claims.tenantId()).isEqualTo("tenant_1");
     assertThat(claims.incidentId()).isEqualTo("inc_1");
+    assertThat(claims.diagnosisId()).isEqualTo("diag_1");
     assertThat(claims.traceId()).isEqualTo("trace_1");
     assertThat(claims.issuedAt()).isEqualTo(NOW);
     assertThat(claims.expiresAt()).isEqualTo(NOW.plusSeconds(300));
@@ -45,67 +65,64 @@ class SignedDiagnosisGrantProviderTest {
   }
 
   @Test
-  void rejectsConfiguredTtlOutsideGrantBoundaryAtStartup() {
-    assertThatThrownBy(() -> new SignedDiagnosisGrantProvider(propertiesWithTtl(301), codec, clock))
+  void rejectsIncompleteGrantMetadataAndTtlOutsideBoundary() {
+    AgentGrantProperties tooLong = propertiesWithTtl(301);
+    assertThatThrownBy(
+            () -> new SignedDiagnosisGrantProvider(tooLong, codec, clock, signingKeys.getPrivate()))
         .isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("ttl-seconds");
-
-    assertThatThrownBy(() -> new SignedDiagnosisGrantProvider(propertiesWithTtl(0), codec, clock))
-        .isInstanceOf(IllegalStateException.class)
-        .hasMessageContaining("ttl-seconds");
-  }
-
-  @Test
-  void rejectsWeakOrIncompleteGrantConfigurationAtStartup() {
-    AgentGrantProperties weakSecret = propertiesWithTtl(300);
-    weakSecret.setSecret("x".repeat(31));
-    assertThatThrownBy(() -> new SignedDiagnosisGrantProvider(weakSecret, codec, clock))
-        .isInstanceOf(IllegalStateException.class)
-        .hasMessageContaining("secret");
-
-    AgentGrantProperties blankSecret = propertiesWithTtl(300);
-    blankSecret.setSecret(" ".repeat(32));
-    assertThatThrownBy(() -> new SignedDiagnosisGrantProvider(blankSecret, codec, clock))
-        .isInstanceOf(IllegalStateException.class)
-        .hasMessageContaining("secret");
 
     AgentGrantProperties blankIssuer = propertiesWithTtl(300);
     blankIssuer.setIssuer(" ");
-    assertThatThrownBy(() -> new SignedDiagnosisGrantProvider(blankIssuer, codec, clock))
+    assertThatThrownBy(
+            () ->
+                new SignedDiagnosisGrantProvider(
+                    blankIssuer, codec, clock, signingKeys.getPrivate()))
         .isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("issuer");
 
     AgentGrantProperties blankAudience = propertiesWithTtl(300);
-    blankAudience.setAudience("");
-    assertThatThrownBy(() -> new SignedDiagnosisGrantProvider(blankAudience, codec, clock))
+    blankAudience.setAudiences(List.of(" "));
+    assertThatThrownBy(
+            () ->
+                new SignedDiagnosisGrantProvider(
+                    blankAudience, codec, clock, signingKeys.getPrivate()))
         .isInstanceOf(IllegalStateException.class)
-        .hasMessageContaining("audience");
-  }
+        .hasMessageContaining("audiences");
 
-  @Test
-  void acceptsGrantSecretBasedOnUtf8BytesAndMinimumTtl() {
-    AgentGrantProperties properties = propertiesWithTtl(1);
-    properties.setSecret("中".repeat(11));
-
-    SignedDiagnosisGrantProvider provider =
-        new SignedDiagnosisGrantProvider(properties, codec, clock);
-
-    String token = provider.issue(request("tenant_1", "inc_1", "trace_1"));
-    DiagnosisGrantClaims claims = codec.verify(properties.getSecret(), token, AUDIENCE);
-    assertThat(claims.expiresAt()).isEqualTo(NOW.plusSeconds(1));
+    AgentGrantProperties blankScope = propertiesWithTtl(300);
+    blankScope.setScopes(List.of("diagnosis:execute", " "));
+    assertThatThrownBy(
+            () ->
+                new SignedDiagnosisGrantProvider(
+                    blankScope, codec, clock, signingKeys.getPrivate()))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("scopes");
   }
 
   private AgentGrantProperties propertiesWithTtl(long ttlSeconds) {
     AgentGrantProperties properties = new AgentGrantProperties();
-    properties.setIssuer("aiops-worker");
-    properties.setAudience(AUDIENCE);
-    properties.setSecret(SECRET);
+    properties.setIssuer("aegisops-app");
+    properties.setAudiences(List.of("aiops-agent-api", "aegisops-internal-api"));
+    properties.setScopes(List.of("diagnosis:execute", "diagnosis:resume"));
+    properties.setKeyId("task-grant-v1");
     properties.setTtlSeconds(ttlSeconds);
     return properties;
   }
 
-  private AgentDiagnosisRequest request(String tenantId, String incidentId, String traceId) {
+  private AgentDiagnosisRequest request(
+      String tenantId, String incidentId, String diagnosisId, String traceId) {
     return new AgentDiagnosisRequest(
-        "v1", tenantId, incidentId, null, List.of(), null, List.of(), List.of(), "zh-CN", traceId);
+        "v1",
+        tenantId,
+        incidentId,
+        null,
+        List.of(),
+        null,
+        List.of(),
+        List.of(),
+        "zh-CN",
+        traceId,
+        diagnosisId);
   }
 }

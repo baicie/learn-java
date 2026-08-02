@@ -79,6 +79,7 @@ class AgentMemory(BaseModel):
 class DiagnosisRequest(BaseModel):
     tenant_id: str
     incident_id: str
+    diagnosis_id: str = ""
     trace_id: str
     title: str
     severity: Severity = "medium"
@@ -98,6 +99,9 @@ class DiagnosisRequest(BaseModel):
 
 class DiagnosisResumeRequest(BaseModel):
     tenant_id: str
+    incident_id: str
+    diagnosis_id: str
+    trace_id: str
     checkpoint_id: str | None = None
     resume_token: str | None = None
 

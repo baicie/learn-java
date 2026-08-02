@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.setup.MockMvcBuilders.standal
 
 import io.aegisops.common.security.DiagnosisGrantClaims;
 import java.time.Instant;
+import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.web.servlet.MockMvc;
@@ -19,13 +20,17 @@ class InternalServiceAuthProbeControllerTest {
         new InternalServicePrincipal("svc:aiops-agent", Set.of("evidence:read"));
     DiagnosisGrantClaims grant =
         new DiagnosisGrantClaims(
-            "aiops-server",
-            "aegisops-internal-api",
+            "aegisops-app",
+            "diagnosis:diagnosis-probe",
+            Set.of("aegisops-internal-api", "aiops-agent-api"),
+            List.of("evidence:read"),
             "tenant-probe",
             "incident-probe",
+            "diagnosis-probe",
             "trace-probe",
             Instant.parse("2026-07-30T08:00:00Z"),
-            Instant.parse("2026-07-30T08:05:00Z"));
+            Instant.parse("2026-07-30T08:05:00Z"),
+            "grant-probe");
 
     mvc.perform(
             post("/internal/agent/auth/probe")

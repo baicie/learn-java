@@ -5,7 +5,7 @@ status: accepted
 phase: global
 owner: ai
 created: 2026-06-30
-updated: 2026-07-29
+updated: 2026-08-02
 related:
   - docs/scenarios/phase-z9-zabbix-mvp-acceptance.md
 ---
@@ -14,7 +14,7 @@ related:
 
 ## 接入模式定位
 
-AegisOps 的默认真实 Zabbix 链路由 aiops-worker 周期轮询 `active` 数据源：
+AegisOps 的默认真实 Zabbix 链路由 aegisops-app 内的 Worker runtime 周期轮询 `active` 数据源：
 
 ```text
 Zabbix problem.get -> Worker -> AlertEvent -> Incident

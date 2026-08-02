@@ -8,6 +8,7 @@ from typing import Any
 
 import httpx
 
+from aiops_agent import mtls
 from aiops_agent.settings import settings
 from aiops_agent.workflow.contracts import EvidenceItem
 from aiops_agent.workflow.errors import ToolError
@@ -53,12 +54,14 @@ class EvidenceClient:
         }
 
         try:
-            async with httpx.AsyncClient(timeout=self.timeout, trust_env=False) as client:
+            async with httpx.AsyncClient(
+                timeout=self.timeout, **mtls.mtls_httpx_kwargs(settings)
+            ) as client:
                 response = await client.post(
                     url,
                     headers={
                         "Content-Type": "application/json",
-                        **(await internal_tool_headers(tenant_id, settings)),
+                        **(await internal_tool_headers(tenant_id)),
                     },
                     json=body,
                 )

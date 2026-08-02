@@ -1,23 +1,4 @@
 services:
-  keycloak:
-    image: quay.io/keycloak/keycloak:26.1.4
-    container_name: aegisops-keycloak
-    command: ["start-dev", "--import-realm"]
-    environment:
-      KC_BOOTSTRAP_ADMIN_USERNAME: ${AIOPS_KEYCLOAK_ADMIN_USERNAME:-admin}
-      KC_BOOTSTRAP_ADMIN_PASSWORD: ${AIOPS_KEYCLOAK_ADMIN_PASSWORD:-dev-keycloak-admin}
-      KC_HOSTNAME: http://localhost:8089
-      AIOPS_SERVER_OAUTH2_CLIENT_SECRET: ${AIOPS_SERVER_OAUTH2_CLIENT_SECRET:-dev-aiops-server-client-secret}
-      AIOPS_WORKER_OAUTH2_CLIENT_SECRET: ${AIOPS_WORKER_OAUTH2_CLIENT_SECRET:-dev-aiops-worker-client-secret}
-      AIOPS_AGENT_OAUTH2_CLIENT_SECRET: ${AIOPS_AGENT_OAUTH2_CLIENT_SECRET:-dev-aiops-agent-client-secret}
-    volumes:
-      - ./keycloak/aegisops-realm.json:/opt/keycloak/data/import/aegisops-realm.json:ro
-    ports:
-      - "8089:8080"
-    mem_limit: "${AIOPS_KEYCLOAK_MEMORY_LIMIT:-512m}"
-    mem_reservation: "${AIOPS_KEYCLOAK_MEMORY_RESERVATION:-256m}"
-    restart: unless-stopped
-
   postgres:
     image: postgres:16
     container_name: aegisops-postgres
@@ -176,64 +157,6 @@ services:
       ZBX_SERVER_ACTIVE: zabbix-server
     ports:
       - "10050:10050"
-    restart: unless-stopped
-
-  aiops-agent:
-    build:
-      context: ../apps/aiops-agent
-      dockerfile: Dockerfile
-    container_name: aegisops-agent
-    environment:
-      AIOPS_AGENT_INBOUND_OAUTH2_ISSUER: http://localhost:8089/realms/aegisops
-      AIOPS_AGENT_INBOUND_OAUTH2_JWKS_URL: http://keycloak:8080/realms/aegisops/protocol/openid-connect/certs
-      AIOPS_AGENT_INBOUND_OAUTH2_AUDIENCE: aiops-agent-api
-      AIOPS_AGENT_OUTBOUND_OAUTH2_TOKEN_URL: http://keycloak:8080/realms/aegisops/protocol/openid-connect/token
-      AIOPS_AGENT_OUTBOUND_OAUTH2_CLIENT_ID: aiops-agent
-      AIOPS_AGENT_OUTBOUND_OAUTH2_CLIENT_SECRET: ${AIOPS_AGENT_OAUTH2_CLIENT_SECRET:-dev-aiops-agent-client-secret}
-      AIOPS_AGENT_OUTBOUND_OAUTH2_SCOPE: "evidence:read cases:read checkpoint:read checkpoint:write memory:read memory:write plugin:authorize"
-      AIOPS_AGENT_PROVIDER: aiops-agent
-      AIOPS_AGENT_NAME: aegisops_diagnosis_graph
-      AIOPS_AGENT_AGENT_NAME: aegisops_diagnosis_graph
-      AIOPS_AGENT_CONTRACT_VERSION: agent-diagnosis.v1
-      AIOPS_AGENT_GENERATION_MODE: openai-compatible
-      AIOPS_AGENT_MODEL: deepseek-v4-flash
-      # Phase4.2 LLM provider
-      AIOPS_AGENT_OPENAI_BASE_URL: https://api.deepseek.com/v1
-      AIOPS_AGENT_OPENAI_API_KEY: ${AIOPS_DEEPSEEK_API_KEY}
-      AIOPS_AGENT_OPENAI_TIMEOUT_SECONDS: 60
-      AIOPS_AGENT_OPENAI_TEMPERATURE: 0.2
-      AIOPS_AGENT_OPENAI_MAX_TOKENS: 1200
-      AIOPS_AGENT_OPENAI_RESPONSE_FORMAT_ENABLED: "true"
-      # Phase4.3 evidence tool. Disabled by default to keep local stack self-contained.
-      AIOPS_AGENT_EVIDENCE_ENABLED: "false"
-      AIOPS_AGENT_EVIDENCE_BASE_URL: http://aiops-server:8080/internal/agent/evidence
-      AIOPS_AGENT_EVIDENCE_TIMEOUT_SECONDS: 5
-      # Phase4.4 observability. When enabled, response.raw carries agentRun + agentEval.
-      AIOPS_AGENT_TRACE_ENABLED: "true"
-      AIOPS_AGENT_EVAL_ENABLED: "true"
-      # Phase7 canonical workflow. It only queries Java internal APIs and never calls runner.
-      AIOPS_AGENT_WORKFLOW_API_BASE_URL: http://aiops-server:8080
-      AIOPS_AGENT_WORKFLOW_EVIDENCE_ENABLED: "true"
-      AIOPS_AGENT_WORKFLOW_CASE_RETRIEVAL_ENABLED: "true"
-      AIOPS_AGENT_WORKFLOW_HUMAN_CHECKPOINT_ENABLED: "false"
-      AIOPS_AGENT_WORKFLOW_MULTI_AGENT_ENABLED: "false"
-      AIOPS_AGENT_WORKFLOW_MEMORY_ENABLED: "true"
-      AIOPS_AGENT_WORKFLOW_MEMORY_WRITE_ENABLED: "false"
-      # Optional Dify work-record provider. Keep credentials in the local .env file.
-      AIOPS_AGENT_WORK_RECORD_PROVIDER: ${AIOPS_AGENT_WORK_RECORD_PROVIDER:-deterministic}
-      AIOPS_AGENT_DIFY_BASE_URL: ${AIOPS_AGENT_DIFY_BASE_URL:-https://dify.example.com/v1}
-      AIOPS_AGENT_DIFY_WORK_RECORD_API_KEY: ${AIOPS_AGENT_DIFY_WORK_RECORD_API_KEY:-}
-      AIOPS_AGENT_DIFY_WORK_RECORD_WORKFLOW_ID: ${AIOPS_AGENT_DIFY_WORK_RECORD_WORKFLOW_ID:-}
-      AIOPS_AGENT_DIFY_WORK_RECORD_WORKFLOW_VERSION: ${AIOPS_AGENT_DIFY_WORK_RECORD_WORKFLOW_VERSION:-work-record-2026-07-19.1}
-      AIOPS_AGENT_DIFY_TIMEOUT_SECONDS: ${AIOPS_AGENT_DIFY_TIMEOUT_SECONDS:-75}
-      AIOPS_AGENT_DIFY_MAX_RETRIES: ${AIOPS_AGENT_DIFY_MAX_RETRIES:-2}
-      AIOPS_AGENT_DIFY_MAX_INPUT_BYTES: ${AIOPS_AGENT_DIFY_MAX_INPUT_BYTES:-65536}
-      AIOPS_AGENT_DIFY_USER_HMAC_SECRET: ${AIOPS_AGENT_DIFY_USER_HMAC_SECRET:-}
-    ports:
-      - "9008:9008"
-    depends_on:
-      keycloak:
-        condition: service_started
     restart: unless-stopped
 
 volumes:

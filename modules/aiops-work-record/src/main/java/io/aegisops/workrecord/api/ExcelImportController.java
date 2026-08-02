@@ -30,7 +30,7 @@ import org.springframework.web.bind.annotation.RestController;
 @ConditionalOnProperty(
     prefix = "aiops.runtime",
     name = "app",
-    havingValue = "server",
+    havingValue = "app",
     matchIfMissing = true)
 public class ExcelImportController {
   private static final MediaType XLSX_MEDIA_TYPE =

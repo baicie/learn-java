@@ -2,6 +2,8 @@ package io.aegisops.ai.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.aegisops.ai.client.dto.AgentDiagnosisRequest;
@@ -9,9 +11,17 @@ import io.aegisops.ai.client.workrecord.HttpWorkRecordAiClient;
 import io.aegisops.ai.client.workrecord.WorkRecordAiClient;
 import io.aegisops.ai.client.workrecord.WorkRecordGenerationRequest;
 import io.aegisops.common.exception.AppException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.security.KeyPairGenerator;
+import java.util.Base64;
 import java.util.List;
 import java.util.Map;
+import javax.net.ssl.SSLContext;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import org.springframework.boot.ssl.SslBundle;
+import org.springframework.boot.ssl.SslBundles;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
@@ -49,7 +59,8 @@ class AgentFeatureToggleTest {
                                   List.of(),
                                   List.of(),
                                   null,
-                                  null)))
+                                  null,
+                                  "diagnosis-1")))
               .isInstanceOf(AppException.class)
               .hasMessage("AI Agent is disabled for this deployment");
           assertThatThrownBy(
@@ -72,7 +83,7 @@ class AgentFeatureToggleTest {
                                   null)))
               .isInstanceOf(AppException.class)
               .hasMessage("AI Agent is disabled for this deployment");
-          assertThat(context).doesNotHaveBean(AgentCredentialProvider.class);
+          assertThat(context).doesNotHaveBean("agentCredentialProvider");
           assertThat(context).doesNotHaveBean(DiagnosisGrantProvider.class);
           assertThat(context).doesNotHaveBean(HttpAiAgentClient.class);
           assertThat(context).doesNotHaveBean(HttpWorkRecordAiClient.class);
@@ -80,17 +91,29 @@ class AgentFeatureToggleTest {
   }
 
   @Test
-  void createsOauthAndHttpClientsOnlyWhenAgentIsEnabled() {
+  void createsMtlsHttpClientsAndEd25519GrantSignerOnlyWhenAgentIsEnabled(@TempDir Path tempDir)
+      throws Exception {
+    Path privateKeyFile = tempDir.resolve("task-grant-private.pem");
+    byte[] encoded =
+        KeyPairGenerator.getInstance("Ed25519").generateKeyPair().getPrivate().getEncoded();
+    String body = Base64.getMimeEncoder(64, new byte[] {'\n'}).encodeToString(encoded);
+    Files.writeString(
+        privateKeyFile, "-----BEGIN PRIVATE KEY-----\n" + body + "\n-----END PRIVATE KEY-----\n");
+
+    SslBundles bundles = mock(SslBundles.class);
+    SslBundle bundle = mock(SslBundle.class);
+    when(bundles.getBundle("agent-client")).thenReturn(bundle);
+    when(bundle.createSslContext()).thenReturn(SSLContext.getDefault());
+
     contextRunner
+        .withBean(SslBundles.class, () -> bundles)
         .withPropertyValues(
             "aiops.agent.enabled=true",
-            "aiops.agent.base-url=http://agent:9008",
-            "aiops.agent.auth.token-uri=http://idp/token",
-            "aiops.agent.auth.client-id=aiops-server",
-            "aiops.agent.auth.client-secret=test-client-secret",
-            "aiops.agent.grant.issuer=aiops-server",
-            "aiops.agent.grant.audience=aegisops-internal-api",
-            "aiops.agent.grant.secret=test-diagnosis-grant-secret-change-me",
+            "aiops.agent.base-url=https://agent:9008",
+            "aiops.agent.ssl-bundle-name=agent-client",
+            "aiops.agent.grant.issuer=aegisops-app",
+            "aiops.agent.grant.key-id=task-grant-v1",
+            "aiops.agent.grant.private-key-file=" + privateKeyFile,
             "aiops.agent.grant.ttl-seconds=300")
         .run(
             context -> {
@@ -100,7 +123,7 @@ class AgentFeatureToggleTest {
                   .isInstanceOf(HttpAiAgentClient.class);
               assertThat(context.getBean(WorkRecordAiClient.class))
                   .isInstanceOf(HttpWorkRecordAiClient.class);
-              assertThat(context).hasSingleBean(AgentCredentialProvider.class);
+              assertThat(context).doesNotHaveBean("agentCredentialProvider");
               assertThat(context).hasSingleBean(DiagnosisGrantProvider.class);
               assertThat(context).doesNotHaveBean(DisabledAgentClients.class);
             });
@@ -108,7 +131,6 @@ class AgentFeatureToggleTest {
 
   @Configuration(proxyBeanMethods = false)
   @Import({
-    AgentServiceAuthConfiguration.class,
     DisabledAgentClients.class,
     HttpAiAgentClient.class,
     HttpWorkRecordAiClient.class,

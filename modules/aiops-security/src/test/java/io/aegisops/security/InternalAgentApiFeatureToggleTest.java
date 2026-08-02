@@ -3,7 +3,12 @@ package io.aegisops.security;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.security.KeyPairGenerator;
+import java.util.Base64;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
@@ -21,7 +26,7 @@ class InternalAgentApiFeatureToggleTest {
           .withUserConfiguration(InternalAgentApiTestConfiguration.class);
 
   @Test
-  void doesNotCreateJwksSecurityOrProbeControllerByDefault() {
+  void doesNotCreateInternalMtlsSecurityOrProbeControllerByDefault() {
     contextRunner.run(
         context -> {
           assertThat(context).doesNotHaveBean(InternalServiceAuthenticator.class);
@@ -31,17 +36,26 @@ class InternalAgentApiFeatureToggleTest {
   }
 
   @Test
-  void createsJwksSecurityAndProbeControllerWhenExplicitlyEnabled() {
+  void createsMtlsAndEd25519GrantSecurityWhenExplicitlyEnabled(@TempDir Path tempDir)
+      throws Exception {
+    Path publicKeyFile = tempDir.resolve("task-grant-public.pem");
+    byte[] encoded =
+        KeyPairGenerator.getInstance("Ed25519").generateKeyPair().getPublic().getEncoded();
+    String body = Base64.getMimeEncoder(64, new byte[] {'\n'}).encodeToString(encoded);
+    Files.writeString(
+        publicKeyFile, "-----BEGIN PUBLIC KEY-----\n" + body + "\n-----END PUBLIC KEY-----\n");
+
     contextRunner
         .withPropertyValues(
             "aiops.internal-agent-api.enabled=true",
-            "aiops.security.internal-agent-jwt-issuer-uri=http://idp/realms/aegisops",
-            "aiops.security.internal-agent-jwt-jwk-set-uri=http://idp/certs",
-            "aiops.security.internal-agent-jwt-audience=aegisops-internal-api",
-            "aiops.security.diagnosis-grant-secret=test-diagnosis-grant-secret-change-me")
+            "aiops.security.diagnosis-grant-key-id=task-grant-v1",
+            "aiops.security.diagnosis-grant-public-key-file=" + publicKeyFile)
         .run(
             context -> {
               assertThat(context).hasSingleBean(InternalServiceAuthenticator.class);
+              assertThat(context.getBean(InternalServiceAuthenticator.class))
+                  .isInstanceOf(MtlsInternalServiceAuthenticator.class);
+              assertThat(context).hasSingleBean(DiagnosisGrantVerificationKeys.class);
               assertThat(context).hasSingleBean(InternalAgentAuthFilter.class);
               assertThat(context).hasSingleBean(InternalServiceAuthProbeController.class);
             });

@@ -12,8 +12,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * <p>Apps register this properties class via their {@code @SpringBootApplication} entry point:
  *
  * <ul>
- *   <li>{@code aiops-server} registers it implicitly through {@code @ConfigurationPropertiesScan}
- *   <li>{@code aiops-runner} and {@code aiops-worker} declare
+ *   <li>{@code aegisops-app} registers it implicitly through {@code @ConfigurationPropertiesScan}
+ *   <li>{@code aiops-runner} declares
  *       {@code @EnableConfigurationProperties(RuntimeProperties.class)}
  * </ul>
  */

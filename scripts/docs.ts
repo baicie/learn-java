@@ -193,8 +193,8 @@ Postmortem
 
 ## Applications
 
-- aiops-server
-- aiops-worker
+- aegisops-app (apps/aiops-server + modules/aiops-worker-runtime)
+- aiops-agent
 - aiops-runner
 
 ## Data Stores
@@ -224,8 +224,8 @@ Build the project foundation.
 ## Deliverables
 
 - Maven multi-module project
-- aiops-server
-- aiops-worker
+- aegisops-app
+- aiops-agent
 - aiops-runner
 - React console
 - Docker Compose

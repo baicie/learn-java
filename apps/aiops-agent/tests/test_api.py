@@ -2,29 +2,25 @@ import logging
 
 from fastapi.testclient import TestClient
 
-from aiops_agent.main import app, service_authenticator
+from aiops_agent import main as main_module
+from aiops_agent.main import app
 from aiops_agent.settings import settings
 
 client = TestClient(app)
+DIAGNOSIS_HEADERS = {"X-AegisOps-Diagnosis-Grant": "diagnosis-grant"}
 
 
-class FakeServiceDecoder:
-    async def decode(self, token: str) -> dict[str, object]:
-        assert token == "test-service-token"
-        return {
-            "sub": "svc:aiops-server",
-            "aud": ["aiops-agent-api"],
-            "scope": "agent:diagnose agent:resume agent:work-record",
-            "iat": 1_000,
-            "exp": 1_300,
-        }
-
-
-service_authenticator.decoder = FakeServiceDecoder()
-SERVICE_HEADERS = {
-    "Authorization": "Bearer test-service-token",
-    "X-AegisOps-Diagnosis-Grant": "diagnosis-grant",
-}
+def diagnosis_request() -> dict:
+    return {
+        "contractVersion": "agent-diagnosis.v1",
+        "tenantId": "tenant_1",
+        "incidentId": "inc_1",
+        "diagnosisId": "diag_1",
+        "incident": {"id": "inc_1"},
+        "alerts": [],
+        "locale": "zh-CN",
+        "traceId": "trace_1",
+    }
 
 
 def test_health_includes_contract_version():
@@ -47,93 +43,34 @@ def test_contract_endpoint_returns_schemas():
     assert body["responseSchema"]["title"] == "AegisOps Agent Diagnosis Response"
 
 
-def test_service_auth_probe_requires_valid_scoped_service_identity():
-    response = client.post(
-        "/v1/auth/probe",
-        headers={"Authorization": "Bearer test-service-token"},
-    )
-
-    assert response.status_code == 200
-    assert response.json() == {
-        "ok": True,
-        "serviceId": "svc:aiops-server",
-    }
-
-    missing = client.post("/v1/auth/probe")
-    assert missing.status_code == 401
-
-
-def test_diagnosis_endpoints_publish_service_auth_security_contract():
+def test_internal_endpoints_publish_mtls_and_task_grant_security_contract():
     schema = client.get("/openapi.json").json()
 
-    assert schema["components"]["securitySchemes"]["HTTPBearer"] == {
-        "type": "http",
-        "scheme": "bearer",
-        "bearerFormat": "JWT",
+    assert schema["components"]["securitySchemes"]["WorkloadMtls"] == {
+        "type": "mutualTLS"
     }
     assert schema["components"]["securitySchemes"]["DiagnosisGrant"] == {
         "type": "apiKey",
         "in": "header",
         "name": "X-AegisOps-Diagnosis-Grant",
     }
+    assert "HTTPBearer" not in schema["components"]["securitySchemes"]
 
     for path in ("/v1/diagnose", "/v1/diagnose/resume"):
         operation = schema["paths"][path]["post"]
         assert operation["security"] == [
-            {"HTTPBearer": [], "DiagnosisGrant": []},
+            {"WorkloadMtls": [], "DiagnosisGrant": []},
         ]
-        assert {"401", "403", "503"} <= operation["responses"].keys()
+        assert {"401", "403"} <= operation["responses"].keys()
 
     work_record = schema["paths"]["/v1/work-record/generate"]["post"]
-    assert work_record["security"] == [{"HTTPBearer": []}]
-    assert {"401", "403", "503"} <= work_record["responses"].keys()
-
-    auth_probe = schema["paths"]["/v1/auth/probe"]["post"]
-    assert auth_probe["security"] == [{"HTTPBearer": []}]
-    assert {"401", "403", "503"} <= auth_probe["responses"].keys()
-
-
-def test_diagnose_rejects_missing_token(caplog):
-    with caplog.at_level(logging.WARNING):
-        response = client.post(
-            "/v1/diagnose",
-            headers={"X-AegisOps-Diagnosis-Grant": "diagnosis-grant"},
-            json={
-                "contractVersion": "agent-diagnosis.v1",
-                "tenantId": "tenant_1",
-                "incidentId": "inc_1",
-                "incident": {"id": "inc_1"},
-                "alerts": [],
-                "locale": "zh-CN",
-                "traceId": "trace_1",
-            },
-        )
-
-    assert response.status_code == 401
-    records = [
-        record
-        for record in caplog.records
-        if getattr(record, "eventType", None) == "internal_auth_failed"
-    ]
-    assert len(records) == 1
-    assert "diagnosis-grant" not in caplog.text
+    assert work_record["security"] == [{"WorkloadMtls": []}]
+    assert "/v1/auth/probe" not in schema["paths"]
 
 
 def test_diagnose_rejects_missing_diagnosis_grant(caplog):
     with caplog.at_level(logging.WARNING):
-        response = client.post(
-            "/v1/diagnose",
-            headers={"Authorization": "Bearer test-service-token"},
-            json={
-                "contractVersion": "agent-diagnosis.v1",
-                "tenantId": "tenant_1",
-                "incidentId": "inc_1",
-                "incident": {"id": "inc_1"},
-                "alerts": [],
-                "locale": "zh-CN",
-                "traceId": "trace_1",
-            },
-        )
+        response = client.post("/v1/diagnose", json=diagnosis_request())
 
     assert response.status_code == 401
     records = [
@@ -146,26 +83,13 @@ def test_diagnose_rejects_missing_diagnosis_grant(caplog):
     assert record.severity == "critical"
     assert record.httpStatus == 401
     assert record.requestPath == "/v1/diagnose"
-    assert record.serviceId == "svc:aiops-server"
-    assert "test-service-token" not in caplog.text
 
 
 def test_diagnose_rejects_blank_diagnosis_grant():
     response = client.post(
         "/v1/diagnose",
-        headers={
-            "Authorization": "Bearer test-service-token",
-            "X-AegisOps-Diagnosis-Grant": " \t ",
-        },
-        json={
-            "contractVersion": "agent-diagnosis.v1",
-            "tenantId": "tenant_1",
-            "incidentId": "inc_1",
-            "incident": {"id": "inc_1"},
-            "alerts": [],
-            "locale": "zh-CN",
-            "traceId": "trace_1",
-        },
+        headers={"X-AegisOps-Diagnosis-Grant": " \t "},
+        json=diagnosis_request(),
     )
 
     assert response.status_code == 401
@@ -175,34 +99,19 @@ def test_diagnose_rejects_wrong_contract_header():
     response = client.post(
         "/v1/diagnose",
         headers={
-            **SERVICE_HEADERS,
+            **DIAGNOSIS_HEADERS,
             "X-AegisOps-Contract-Version": "bad",
         },
-        json={
-            "contractVersion": "agent-diagnosis.v1",
-            "tenantId": "tenant_1",
-            "incidentId": "inc_1",
-            "incident": {"id": "inc_1"},
-            "alerts": [],
-            "locale": "zh-CN",
-            "traceId": "trace_1",
-        },
+        json=diagnosis_request(),
     )
 
     assert response.status_code == 400
 
 
-def test_diagnose_returns_contract_response():
-    response = client.post(
-        "/v1/diagnose",
-        headers={
-            **SERVICE_HEADERS,
-            "X-AegisOps-Contract-Version": settings.contract_version,
-        },
-        json={
-            "contractVersion": "agent-diagnosis.v1",
-            "tenantId": "tenant_1",
-            "incidentId": "inc_1",
+def test_diagnose_returns_contract_response_without_bearer_header():
+    payload = diagnosis_request()
+    payload.update(
+        {
             "incident": {
                 "id": "inc_1",
                 "title": "CPU high",
@@ -226,9 +135,15 @@ def test_diagnose_returns_contract_response():
                 "confidence": 0.8,
                 "summary": "RCA summary",
             },
-            "locale": "zh-CN",
-            "traceId": "trace_1",
+        }
+    )
+    response = client.post(
+        "/v1/diagnose",
+        headers={
+            **DIAGNOSIS_HEADERS,
+            "X-AegisOps-Contract-Version": settings.contract_version,
         },
+        json=payload,
     )
 
     assert response.status_code == 200
@@ -240,27 +155,10 @@ def test_diagnose_returns_contract_response():
     assert body["raw"]["workflow"]["graphVersion"] == "phase8.0-saas-tenant-hardening"
 
 
-def test_diagnose_resume_rejects_missing_token():
-    response = client.post(
-        "/v1/diagnose/resume",
-        headers={"X-AegisOps-Diagnosis-Grant": "diagnosis-grant"},
-        json={
-            "tenant_id": "tenant_1",
-            "checkpoint_id": "agcp_1",
-        },
-    )
-
-    assert response.status_code == 401
-
-
 def test_diagnose_resume_rejects_missing_diagnosis_grant():
     response = client.post(
         "/v1/diagnose/resume",
-        headers={"Authorization": "Bearer test-service-token"},
-        json={
-            "tenant_id": "tenant_1",
-            "checkpoint_id": "agcp_1",
-        },
+        json={"tenant_id": "tenant_1", "checkpoint_id": "agcp_1"},
     )
 
     assert response.status_code == 401
@@ -269,14 +167,54 @@ def test_diagnose_resume_rejects_missing_diagnosis_grant():
 def test_diagnose_resume_rejects_blank_diagnosis_grant():
     response = client.post(
         "/v1/diagnose/resume",
-        headers={
-            "Authorization": "Bearer test-service-token",
-            "X-AegisOps-Diagnosis-Grant": " \t ",
-        },
-        json={
-            "tenant_id": "tenant_1",
-            "checkpoint_id": "agcp_1",
-        },
+        headers={"X-AegisOps-Diagnosis-Grant": " \t "},
+        json={"tenant_id": "tenant_1", "checkpoint_id": "agcp_1"},
     )
 
     assert response.status_code == 401
+
+
+def test_diagnose_resume_binds_grant_to_complete_task_context(monkeypatch):
+    captured = {}
+
+    def verify(token, **kwargs):
+        captured.update(kwargs)
+        return {"sub": "diagnosis:diag_1", "jti": "test"}
+
+    class ResumeService:
+        async def resume(self, request):
+            return {
+                "tenant_id": request.tenant_id,
+                "incident_id": request.incident_id,
+                "summary": "resumed",
+                "root_cause": "unknown",
+                "confidence": 0.1,
+                "severity": "medium",
+                "risk_level": "low",
+            }
+
+    monkeypatch.setattr("aiops_agent.main.diagnosis_grant_verifier.verify", verify)
+    app.dependency_overrides[main_module.diagnosis_service] = ResumeService
+    try:
+        response = client.post(
+            "/v1/diagnose/resume",
+            headers=DIAGNOSIS_HEADERS,
+            json={
+                "tenant_id": "tenant_1",
+                "incident_id": "inc_1",
+                "diagnosis_id": "diag_1",
+                "trace_id": "trace_1",
+                "checkpoint_id": "agcp_1",
+            },
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert captured == {
+        "required_scope": "diagnosis:resume",
+        "tenant_id": "tenant_1",
+        "incident_id": "inc_1",
+        "diagnosis_id": "diag_1",
+        "trace_id": "trace_1",
+    }

@@ -28,6 +28,7 @@ def to_workflow_request(
     return WorkflowDiagnosisRequest(
         tenant_id=request.tenantId,
         incident_id=request.incidentId,
+        diagnosis_id=request.diagnosisId,
         trace_id=request.traceId,
         title=incident.title or f"Incident {request.incidentId}",
         severity=_normalize_severity(incident.severity),

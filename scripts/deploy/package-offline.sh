@@ -18,6 +18,9 @@
 #   │   └── aegisops-*.tgz
 #   ├── values/
 #   │   └── values-offline.yaml
+#   ├── init/
+#   │   ├── 001-create-roles.sql
+#   │   └── 002-grant-runner.sql
 #   ├── scripts/
 #   │   ├── load-offline-images.sh
 #   │   ├── generate-secrets.sh
@@ -49,14 +52,13 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT_DIR"
 
 rm -rf "$OUT_DIR"
-mkdir -p "$OUT_DIR/images" "$OUT_DIR/chart" "$OUT_DIR/values" "$OUT_DIR/scripts"
+mkdir -p "$OUT_DIR/images" "$OUT_DIR/chart" "$OUT_DIR/values" "$OUT_DIR/init" "$OUT_DIR/scripts"
 
 # ── 1. 打包镜像 ────────────────────────────────────────────────────────────
 IMAGE_LIST=(
-  "${REGISTRY}/aiops-server:${VERSION}"
-  "${REGISTRY}/aiops-worker:${VERSION}"
-  "${REGISTRY}/aiops-runner:${VERSION}"
+  "${REGISTRY}/aegisops-app:${VERSION}"
   "${REGISTRY}/aiops-agent:${VERSION}"
+  "${REGISTRY}/aiops-runner:${VERSION}"
 )
 
 echo "[1/5] 打包镜像..."
@@ -101,6 +103,8 @@ helm package deploy/helm/aegisops --destination "$OUT_DIR/chart"
 echo "[4/5] 复制配置和脚本..."
 cp deploy/helm/aegisops/values-offline.yaml "$OUT_DIR/values/values-offline.yaml"
 cp deploy/offline/README.md "$OUT_DIR/README.md"
+cp deploy/init/001-create-roles.sql "$OUT_DIR/init/001-create-roles.sql"
+cp deploy/init/002-grant-runner.sql "$OUT_DIR/init/002-grant-runner.sql"
 cp scripts/deploy/load-offline-images.sh "$OUT_DIR/scripts/load-offline-images.sh"
 cp scripts/deploy/generate-secrets.sh "$OUT_DIR/scripts/generate-secrets.sh"
 cp scripts/deploy/render-helm.sh "$OUT_DIR/scripts/render-helm.sh"

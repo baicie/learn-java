@@ -84,12 +84,16 @@ class InternalAgentMemoryControllerTest {
 
   private DiagnosisGrantClaims grant() {
     return new DiagnosisGrantClaims(
-        "aiops-server",
-        "aegisops-internal-api",
+        "aegisops-app",
+        "diagnosis:diag_1",
+        java.util.Set.of("aegisops-internal-api"),
+        List.of("memory:read"),
         "tenant_grant",
         "inc_1",
+        "diag_1",
         "trace_1",
         Instant.parse("2026-07-30T08:00:00Z"),
-        Instant.parse("2026-07-30T08:05:00Z"));
+        Instant.parse("2026-07-30T08:05:00Z"),
+        "grant_1");
   }
 }

@@ -9,6 +9,7 @@ from typing import Any
 import httpx
 from pydantic import ValidationError
 
+from aiops_agent import mtls
 from aiops_agent.settings import settings
 from aiops_agent.workflow.contracts import SimilarCase
 from aiops_agent.workflow.errors import ToolError
@@ -45,7 +46,9 @@ class KnowledgeClient:
         }
 
         try:
-            async with httpx.AsyncClient(timeout=self.timeout, trust_env=False) as client:
+            async with httpx.AsyncClient(
+                timeout=self.timeout, **mtls.mtls_httpx_kwargs(settings)
+            ) as client:
                 headers = await internal_tool_headers(tenant_id)
                 response = await client.post(url, json=body, headers=headers)
                 if response.status_code == 404:

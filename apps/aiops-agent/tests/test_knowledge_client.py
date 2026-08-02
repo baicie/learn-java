@@ -12,17 +12,6 @@ from aiops_agent.workflow.errors import ToolError
 from aiops_agent.workflow.tools.knowledge_client import KnowledgeClient
 
 
-@pytest.fixture(autouse=True)
-def oauth_service_headers(monkeypatch):
-    async def headers(_settings):
-        return {"Authorization": "Bearer oauth-service-token"}
-
-    monkeypatch.setattr(
-        "aiops_agent.workflow.tools.internal_auth.service_credential_headers",
-        headers,
-    )
-
-
 @pytest.mark.asyncio
 @respx.mock
 async def test_knowledge_client_extracts_root_cause_from_phase6_chunk_content():

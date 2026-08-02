@@ -6,6 +6,7 @@ from typing import Any
 
 import httpx
 
+from aiops_agent import mtls
 from aiops_agent.settings import settings
 from aiops_agent.workflow.tools.internal_auth import internal_tool_headers
 
@@ -33,11 +34,13 @@ class PluginPolicyClient:
             "toolKey": tool_key,
         }
 
-        async with httpx.AsyncClient(timeout=self.timeout, trust_env=False) as client:
+        async with httpx.AsyncClient(
+            timeout=self.timeout, **mtls.mtls_httpx_kwargs(settings)
+        ) as client:
             response = await client.post(
                 url,
                 json=body,
-                headers=await internal_tool_headers(tenant_id, settings),
+                headers=await internal_tool_headers(tenant_id),
             )
             response.raise_for_status()
             payload = response.json()

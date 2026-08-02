@@ -7,167 +7,131 @@ owner: ai
 created: 2026-06-30
 updated: 2026-08-01
 related:
-  - docs/adr/0009-service-to-service-authentication.md
-  - docs/adr/0010-service-authentication-oauth2-only.md
+  - docs/adr/0012-internal-mtls-task-grants.md
   - docs/api/internal-service-authentication.md
+  - docs/deployment/production-security-checklist.md
 ---
 
 # AegisOps Production Runbook
 
-## 1. Pod Not Ready
+## 1. 运行拓扑
 
-```bash
-kubectl get pods -n aegisops
-kubectl describe pod <pod> -n aegisops
-kubectl logs <pod> -n aegisops --tail=200
+```text
+诊断模式:   aegisops-app + aiops-agent + PostgreSQL
+自动化模式: 诊断模式 + aiops-runner
 ```
 
-Check:
-
-- readiness path
-- external PostgreSQL
-- Redis
-- IdP / JWKS 连通性
-- OAuth2 client secret
-- Diagnosis Grant 配置
-- image pull secret
-- resource limits
-
-## 2. High 5xx Rate
-
-Check dashboard:
-
-- HTTP 5xx Rate
-- p95 latency
-- JVM memory
-- DB connectivity
-
-Commands:
+外部只访问 App 8080。App 8443、Agent 9008 和 Runner 状态端口仅在内部网络可达。默认一键安装：
 
 ```bash
-kubectl logs deploy/aegisops-aegisops-server -n aegisops --tail=200
+bash deploy/install.sh
 ```
 
-## 3. Agent High Error Rate
-
-Check:
+启用自动化：
 
 ```bash
-kubectl get pods -n aegisops -l app.kubernetes.io/component=agent
-kubectl logs deploy/aegisops-aegisops-agent -n aegisops --tail=200
+bash deploy/install.sh --mode automation
 ```
 
-Check env:
+安装器默认复用已有安全材料。证书/密钥轮换必须先验证数据库凭据、当前/前一把公钥窗口和回滚
+材料，不能直接删除 `deploy/runtime`。`--force` 只保留一代 previous Grant 公钥；再次轮换前
+必须确认更早公钥对应的任务均已完成或过期。
 
-- `AIOPS_AGENT_INBOUND_OAUTH2_ISSUER`
-- `AIOPS_AGENT_INBOUND_OAUTH2_JWKS_URL`
-- `AIOPS_AGENT_INBOUND_OAUTH2_AUDIENCE`
-- `AIOPS_AGENT_WORKFLOW_API_BASE_URL`
-- `AIOPS_AGENT_EVIDENCE_BASE_URL`
+## 2. 容器未就绪
 
-## 4. Internal Agent 401
+```bash
+docker compose --env-file deploy/runtime/.env \
+  -f deploy/docker-compose.core.yml --profile ai ps
+docker compose --env-file deploy/runtime/.env \
+  -f deploy/docker-compose.core.yml --profile ai logs --tail=200 aegisops-app aiops-agent
+```
 
 依次检查：
 
-- 服务 JWT 的 issuer、audience、expiry 和目标端点 scope。
-- IdP token endpoint 与 JWKS endpoint 是否可达。
-- `X-AegisOps-Diagnosis-Grant` 是否存在、过期或 issuer 不允许。
-- server 与 worker 的 `AIOPS_DIAGNOSIS_GRANT_SECRET` 是否一致。
-- 对应组件的 OAuth2 client id、client secret 与端点 scope 是否匹配 IdP 配置。
+- PostgreSQL 与 `aegisops_app` 凭据；Runner 另查 `aegisops_runner`。
+- App/Agent 证书文件、私钥权限、角色 CA 与证书有效期。
+- Grant 当前 `kid`、公钥文件和仅 App 可见的私钥。
+- App 8443 与 Agent 9008 的内部 DNS/网络连通性。
+- 镜像拉取、资源限制与只读文件系统的临时目录。
 
-## 5. Tenant Missing
+不要通过关闭证书校验、回退 HTTP、重新启用静态 Token 或 OAuth2 兼容代码恢复服务。
 
-内部 API 的租户授权来自有效 Diagnosis Grant。`X-Tenant-Id` 可以继续发送用于兼容和
-可观测，但不得作为授权来源。若出现 `TENANT_REQUIRED` 或 `DIAGNOSIS_GRANT_INVALID`，检查：
+## 3. Agent 高错误率
 
-- Grant 是否包含非空 `tenantId`、`incidentId`、`traceId`。
-- Grant audience 是否为 `aegisops-internal-api`。
-- 公共 API 是否能从用户 JWT 恢复租户。
+重点核对：
 
-## 6. 首次从静态 Token 升级到 OAuth2
+```text
+AIOPS_AGENT_TLS_CERTIFICATE_FILE
+AIOPS_AGENT_TLS_PRIVATE_KEY_FILE
+AIOPS_AGENT_TLS_CLIENT_CA_FILE
+AIOPS_AGENT_DIAGNOSIS_GRANT_PUBLIC_KEY_FILE
+AIOPS_AGENT_DIAGNOSIS_GRANT_KEY_ID
+AIOPS_AGENT_WORKFLOW_API_BASE_URL
+AIOPS_AGENT_EVIDENCE_BASE_URL
+```
 
-首次升级必须安排协调变更窗口，同时升级 server、worker 和 agent，不能长期运行混合版本。
-上线前先在 IdP 创建并验证三个独立 confidential client：
+`401` 通常表示缺失/无效/过期 Grant；`403` 通常表示 scope 或资源上下文不匹配；TLS 握手失败
+应检查证书链、DNS SAN/URI SAN、时间同步和角色 CA，不会表现为业务 HTTP 状态码。
 
-| client         | audience                | 必需 scope                                                                                            |
-| -------------- | ----------------------- | ----------------------------------------------------------------------------------------------------- |
-| `aiops-server` | `aiops-agent-api`       | `agent:diagnose agent:resume agent:work-record`                                                       |
-| `aiops-worker` | `aiops-agent-api`       | `agent:diagnose agent:work-record`                                                                    |
-| `aiops-agent`  | `aegisops-internal-api` | `evidence:read cases:read checkpoint:read checkpoint:write memory:read memory:write plugin:authorize` |
+默认 Grant 只包含 `diagnosis:execute` 和 `diagnosis:resume`。若启用了 evidence、case、plugin、
+memory 或 checkpoint 功能，检查 `AIOPS_DIAGNOSIS_GRANT_SCOPES` 是否只增加了对应 scope，并与
+Agent 功能开关一致。Resume 请求和 checkpoint 状态中的 tenant、Incident、diagnosis、trace
+必须全部一致。
 
-在变更窗口开始前完成以下预验证：
+## 4. Internal Agent 401/403
 
-1. discovery、token 和 JWKS endpoint 从目标运行网络可达。
-2. 三个 client 分别换取 Token，且 secret 互不相同。
-3. Token 包含正确的 `iss`、`sub`、`aud`、`scope`、`iat` 和 `exp`，并满足
-   `0 < exp - iat <= 300s`。
-4. server 与 worker 配置相同的 Diagnosis Grant audience、issuer allowlist 和至少 32 字节
-   的签名密钥；Agent 容器中不存在该签名密钥。
-5. 新部署描述符中的 server、worker、agent 均声明 `AIOPS_SERVICE_AUTH_CONTRACT=oauth2-v1`。
+依次检查：
 
-首次切换后禁止自动回滚到旧静态 Token 版本。若 IdP、scope、audience、JWKS 或 secret 配置
-有误，应暂停新的 AI 诊断请求并前向修复配置，再逐个重启受影响 workload。不要重新启用旧
-Header、长期共享 Token 或 static 兼容分支。
+1. 请求是否进入 App 8443，而不是公共 8080。
+2. Agent 证书是否由 agent CA 签发，URI SAN 是否为
+   `spiffe://aegisops.local/service/aiops-agent`。
+3. `X-AegisOps-Diagnosis-Grant` 是否由当前/前一把 Ed25519 公钥验证通过。
+4. Grant 是否包含双 audience、端点所需 scope，以及匹配的 tenant/incident/diagnosis/trace。
+5. 主机时间偏差是否超过允许窗口。
 
-完成首次升级后，后续版本回滚只允许使用满足以下条件的完整历史部署：
+内部租户授权只来自有效 Diagnosis Grant。`X-Tenant-Id` 可以用于可观测，但不能作为替代凭据。
 
-- server、worker、agent 三个历史容器都带 `oauth2-v1` 契约标记。
-- 历史镜像、部署描述符和 client 配置属于同一次已验证发布。
-- 回滚不会恢复已经轮换或吊销的 client secret。
+## 5. Runner 拒绝任务
 
-任何组件缺少契约标记时，回滚门禁必须拒绝该历史版本。
+查询执行记录和 `execution_audit_event`，关注 `execution_grant_rejected` 等脱敏事件。检查：
 
-### 6.1 VM 发布描述符恢复语义
+- Grant 是否缺失、过期、`kid` 未加载或 issuer/audience/scope 错误。
+- `execution_snapshot_sha256` 是否与当前执行行及按 sequence 排序的步骤一致。
+- 审批 ID/快照、mode、执行类型、回滚引用、重试次数或 timeout 是否被修改。
+- live 审批快照是否为 `approved`，`approvalId`/`planId` 是否一致，批准数是否达到至少一次审批
+  和 `requiredApprovals` 门槛。
+- Runner 是否使用独立账号，且权限覆盖领取、心跳、状态、产物和审计所需表。
 
-VM 发布不得在验证前覆盖 active 描述符：
+Grant 拒绝时不得手工改状态绕过验证，也不得把私钥挂入 Runner。应停止领取新任务，修复 App
+签发或数据库一致性后重新走创建/审批流程。
 
-- `docker-compose.app.yml` 是 active，只对应最后完整通过健康检查与双向 OAuth2 探针的版本。
-- `docker-compose.app.candidate.yml` 是本次待发布版本。
-- `docker-compose.app.previous.yml` 是 candidate 校验通过后，对 active 的原子快照。
+## 6. 非破坏性 mTLS 检查
 
-拉镜像或端口预检失败时，运行容器和 active 均保持不变。新容器启动后失败时，脚本使用
-previous 与部署前捕获的不可变镜像执行回滚；即使回滚健康检查或鉴权探针失败，也不得把
-candidate 写入 active。只有新版本全部验证成功后，candidate 才原子提升为 active。连续发布
-时必须始终从 active 生成 previous，不能从上一次失败遗留的 candidate 生成。
+部署探针 `deploy/scripts/verify-internal-mtls.py` 使用客户端证书建立真实 TLS 连接，校验服务端
+证书链、DNS 与预期 SPIFFE URI SAN。探针不得打印私钥、Grant、数据库密码或完整证书内容。
 
-## 7. OAuth2 故障人工恢复
+完整 Java → Agent → Java 业务烟测必须使用已批准的合成租户和 Incident，并确认不会触发
+Runner、自动化审批或外部通知。
 
-按错误类型处理：
+## 7. 发布与回滚
 
-- `401 internal_auth_failed`：检查 Bearer 格式、签名、issuer、audience、`iat/exp` 和主体。
-- `403 internal_auth_forbidden`：检查 client scope 与目标端点 scope，不扩大其他 client 权限。
-- `503 internal_auth_unavailable`：检查 IdP/JWKS 网络、DNS、证书和服务状态。
-- `diagnosis_grant_missing` / `DIAGNOSIS_GRANT_INVALID`：检查 Java 签发和 Agent 原样传播路径，
-  不把 `X-Tenant-Id` 当作替代凭据。
+VM 发布不得在验证前覆盖 active 描述符或现有安全材料。新镜像应先作为 candidate 启动，依次
+通过 PostgreSQL migration、App/Agent 健康、双向 mTLS 和合成诊断检查后再提升为 active。
 
-恢复步骤：
+回滚必须使用同一次已验证发布的镜像、Compose/Helm 描述符、证书信任窗口和 Grant 公钥集合。
+如果新版本已经写入不可逆 migration，先按 migration 兼容性评估，不得只回滚镜像。Runner 已
+领取的任务保留审计记录，不得删除数据库行来伪造回滚成功。
 
-1. 暂停触发新的 AI 诊断，保留已有 Incident、审计和执行记录。
-2. 从对应 Pod 验证 discovery、JWKS 和 token endpoint 连通性，不输出 Token 或 client secret。
-3. 分别核对三个 client 的 audience、scope、启用状态和 secret 版本。
-4. 通过 Secret 管理系统修正配置，只滚动重启使用该 Secret 的 workload。
-5. 观察结构化事件 `internal_auth_failed`、`internal_auth_forbidden`、
-   `internal_auth_unavailable` 和 `diagnosis_grant_missing` 是否停止增长。
-6. 通过后述非破坏性检查确认 IdP 契约，再在指定的合成租户和 Incident 上恢复业务烟测。
+## 8. 旧 Compose 升级
 
-## 8. 生产健康后的非破坏性 OAuth2 检查
+运行 `bash deploy/install.sh` 时，安装器会在启动新栈前探测旧 PostgreSQL 服务。发现旧栈后应
+在输出中确认：
 
-`deploy/scripts/deploy-app.sh` 在所有容器通过健康检查后自动运行
-`deploy/scripts/verify-service-auth-oauth.py`。该脚本执行以下非破坏性检查：
+1. `deploy/runtime/backups/pre-mtls-*.dump` 已生成且非空。
+2. `deploy/runtime/.env` 的 `AIOPS_POSTGRES_VOLUME_NAME` 指向旧命名卷。
+3. 新 PostgreSQL 使用 `aegisops_admin`，App 与 Runner 分别使用最小权限账号。
+4. App 健康、Flyway 完成、Agent mTLS 探针通过后，才把新栈视为可用。
 
-1. JWKS endpoint 返回至少一个签名公钥。
-2. server、worker、agent 三个 client 分别换取短期 Token，并在内存中校验
-   `iss/sub/aud/scope/iat/exp`。
-3. server 和 worker 分别调用 Agent 的 `POST /v1/auth/probe`。
-4. agent 携带合成 Diagnosis Grant 调用 Java 的 `POST /internal/agent/auth/probe`，并核对
-   返回的 `tenantId + incidentId + traceId`。
-
-两个 probe 都不读写业务数据，不触发诊断、Runner、审批或通知。命令输出禁止包含 Token、
-client secret、Diagnosis Grant 或完整 claims。探针失败会使部署失败；只有旧部署的
-server、worker、agent 都声明 `AIOPS_SERVICE_AUTH_CONTRACT=oauth2-v1` 时，部署脚本才允许
-自动回滚，并在回滚后重新运行同一探针。
-
-`scripts/ci/verify-service-auth-runtime.py` 会幂等创建并清理合成 Incident 与 change marker，
-用于 CI 或预发布环境验证完整的 Java -> Agent -> Java 回调路径，不应直接对生产数据库运行。
-生产需要完整业务烟测时，必须使用已批准的合成租户和 Incident，并确认不会触发 Runner、
-自动化审批或外部通知。
+备份或角色迁移失败时，旧容器与命名卷不得删除。自动迁移成功后旧业务容器会被移除，但 dump
+和原卷保留；回滚需要旧 Compose/镜像以及数据库兼容性评估，必要时从 dump 恢复。不要为了
+重试而执行 `docker volume rm`、`docker compose down -v` 或手工删除备份。

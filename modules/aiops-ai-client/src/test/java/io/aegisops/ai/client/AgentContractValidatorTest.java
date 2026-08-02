@@ -39,7 +39,8 @@ class AgentContractValidatorTest {
             List.of(),
             List.of(),
             "zh-CN",
-            "trace_1");
+            "trace_1",
+            "diag_1");
 
     AgentContractViolationException ex =
         assertThrows(
@@ -61,7 +62,8 @@ class AgentContractValidatorTest {
             List.of(),
             List.of(),
             "zh-CN",
-            "trace_1");
+            "trace_1",
+            "diag_1");
 
     assertThrows(AgentContractViolationException.class, () -> validator.validateRequest(request));
   }
@@ -80,7 +82,8 @@ class AgentContractValidatorTest {
             null,
             List.of(),
             "zh-CN",
-            "trace_1");
+            "trace_1",
+            "diag_1");
 
     AgentContractViolationException ex =
         assertThrows(
@@ -106,7 +109,8 @@ class AgentContractValidatorTest {
                     null, "", "zabbix", "", null, null, null, null, null, "{}")),
             List.of(),
             "zh-CN",
-            "trace_1");
+            "trace_1",
+            "diag_1");
 
     AgentContractViolationException ex =
         assertThrows(
@@ -129,7 +133,8 @@ class AgentContractValidatorTest {
             List.of(),
             null,
             "zh-CN",
-            "trace_1");
+            "trace_1",
+            "diag_1");
 
     AgentContractViolationException ex =
         assertThrows(
@@ -153,7 +158,8 @@ class AgentContractValidatorTest {
             List.of(),
             Arrays.asList((AgentTimelineContext) null),
             "zh-CN",
-            "trace_1");
+            "trace_1",
+            "diag_1");
 
     AgentContractViolationException ex =
         assertThrows(
@@ -161,6 +167,17 @@ class AgentContractValidatorTest {
 
     assertEquals("AI_AGENT_CONTRACT_VIOLATION", ex.errorCode());
     assertTrue(ex.getMessage().contains("timeline[0] is null"));
+  }
+
+  @Test
+  void rejectsMissingDiagnosisId() {
+    AgentDiagnosisRequest request = validRequest(null);
+
+    AgentContractViolationException ex =
+        assertThrows(
+            AgentContractViolationException.class, () -> validator.validateRequest(request));
+
+    assertTrue(ex.getMessage().contains("diagnosisId is required"));
   }
 
   @Test
@@ -198,6 +215,10 @@ class AgentContractValidatorTest {
   }
 
   private AgentDiagnosisRequest validRequest() {
+    return validRequest("diag_1");
+  }
+
+  private AgentDiagnosisRequest validRequest(String diagnosisId) {
     return new AgentDiagnosisRequest(
         AgentContract.DIAGNOSIS_CONTRACT_VERSION,
         "tenant_1",
@@ -211,7 +232,8 @@ class AgentContractValidatorTest {
         List.of(),
         List.of(),
         "zh-CN",
-        "trace_1");
+        "trace_1",
+        diagnosisId);
   }
 
   private AgentDiagnosisResponse validResponse() {

@@ -5,9 +5,9 @@ status: accepted
 phase: global
 owner: ai
 created: 2026-06-30
-updated: 2026-07-30
+updated: 2026-08-01
 related:
-  - docs/adr/0010-service-authentication-oauth2-only.md
+  - docs/adr/0012-internal-mtls-task-grants.md
   - docs/api/internal-service-authentication.md
 ---
 
@@ -36,11 +36,11 @@ cd aegisops-0.1.0
 ./scripts/generate-secrets.sh values/generated-secrets.values.yaml
 ```
 
-修改 `values/values-offline.yaml`，配置外部依赖、IdP 端点以及这些服务的受限
-`networkPolicy.egress.allowedCidrs`；空列表和全网 CIDR 会被 Helm 拒绝。离线包不包含
-IdP/Keycloak 镜像；安装前必须准备支持 OAuth2 Client Credentials 的 IdP，并创建 `aiops-server`、
-`aiops-worker`、`aiops-agent` 三个独立 client。client secret、audience 与 scope 必须与
-`docs/api/internal-service-authentication.md` 一致。
+修改 `values/values-offline.yaml`，配置 PostgreSQL、可选外部依赖及其受限
+`networkPolicy.egress.allowedCidrs`；空列表和全网 CIDR 会被 Helm 拒绝。离线包不需要
+IdP/Keycloak 镜像或 OAuth2 client。安装前必须生成 App/Agent mTLS 证书、角色 CA、Ed25519
+Grant 密钥，以及互相独立的 App/Runner 数据库凭据；身份、audience 与 scope 必须符合
+`docs/api/internal-service-authentication.md`。
 
 配置文件：
 

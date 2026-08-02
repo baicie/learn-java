@@ -12,4 +12,5 @@ public record AgentDiagnosisRequest(
     List<AgentEvidenceContext> evidence,
     List<AgentTimelineContext> timeline,
     String locale,
-    String traceId) {}
+    String traceId,
+    String diagnosisId) {}

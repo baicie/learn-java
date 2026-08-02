@@ -1,8 +1,10 @@
 package io.aegisops.runner;
 
 import io.aegisops.common.exception.AppException;
+import io.aegisops.common.security.InvalidExecutionGrantException;
 import io.aegisops.execution.ExecutionProperties;
 import io.aegisops.execution.dto.ExecutionArtifactCreateCommand;
+import io.aegisops.execution.dto.ExecutionAuditEventCreateCommand;
 import io.aegisops.execution.dto.ExecutionRunRecord;
 import io.aegisops.execution.dto.ExecutionRunStatusUpdateCommand;
 import io.aegisops.execution.dto.ExecutionStepRecord;
@@ -16,6 +18,7 @@ import java.time.OffsetDateTime;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,13 +36,15 @@ public class RunnerExecutionService {
   private final ExecutionProperties executionProperties;
   private final RunnerProperties runnerProperties;
   private final List<StepExecutor> executors;
+  private final ExecutionGrantValidator executionGrantValidator;
 
   public RunnerExecutionService(
       ExecutionApplicationService executionApplicationService,
       RollbackApplicationService rollbackApplicationService,
       ExecutionProperties executionProperties,
       RunnerProperties runnerProperties,
-      List<StepExecutor> executors) {
+      List<StepExecutor> executors,
+      ExecutionGrantValidator executionGrantValidator) {
     this.executionApplicationService = executionApplicationService;
     this.rollbackApplicationService = rollbackApplicationService;
     this.executionProperties = executionProperties;
@@ -48,6 +53,7 @@ public class RunnerExecutionService {
         executors.stream()
             .sorted(Comparator.comparing(executor -> executor.getClass().getSimpleName()))
             .toList();
+    this.executionGrantValidator = executionGrantValidator;
   }
 
   @Transactional
@@ -83,6 +89,13 @@ public class RunnerExecutionService {
   public void process(ExecutionRunRecord run) {
     List<ExecutionStepRecord> steps =
         executionApplicationService.listExecutionSteps(run.tenantId(), run.id());
+
+    try {
+      executionGrantValidator.validate(run, steps);
+    } catch (InvalidExecutionGrantException exception) {
+      rejectInvalidGrant(run);
+      return;
+    }
 
     if (steps.isEmpty()) {
       failRunAndPlan(run, "Execution has no steps.");
@@ -276,6 +289,20 @@ public class RunnerExecutionService {
         executionApplicationService.updatePlanStatus(run.tenantId(), run.planId(), "failed"),
         "AUTOMATION_PLAN_UPDATE_FAILED",
         "Automation plan status was not updated");
+  }
+
+  private void rejectInvalidGrant(ExecutionRunRecord run) {
+    failRunAndPlan(run, "Execution grant validation failed.");
+    executionApplicationService.appendAuditEvent(
+        new ExecutionAuditEventCreateCommand(
+            "execaudit_" + UUID.randomUUID().toString().replace("-", ""),
+            run.tenantId(),
+            run.id(),
+            null,
+            "execution_grant_rejected",
+            "aiops-runner",
+            "Execution rejected before executor invocation.",
+            "{\"reason\":\"grant_validation_failed\"}"));
   }
 
   private void ensureUpdated(boolean updated, String code, String message) {

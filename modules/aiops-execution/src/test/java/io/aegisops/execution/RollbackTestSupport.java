@@ -56,6 +56,9 @@ final class RollbackTestSupport {
         state.executionKind(),
         null,
         null,
+        null,
+        null,
+        null,
         OffsetDateTime.now(),
         OffsetDateTime.now());
   }
@@ -205,6 +208,9 @@ final class RollbackTestSupport {
           c.executionKind(),
           c.rollbackPlanId(),
           c.rollbackOfExecutionId(),
+          c.executionGrant(),
+          c.executionSnapshotSha256(),
+          c.executionGrantExpiresAt(),
           OffsetDateTime.now(),
           OffsetDateTime.now());
     }

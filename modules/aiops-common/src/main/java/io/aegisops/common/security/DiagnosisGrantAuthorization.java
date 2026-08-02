@@ -31,4 +31,16 @@ public final class DiagnosisGrantAuthorization {
       throw new SecurityException(ACCESS_DENIED);
     }
   }
+
+  public static void requireScope(DiagnosisGrantClaims claims, String scope) {
+    if (claims == null || !claims.scopes().contains(scope)) {
+      throw new SecurityException(ACCESS_DENIED);
+    }
+  }
+
+  public static void requireDiagnosis(DiagnosisGrantClaims claims, String diagnosisId) {
+    if (claims == null || !Objects.equals(claims.diagnosisId(), diagnosisId)) {
+      throw new SecurityException(ACCESS_DENIED);
+    }
+  }
 }

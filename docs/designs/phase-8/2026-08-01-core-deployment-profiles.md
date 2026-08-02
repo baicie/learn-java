@@ -1,7 +1,7 @@
 ---
 title: Core 与可选能力部署模式
 type: design
-status: accepted
+status: deprecated
 phase: phase-8
 owner: ai
 created: 2026-08-01
@@ -9,12 +9,16 @@ updated: 2026-08-01
 related:
   - docs/adr/0010-service-authentication-oauth2-only.md
   - docs/adr/0011-default-core-deployment.md
+  - docs/adr/0012-internal-mtls-task-grants.md
   - docs/api/internal-service-authentication.md
   - docs/deployment/production-security-checklist.md
   - .agents/skills/aegisops/references/architecture-boundaries.md
 ---
 
 # Core 与可选能力部署模式
+
+> 本设计已由 ADR 0012 与 `2026-08-01-mtls-task-grants.md` 取代。以下内容保留为历史背景，
+> 不再作为当前部署契约。
 
 ## 1. Scope
 

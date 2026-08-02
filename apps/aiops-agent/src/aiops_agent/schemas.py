@@ -84,6 +84,7 @@ class DiagnoseRequest(BaseModel):
     timeline: list[TimelineContext] = Field(default_factory=list)
     locale: str = "zh-CN"
     traceId: str
+    diagnosisId: str = ""
 
 
 class DiagnoseResponse(BaseModel):

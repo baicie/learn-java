@@ -16,6 +16,7 @@ import io.aegisops.evidence.dto.MetricEvidence;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
@@ -88,13 +89,17 @@ class AgentEvidenceInternalControllerTest {
 
   private DiagnosisGrantClaims grant() {
     return new DiagnosisGrantClaims(
-        "aiops-server",
-        "aegisops-internal-api",
+        "aegisops-app",
+        "diagnosis:diag_1",
+        Set.of("aegisops-internal-api"),
+        List.of("evidence:read"),
         "tenant_1",
         "inc_1",
+        "diag_1",
         "trace_1",
         Instant.parse("2026-07-30T08:00:00Z"),
-        Instant.parse("2026-07-30T08:05:00Z"));
+        Instant.parse("2026-07-30T08:05:00Z"),
+        "grant_1");
   }
 
   private String json(Object value) throws Exception {

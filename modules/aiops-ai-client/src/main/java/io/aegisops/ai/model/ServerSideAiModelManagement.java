@@ -10,5 +10,5 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-@ConditionalOnProperty(prefix = "aiops.runtime", name = "app", havingValue = "server")
+@ConditionalOnProperty(prefix = "aiops.runtime", name = "app", havingValue = "app")
 public @interface ServerSideAiModelManagement {}

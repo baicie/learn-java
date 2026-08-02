@@ -1,7 +1,7 @@
 # scripts/start.ts
 
-AegisOps 一键启动脚本：拉起 Docker Compose 基础设施、构建并启动三个后端
-应用（aiops-server / aiops-worker / aiops-runner），提供健康检查与日志追踪。
+AegisOps 一键启动脚本：拉起 Docker Compose 基础设施、构建并启动 `aegisops-app` 与
+`aiops-runner`，提供健康检查与日志追踪。后台 Worker runtime 已装入 App 同一 JVM。
 
 **单一职责**：本地开发环境的进程编排。不读 docs、不写 docs、不改数据库结构。
 
@@ -11,32 +11,32 @@ AegisOps 一键启动脚本：拉起 Docker Compose 基础设施、构建并启�
 tsx scripts/start.ts <command>
 ```
 
-未传子命令或传 `all` 时按顺序执行：infra → build → 三个 backend app。
+未传子命令或传 `all` 时按顺序执行：infra → build → App 与 Runner。
 
 ## 子命令
 
 | 子命令        | 作用                                                                               | 副作用                           |
 | ------------- | ---------------------------------------------------------------------------------- | -------------------------------- |
-| `all`（默认） | infra + build + start 三个后端                                                     | 启动 Docker volumes、Java 子进程 |
-| `dev`         | infra + server + worker + Portal；不启动 runner                                    | 启动本地联调所需进程             |
+| `all`（默认） | infra + build + start App 与 Runner                                                | 启动 Docker volumes、Java 子进程 |
+| `dev`         | infra + App + Portal；不启动 runner                                                | 启动本地联调所需进程             |
 | `infra`       | 仅 `docker compose up -d`（PostgreSQL、Redis、ClickHouse、VictoriaMetrics、MinIO） | 启动容器                         |
-| `backend`     | 仅 `mvn package` + 启动三个后端                                                    | 启动 Java 子进程                 |
+| `backend`     | 仅 `mvn package` + 启动 App 与 Runner                                              | 启动 Java 子进程                 |
 | `frontend`    | 仅启动 web/console dev server                                                      | 启动 Vite dev server             |
 | `status`      | 打印系统要求检查（Java / Maven / Docker / pnpm）+ 容器健康                         | 只读                             |
-| `stop`        | 停止三个后端 Java 子进程                                                           | 写 PID 文件 `apps/<app>/.pid`    |
+| `stop`        | 停止 App 与 Runner Java 子进程                                                     | 写 PID 文件 `apps/<app>/.pid`    |
 | `infra-stop`  | `docker compose down`（保留 volumes）                                              | 停止容器                         |
 | `clean`       | stop + `docker compose down -v`（**DESTROYS DATA**）                               | 删除所有 volumes                 |
 | `logs <app>`  | tail `apps/<app>/logs/console.log`                                                 | 只读                             |
 | `help`        | 打印 usage                                                                         | 只读                             |
 
-`app` 可选值：`server`（port 8080）/ `worker`（本地 port 8091）/ `runner`（port 8092）。
+`app` 可选值：`server`（`aegisops-app` 启动模块，port 8080）/ `runner`（port 8092）。
 
 ## 启动顺序与超时
 
 ```txt
 1. 基础设施 (Docker Compose)        -- 阻塞到容器 healthcheck 通过
 2. Maven 构建（一次性）             -- mvn -q -DskipTests package
-3. 三个后端 (server → worker → runner) -- 每个用 start-stop-daemon 等价物后台启动
+3. 两个 Java 进程 (app → runner)       -- 每个用 start-stop-daemon 等价物后台启动
 ```
 
 默认无总超时；infra 启动依赖 Docker daemon，backend 启动依赖 PostgreSQL 端口可达。
@@ -80,6 +80,6 @@ Markdown 报告章节；任一步为空、超时或返回非成功状态都会�
 | ---------------------------- | ----------------------- | ------------------------------- |
 | 容器起不来                   | Docker daemon 未运行    | `docker info`                   |
 | Maven 构建失败               | Java 版本不符           | SKILL §4 要求 JDK 21            |
-| 后端起不来                   | 8080/8091/8092 端口被占 | `netstat -ano \| findstr :8080` |
+| 后端起不来                   | 8080/8092 端口被占      | `netstat -ano \| findstr :8080` |
 | `clean` 后 Postgres 数据丢失 | 这是设计行为            | 不在生产环境用 clean            |
 | 找不到 tsx                   | 未安装                  | `pnpm install`                  |

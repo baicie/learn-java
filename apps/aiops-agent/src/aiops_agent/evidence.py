@@ -5,9 +5,9 @@ from typing import Any, Protocol
 import httpx
 from pydantic import BaseModel, Field
 
+from aiops_agent import mtls
 from aiops_agent.observability.context import get_diagnosis_grant
 from aiops_agent.schemas import DiagnoseRequest
-from aiops_agent.service_credentials import synchronous_service_credential_headers
 from aiops_agent.settings import Settings
 
 
@@ -65,7 +65,6 @@ class HttpEvidenceClient:
                 "Content-Type": "application/json",
                 "X-Tenant-Id": request.tenantId,
             }
-            headers.update(synchronous_service_credential_headers(self.settings))
             diagnosis_grant = get_diagnosis_grant()
             if diagnosis_grant is None or not diagnosis_grant.strip():
                 raise ValueError("diagnosis grant is required for evidence query")
@@ -73,7 +72,7 @@ class HttpEvidenceClient:
 
             with httpx.Client(
                 timeout=self.settings.evidence_timeout_seconds,
-                trust_env=False,
+                **mtls.mtls_httpx_kwargs(self.settings),
             ) as client:
                 response = client.post(
                     f"{base_url}/query",

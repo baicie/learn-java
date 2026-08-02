@@ -2,10 +2,12 @@ package io.aegisops.ai.client.workrecord;
 
 import io.aegisops.ai.client.AgentClientProperties;
 import io.aegisops.ai.client.AgentContract;
-import io.aegisops.ai.client.AgentCredentialProvider;
+import io.aegisops.ai.client.AgentMtlsRequestFactory;
 import io.aegisops.common.exception.AppException;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.boot.ssl.SslBundles;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
@@ -18,14 +20,21 @@ import org.springframework.web.client.RestClient;
 public class HttpWorkRecordAiClient implements WorkRecordAiClient {
   private final AgentClientProperties properties;
   private final RestClient restClient;
-  private final AgentCredentialProvider credentialProvider;
 
+  @Autowired
   public HttpWorkRecordAiClient(
-      AgentClientProperties properties,
-      RestClient.Builder builder,
-      AgentCredentialProvider credentialProvider) {
+      AgentClientProperties properties, RestClient.Builder builder, SslBundles sslBundles) {
     this.properties = properties;
-    this.credentialProvider = credentialProvider;
+    this.restClient =
+        builder
+            .baseUrl(properties.normalizedBaseUrl())
+            .requestFactory(AgentMtlsRequestFactory.create(properties, sslBundles))
+            .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+            .build();
+  }
+
+  HttpWorkRecordAiClient(AgentClientProperties properties, RestClient.Builder builder) {
+    this.properties = properties;
     this.restClient =
         builder
             .baseUrl(properties.normalizedBaseUrl())
@@ -48,7 +57,6 @@ public class HttpWorkRecordAiClient implements WorkRecordAiClient {
           restClient
               .post()
               .uri("/v1/work-record/generate")
-              .headers(credentialProvider::apply)
               .header(AgentContract.TRACE_ID_HEADER, request.traceId())
               .body(request)
               .retrieve()

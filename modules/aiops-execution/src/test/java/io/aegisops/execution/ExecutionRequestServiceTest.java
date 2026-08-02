@@ -5,26 +5,45 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.aegisops.execution.dto.ExecutionArtifactRecord;
 import io.aegisops.execution.dto.ExecutionCreateRequest;
 import io.aegisops.execution.dto.ExecutionRetryRequest;
 import io.aegisops.execution.dto.ExecutionRunCreateCommand;
 import io.aegisops.execution.dto.ExecutionRunRecord;
 import io.aegisops.execution.dto.ExecutionStepCreateCommand;
-import io.aegisops.execution.dto.ExecutionStepRecord;
 import io.aegisops.execution.dto.PlanForExecutionRecord;
 import io.aegisops.execution.dto.PlanStepForExecutionRecord;
-import io.aegisops.execution.dto.TimelineCreateCommand;
 import java.time.OffsetDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 class ExecutionRequestServiceTest {
+  private static final OffsetDateTime GRANT_EXPIRES_AT =
+      OffsetDateTime.parse("2026-08-01T12:30:00Z");
+
+  @Test
+  void createExecutionPersistsSignedGrantAndSnapshotMetadata() {
+    FakeExecutionRequestRepository repository = new FakeExecutionRequestRepository();
+    repository.plan = plan("approved");
+    repository.planSteps.add(planStep());
+
+    ExecutionRequestService service =
+        new ExecutionRequestService(
+            repository,
+            new ExecutionProperties(),
+            new ObjectMapper(),
+            (run, steps) ->
+                new IssuedExecutionGrant(
+                    "signed.execution.grant", "a".repeat(64), GRANT_EXPIRES_AT));
+
+    service.createExecution("tenant_1", "plan_1", new ExecutionCreateRequest(true, "alice", 3));
+
+    assertEquals("signed.execution.grant", repository.createdRun.executionGrant());
+    assertEquals("a".repeat(64), repository.createdRun.executionSnapshotSha256());
+    assertEquals(GRANT_EXPIRES_AT, repository.createdRun.executionGrantExpiresAt());
+  }
+
   @Test
   void createExecutionCreatesAttemptMetadata() {
-    FakeExecutionRepository repository = new FakeExecutionRepository();
+    FakeExecutionRequestRepository repository = new FakeExecutionRequestRepository();
     repository.plan = plan("approved");
     repository.planSteps.add(planStep());
 
@@ -32,7 +51,13 @@ class ExecutionRequestServiceTest {
     properties.setMaxRetryAttempts(3);
 
     ExecutionRequestService service =
-        new ExecutionRequestService(repository, properties, new ObjectMapper());
+        new ExecutionRequestService(
+            repository,
+            properties,
+            new ObjectMapper(),
+            (run, steps) ->
+                new IssuedExecutionGrant(
+                    "attempt.execution.grant", "d".repeat(64), GRANT_EXPIRES_AT));
 
     var response =
         service.createExecution("tenant_1", "plan_1", new ExecutionCreateRequest(true, "alice", 3));
@@ -45,7 +70,7 @@ class ExecutionRequestServiceTest {
 
   @Test
   void retryCreatesNextAttempt() {
-    FakeExecutionRepository repository = new FakeExecutionRepository();
+    FakeExecutionRequestRepository repository = new FakeExecutionRequestRepository();
     repository.plan = plan("failed");
     repository.planSteps.add(planStep());
     repository.existingRun = run("exec_old", "failed", 1, 3, null);
@@ -55,7 +80,13 @@ class ExecutionRequestServiceTest {
     properties.setMaxRetryAttempts(3);
 
     ExecutionRequestService service =
-        new ExecutionRequestService(repository, properties, new ObjectMapper());
+        new ExecutionRequestService(
+            repository,
+            properties,
+            new ObjectMapper(),
+            (run, steps) ->
+                new IssuedExecutionGrant(
+                    "retry-attempt.execution.grant", "e".repeat(64), GRANT_EXPIRES_AT));
 
     var response = service.retry("tenant_1", "exec_old", new ExecutionRetryRequest("bob"));
 
@@ -66,8 +97,32 @@ class ExecutionRequestServiceTest {
   }
 
   @Test
+  void retryPersistsAReplacementExecutionGrant() {
+    FakeExecutionRequestRepository repository = new FakeExecutionRequestRepository();
+    repository.plan = plan("failed");
+    repository.planSteps.add(planStep());
+    repository.existingRun = run("exec_old", "failed", 1, 3, null);
+    repository.latestRun = repository.existingRun;
+
+    ExecutionRequestService service =
+        new ExecutionRequestService(
+            repository,
+            new ExecutionProperties(),
+            new ObjectMapper(),
+            (run, steps) ->
+                new IssuedExecutionGrant(
+                    "retry.execution.grant", "b".repeat(64), GRANT_EXPIRES_AT));
+
+    service.retry("tenant_1", "exec_old", new ExecutionRetryRequest("bob"));
+
+    assertEquals("retry.execution.grant", repository.createdRun.executionGrant());
+    assertEquals("b".repeat(64), repository.createdRun.executionSnapshotSha256());
+    assertEquals(GRANT_EXPIRES_AT, repository.createdRun.executionGrantExpiresAt());
+  }
+
+  @Test
   void retryRejectsWhenAttemptsExhausted() {
-    FakeExecutionRepository repository = new FakeExecutionRepository();
+    FakeExecutionRequestRepository repository = new FakeExecutionRequestRepository();
     repository.plan = plan("failed");
     repository.existingRun = run("exec_old", "failed", 3, 3, null);
     repository.latestRun = repository.existingRun;
@@ -82,7 +137,7 @@ class ExecutionRequestServiceTest {
 
   @Test
   void retryRejectsNonLatestFailedExecution() {
-    FakeExecutionRepository repository = new FakeExecutionRepository();
+    FakeExecutionRequestRepository repository = new FakeExecutionRequestRepository();
     repository.plan = plan("failed");
     repository.planSteps.add(planStep());
     repository.existingRun = run("exec_old", "failed", 1, 3, null);
@@ -104,7 +159,7 @@ class ExecutionRequestServiceTest {
 
   @Test
   void retryReturnsActiveLatestExecutionWhenRetryAlreadyQueued() {
-    FakeExecutionRepository repository = new FakeExecutionRepository();
+    FakeExecutionRequestRepository repository = new FakeExecutionRequestRepository();
     repository.plan = plan("executing");
     repository.planSteps.add(planStep());
     repository.existingRun = run("exec_old", "failed", 1, 3, null);
@@ -124,7 +179,7 @@ class ExecutionRequestServiceTest {
 
   @Test
   void retryRejectsWhenPlanIsNotFailed() {
-    FakeExecutionRepository repository = new FakeExecutionRepository();
+    FakeExecutionRequestRepository repository = new FakeExecutionRequestRepository();
     repository.plan = plan("succeeded");
     repository.planSteps.add(planStep());
     repository.existingRun = run("exec_old", "failed", 1, 3, null);
@@ -146,7 +201,7 @@ class ExecutionRequestServiceTest {
 
   @Test
   void cancelExecutionCancelsRunStepsAndPlan() {
-    FakeExecutionRepository repository = new FakeExecutionRepository();
+    FakeExecutionRequestRepository repository = new FakeExecutionRequestRepository();
     repository.createdRun =
         new ExecutionRunCreateCommand(
             "exec_1",
@@ -164,6 +219,9 @@ class ExecutionRequestServiceTest {
             null,
             null,
             "normal",
+            null,
+            null,
+            null,
             null,
             null);
 
@@ -197,7 +255,7 @@ class ExecutionRequestServiceTest {
 
   @Test
   void cancelRollbackExecutionCancelsRollbackPlanWithoutUpdatingAutomationPlan() {
-    FakeExecutionRepository repository = new FakeExecutionRepository();
+    FakeExecutionRequestRepository repository = new FakeExecutionRequestRepository();
     repository.createdRun =
         new ExecutionRunCreateCommand(
             "exec_1",
@@ -216,7 +274,10 @@ class ExecutionRequestServiceTest {
             "high",
             "rollback",
             "rbp_1",
-            "exec_source");
+            "exec_source",
+            null,
+            null,
+            null);
 
     FakeExecutionRollbackRepository rollback = new FakeExecutionRollbackRepository();
     ExecutionRequestService service =
@@ -233,7 +294,7 @@ class ExecutionRequestServiceTest {
 
   @Test
   void rejectNormalRetryForRollbackExecution() {
-    FakeExecutionRepository repository = new FakeExecutionRepository();
+    FakeExecutionRequestRepository repository = new FakeExecutionRequestRepository();
     repository.existingRun = rollbackRun();
     repository.latestRun = repository.existingRun;
 
@@ -302,6 +363,9 @@ class ExecutionRequestServiceTest {
         "normal",
         null,
         null,
+        null,
+        null,
+        null,
         OffsetDateTime.now(),
         OffsetDateTime.now());
   }
@@ -333,114 +397,10 @@ class ExecutionRequestServiceTest {
         "rollback",
         "rbp_1",
         "exec_source",
+        null,
+        null,
+        null,
         OffsetDateTime.now(),
         OffsetDateTime.now());
-  }
-
-  private static class FakeExecutionRepository extends FakeExecutionRepositoryBase {
-    PlanForExecutionRecord plan;
-    String planStatus;
-    ExecutionRunRecord existingRun;
-    ExecutionRunRecord latestRun;
-    ExecutionRunCreateCommand createdRun;
-    final List<PlanStepForExecutionRecord> planSteps = new ArrayList<>();
-    final List<ExecutionStepCreateCommand> createdSteps = new ArrayList<>();
-    final List<TimelineCreateCommand> timelines = new ArrayList<>();
-    String cancelledExecutionId;
-    boolean stepsCancelled;
-
-    @Override
-    public Optional<PlanForExecutionRecord> findPlan(String tenantId, String planId) {
-      return Optional.ofNullable(plan);
-    }
-
-    @Override
-    public List<PlanStepForExecutionRecord> listPlanSteps(String planId) {
-      return planSteps;
-    }
-
-    @Override
-    public Optional<ExecutionRunRecord> findRun(String tenantId, String executionId) {
-      if (createdRun != null && createdRun.id().equals(executionId)) {
-        return Optional.of(
-            new ExecutionRunRecord(
-                createdRun.id(),
-                createdRun.tenantId(),
-                createdRun.incidentId(),
-                createdRun.planId(),
-                createdRun.status(),
-                createdRun.mode(),
-                createdRun.requestedBy(),
-                null,
-                null,
-                null,
-                null,
-                null,
-                createdRun.attempt(),
-                createdRun.maxAttempts(),
-                createdRun.retryOfExecutionId(),
-                null,
-                null,
-                createdRun.timeoutSeconds(),
-                null,
-                null,
-                null,
-                null,
-                createdRun.executionKind(),
-                createdRun.rollbackPlanId(),
-                createdRun.rollbackOfExecutionId(),
-                OffsetDateTime.now(),
-                OffsetDateTime.now()));
-      }
-      return Optional.ofNullable(existingRun);
-    }
-
-    @Override
-    public Optional<ExecutionRunRecord> findLatestRunByPlan(String tenantId, String planId) {
-      return Optional.ofNullable(latestRun != null ? latestRun : existingRun);
-    }
-
-    @Override
-    public void createRun(ExecutionRunCreateCommand command) {
-      createdRun = command;
-    }
-
-    @Override
-    public void createSteps(List<ExecutionStepCreateCommand> commands) {
-      createdSteps.addAll(commands);
-    }
-
-    @Override
-    public boolean updatePlanStatus(String tenantId, String planId, String status) {
-      planStatus = status;
-      return true;
-    }
-
-    @Override
-    public List<ExecutionStepRecord> listExecutionSteps(String tenantId, String executionId) {
-      return List.of();
-    }
-
-    @Override
-    public List<ExecutionArtifactRecord> listArtifacts(String tenantId, String executionId) {
-      return List.of();
-    }
-
-    @Override
-    public void addTimeline(TimelineCreateCommand command) {
-      timelines.add(command);
-    }
-
-    @Override
-    public boolean cancelRun(String tenantId, String executionId) {
-      cancelledExecutionId = executionId;
-      return true;
-    }
-
-    @Override
-    public boolean cancelExecutionSteps(String tenantId, String executionId) {
-      stepsCancelled = true;
-      return true;
-    }
   }
 }

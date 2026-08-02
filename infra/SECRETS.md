@@ -84,8 +84,7 @@ AIOPS_DB_USERNAME     # DB 用户名
 AIOPS_DB_PASSWORD     # DB 密码
 AIOPS_JWT_SECRET      # JWT 签名密钥，至少 32 字节
 AIOPS_DEEPSEEK_API_KEY # DeepSeek LLM API Key
-AIOPS_SERVER_PORT     # aiops-server 监听端口
-AIOPS_WORKER_PORT     # aiops-worker 监听端口
+AIOPS_SERVER_PORT     # aegisops-app 公共 API 监听端口
 AIOPS_RUNNER_PORT     # aiops-runner 监听端口
 ```
 

@@ -1,22 +1,33 @@
 {{- $root := . -}}
-{{- range $appName, $app := .Values.apps }}
+{{- range $component, $app := .Values.apps }}
 {{- if $app.enabled }}
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "aegisops.fullname" $root }}-{{ $appName }}
+  name: {{ include "aegisops.fullname" $root }}-{{ $component }}
   labels:
     {{- include "aegisops.labels" $root | nindent 4 }}
-    app.kubernetes.io/component: {{ $appName }}
+    app.kubernetes.io/component: {{ $component }}
 spec:
   type: ClusterIP
   selector:
     {{- include "aegisops.selectorLabels" $root | nindent 4 }}
-    app.kubernetes.io/component: {{ $appName }}
+    app.kubernetes.io/component: {{ $component }}
   ports:
+    {{- if eq $component "agent" }}
+    - name: https
+      port: {{ $app.port }}
+      targetPort: https
+    {{- else }}
     - name: http
       port: {{ $app.port }}
       targetPort: http
+    {{- end }}
+    {{- if eq $component "app" }}
+    - name: internal-mtls
+      port: {{ $app.internalMtlsPort }}
+      targetPort: internal-mtls
+    {{- end }}
 {{- end }}
 {{- end }}

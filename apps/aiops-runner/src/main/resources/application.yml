@@ -48,6 +48,14 @@ aiops:
     timeout-sweep-delay-ms: ${AIOPS_RUNNER_SWEEP_MS:10000}
     max-runs-per-tick: ${AIOPS_RUNNER_MAX_PER_TICK:1}
     timeout-sweep-limit: ${AIOPS_RUNNER_SWEEP_LIMIT:20}
+    execution-grant:
+      issuer: ${AIOPS_EXECUTION_GRANT_ISSUER:aegisops-app}
+      audience: ${AIOPS_EXECUTION_GRANT_AUDIENCE:aiops-runner}
+      scope: ${AIOPS_EXECUTION_GRANT_SCOPE:runbook:execute}
+      current-key-id: ${AIOPS_EXECUTION_GRANT_KEY_ID:task-grant-v1}
+      current-public-key-file: ${AIOPS_EXECUTION_GRANT_PUBLIC_KEY_FILE:}
+      previous-key-id: ${AIOPS_EXECUTION_GRANT_PREVIOUS_KEY_ID:}
+      previous-public-key-file: ${AIOPS_EXECUTION_GRANT_PREVIOUS_PUBLIC_KEY_FILE:}
     ansible:
       check-execution-enabled: ${AIOPS_RUNNER_ANSIBLE_CHECK_ENABLED:true}
       binary: ${AIOPS_RUNNER_ANSIBLE_BINARY:ansible-playbook}

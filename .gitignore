@@ -28,13 +28,10 @@ infra/.env
 infra/.env.*
 deploy/**/.env
 deploy/**/.env.*
+deploy/runtime/
 
 # Generated deployment secret values (must NEVER be committed)
 **/generated-secrets*.yaml
-
-# Runtime VM deployment descriptor state
-/deploy/docker-compose.app.candidate.yml
-/deploy/docker-compose.app.previous.yml
 
 # Playwright
 .playwright/

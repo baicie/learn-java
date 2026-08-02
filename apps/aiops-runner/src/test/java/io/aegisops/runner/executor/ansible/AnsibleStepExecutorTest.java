@@ -159,6 +159,9 @@ class AnsibleStepExecutorTest {
             "normal",
             null,
             null,
+            null,
+            null,
+            null,
             OffsetDateTime.now(),
             OffsetDateTime.now()),
         liveEnabled);

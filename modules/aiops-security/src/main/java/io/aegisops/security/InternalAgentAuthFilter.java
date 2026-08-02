@@ -1,6 +1,7 @@
 package io.aegisops.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.aegisops.common.security.DiagnosisGrantAuthorization;
 import io.aegisops.common.security.DiagnosisGrantClaims;
 import io.aegisops.common.security.DiagnosisGrantCodec;
 import io.aegisops.common.security.InvalidDiagnosisGrantException;
@@ -11,6 +12,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.time.Clock;
+import java.util.Map;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
@@ -23,19 +25,21 @@ public class InternalAgentAuthFilter extends OncePerRequestFilter {
   private final TenantSecurityAuditService auditService;
   private final InternalServiceAuthenticator authenticator;
   private final DiagnosisGrantCodec diagnosisGrantCodec;
+  private final Map<String, java.security.PublicKey> verificationKeys;
 
   InternalAgentAuthFilter(
       AiopsSecurityProperties properties,
       SecurityErrorResponseWriter responseWriter,
       TenantSecurityAuditService auditService,
       InternalServiceAuthenticator authenticator,
+      DiagnosisGrantVerificationKeys verificationKeys,
       Clock clock) {
-    properties.validateDiagnosisGrant();
     this.properties = properties;
     this.responseWriter = responseWriter;
     this.auditService = auditService;
     this.authenticator = authenticator;
     this.diagnosisGrantCodec = new DiagnosisGrantCodec(new ObjectMapper(), clock);
+    this.verificationKeys = verificationKeys.keys();
   }
 
   @Override
@@ -48,62 +52,19 @@ public class InternalAgentAuthFilter extends OncePerRequestFilter {
   protected void doFilterInternal(
       HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
       throws ServletException, IOException {
-    try {
-      InternalServicePrincipal principal = authenticator.authenticate(request);
-      request.setAttribute(SecurityConstants.REQUEST_ATTRIBUTE_SERVICE_PRINCIPAL, principal);
-    } catch (InternalServiceAuthenticationUnavailableException exception) {
-      auditService.record(
-          null, "internal_auth_unavailable", "high", exception.getMessage(), request);
-      responseWriter.write(
-          response,
-          HttpStatus.SERVICE_UNAVAILABLE.value(),
-          "INTERNAL_AGENT_AUTH_UNAVAILABLE",
-          "Internal service authentication is temporarily unavailable");
-      return;
-    } catch (InternalServiceAuthorizationException exception) {
-      auditService.record(
-          null, "internal_auth_forbidden", "critical", exception.getMessage(), request);
-      responseWriter.write(
-          response,
-          HttpStatus.FORBIDDEN.value(),
-          "INTERNAL_AGENT_AUTH_FORBIDDEN",
-          "Internal service is not authorized for this endpoint");
-      return;
-    } catch (InternalServiceAuthenticationException exception) {
-      auditService.record(
-          null, "internal_auth_failed", "critical", exception.getMessage(), request);
-      responseWriter.write(
-          response,
-          HttpStatus.UNAUTHORIZED.value(),
-          "INTERNAL_AGENT_AUTH_FAILED",
-          "Invalid internal service credentials");
+    if (!authenticateInternalService(request, response)) {
       return;
     }
 
+    DiagnosisGrantClaims claims;
     try {
-      DiagnosisGrantClaims claims =
+      claims =
           diagnosisGrantCodec.verify(
-              properties.getDiagnosisGrantSecret(),
+              verificationKeys,
               request.getHeader(SecurityConstants.HEADER_DIAGNOSIS_GRANT),
               properties.getDiagnosisGrantAudience());
       if (!properties.getDiagnosisGrantIssuers().contains(claims.issuer())) {
         throw new InvalidDiagnosisGrantException("Diagnosis grant issuer is not allowed");
-      }
-
-      request.setAttribute(SecurityConstants.REQUEST_ATTRIBUTE_DIAGNOSIS_GRANT, claims);
-      TenantContext.setTenantId(claims.tenantId());
-      try {
-        filterChain.doFilter(request, response);
-        if (response.getStatus() == HttpStatus.FORBIDDEN.value()) {
-          auditService.record(
-              claims.tenantId(),
-              "internal_auth_forbidden",
-              "critical",
-              "Internal agent request was forbidden after grant validation",
-              request);
-        }
-      } finally {
-        TenantContext.clear();
       }
     } catch (InvalidDiagnosisGrantException exception) {
       auditService.record(
@@ -113,6 +74,75 @@ public class InternalAgentAuthFilter extends OncePerRequestFilter {
           HttpStatus.UNAUTHORIZED.value(),
           "DIAGNOSIS_GRANT_INVALID",
           "Invalid diagnosis authorization grant");
+      return;
     }
+
+    try {
+      DiagnosisGrantAuthorization.requireScope(
+          claims, InternalAgentScopePolicy.requiredScope(request));
+    } catch (SecurityException | InternalServiceAuthorizationException exception) {
+      auditService.record(
+          claims.tenantId(),
+          "internal_auth_forbidden",
+          "critical",
+          "Diagnosis grant does not authorize this endpoint",
+          request);
+      responseWriter.write(
+          response,
+          HttpStatus.FORBIDDEN.value(),
+          "INTERNAL_AGENT_AUTH_FORBIDDEN",
+          "Internal service is not authorized for this endpoint");
+      return;
+    }
+
+    request.setAttribute(SecurityConstants.REQUEST_ATTRIBUTE_DIAGNOSIS_GRANT, claims);
+    TenantContext.setTenantId(claims.tenantId());
+    try {
+      filterChain.doFilter(request, response);
+      if (response.getStatus() == HttpStatus.FORBIDDEN.value()) {
+        auditService.record(
+            claims.tenantId(),
+            "internal_auth_forbidden",
+            "critical",
+            "Internal agent request was forbidden after grant validation",
+            request);
+      }
+    } finally {
+      TenantContext.clear();
+    }
+  }
+
+  private boolean authenticateInternalService(
+      HttpServletRequest request, HttpServletResponse response) throws IOException {
+    try {
+      InternalServicePrincipal principal = authenticator.authenticate(request);
+      request.setAttribute(SecurityConstants.REQUEST_ATTRIBUTE_SERVICE_PRINCIPAL, principal);
+      return true;
+    } catch (InternalServiceAuthenticationUnavailableException exception) {
+      auditService.record(
+          null, "internal_auth_unavailable", "high", exception.getMessage(), request);
+      responseWriter.write(
+          response,
+          HttpStatus.SERVICE_UNAVAILABLE.value(),
+          "INTERNAL_AGENT_AUTH_UNAVAILABLE",
+          "Internal service authentication is temporarily unavailable");
+    } catch (InternalServiceAuthorizationException exception) {
+      auditService.record(
+          null, "internal_auth_forbidden", "critical", exception.getMessage(), request);
+      responseWriter.write(
+          response,
+          HttpStatus.FORBIDDEN.value(),
+          "INTERNAL_AGENT_AUTH_FORBIDDEN",
+          "Internal service is not authorized for this endpoint");
+    } catch (InternalServiceAuthenticationException exception) {
+      auditService.record(
+          null, "internal_auth_failed", "critical", exception.getMessage(), request);
+      responseWriter.write(
+          response,
+          HttpStatus.UNAUTHORIZED.value(),
+          "INTERNAL_AGENT_AUTH_FAILED",
+          "Invalid internal service credentials");
+    }
+    return false;
   }
 }

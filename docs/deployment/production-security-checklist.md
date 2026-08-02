@@ -5,58 +5,54 @@ status: accepted
 phase: global
 owner: ai
 created: 2026-06-30
-updated: 2026-07-30
+updated: 2026-08-01
 related:
-  - docs/adr/0010-service-authentication-oauth2-only.md
+  - docs/adr/0012-internal-mtls-task-grants.md
   - docs/api/internal-service-authentication.md
 ---
 
 # 生产安全检查清单
 
-## 必须修改
+## 必须配置
 
-- [ ] security.jwtSecret
-- [ ] security.diagnosisGrantSecret（至少 32 字节）
-- [ ] security.serviceAuth.issuerUri / jwkSetUri / tokenUri
-- [ ] server / worker / agent 使用不同 OAuth2 client secret
-- [ ] external.postgres.password
-- [ ] external.redis.password
-- [ ] external.clickhouse.password
-- [ ] external.minio.accessKey
-- [ ] external.minio.secretKey
+- [ ] 用户 JWT 签名密钥已替换默认值并通过 Secret 注入
+- [ ] PostgreSQL `aegisops_app` 使用随机密码
+- [ ] PostgreSQL `aegisops_runner` 使用不同随机密码和最小表权限
+- [ ] control-plane CA 与 agent CA 的私钥离线保存，不进入运行容器
+- [ ] App/Agent 证书 URI SAN 与内部鉴权契约一致
+- [ ] Grant Ed25519 私钥只挂载到 `aegisops-app`
+- [ ] Agent 与 Runner 只挂载当前/前一把 Grant 公钥
+- [ ] 外部 Redis、ClickHouse、MinIO 启用时使用独立凭据
 
-## Kubernetes
+## 网络与容器
 
-- [ ] 开启 NetworkPolicy
-- [ ] 出站 `allowedCidrs` 仅包含 IdP 与外部依赖的受限网段，不使用全网 CIDR
-- [ ] server / worker / runner / agent 使用独立 ServiceAccount
-- [ ] server / worker / agent 使用独立认证 Secret
-- [ ] Agent 不接收数据库 Secret 与 Diagnosis Grant 签名密钥
-- [ ] Runner 不接收 Agent 服务凭据
-- [ ] 使用 Service Mesh 时开启 STRICT mTLS 与 AuthorizationPolicy
-- [ ] 开启 Ingress TLS
-- [ ] 使用私有镜像仓库
-- [ ] 禁止使用 latest tag
-- [ ] 限制 Pod resource requests / limits
-- [ ] 使用独立 namespace
-- [ ] 使用最小权限 ServiceAccount
+- [ ] 外部只暴露 `aegisops-app:8080`，并由 Ingress/反向代理终止公网 TLS
+- [ ] App 8443、Agent 9008 与 Runner 状态端口未映射到宿主机或公网
+- [ ] App 与 Agent 双向 TLS 均为 required，未使用 `client-auth=want`
+- [ ] Agent 不接收数据库 Secret、Grant 私钥或 Runner 凭据
+- [ ] Runner 不接收 App/Agent TLS 私钥或 Grant 私钥
+- [ ] Runner 容器只读运行，临时目录大小受限
+- [ ] Kubernetes 使用独立 ServiceAccount、Secret 与 NetworkPolicy
+- [ ] 出站 CIDR 仅包含实际外部依赖，不使用 `0.0.0.0/0` 或 `::/0`
+- [ ] 禁止使用 `latest` 镜像标签，并配置 resource requests / limits
 
 ## AegisOps
 
-- [ ] 服务间鉴权只使用 OAuth2 Client Credentials，不存在静态 Token 兼容模式
-- [ ] 服务 JWT 校验 issuer、audience、subject、expiry 与 endpoint scope
-- [ ] Diagnosis Grant required，TTL 不超过 300 秒
+- [ ] 内部 App/Agent 鉴权只使用 mTLS + Diagnosis Grant，不存在静态 Token/OAuth2 兼容路径
+- [ ] Diagnosis Grant 使用 Ed25519，TTL 不超过 300 秒并校验 issuer/audience/scope/resource
 - [ ] 内部租户上下文只从有效 Diagnosis Grant 恢复
-- [ ] tenant required
-- [ ] public API rate limit enabled
-- [ ] internal agent rate limit enabled
+- [ ] Execution Grant 覆盖审批快照和全部不可变执行步骤字段
+- [ ] Runner 对缺失、过期、篡改 Grant 失败关闭且零执行器调用
+- [ ] Execution Grant 拒绝写入脱敏审计事件
+- [ ] public/internal API rate limit enabled
 - [ ] plugin tool policy 默认关闭或显式 allow
 - [ ] Runner live 执行默认关闭
 - [ ] Ansible / SSH adapter 默认关闭
 
-## 备份
+## 轮换与备份
 
-- [ ] PostgreSQL backup
-- [ ] ClickHouse backup
-- [ ] MinIO backup
-- [ ] Helm values secret backup
+- [ ] 证书到期监控已启用，轮换演练支持新旧 CA 短期并存
+- [ ] Grant 公钥轮换演练支持当前/前一把 `kid`
+- [ ] PostgreSQL backup 已验证恢复
+- [ ] 可选 ClickHouse / MinIO 已配置备份
+- [ ] Helm/Compose Secret 有加密备份且不进入 Git

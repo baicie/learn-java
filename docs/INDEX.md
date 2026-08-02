@@ -26,8 +26,8 @@ Do not edit it manually.
 
 | Title                       | Status   | Phase   | Updated    | Path                                                                                            |
 | --------------------------- | -------- | ------- | ---------- | ----------------------------------------------------------------------------------------------- |
-| Automation Safety Rules     | accepted | global  | 2026-06-30 | [docs/automation-safety.md](automation-safety.md)                                               |
-| 生产安全检查清单            | accepted | global  | 2026-07-30 | [docs/deployment/production-security-checklist.md](deployment/production-security-checklist.md) |
+| Automation Safety Rules     | accepted | global  | 2026-08-02 | [docs/automation-safety.md](automation-safety.md)                                               |
+| 生产安全检查清单            | accepted | global  | 2026-08-01 | [docs/deployment/production-security-checklist.md](deployment/production-security-checklist.md) |
 | Agent Skill 管理            | accepted | global  | 2026-07-14 | [docs/operations/agent-skills.md](operations/agent-skills.md)                                   |
 | Git 工作流                  | accepted | phase-8 | 2026-07-22 | [docs/operations/git-workflow.md](operations/git-workflow.md)                                   |
 | AegisOps Production Runbook | accepted | global  | 2026-08-01 | [docs/operations/runbook.md](operations/runbook.md)                                             |
@@ -46,6 +46,7 @@ Do not edit it manually.
 | Java 与 aiops-agent 服务间鉴权                                 | accepted | phase-8     | 2026-07-30 | [docs/adr/0009-service-to-service-authentication.md](adr/0009-service-to-service-authentication.md)               |
 | 服务间鉴权统一为 OAuth2                                        | accepted | phase-8     | 2026-07-30 | [docs/adr/0010-service-authentication-oauth2-only.md](adr/0010-service-authentication-oauth2-only.md)             |
 | 默认采用 Core 最小部署                                         | accepted | phase-8     | 2026-08-01 | [docs/adr/0011-default-core-deployment.md](adr/0011-default-core-deployment.md)                                   |
+| 内部 mTLS 与任务授权分离                                       | accepted | phase-8     | 2026-08-02 | [docs/adr/0012-internal-mtls-task-grants.md](adr/0012-internal-mtls-task-grants.md)                               |
 
 ## ai
 
@@ -62,7 +63,7 @@ Do not edit it manually.
 | AI 模型管理 API                  | accepted | phase-4        | 2026-07-18 | [docs/api/ai-models.md](api/ai-models.md)                                             |
 | 资源中心 API                     | accepted | phase-1        | 2026-07-16 | [docs/api/assets.md](api/assets.md)                                                   |
 | 数据源 API                       | accepted | phase-1        | 2026-07-29 | [docs/api/datasources.md](api/datasources.md)                                         |
-| 内部服务鉴权契约                 | accepted | phase-8        | 2026-07-31 | [docs/api/internal-service-authentication.md](api/internal-service-authentication.md) |
+| 内部服务鉴权契约                 | accepted | phase-8        | 2026-08-01 | [docs/api/internal-service-authentication.md](api/internal-service-authentication.md) |
 | 多来源可观测与变更接入 API       | accepted | phase-1        | 2026-07-18 | [docs/api/operations-ingestion.md](api/operations-ingestion.md)                       |
 | 平台用户与权限管理 API           | accepted | work-record-20 | 2026-07-18 | [docs/api/platform-iam.md](api/platform-iam.md)                                       |
 | 工作记录 Phase 20 异步与协作 API | accepted | work-record-20 | 2026-07-21 | [docs/api/work-record-phase20.md](api/work-record-phase20.md)                         |
@@ -74,7 +75,7 @@ Do not edit it manually.
 
 | Title                                   | Status     | Phase  | Updated    | Path                                                                                          |
 | --------------------------------------- | ---------- | ------ | ---------- | --------------------------------------------------------------------------------------------- |
-| Architecture Overview                   | accepted   | global | 2026-06-30 | [docs/architecture.md](architecture.md)                                                       |
+| Architecture Overview                   | accepted   | global | 2026-08-02 | [docs/architecture.md](architecture.md)                                                       |
 | Phase Z0 Module Boundaries (Historical) | deprecated | z0     | 2026-06-30 | [docs/architecture/phase-z0-module-boundaries.md](architecture/phase-z0-module-boundaries.md) |
 
 ## database
@@ -88,8 +89,8 @@ Do not edit it manually.
 
 | Title                                                            | Status     | Phase          | Updated    | Path                                                                                                                                                                                    |
 | ---------------------------------------------------------------- | ---------- | -------------- | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| AegisOps Offline Package                                         | accepted   | global         | 2026-07-30 | [docs/deployment/offline-package.md](deployment/offline-package.md)                                                                                                                     |
-| AegisOps Private Deployment                                      | accepted   | global         | 2026-07-31 | [docs/deployment/private-deployment.md](deployment/private-deployment.md)                                                                                                               |
+| AegisOps Offline Package                                         | accepted   | global         | 2026-08-01 | [docs/deployment/offline-package.md](deployment/offline-package.md)                                                                                                                     |
+| AegisOps Private Deployment                                      | accepted   | global         | 2026-08-01 | [docs/deployment/private-deployment.md](deployment/private-deployment.md)                                                                                                               |
 | 统一资源来源与实体解析实施计划                                   | accepted   | phase-1        | 2026-07-16 | [docs/designs/phase-1/2026-07-16-resource-source-and-entity-resolution-implementation-plan.md](designs/phase-1/2026-07-16-resource-source-and-entity-resolution-implementation-plan.md) |
 | 多来源资源与证据后续实施计划                                     | accepted   | phase-1        | 2026-07-17 | [docs/designs/phase-1/2026-07-17-resource-intelligence-followups.md](designs/phase-1/2026-07-17-resource-intelligence-followups.md)                                                     |
 | 工作记录导入导出与详情交互修复计划                               | accepted   | phase-20       | 2026-07-19 | [docs/designs/phase-20/2026-07-19-work-record-fixes-plan.md](designs/phase-20/2026-07-19-work-record-fixes-plan.md)                                                                     |
@@ -97,7 +98,7 @@ Do not edit it manually.
 | Portal shadcn/ui 使用审计实施计划                                | accepted   | phase-21       | 2026-07-19 | [docs/designs/phase-21/2026-07-19-portal-shadcn-usage-audit-plan.md](designs/phase-21/2026-07-19-portal-shadcn-usage-audit-plan.md)                                                     |
 | Portal 顶部页面页签布局实现计划                                  | accepted   | phase-21       | 2026-07-19 | [docs/designs/phase-21/2026-07-19-portal-top-page-tabs.md](designs/phase-21/2026-07-19-portal-top-page-tabs.md)                                                                         |
 | DeepSeek 模型管理页面设计                                        | accepted   | phase-4        | 2026-07-18 | [docs/designs/phase-4/2026-07-18-deepseek-model-management.md](designs/phase-4/2026-07-18-deepseek-model-management.md)                                                                 |
-| Core 与可选能力部署模式                                          | accepted   | phase-8        | 2026-08-01 | [docs/designs/phase-8/2026-08-01-core-deployment-profiles.md](designs/phase-8/2026-08-01-core-deployment-profiles.md)                                                                   |
+| mTLS 与任务级授权实施计划                                        | accepted   | phase-8        | 2026-08-02 | [docs/designs/phase-8/2026-08-01-mtls-task-grants.md](designs/phase-8/2026-08-01-mtls-task-grants.md)                                                                                   |
 | Phase2：Incident 聚合与事故中心                                  | accepted   | global         | 2026-06-30 | [docs/mvp/design/phase2.md](mvp/design/phase2.md)                                                                                                                                       |
 | Phase3：RCA 规则引擎与证据链                                     | accepted   | global         | 2026-06-30 | [docs/mvp/design/phase3.md](mvp/design/phase3.md)                                                                                                                                       |
 | Phase4.5：jOOQ 持久层改造                                        | accepted   | global         | 2026-06-30 | [docs/mvp/design/phase4.5.md](mvp/design/phase4.5.md)                                                                                                                                   |
@@ -130,13 +131,13 @@ Do not edit it manually.
 | Phase7.3：Agent Memory                                           | accepted   | global         | 2026-06-30 | [docs/mvp/phase7.3.md](mvp/phase7.3.md)                                                                                                                                                 |
 | Phase7.0：Agent Graph Modularization                             | accepted   | global         | 2026-06-30 | [docs/mvp/phase7.md](mvp/phase7.md)                                                                                                                                                     |
 | AegisOps Observability                                           | accepted   | global         | 2026-06-30 | [docs/operations/observability.md](operations/observability.md)                                                                                                                         |
-| Phase 8.0：SaaS 多租户与生产安全加固                             | accepted   | phase-8        | 2026-07-30 | [docs/phase8.md](phase8.md)                                                                                                                                                             |
+| Phase 8.0：SaaS 多租户与生产安全加固                             | accepted   | phase-8        | 2026-08-02 | [docs/phase8.md](phase8.md)                                                                                                                                                             |
 | Phase Z3: Zabbix Alert Aggregation Strategy                      | accepted   | global         | 2026-06-30 | [docs/scenarios/phase-z3-zabbix-incident-aggregation.md](scenarios/phase-z3-zabbix-incident-aggregation.md)                                                                             |
 | Phase Z4: Zabbix Evidence Collector                              | accepted   | global         | 2026-07-27 | [docs/scenarios/phase-z4-zabbix-evidence-collector.md](scenarios/phase-z4-zabbix-evidence-collector.md)                                                                                 |
 | Phase Z5: Evidence-aware RCA Rules                               | accepted   | global         | 2026-06-30 | [docs/scenarios/phase-z5-rca-evidence-rules.md](scenarios/phase-z5-rca-evidence-rules.md)                                                                                               |
 | Phase Z6: Evidence-based AI Diagnosis                            | accepted   | global         | 2026-06-30 | [docs/scenarios/phase-z6-ai-diagnosis-evidence.md](scenarios/phase-z6-ai-diagnosis-evidence.md)                                                                                         |
 | Phase Z7: Markdown Incident Report                               | accepted   | global         | 2026-06-30 | [docs/scenarios/phase-z7-markdown-incident-report.md](scenarios/phase-z7-markdown-incident-report.md)                                                                                   |
-| Phase Z9：Zabbix MVP 端到端验收                                  | accepted   | global         | 2026-07-29 | [docs/scenarios/phase-z9-zabbix-mvp-acceptance.md](scenarios/phase-z9-zabbix-mvp-acceptance.md)                                                                                         |
+| Phase Z9：Zabbix MVP 端到端验收                                  | accepted   | global         | 2026-08-02 | [docs/scenarios/phase-z9-zabbix-mvp-acceptance.md](scenarios/phase-z9-zabbix-mvp-acceptance.md)                                                                                         |
 | 工作记录动态导入模板下载实施计划                                 | review     | work-record-20 | 2026-07-19 | [docs/designs/phase-20/2026-07-19-work-record-import-template-download.md](designs/phase-20/2026-07-19-work-record-import-template-download.md)                                         |
 | 工作记录导入模板字典下拉设计                                     | review     | work-record-20 | 2026-07-20 | [docs/designs/phase-20/2026-07-20-work-record-import-dictionary-dropdowns.md](designs/phase-20/2026-07-20-work-record-import-dictionary-dropdowns.md)                                   |
 | 工作记录表单设计器详细设计（@formily/core only）                 | review     | work-record    | 2026-07-08 | [docs/record/designer-design.md](record/designer-design.md)                                                                                                                             |
@@ -159,6 +160,7 @@ Do not edit it manually.
 | Formily 与 Shadcn 统一运行时完整代码                             | draft      | work-record    | 2026-07-14 | [docs/record/formily/04-formily-shadcn统一运行时完整代码.md](record/formily/04-formily-shadcn统一运行时完整代码.md)                                                                     |
 | DesignerDocument、编译器与设计器 V2 完整代码                     | draft      | work-record    | 2026-07-14 | [docs/record/formily/05-designer-document与设计器v2完整代码.md](record/formily/05-designer-document与设计器v2完整代码.md)                                                               |
 | Designer 后端编译、旧版本兼容与迁移代码                          | draft      | work-record    | 2026-07-14 | [docs/record/formily/06-designer后端编译兼容与迁移代码.md](record/formily/06-designer后端编译兼容与迁移代码.md)                                                                         |
+| Core 与可选能力部署模式                                          | deprecated | phase-8        | 2026-08-01 | [docs/designs/phase-8/2026-08-01-core-deployment-profiles.md](designs/phase-8/2026-08-01-core-deployment-profiles.md)                                                                   |
 | Phase4.1：Agent Context Contract & Safety Boundary               | deprecated | global         | 2026-07-30 | [docs/mvp/design/phase4.1.md](mvp/design/phase4.1.md)                                                                                                                                   |
 | Phase4.2：LangGraph Agent 可选真实 LLM Provider                  | deprecated | global         | 2026-07-30 | [docs/mvp/design/phase4.2.md](mvp/design/phase4.2.md)                                                                                                                                   |
 | Phase4.3：Evidence Tools 接入 Metrics / Logs / Changes           | deprecated | global         | 2026-07-30 | [docs/mvp/design/phase4.3.md](mvp/design/phase4.3.md)                                                                                                                                   |
@@ -184,7 +186,7 @@ Do not edit it manually.
 
 | Title                      | Status   | Phase  | Updated    | Path                                                                  |
 | -------------------------- | -------- | ------ | ---------- | --------------------------------------------------------------------- |
-| Zabbix Webhook Integration | accepted | global | 2026-07-29 | [docs/integrations/zabbix-webhook.md](integrations/zabbix-webhook.md) |
+| Zabbix Webhook Integration | accepted | global | 2026-08-02 | [docs/integrations/zabbix-webhook.md](integrations/zabbix-webhook.md) |
 
 ## phase
 

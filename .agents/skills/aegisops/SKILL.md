@@ -113,22 +113,27 @@ MVP 必须使用:
 
 ```txt
 apps/
-  aiops-server        # 控制面 / REST API / SSE / 权限
-  aiops-worker        # 异步消费 / Outbox / 后台分析
+  aiops-server        # 生产运行身份 aegisops-app: 控制面 + Worker runtime
   aiops-runner        # 执行隔离层 / Ansible / SSH / Webhook
 
-apps/aiops-agent      # Python LangGraph 诊断运行时, 与 Java 通过 HTTP + OAuth2 解耦
+modules/
+  aiops-worker-runtime # Outbox / 同步 / 后台分析, 装入 aegisops-app
+
+apps/aiops-agent      # Python LangGraph 诊断运行时, 与 Java 通过 HTTPS + mTLS 解耦
 ```
 
 后端架构定性为:
 
 ```txt
-模块化单体 (Java) + 外挂 Python Agent + 独立 Runner
+单一 Java 模块化单体 App + 外挂 Python Agent + 独立 Runner
 ```
 
-不是微服务。任何把 server/worker/runner 描述为"独立服务"或"分布式系统"的设计评审视为不通过。
+不是微服务。`aegisops-app`、`aiops-agent`、`aiops-runner` 是三个按运行时与权限边界隔离的
+业务进程，不代表三个独立业务域或微服务。
 
-三 app 与 agent 共享同一份数据库 schema (Flyway), 但运行时独立部署、独立进程、独立端口 (端口表见 `references/architecture-boundaries.md` §1)。
+`aegisops-app` 是唯一控制面和任务授权签发者，承载公共 API 与后台作业。Agent 不访问业务
+数据库；Runner 只通过独立最小权限账号访问执行相关表。运行时端口和通信方向见
+`references/architecture-boundaries.md` §1。
 
 MVP 阶段不要拆分为微服务。
 
@@ -147,9 +152,12 @@ automation-service
 
 ---
 
-### 3.2 三个后端应用
+### 3.2 三个业务进程
 
-#### aiops-server
+#### aegisops-app
+
+当前 Maven 启动模块路径仍为 `apps/aiops-server`，镜像、容器、Spring 应用名和部署文档统一
+使用 `aegisops-app`。不要再部署 `aiops-worker` 进程。
 
 职责:
 
@@ -178,15 +186,9 @@ AutomationJob 审批
 直接执行 Ansible
 直接执行 SSH
 直接执行高危自动化
-长时间数据同步
-大批量分析
 ```
 
----
-
-#### aiops-worker
-
-职责:
+后台 Worker runtime 职责:
 
 ```txt
 Zabbix 主机同步
@@ -203,6 +205,9 @@ AI 诊断任务执行
 复盘初稿生成
 通知下发
 ```
+
+这些作业放在 `modules/aiops-worker-runtime`，由 `aegisops-app` 同一 JVM 调度。仍需保持模块、
+事务、幂等、租约和 Outbox 边界，不得把调度逻辑塞进 Controller。
 
 ---
 
@@ -222,9 +227,23 @@ Kubernetes Runner 执行 (后续)
 执行后健康检查
 ```
 
-`aiops-runner` 必须与 `aiops-server` 隔离。
+`aiops-runner` 必须与 `aegisops-app` 隔离，并使用独立最小权限数据库账号。
 
-Server 可以创建与审批任务, 但只有 Runner 才能执行。
+App 可以创建与审批任务、签发 Execution Grant，但只有 Runner 才能执行。Runner 必须在调用
+任何执行器之前验证 Grant、审批快照和不可变步骤摘要。
+
+#### aiops-agent
+
+职责:
+
+```txt
+模型调用与 LangGraph 工作流
+诊断推理与受控工具编排
+Checkpoint 与诊断结果回传
+```
+
+Agent 与 App 使用双向 TLS 和短期 Ed25519 Diagnosis Grant。Agent 不访问 PostgreSQL，不持有
+Grant 私钥，不调用 Runner，也不具备 Shell、Ansible 或 Kubernetes 高权限。
 
 ---
 
@@ -261,7 +280,7 @@ Server 可以创建与审批任务, 但只有 Runner 才能执行。
   aiops-execution
   aiops-plugin
   apps/aiops-runner
-  apps/aiops-worker           # 异步消费, 自身也是执行侧
+  aiops-worker-runtime        # App 内异步消费 / Outbox / 后台作业
   aiops-work-record           # 轻量记录, 与执行松耦合
 
 AI 体系 (ai):
@@ -272,7 +291,7 @@ AI 体系 (ai):
 判断一个模块属于哪一类, 顺序:
 
 ```txt
-1. 是否被 server/worker/runner 任一方复用?
+1. 是否被 app/runner 任一方复用?
 2. 是否对外部系统做 IO?    -> 通常是 -adapter / -datasource / -ai-client
 3. 是否承载 Incident 核心模型或证据链? -> operations-domain
 4. 其它都按命名直观归类, 不要重复造平行的 "xxx-core" / "xxx-facade"。
@@ -304,7 +323,7 @@ plugin   -> PlatformPluginRegistry      (不允许反射业务模块私有类)
 
 ```txt
 domain 依赖 -adapter / -client / -web / -persistence
-server / worker / runner 互相直接调用 (允许通过 aiops-execution 的 ApplicationService)
+app / runner 互相直接调用 (只允许经 PostgreSQL 任务表和 aiops-execution ApplicationService 边界协作)
 runner 注入 ExecutionRepository / RollbackRepository (ArchUnit 守卫: RunnerArchUnitGuardTest)
 领域模块把 spring-boot-starter-web 当成业务职责, 而非只用于 actuator endpoint
 ```
@@ -316,17 +335,16 @@ runner 注入 ExecutionRepository / RollbackRepository (ArchUnit 守卫: RunnerA
 ### 3.5 Spring 扫描范围
 
 ```txt
-aiops-server      @SpringBootApplication(scanBasePackages = "io.aegisops")
-aiops-worker      全包扫描非 Controller Bean, 排除 @Controller / @RestController
+aegisops-app      @SpringBootApplication(scanBasePackages = "io.aegisops")
 aiops-runner      全包扫描非 Controller Bean, 排除 @Controller / @RestController
 ```
 
-后果: 只要模块里放了 Spring Bean, 它就会进入所有三 app 的容器。规则:
+后果: 只要模块里放了 Spring Bean, 它可能进入 App 或 Runner 容器。规则:
 
 ```txt
 任何 RestController / @Configuration / @Service 必须明确归类到基础底座 / 领域模块的 api 包, 不要放进 domain 包
-AI 诊断上下文相关的轻量 controller (如 InternalAgentEvidenceController) 放在 modules 下, 不放进 apps/aiops-server, 避免污染 server 主入口
-共享业务 Controller 只允许 aiops-server 注册; worker / runner 仅显式 @Import 各自的 `/internal/*/status` Controller
+AI 诊断上下文相关的轻量 controller (如 InternalAgentEvidenceController) 放在 modules 下, 不放进 apps/aiops-server, 避免污染 App 启动模块
+共享业务 Controller 只允许 aegisops-app 注册; runner 仅显式 @Import 自身内部状态 Controller
 Controller 隔离必须由组件扫描边界保证, 不得依赖配置开关或缺失安全 Bean 阻止端点启动
 Runner 内部执行器 (ansible / ssh / webhook) 全部放进 io.aegisops.runner.executor.* 包, 与 aiops-execution 的 dto/service 分开
 ```
@@ -530,8 +548,8 @@ Phase 0 不要引入 Kafka, 除非用户明确要求高吞吐接入。
 aegisops/
 ├─ pom.xml
 ├─ apps/
-│  ├─ aiops-server/
-│  ├─ aiops-worker/
+│  ├─ aiops-server/          # 生产运行身份 aegisops-app
+│  ├─ aiops-agent/
 │  └─ aiops-runner/
 │
 ├─ modules/
@@ -550,6 +568,7 @@ aegisops/
 │  ├─ aiops-automation/
 │  ├─ aiops-audit/
 │  ├─ aiops-notification/
+│  ├─ aiops-worker-runtime/
 │  ├─ aiops-zabbix-adapter/
 │  ├─ aiops-vm-adapter/
 │  ├─ aiops-clickhouse-adapter/
@@ -1927,8 +1946,8 @@ Incident 时间线追加 AutomationEvent
 
 ```txt
 Maven 多模块工程
-apps/aiops-server
-apps/aiops-worker
+apps/aiops-server (运行身份 aegisops-app)
+modules/aiops-worker-runtime
 apps/aiops-runner
 React 控制台
 Docker Compose

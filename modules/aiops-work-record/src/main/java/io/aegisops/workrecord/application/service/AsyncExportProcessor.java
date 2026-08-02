@@ -26,7 +26,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
 @Service
-@ConditionalOnProperty(prefix = "aiops.runtime", name = "app", havingValue = "worker")
+@ConditionalOnProperty(prefix = "aiops.runtime", name = "app", havingValue = "app")
 public class AsyncExportProcessor {
   private static final long MAX_FILE_BYTES = 100L * 1024L * 1024L;
   private static final String CONTENT_TYPE = "text/csv;charset=UTF-8";

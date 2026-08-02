@@ -7,12 +7,12 @@ import io.aegisops.common.exception.AppException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.boot.ssl.SslBundles;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
@@ -24,21 +24,19 @@ public class HttpAiAgentClient implements AiAgentClient {
   private final ObjectMapper objectMapper;
   private final RestTemplate restTemplate;
   private final AgentContractValidator contractValidator;
-  private final AgentCredentialProvider credentialProvider;
   private final DiagnosisGrantProvider diagnosisGrantProvider;
 
   @Autowired
   public HttpAiAgentClient(
       AgentClientProperties properties,
       ObjectMapper objectMapper,
-      AgentCredentialProvider credentialProvider,
-      DiagnosisGrantProvider diagnosisGrantProvider) {
+      DiagnosisGrantProvider diagnosisGrantProvider,
+      SslBundles sslBundles) {
     this(
         properties,
         objectMapper,
-        createRestTemplate(properties),
+        new RestTemplate(AgentMtlsRequestFactory.create(properties, sslBundles)),
         new AgentContractValidator(),
-        credentialProvider,
         diagnosisGrantProvider);
   }
 
@@ -47,13 +45,11 @@ public class HttpAiAgentClient implements AiAgentClient {
       ObjectMapper objectMapper,
       RestTemplate restTemplate,
       AgentContractValidator contractValidator,
-      AgentCredentialProvider credentialProvider,
       DiagnosisGrantProvider diagnosisGrantProvider) {
     this.properties = properties;
     this.objectMapper = objectMapper;
     this.restTemplate = restTemplate;
     this.contractValidator = contractValidator;
-    this.credentialProvider = credentialProvider;
     this.diagnosisGrantProvider = diagnosisGrantProvider;
   }
 
@@ -64,7 +60,6 @@ public class HttpAiAgentClient implements AiAgentClient {
 
       HttpHeaders headers = new HttpHeaders();
       headers.setContentType(MediaType.APPLICATION_JSON);
-      credentialProvider.apply(headers);
       headers.set(AgentContract.TRACE_ID_HEADER, request.traceId());
       headers.set(AgentContract.CONTRACT_VERSION_HEADER, AgentContract.DIAGNOSIS_CONTRACT_VERSION);
       headers.set(AgentContract.DIAGNOSIS_GRANT_HEADER, diagnosisGrantProvider.issue(request));
@@ -90,12 +85,5 @@ public class HttpAiAgentClient implements AiAgentClient {
     } catch (Exception ex) {
       throw new AppException("AI_AGENT_CALL_FAILED", "Failed to call AI diagnosis agent");
     }
-  }
-
-  private static RestTemplate createRestTemplate(AgentClientProperties properties) {
-    SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-    factory.setConnectTimeout(properties.normalizedConnectTimeoutMillis());
-    factory.setReadTimeout(properties.normalizedReadTimeoutMillis());
-    return new RestTemplate(factory);
   }
 }

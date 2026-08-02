@@ -12,7 +12,7 @@ import org.springframework.context.annotation.Import;
 class ObjectStorageFeatureToggleTest {
   private final ApplicationContextRunner contextRunner =
       new ApplicationContextRunner()
-          .withPropertyValues("aiops.runtime.app=worker")
+          .withPropertyValues("aiops.runtime.app=app")
           .withUserConfiguration(ObjectStorageTestConfiguration.class);
 
   @Test

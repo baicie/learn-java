@@ -85,7 +85,7 @@ modules/<name>/src/main/java/io/aegisops/<name>/
 | aiops-execution    | 224 个 Java 类, Controller 与 Repository 同包根目录             | 拆 `api/` (ExecutionController 等) + `infrastructure/persistence/` (Jooq*) + `service/` 保持 facade                                    |
 | aiops-incident     | Controller 与 Jdbc* 同包根目录                                  | 拆 `api/IncidentController` + `infrastructure/persistence/JdbcIncidentRepository`                                                      |
 | aiops-runner (app) | Starter-web 仅用于 `/internal/runner/status`, 合理              | 维持现状, 但要保证 executor 包内禁止直接依赖 ExecutionRepository (ArchUnit 已覆盖)                                                     |
-| aiops-worker (app) | Starter-web 仅用于 `/internal/worker/status`, 合理              | 维持现状, 后续可在 api 包统一 /internal/* 入口                                                                                         |
+| aiops-worker-runtime | App 内后台作业模块，不暴露 Controller                         | 保持 job/outbox/runtime 边界，由 aegisops-app 装配；不得恢复独立生产部署入口                                                           |
 
 ## 4. ArchUnit 推荐测试
 

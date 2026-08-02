@@ -64,8 +64,12 @@ jobs:
             done
           }
 
-          for component in server agent worker runner; do
-            local_image="local/aiops-${component}:${IMAGE_TAG}"
+          for component in app agent runner; do
+            if [ "$component" = "app" ]; then
+              local_image="local/aegisops-app:${IMAGE_TAG}"
+            else
+              local_image="local/aiops-${component}:${IMAGE_TAG}"
+            fi
             remote_image="${IMAGE_PREFIX}:${IMAGE_TAG}-${component}"
             docker tag "$local_image" "$remote_image"
             retry docker push "$remote_image"

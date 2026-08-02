@@ -6,6 +6,7 @@ from typing import Any
 
 import httpx
 
+from aiops_agent import mtls
 from aiops_agent.settings import settings
 from aiops_agent.workflow.contracts import AgentMemory
 from aiops_agent.workflow.errors import ToolError
@@ -49,7 +50,9 @@ class MemoryClient:
         }
 
         try:
-            async with httpx.AsyncClient(timeout=self.timeout, trust_env=False) as client:
+            async with httpx.AsyncClient(
+                timeout=self.timeout, **mtls.mtls_httpx_kwargs(settings)
+            ) as client:
                 headers = await internal_tool_headers(tenant_id)
                 response = await client.post(url, json=body, headers=headers)
                 response.raise_for_status()
@@ -94,7 +97,9 @@ class MemoryClient:
         }
 
         try:
-            async with httpx.AsyncClient(timeout=self.timeout, trust_env=False) as client:
+            async with httpx.AsyncClient(
+                timeout=self.timeout, **mtls.mtls_httpx_kwargs(settings)
+            ) as client:
                 headers = await internal_tool_headers(tenant_id)
                 response = await client.post(url, json=body, headers=headers)
                 response.raise_for_status()

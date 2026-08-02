@@ -36,11 +36,11 @@
     <module>modules/aiops-execution</module>
     <module>modules/aiops-plugin</module>
     <module>apps/aiops-server</module>
-    <module>apps/aiops-worker</module>
     <module>apps/aiops-runner</module>
     <module>modules/aiops-observability</module>
     <module>modules/aiops-platform</module>
     <module>modules/aiops-work-record</module>
+    <module>modules/aiops-worker-runtime</module>
   </modules>
 
   <properties>

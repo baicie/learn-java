@@ -24,7 +24,6 @@ def test_offline_values_uses_local_image_repositories():
     values = load_yaml("values-offline.yaml")
 
     apps = values["apps"]
-    assert apps["server"]["image"]["repository"] == "aiops-server"
-    assert apps["worker"]["image"]["repository"] == "aiops-worker"
+    assert apps["app"]["image"]["repository"] == "aegisops-app"
     assert apps["runner"]["image"]["repository"] == "aiops-runner"
     assert apps["agent"]["image"]["repository"] == "aiops-agent"

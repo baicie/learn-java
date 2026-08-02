@@ -4,21 +4,16 @@ import pytest
 import respx
 from httpx import Response
 
-from aiops_agent.workflow.tools.internal_auth import HEADER_TENANT_ID
+from aiops_agent.workflow.tools.internal_auth import (
+    HEADER_DIAGNOSIS_GRANT,
+    HEADER_TENANT_ID,
+)
 from aiops_agent.workflow.tools.memory_client import MemoryClient
 
 
 @pytest.mark.asyncio
 @respx.mock
-async def test_memory_client_sends_internal_auth_headers(monkeypatch):
-    async def oauth_headers(_settings):
-        return {"Authorization": "Bearer oauth-service-token"}
-
-    monkeypatch.setattr(
-        "aiops_agent.workflow.tools.internal_auth.service_credential_headers",
-        oauth_headers,
-    )
-
+async def test_memory_client_sends_mtls_grant_headers():
     route = respx.post("http://java/internal/agent/memories/search").mock(
         return_value=Response(
             200,
@@ -42,7 +37,5 @@ async def test_memory_client_sends_internal_auth_headers(monkeypatch):
 
     assert route.called
     assert route.calls[0].request.headers[HEADER_TENANT_ID] == "tenant_1"
-    assert (
-        route.calls[0].request.headers["Authorization"]
-        == "Bearer oauth-service-token"
-    )
+    assert route.calls[0].request.headers[HEADER_DIAGNOSIS_GRANT] == "test-diagnosis-grant"
+    assert "Authorization" not in route.calls[0].request.headers

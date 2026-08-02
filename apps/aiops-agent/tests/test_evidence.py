@@ -106,10 +106,6 @@ def test_http_evidence_client_posts_internal_request(monkeypatch):
         return FakeHttpxClient()
 
     monkeypatch.setattr("aiops_agent.evidence.httpx.Client", fake_client)
-    monkeypatch.setattr(
-        "aiops_agent.evidence.synchronous_service_credential_headers",
-        lambda _settings: {"Authorization": "Bearer oauth-service-token"},
-    )
 
     settings = Settings(
         evidence_enabled=True,
@@ -124,7 +120,7 @@ def test_http_evidence_client_posts_internal_request(monkeypatch):
         diagnosis_grant_var.reset(token)
 
     assert captured["url"] == "http://server:8080/internal/agent/evidence/query"
-    assert captured["headers"]["Authorization"] == "Bearer oauth-service-token"
+    assert "Authorization" not in captured["headers"]
     assert captured["headers"]["X-AegisOps-Diagnosis-Grant"] == "diagnosis-grant"
     assert captured["headers"]["X-Tenant-Id"] == "tenant_1"
     assert captured["json"]["traceId"] == "trace_1"
@@ -149,11 +145,6 @@ def test_http_evidence_client_falls_back_on_error(monkeypatch):
         "aiops_agent.evidence.httpx.Client",
         lambda *, timeout, trust_env: FailingHttpxClient(),
     )
-    monkeypatch.setattr(
-        "aiops_agent.evidence.synchronous_service_credential_headers",
-        lambda _settings: {"Authorization": "Bearer oauth-service-token"},
-    )
-
     settings = Settings(
         evidence_enabled=True,
         evidence_base_url="http://server:8080/internal/agent/evidence",
@@ -187,10 +178,6 @@ def test_http_evidence_client_rejects_blank_context_grant_before_request(monkeyp
     monkeypatch.setattr(
         "aiops_agent.evidence.httpx.Client",
         lambda *, timeout, trust_env: UnexpectedHttpxClient(),
-    )
-    monkeypatch.setattr(
-        "aiops_agent.evidence.synchronous_service_credential_headers",
-        lambda _settings: {"Authorization": "Bearer oauth-service-token"},
     )
     settings = Settings(
         evidence_enabled=True,

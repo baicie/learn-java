@@ -3,7 +3,7 @@ AegisOps has been installed.
 Release: {{ .Release.Name }}
 Namespace: {{ .Release.Namespace }}
 
-Services:
+Enabled business processes:
 {{- range $appName, $app := .Values.apps }}
 {{- if $app.enabled }}
   - {{ include "aegisops.fullname" $ }}-{{ $appName }}:{{ $app.port }}
@@ -11,8 +11,10 @@ Services:
 {{- end }}
 
 Security:
-  - OAuth2 Bearer JWT is required for service-to-service APIs
-  - Diagnosis Grant supplies the tenant context for /internal/agent/**
+  - App and Agent use workload mTLS plus short-lived Ed25519 Diagnosis Grants.
+  - Runner uses a separate restricted PostgreSQL identity and verifies Execution Grants.
+  - Existing component Secrets must provide the keys documented in values.yaml.
+  - Provision Runner table grants with deploy/init/002-grant-runner.sql before enabling it.
 
 Next:
   kubectl get pods -n {{ .Release.Namespace }}

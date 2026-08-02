@@ -129,6 +129,7 @@ async def run_diagnosis_graph(
     initial_state: DiagnosisGraphState = {
         "tenant_id": request.tenant_id,
         "incident_id": request.incident_id,
+        "diagnosis_id": request.diagnosis_id,
         "trace_id": request.trace_id,
         "title": request.title,
         "severity": request.severity,
@@ -178,6 +179,18 @@ async def resume_diagnosis_graph(
         checkpoint_id=request.checkpoint_id,
         resume_token=request.resume_token,
     )
+
+    expected_context = {
+        "tenant_id": request.tenant_id,
+        "incident_id": request.incident_id,
+        "diagnosis_id": request.diagnosis_id,
+        "trace_id": request.trace_id,
+    }
+    if any(
+        checkpoint.state_snapshot.get(name) != value
+        for name, value in expected_context.items()
+    ):
+        raise ValueError("checkpoint context does not match diagnosis grant context")
 
     state = DiagnosisGraphState(**checkpoint.state_snapshot)
     state["checkpoint"] = checkpoint.checkpoint_id

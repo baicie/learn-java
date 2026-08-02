@@ -4,6 +4,13 @@ from aiops_agent.settings import Settings
 def test_static_service_token_settings_do_not_exist():
     settings = Settings()
 
+    assert not hasattr(settings, "inbound_oauth2_issuer")
+    assert not hasattr(settings, "inbound_oauth2_jwks_url")
+    assert not hasattr(settings, "inbound_oauth2_audience")
+    assert not hasattr(settings, "outbound_oauth2_token_url")
+    assert not hasattr(settings, "outbound_oauth2_client_id")
+    assert not hasattr(settings, "outbound_oauth2_client_secret")
+    assert not hasattr(settings, "outbound_oauth2_scope")
     assert not hasattr(settings, "internal_agent_token")
     assert not hasattr(settings, "outbound_static_token")
     assert not hasattr(settings, "inbound_auth_mode")

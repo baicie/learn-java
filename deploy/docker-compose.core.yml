@@ -1,65 +1,98 @@
-name: aegisops-core
+name: aegisops
 
-x-database-environment: &database-environment
+x-app-database-environment: &app-database-environment
   AIOPS_DB_URL: jdbc:postgresql://postgres:5432/aegisops
-  AIOPS_DB_USERNAME: aegisops
-  AIOPS_DB_USER: aegisops
-  AIOPS_DB_PASSWORD: ${AIOPS_DB_PASSWORD:-aegisops}
-
-x-core-feature-environment: &core-feature-environment
-  AIOPS_AGENT_ENABLED: ${AIOPS_AGENT_ENABLED:-false}
-  AIOPS_INTERNAL_AGENT_API_ENABLED: ${AIOPS_INTERNAL_AGENT_API_ENABLED:-false}
-  AIOPS_OBJECT_STORAGE_ENABLED: ${AIOPS_OBJECT_STORAGE_ENABLED:-false}
-  AIOPS_EVIDENCE_VICTORIA_ENABLED: ${AIOPS_EVIDENCE_VICTORIA_ENABLED:-false}
-  AIOPS_QUOTA_BACKEND: ${AIOPS_QUOTA_BACKEND:-memory}
-  AIOPS_REDIS_HEALTH_ENABLED: ${AIOPS_REDIS_HEALTH_ENABLED:-false}
+  AIOPS_DB_USERNAME: aegisops_app
 
 services:
   postgres:
     image: postgres:16-alpine
+    container_name: aegisops-postgres
     environment:
       POSTGRES_DB: aegisops
-      POSTGRES_USER: aegisops
-      POSTGRES_PASSWORD: ${AIOPS_DB_PASSWORD:-aegisops}
-    ports:
-      - "${AIOPS_POSTGRES_PORT:-5432}:5432"
+      POSTGRES_USER: aegisops_admin
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_admin_password
+    secrets:
+      - postgres_admin_password
+      - app_db_password
+      - runner_db_password
     volumes:
       - core_postgres_data:/var/lib/postgresql/data
+      - ./init/001-create-roles.sh:/docker-entrypoint-initdb.d/001-create-roles.sh:ro
+      - ./init/001-create-roles.sql:/opt/aegisops/init/001-create-roles.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U aegisops -d aegisops"]
+      test: ["CMD-SHELL", "pg_isready -U aegisops_admin -d aegisops"]
       interval: 5s
       timeout: 5s
       retries: 20
+    networks:
+      - app-db
+      - runner-db
     restart: unless-stopped
 
-  aiops-server:
-    image: ${AIOPS_SERVER_IMAGE:-aegisops/aiops-server:0.1.0}
+  aegisops-app:
+    image: ${AIOPS_APP_IMAGE:-aegisops/aegisops-app:0.1.0}
+    container_name: aegisops-app
     build:
       context: ..
       dockerfile: apps/aiops-server/Dockerfile
+    entrypoint: ["/bin/sh", "-ec"]
+    command:
+      - >-
+        export AIOPS_DB_PASSWORD="$$(cat /run/secrets/app_db_password)";
+        exec java $$JAVA_OPTS -jar /app/app.jar
     environment:
-      <<: [*database-environment, *core-feature-environment]
+      <<: *app-database-environment
+      AIOPS_APP_NAME: aegisops-app
       AIOPS_SERVER_PORT: 8080
-      AIOPS_RUNTIME_PHASE: ${AIOPS_RUNTIME_PHASE:-phase5}
-      AIOPS_JWT_SECRET: ${AIOPS_JWT_SECRET:-dev-secret-change-me-change-me-change-me}
-      AIOPS_AGENT_BASE_URL: http://aiops-agent:9008
-      AIOPS_AGENT_OAUTH2_TOKEN_URI: http://keycloak:8080/realms/aegisops/protocol/openid-connect/token
-      AIOPS_AGENT_OAUTH2_CLIENT_ID: aiops-server
-      AIOPS_AGENT_OAUTH2_CLIENT_SECRET: ${AIOPS_SERVER_OAUTH2_CLIENT_SECRET:-dev-aiops-server-client-secret}
-      AIOPS_INTERNAL_AGENT_JWT_ISSUER_URI: http://localhost:8089/realms/aegisops
-      AIOPS_INTERNAL_AGENT_JWT_JWK_SET_URI: http://keycloak:8080/realms/aegisops/protocol/openid-connect/certs
-      AIOPS_DIAGNOSIS_GRANT_SECRET: ${AIOPS_DIAGNOSIS_GRANT_SECRET:-dev-diagnosis-grant-secret-change-me}
-      AIOPS_MINIO_ENDPOINT: http://minio:9000
-      AIOPS_MINIO_ACCESS_KEY: ${AIOPS_MINIO_ACCESS_KEY:-minioadmin}
-      AIOPS_MINIO_SECRET_KEY: ${AIOPS_MINIO_SECRET_KEY:-minioadmin}
-      AIOPS_MINIO_BUCKET: ${AIOPS_MINIO_BUCKET:-aegisops-work-record}
-      AIOPS_EVIDENCE_VICTORIA_BASE_URL: http://victoriametrics:8428
-      SPRING_DATA_REDIS_HOST: redis
-      SPRING_DATA_REDIS_PORT: 6379
-      SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: 6
-      SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE: 2
+      AIOPS_RUNTIME_PHASE: ${AIOPS_RUNTIME_PHASE:-phase6}
+      AIOPS_JWT_SECRET: ${AIOPS_JWT_SECRET:?set AIOPS_JWT_SECRET in the generated env file}
+      AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN: ${AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN:?set AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN in the generated env file}
+      AIOPS_AGENT_ENABLED: ${AIOPS_AGENT_ENABLED:-false}
+      AIOPS_INTERNAL_AGENT_API_ENABLED: ${AIOPS_INTERNAL_AGENT_API_ENABLED:-false}
+      AIOPS_AGENT_BASE_URL: https://aiops-agent:9008
+      AIOPS_AGENT_SSL_BUNDLE_NAME: agentclient
+      SPRING_SSL_BUNDLE_PEM_AGENTCLIENT_KEYSTORE_CERTIFICATE: /run/secrets/app_tls_cert
+      SPRING_SSL_BUNDLE_PEM_AGENTCLIENT_KEYSTORE_PRIVATE_KEY: /run/secrets/app_tls_key
+      SPRING_SSL_BUNDLE_PEM_AGENTCLIENT_TRUSTSTORE_CERTIFICATE: /run/secrets/agent_ca_cert
+      AIOPS_INTERNAL_MTLS_PORT: 8443
+      AIOPS_TLS_CERT_FILE: /run/secrets/app_tls_cert
+      AIOPS_TLS_KEY_FILE: /run/secrets/app_tls_key
+      AIOPS_TLS_CLIENT_CA_FILE: /run/secrets/agent_ca_cert
+      AIOPS_INTERNAL_AGENT_CERTIFICATE_IDENTITIES: spiffe://aegisops.local/service/aiops-agent
+      AIOPS_DIAGNOSIS_GRANT_PUBLIC_KEY_FILE: /run/secrets/task_grant_public_key
+      AIOPS_DIAGNOSIS_GRANT_AUDIENCE: aegisops-internal-api
+      AIOPS_DIAGNOSIS_GRANT_ISSUERS: aegisops-app
+      AIOPS_AGENT_GRANT_ISSUER: aegisops-app
+      AIOPS_DIAGNOSIS_GRANT_AUDIENCES: aiops-agent-api,aegisops-internal-api
+      AIOPS_DIAGNOSIS_GRANT_KEY_ID: ${AIOPS_TASK_GRANT_KEY_ID:-task-grant-v1}
+      AIOPS_DIAGNOSIS_GRANT_PREVIOUS_KEY_ID: ${AIOPS_TASK_GRANT_PREVIOUS_KEY_ID:-}
+      AIOPS_DIAGNOSIS_GRANT_PREVIOUS_PUBLIC_KEY_FILE: ${AIOPS_TASK_GRANT_PREVIOUS_PUBLIC_KEY_FILE:-}
+      AIOPS_DIAGNOSIS_GRANT_PRIVATE_KEY_FILE: /run/secrets/task_grant_private_key
+      AIOPS_DIAGNOSIS_GRANT_TTL_SECONDS: 300
+      AIOPS_EXECUTION_GRANT_ISSUER: aegisops-app
+      AIOPS_EXECUTION_GRANT_AUDIENCE: aiops-runner
+      AIOPS_EXECUTION_GRANT_SCOPE: runbook:execute
+      AIOPS_EXECUTION_GRANT_KEY_ID: ${AIOPS_TASK_GRANT_KEY_ID:-task-grant-v1}
+      AIOPS_EXECUTION_GRANT_PRIVATE_KEY_FILE: /run/secrets/task_grant_private_key
+      AIOPS_OBJECT_STORAGE_ENABLED: ${AIOPS_OBJECT_STORAGE_ENABLED:-false}
+      AIOPS_EVIDENCE_VICTORIA_ENABLED: ${AIOPS_EVIDENCE_VICTORIA_ENABLED:-false}
+      AIOPS_QUOTA_BACKEND: ${AIOPS_QUOTA_BACKEND:-memory}
+      AIOPS_REDIS_HEALTH_ENABLED: ${AIOPS_REDIS_HEALTH_ENABLED:-false}
+      SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: ${AIOPS_APP_DB_POOL_MAX:-10}
+      SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE: ${AIOPS_APP_DB_POOL_MIN_IDLE:-2}
+    secrets:
+      - app_db_password
+      - app_tls_cert
+      - app_tls_key
+      - agent_ca_cert
+      - task_grant_private_key
+      - task_grant_public_key
+      - task_grant_previous_public_key
     ports:
-      - "${AIOPS_SERVER_PORT:-8080}:8080"
+      - "${AIOPS_APP_PORT:-8080}:8080"
+    expose:
+      - 8443
     depends_on:
       postgres:
         condition: service_healthy
@@ -68,228 +101,175 @@ services:
       interval: 10s
       timeout: 5s
       retries: 20
-      start_period: 30s
-    restart: unless-stopped
-
-  aiops-worker:
-    image: ${AIOPS_WORKER_IMAGE:-aegisops/aiops-worker:0.1.0}
-    build:
-      context: ..
-      dockerfile: deploy/docker/java-app.Dockerfile
-      args:
-        APP_MODULE: apps/aiops-worker
-        APP_NAME: aiops-worker
-        APP_PORT: 8081
-    environment:
-      <<: [*database-environment, *core-feature-environment]
-      AIOPS_INTERNAL_AGENT_API_ENABLED: "false"
-      AIOPS_WORKER_PORT: 8081
-      AIOPS_RUNTIME_PHASE: ${AIOPS_RUNTIME_PHASE:-phase5}
-      AIOPS_AGENT_BASE_URL: http://aiops-agent:9008
-      AIOPS_AGENT_OAUTH2_TOKEN_URI: http://keycloak:8080/realms/aegisops/protocol/openid-connect/token
-      AIOPS_AGENT_OAUTH2_CLIENT_ID: aiops-worker
-      AIOPS_AGENT_OAUTH2_CLIENT_SECRET: ${AIOPS_WORKER_OAUTH2_CLIENT_SECRET:-dev-aiops-worker-client-secret}
-      AIOPS_DIAGNOSIS_GRANT_SECRET: ${AIOPS_DIAGNOSIS_GRANT_SECRET:-dev-diagnosis-grant-secret-change-me}
-      AIOPS_MINIO_ENDPOINT: http://minio:9000
-      AIOPS_MINIO_ACCESS_KEY: ${AIOPS_MINIO_ACCESS_KEY:-minioadmin}
-      AIOPS_MINIO_SECRET_KEY: ${AIOPS_MINIO_SECRET_KEY:-minioadmin}
-      AIOPS_MINIO_BUCKET: ${AIOPS_MINIO_BUCKET:-aegisops-work-record}
-      SPRING_DATA_REDIS_HOST: redis
-      SPRING_DATA_REDIS_PORT: 6379
-      SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: 6
-      SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE: 2
-    depends_on:
-      postgres:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "wget -q -O - http://localhost:8081/actuator/health >/dev/null || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 20
-      start_period: 30s
-    restart: unless-stopped
-
-  keycloak:
-    profiles: ["ai", "demo"]
-    image: quay.io/keycloak/keycloak:26.1.4
-    command: ["start-dev", "--import-realm"]
-    environment:
-      KC_BOOTSTRAP_ADMIN_USERNAME: ${AIOPS_KEYCLOAK_ADMIN_USERNAME:-admin}
-      KC_BOOTSTRAP_ADMIN_PASSWORD: ${AIOPS_KEYCLOAK_ADMIN_PASSWORD:-dev-keycloak-admin}
-      KC_HOSTNAME: http://localhost:8089
-      AIOPS_SERVER_OAUTH2_CLIENT_SECRET: ${AIOPS_SERVER_OAUTH2_CLIENT_SECRET:-dev-aiops-server-client-secret}
-      AIOPS_WORKER_OAUTH2_CLIENT_SECRET: ${AIOPS_WORKER_OAUTH2_CLIENT_SECRET:-dev-aiops-worker-client-secret}
-      AIOPS_AGENT_OAUTH2_CLIENT_SECRET: ${AIOPS_AGENT_OAUTH2_CLIENT_SECRET:-dev-aiops-agent-client-secret}
-    volumes:
-      - ../infra/keycloak/aegisops-realm.json:/opt/keycloak/data/import/aegisops-realm.json:ro
-    ports:
-      - "${AIOPS_KEYCLOAK_PORT:-8089}:8080"
+      start_period: 45s
+    networks:
+      - frontend
+      - app-db
+      - app-agent
+    tmpfs:
+      - /tmp:size=128m,mode=1777
     restart: unless-stopped
 
   aiops-agent:
-    profiles: ["ai", "demo"]
+    profiles: ["ai"]
     image: ${AIOPS_AGENT_IMAGE:-aegisops/aiops-agent:0.1.0}
+    container_name: aegisops-agent
     build:
       context: ../apps/aiops-agent
       dockerfile: Dockerfile
     environment:
-      AIOPS_AGENT_INBOUND_OAUTH2_ISSUER: http://localhost:8089/realms/aegisops
-      AIOPS_AGENT_INBOUND_OAUTH2_JWKS_URL: http://keycloak:8080/realms/aegisops/protocol/openid-connect/certs
-      AIOPS_AGENT_INBOUND_OAUTH2_AUDIENCE: aiops-agent-api
-      AIOPS_AGENT_OUTBOUND_OAUTH2_TOKEN_URL: http://keycloak:8080/realms/aegisops/protocol/openid-connect/token
-      AIOPS_AGENT_OUTBOUND_OAUTH2_CLIENT_ID: aiops-agent
-      AIOPS_AGENT_OUTBOUND_OAUTH2_CLIENT_SECRET: ${AIOPS_AGENT_OAUTH2_CLIENT_SECRET:-dev-aiops-agent-client-secret}
-      AIOPS_AGENT_OUTBOUND_OAUTH2_SCOPE: "evidence:read cases:read checkpoint:read checkpoint:write memory:read memory:write plugin:authorize"
       AIOPS_AGENT_GENERATION_MODE: ${AIOPS_AGENT_GENERATION_MODE:-workflow}
       AIOPS_AGENT_OPENAI_BASE_URL: ${AIOPS_AGENT_OPENAI_BASE_URL:-https://api.deepseek.com/v1}
-      AIOPS_AGENT_OPENAI_API_KEY: ${AIOPS_DEEPSEEK_API_KEY:-}
-      AIOPS_AGENT_WORKFLOW_API_BASE_URL: http://aiops-server:8080
-      AIOPS_AGENT_EVIDENCE_BASE_URL: http://aiops-server:8080/internal/agent/evidence
-    ports:
-      - "${AIOPS_AGENT_PORT:-9008}:9008"
+      AIOPS_AGENT_OPENAI_API_KEY: ${AIOPS_AGENT_OPENAI_API_KEY:-}
+      AIOPS_AGENT_WORKFLOW_API_BASE_URL: https://aegisops-app:8443
+      AIOPS_AGENT_EVIDENCE_BASE_URL: https://aegisops-app:8443/internal/agent/evidence
+      AIOPS_AGENT_TLS_CERTIFICATE_FILE: /run/secrets/agent_tls_cert
+      AIOPS_AGENT_TLS_PRIVATE_KEY_FILE: /run/secrets/agent_tls_key
+      AIOPS_AGENT_TLS_CLIENT_CA_FILE: /run/secrets/control_plane_ca_cert
+      AIOPS_AGENT_DIAGNOSIS_GRANT_ISSUER: aegisops-app
+      AIOPS_AGENT_DIAGNOSIS_GRANT_AUDIENCE: aiops-agent-api
+      AIOPS_AGENT_DIAGNOSIS_GRANT_KEY_ID: ${AIOPS_TASK_GRANT_KEY_ID:-task-grant-v1}
+      AIOPS_AGENT_DIAGNOSIS_GRANT_PUBLIC_KEY_FILE: /run/secrets/task_grant_public_key
+      AIOPS_AGENT_DIAGNOSIS_GRANT_PREVIOUS_KEY_ID: ${AIOPS_TASK_GRANT_PREVIOUS_KEY_ID:-}
+      AIOPS_AGENT_DIAGNOSIS_GRANT_PREVIOUS_PUBLIC_KEY_FILE: ${AIOPS_TASK_GRANT_PREVIOUS_PUBLIC_KEY_FILE:-}
+    secrets:
+      - agent_tls_cert
+      - agent_tls_key
+      - control_plane_ca_cert
+      - task_grant_public_key
+      - task_grant_previous_public_key
+    expose:
+      - 9008
     depends_on:
-      keycloak:
-        condition: service_started
+      aegisops-app:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import socket; s=socket.create_connection(('127.0.0.1', 9008), 3); s.close()"
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 15s
+    networks:
+      - app-agent
+      - agent-egress
+    read_only: true
+    tmpfs:
+      - /tmp:size=128m,mode=1777
     restart: unless-stopped
 
-  aiops-runner:
-    profiles: ["automation", "demo"]
-    image: ${AIOPS_RUNNER_IMAGE:-aegisops/aiops-runner:0.1.0}
-    build:
-      context: ..
-      dockerfile: apps/aiops-runner/Dockerfile
+  runner-db-permissions:
+    profiles: ["automation"]
+    image: postgres:16-alpine
     environment:
-      <<: *database-environment
-      AIOPS_RUNNER_PORT: 8092
-      AIOPS_RUNTIME_PHASE: ${AIOPS_RUNTIME_PHASE:-phase5}
-      AIOPS_RUNNER_ID: ${AIOPS_RUNNER_ID:-compose-runner-1}
+      PGHOST: postgres
+      PGPORT: 5432
+      PGDATABASE: aegisops
+      PGUSER: aegisops_admin
+    entrypoint: ["/bin/sh", "-ec"]
+    command:
+      - >-
+        export PGPASSWORD="$$(cat /run/secrets/postgres_admin_password)";
+        exec psql --set=ON_ERROR_STOP=1 --file=/opt/aegisops/init/002-grant-runner.sql
+    secrets:
+      - postgres_admin_password
+    volumes:
+      - ./init/002-grant-runner.sql:/opt/aegisops/init/002-grant-runner.sql:ro
     depends_on:
       postgres:
         condition: service_healthy
-    tmpfs:
-      - /app/.runtime:size=512m,mode=1777
-    restart: unless-stopped
-
-  redis:
-    profiles: ["distributed-cache", "demo"]
-    image: redis:7-alpine
-    command: ["redis-server", "--appendonly", "yes"]
-    ports:
-      - "${AIOPS_REDIS_PORT:-6379}:6379"
-    volumes:
-      - core_redis_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 5s
-      retries: 20
-    restart: unless-stopped
-
-  minio:
-    profiles: ["object-storage", "demo"]
-    image: minio/minio:latest
-    environment:
-      MINIO_ROOT_USER: ${AIOPS_MINIO_ACCESS_KEY:-minioadmin}
-      MINIO_ROOT_PASSWORD: ${AIOPS_MINIO_SECRET_KEY:-minioadmin}
-    command: server /data --console-address ":9001"
-    ports:
-      - "${AIOPS_MINIO_CONSOLE_PORT:-9001}:9001"
-      - "${AIOPS_MINIO_PORT:-9002}:9000"
-    volumes:
-      - core_minio_data:/data
-    restart: unless-stopped
-
-  minio-init:
-    profiles: ["object-storage", "demo"]
-    image: minio/mc:latest
-    environment:
-      AIOPS_MINIO_ACCESS_KEY: ${AIOPS_MINIO_ACCESS_KEY:-minioadmin}
-      AIOPS_MINIO_SECRET_KEY: ${AIOPS_MINIO_SECRET_KEY:-minioadmin}
-      AIOPS_MINIO_BUCKET: ${AIOPS_MINIO_BUCKET:-aegisops-work-record}
-    entrypoint:
-      - /bin/sh
-      - -c
-      - >-
-        until mc alias set local http://minio:9000 "$${AIOPS_MINIO_ACCESS_KEY}" "$${AIOPS_MINIO_SECRET_KEY}"; do sleep 2; done &&
-        mc mb --ignore-existing "local/$${AIOPS_MINIO_BUCKET}"
-    depends_on:
-      minio:
-        condition: service_started
+      aegisops-app:
+        condition: service_healthy
+    networks:
+      - runner-db
     restart: "no"
 
-  victoriametrics:
-    profiles: ["observability", "demo"]
-    image: victoriametrics/victoria-metrics:v1.109.1
-    command: ["-storageDataPath=/storage", "-retentionPeriod=30d"]
-    ports:
-      - "${AIOPS_VICTORIA_METRICS_PORT:-8428}:8428"
-    volumes:
-      - core_vm_data:/storage
-    restart: unless-stopped
-
-  zabbix-postgres:
-    profiles: ["demo-zabbix", "demo"]
-    image: postgres:16-alpine
+  aiops-runner:
+    profiles: ["automation"]
+    image: ${AIOPS_RUNNER_IMAGE:-aegisops/aiops-runner:0.1.0}
+    container_name: aegisops-runner
+    build:
+      context: ..
+      dockerfile: apps/aiops-runner/Dockerfile
+    entrypoint: ["/usr/bin/tini", "--", "/bin/sh", "-ec"]
+    command:
+      - >-
+        export AIOPS_DB_PASSWORD="$$(cat /run/secrets/runner_db_password)";
+        exec java $$JAVA_OPTS -jar /app/app.jar
     environment:
-      POSTGRES_DB: zabbix
-      POSTGRES_USER: zabbix
-      POSTGRES_PASSWORD: ${ZABBIX_DB_PASSWORD:-zabbix}
-    volumes:
-      - core_zabbix_postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U zabbix -d zabbix"]
-      interval: 5s
-      timeout: 5s
-      retries: 20
-    restart: unless-stopped
-
-  zabbix-server:
-    profiles: ["demo-zabbix", "demo"]
-    image: zabbix/zabbix-server-pgsql:alpine-7.0-latest
-    environment:
-      DB_SERVER_HOST: zabbix-postgres
-      POSTGRES_DB: zabbix
-      POSTGRES_USER: zabbix
-      POSTGRES_PASSWORD: ${ZABBIX_DB_PASSWORD:-zabbix}
-    ports:
-      - "${ZABBIX_SERVER_PORT:-10051}:10051"
+      AIOPS_DB_URL: jdbc:postgresql://postgres:5432/aegisops
+      AIOPS_DB_USERNAME: aegisops_runner
+      AIOPS_RUNNER_PORT: 8092
+      AIOPS_RUNTIME_PHASE: ${AIOPS_RUNTIME_PHASE:-phase6}
+      AIOPS_RUNNER_ID: ${AIOPS_RUNNER_ID:-compose-runner-1}
+      AIOPS_RUNNER_EXECUTION_GRANT_ISSUER: aegisops-app
+      AIOPS_RUNNER_EXECUTION_GRANT_AUDIENCE: aiops-runner
+      AIOPS_RUNNER_EXECUTION_GRANT_SCOPE: runbook:execute
+      AIOPS_RUNNER_EXECUTION_GRANT_CURRENT_KEY_ID: ${AIOPS_TASK_GRANT_KEY_ID:-task-grant-v1}
+      AIOPS_RUNNER_EXECUTION_GRANT_CURRENT_PUBLIC_KEY_FILE: /run/secrets/task_grant_public_key
+      AIOPS_RUNNER_EXECUTION_GRANT_PREVIOUS_KEY_ID: ${AIOPS_TASK_GRANT_PREVIOUS_KEY_ID:-}
+      AIOPS_RUNNER_EXECUTION_GRANT_PREVIOUS_PUBLIC_KEY_FILE: ${AIOPS_TASK_GRANT_PREVIOUS_PUBLIC_KEY_FILE:-}
+      SPRING_FLYWAY_ENABLED: "false"
+      SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: ${AIOPS_RUNNER_DB_POOL_MAX:-4}
+      SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE: ${AIOPS_RUNNER_DB_POOL_MIN_IDLE:-1}
+    secrets:
+      - runner_db_password
+      - task_grant_public_key
+      - task_grant_previous_public_key
     depends_on:
-      zabbix-postgres:
+      postgres:
         condition: service_healthy
+      runner-db-permissions:
+        condition: service_completed_successfully
+    networks:
+      - runner-db
+      - runner-egress
+    read_only: true
+    tmpfs:
+      - /app/.runtime:size=512m,mode=1777
+      - /tmp:size=128m,mode=1777
     restart: unless-stopped
 
-  zabbix-web:
-    profiles: ["demo-zabbix", "demo"]
-    image: zabbix/zabbix-web-nginx-pgsql:alpine-7.0-latest
-    environment:
-      DB_SERVER_HOST: zabbix-postgres
-      POSTGRES_DB: zabbix
-      POSTGRES_USER: zabbix
-      POSTGRES_PASSWORD: ${ZABBIX_DB_PASSWORD:-zabbix}
-      ZBX_SERVER_HOST: zabbix-server
-      PHP_TZ: Asia/Shanghai
-    ports:
-      - "${ZABBIX_WEB_PORT:-8083}:8080"
-    depends_on:
-      zabbix-server:
-        condition: service_started
-    restart: unless-stopped
-
-  zabbix-agent2:
-    profiles: ["demo-zabbix", "demo"]
-    image: zabbix/zabbix-agent2:alpine-7.0-latest
-    environment:
-      ZBX_HOSTNAME: zabbix-agent2
-      ZBX_SERVER_HOST: zabbix-server
-      ZBX_SERVER_ACTIVE: zabbix-server
-    depends_on:
-      zabbix-server:
-        condition: service_started
-    restart: unless-stopped
+networks:
+  frontend:
+  app-db:
+    internal: true
+  app-agent:
+    internal: true
+  runner-db:
+    internal: true
+  agent-egress: {}
+  runner-egress: {}
 
 volumes:
   core_postgres_data:
-  core_redis_data:
-  core_minio_data:
-  core_vm_data:
-  core_zabbix_postgres_data:
+    name: ${AIOPS_POSTGRES_VOLUME_NAME:-aegisops_postgres_data}
+
+secrets:
+  postgres_admin_password:
+    file: ${AIOPS_SECRETS_DIR:-./runtime/secrets}/postgres_admin_password
+  app_db_password:
+    file: ${AIOPS_SECRETS_DIR:-./runtime/secrets}/app_db_password
+  runner_db_password:
+    file: ${AIOPS_SECRETS_DIR:-./runtime/secrets}/runner_db_password
+  control_plane_ca_cert:
+    file: ${AIOPS_SECRETS_DIR:-./runtime/secrets}/control_plane_ca.crt
+  agent_ca_cert:
+    file: ${AIOPS_SECRETS_DIR:-./runtime/secrets}/agent_ca.crt
+  app_tls_cert:
+    file: ${AIOPS_SECRETS_DIR:-./runtime/secrets}/app.crt
+  app_tls_key:
+    file: ${AIOPS_SECRETS_DIR:-./runtime/secrets}/app.key
+  agent_tls_cert:
+    file: ${AIOPS_SECRETS_DIR:-./runtime/secrets}/agent.crt
+  agent_tls_key:
+    file: ${AIOPS_SECRETS_DIR:-./runtime/secrets}/agent.key
+  task_grant_private_key:
+    file: ${AIOPS_SECRETS_DIR:-./runtime/secrets}/grant-private.pem
+  task_grant_public_key:
+    file: ${AIOPS_SECRETS_DIR:-./runtime/secrets}/grant-public.pem
+  task_grant_previous_public_key:
+    file: ${AIOPS_SECRETS_DIR:-./runtime/secrets}/grant-previous-public.pem

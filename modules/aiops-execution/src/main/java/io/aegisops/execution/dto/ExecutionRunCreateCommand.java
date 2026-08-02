@@ -17,4 +17,32 @@ public record ExecutionRunCreateCommand(
     String planRiskLevel,
     String executionKind,
     String rollbackPlanId,
-    String rollbackOfExecutionId) {}
+    String rollbackOfExecutionId,
+    String executionGrant,
+    String executionSnapshotSha256,
+    java.time.OffsetDateTime executionGrantExpiresAt) {
+  public ExecutionRunCreateCommand withGrant(
+      String token, String snapshotSha256, java.time.OffsetDateTime expiresAt) {
+    return new ExecutionRunCreateCommand(
+        id,
+        tenantId,
+        incidentId,
+        planId,
+        status,
+        mode,
+        requestedBy,
+        attempt,
+        maxAttempts,
+        retryOfExecutionId,
+        timeoutSeconds,
+        approvalId,
+        approvalSnapshotJson,
+        planRiskLevel,
+        executionKind,
+        rollbackPlanId,
+        rollbackOfExecutionId,
+        token,
+        snapshotSha256,
+        expiresAt);
+  }
+}

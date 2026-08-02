@@ -5,13 +5,14 @@ from collections.abc import AsyncIterator, Callable
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Request, Response, Security, status
 from fastapi.openapi.utils import get_openapi
-from fastapi.security import APIKeyHeader, HTTPAuthorizationCredentials, HTTPBearer
+from fastapi.security import APIKeyHeader
 
 from aiops_agent.contract import (
     load_contract_schema,
     validate_request_contract,
     validate_response_contract,
 )
+from aiops_agent.diagnosis_grant import DiagnosisGrantError, DiagnosisGrantVerifier
 from aiops_agent.observability.context import diagnosis_grant_var
 from aiops_agent.observability.logging import configure_json_logging
 from aiops_agent.observability.metrics import metrics_content_type, render_metrics
@@ -21,12 +22,10 @@ from aiops_agent.schemas import (
     DiagnoseRequest,
     DiagnoseResponse,
     HealthResponse,
-    ServiceAuthProbeResponse,
     WorkRecordGenerateRequest,
     WorkRecordGenerateResponse,
 )
 from aiops_agent.service import DiagnosisService
-from aiops_agent.service_auth import ServiceAuthenticator, ServicePrincipal
 from aiops_agent.settings import settings
 from aiops_agent.work_record_generation import WorkRecordGenerationService
 from aiops_agent.workflow.contracts import (
@@ -42,46 +41,22 @@ if settings.observability_enabled:
     app.add_middleware(RequestContextMiddleware)
 
 
-service_authenticator = ServiceAuthenticator(settings)
-service_bearer = HTTPBearer(auto_error=False, bearerFormat="JWT", scheme_name="HTTPBearer")
+diagnosis_grant_verifier = DiagnosisGrantVerifier(settings)
 diagnosis_grant_header = APIKeyHeader(
     name="X-AegisOps-Diagnosis-Grant",
     auto_error=False,
     scheme_name="DiagnosisGrant",
 )
 
-SERVICE_AUTH_RESPONSES = {
-    401: {"description": "Missing or invalid service credentials"},
-    403: {"description": "Service credentials do not grant the required scope"},
-    503: {"description": "Service authentication provider is unavailable"},
-}
 DIAGNOSIS_AUTH_RESPONSES = {
-    **SERVICE_AUTH_RESPONSES,
-    401: {"description": "Missing or invalid service credentials, or missing diagnosis grant"},
+    401: {"description": "Missing or invalid diagnosis grant"},
+    403: {"description": "Diagnosis grant does not authorize this request"},
 }
-
-
-def require_service_scope(scope: str) -> Callable:
-    async def dependency(
-        credentials: HTTPAuthorizationCredentials | None = Security(service_bearer),
-    ) -> ServicePrincipal:
-        authorization = None
-        if credentials is not None:
-            authorization = f"{credentials.scheme} {credentials.credentials}"
-        return await service_authenticator.authenticate(
-            authorization=authorization,
-            required_scope=scope,
-        )
-
-    return dependency
 
 
 def require_diagnosis_grant(scope: str) -> Callable:
-    service_dependency = require_service_scope(scope)
-
     async def dependency(
         request: Request,
-        principal: ServicePrincipal = Depends(service_dependency),
         x_aegisops_diagnosis_grant: str | None = Security(diagnosis_grant_header),
     ) -> AsyncIterator[None]:
         if x_aegisops_diagnosis_grant is None or not x_aegisops_diagnosis_grant.strip():
@@ -92,13 +67,52 @@ def require_diagnosis_grant(scope: str) -> Callable:
                     "severity": "critical",
                     "httpStatus": status.HTTP_401_UNAUTHORIZED,
                     "requestPath": request.url.path,
-                    "serviceId": principal.service_id,
                 },
             )
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="diagnosis authorization grant is required",
             )
+        payload = await request.json()
+        is_resume = request.url.path.endswith("/resume")
+        context = (
+            {
+                "tenant_id": payload.get("tenant_id"),
+                "incident_id": payload.get("incident_id"),
+                "diagnosis_id": payload.get("diagnosis_id"),
+                "trace_id": payload.get("trace_id"),
+            }
+            if is_resume
+            else {
+                "tenant_id": payload.get("tenantId"),
+                "incident_id": payload.get("incidentId"),
+                "diagnosis_id": payload.get("diagnosisId"),
+                "trace_id": payload.get("traceId"),
+            }
+        )
+        try:
+            diagnosis_grant_verifier.verify(
+                x_aegisops_diagnosis_grant.strip(),
+                required_scope=scope,
+                **context,
+            )
+        except DiagnosisGrantError as exc:
+            forbidden = "scope" in str(exc) or "context" in str(exc)
+            http_status = status.HTTP_403_FORBIDDEN if forbidden else status.HTTP_401_UNAUTHORIZED
+            logger.warning(
+                "Diagnosis authorization grant rejected",
+                extra={
+                    "eventType": "diagnosis_grant_invalid",
+                    "severity": "critical",
+                    "httpStatus": http_status,
+                    "requestPath": request.url.path,
+                    "reason": str(exc),
+                },
+            )
+            raise HTTPException(
+                status_code=http_status,
+                detail="diagnosis authorization grant is invalid",
+            ) from exc
         token = diagnosis_grant_var.set(x_aegisops_diagnosis_grant)
         try:
             yield
@@ -139,17 +153,6 @@ def health() -> HealthResponse:
     )
 
 
-@app.post(
-    "/v1/auth/probe",
-    response_model=ServiceAuthProbeResponse,
-    responses=SERVICE_AUTH_RESPONSES,
-)
-async def service_auth_probe(
-    principal: ServicePrincipal = Depends(require_service_scope("agent:diagnose")),
-) -> ServiceAuthProbeResponse:
-    return ServiceAuthProbeResponse(ok=True, serviceId=principal.service_id)
-
-
 @app.get("/v1/contracts/diagnosis", response_model=ContractResponse)
 def diagnosis_contract() -> ContractResponse:
     return ContractResponse(
@@ -164,7 +167,7 @@ def diagnosis_contract() -> ContractResponse:
     response_model=DiagnoseResponse,
     responses=DIAGNOSIS_AUTH_RESPONSES,
     dependencies=[
-        Depends(require_diagnosis_grant("agent:diagnose")),
+        Depends(require_diagnosis_grant("diagnosis:execute")),
         Depends(verify_contract_version),
     ],
 )
@@ -183,7 +186,7 @@ async def diagnose(
     response_model=WorkflowDiagnosisResponse,
     responses=DIAGNOSIS_AUTH_RESPONSES,
     dependencies=[
-        Depends(require_diagnosis_grant("agent:resume")),
+        Depends(require_diagnosis_grant("diagnosis:resume")),
         Depends(verify_contract_version),
     ],
 )
@@ -197,8 +200,6 @@ async def diagnose_resume(
 @app.post(
     "/v1/work-record/generate",
     response_model=WorkRecordGenerateResponse,
-    responses=SERVICE_AUTH_RESPONSES,
-    dependencies=[Depends(require_service_scope("agent:work-record"))],
 )
 async def generate_work_record(
     request: WorkRecordGenerateRequest,
@@ -226,9 +227,15 @@ def custom_openapi() -> dict:
         version=app.version,
         routes=app.routes,
     )
-    diagnosis_security = [{"HTTPBearer": [], "DiagnosisGrant": []}]
+    schema.setdefault("components", {}).setdefault("securitySchemes", {})["WorkloadMtls"] = {
+        "type": "mutualTLS"
+    }
+    diagnosis_security = [{"WorkloadMtls": [], "DiagnosisGrant": []}]
     for path in ("/v1/diagnose", "/v1/diagnose/resume"):
         schema["paths"][path]["post"]["security"] = diagnosis_security
+    schema["paths"]["/v1/work-record/generate"]["post"]["security"] = [
+        {"WorkloadMtls": []}
+    ]
     app.openapi_schema = schema
     return schema
 

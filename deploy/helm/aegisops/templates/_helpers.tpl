@@ -39,7 +39,9 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- define "aegisops.validateComponentServiceAccounts" -}}
 {{- $root := . -}}
 {{- $seen := dict -}}
-{{- range $component := list "server" "worker" "runner" "agent" -}}
+{{- range $component := list "app" "agent" "runner" -}}
+{{- $app := index $root.Values.apps $component -}}
+{{- if $app.enabled -}}
 {{- $configured := index $root.Values.serviceAccount.names $component -}}
 {{- if and (not $root.Values.serviceAccount.create) (empty $configured) -}}
 {{- fail (printf "serviceAccount.names.%s is required when serviceAccount.create=false" $component) -}}
@@ -53,6 +55,14 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end -}}
 {{- $_ := set $seen $resolved $component -}}
 {{- end -}}
+{{- end -}}
+{{- end -}}
+
+{{- define "aegisops.componentSecretName" -}}
+{{- $root := index . 0 -}}
+{{- $component := index . 1 -}}
+{{- $configured := index $root.Values.security.existingSecrets $component -}}
+{{- default (printf "%s-%s-security" (include "aegisops.fullname" $root) $component) $configured -}}
 {{- end -}}
 
 {{- define "aegisops.validateIngressNamespaceSelector" -}}

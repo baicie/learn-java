@@ -2,6 +2,7 @@ package io.aegisops.ai.client;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.headerDoesNotExist;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
@@ -11,6 +12,7 @@ import io.aegisops.ai.client.dto.AgentDiagnosisResponse;
 import io.aegisops.ai.client.dto.AgentIncidentContext;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestTemplate;
@@ -30,12 +32,11 @@ class HttpAiAgentClientTest {
             objectMapper,
             restTemplate,
             new AgentContractValidator(),
-            headers -> headers.setBearerAuth("oauth-service-token"),
             request -> "test-diagnosis-grant");
 
     server
         .expect(requestTo("http://agent:9008/v1/diagnose"))
-        .andExpect(header("Authorization", "Bearer oauth-service-token"))
+        .andExpect(headerDoesNotExist(HttpHeaders.AUTHORIZATION))
         .andExpect(header("X-AegisOps-Diagnosis-Grant", "test-diagnosis-grant"))
         .andExpect(header(AgentContract.TRACE_ID_HEADER, "trace_1"))
         .andExpect(
@@ -78,7 +79,8 @@ class HttpAiAgentClientTest {
                 List.of(),
                 List.of(),
                 "zh-CN",
-                "trace_1"));
+                "trace_1",
+                "diag_1"));
 
     assertEquals("aiops-agent", response.provider());
     assertEquals("aegisops_diagnosis_graph", response.agentName());

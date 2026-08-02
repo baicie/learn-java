@@ -34,7 +34,6 @@ class ApplicationYmlRuntimePhaseTest {
   private static final Set<String> APPS =
       Set.of(
           "apps/aiops-server/src/main/resources/application.yml",
-          "apps/aiops-worker/src/main/resources/application.yml",
           "apps/aiops-runner/src/main/resources/application.yml");
 
   @Test

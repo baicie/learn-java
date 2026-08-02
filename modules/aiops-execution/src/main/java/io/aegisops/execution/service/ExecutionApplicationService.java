@@ -1,6 +1,7 @@
 package io.aegisops.execution.service;
 
 import io.aegisops.execution.dto.ExecutionArtifactCreateCommand;
+import io.aegisops.execution.dto.ExecutionAuditEventCreateCommand;
 import io.aegisops.execution.dto.ExecutionRunRecord;
 import io.aegisops.execution.dto.ExecutionRunStatusUpdateCommand;
 import io.aegisops.execution.dto.ExecutionStepRecord;
@@ -55,6 +56,9 @@ public interface ExecutionApplicationService {
 
   /** Persist a new artifact row; matches the legacy {@code ExecutionRepository} contract. */
   void createArtifact(ExecutionArtifactCreateCommand command);
+
+  /** Append a runner audit event without exposing execution repositories across the module edge. */
+  void appendAuditEvent(ExecutionAuditEventCreateCommand command);
 
   /** Increment {@code artifact_count} on the step row; {@code false} indicates no row matched. */
   boolean incrementStepArtifactCount(String tenantId, String stepId);

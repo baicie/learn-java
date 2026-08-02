@@ -265,6 +265,8 @@ async def test_resume_after_checkpoint_approved_uses_multi_agent_recommendation(
     checkpoint_client.checkpoint.state_snapshot = {
         "tenant_id": "tenant_1",
         "incident_id": "inc_1",
+        "diagnosis_id": "diag_1",
+        "trace_id": "trace_1",
         "title": "Order service timeout",
         "severity": "high",
         "description": None,
@@ -296,6 +298,9 @@ async def test_resume_after_checkpoint_approved_uses_multi_agent_recommendation(
     response = await resume_diagnosis_graph(
         DiagnosisResumeRequest(
             tenant_id="tenant_1",
+            incident_id="inc_1",
+            diagnosis_id="diag_1",
+            trace_id="trace_1",
             checkpoint_id="agcp_1",
         ),
         context,
@@ -306,3 +311,31 @@ async def test_resume_after_checkpoint_approved_uses_multi_agent_recommendation(
     assert len(response.agent_messages) == 3
     assert response.agent_messages[-1].role == "reviewer_agent"
     assert response.metadata["collaboration_mode"] == "multi_agent"
+
+
+@pytest.mark.asyncio
+async def test_resume_rejects_checkpoint_from_another_diagnosis_context():
+    checkpoint_client = ApprovedCheckpointClient()
+    checkpoint_client.checkpoint.state_snapshot = {
+        "tenant_id": "tenant_1",
+        "incident_id": "inc_other",
+        "diagnosis_id": "diag_other",
+        "trace_id": "trace_other",
+    }
+    context = GraphContext(
+        evidence_client=FakeEvidenceClient(),
+        knowledge_client=FakeKnowledgeClient(),
+        checkpoint_client=checkpoint_client,
+    )
+
+    with pytest.raises(ValueError, match="checkpoint context"):
+        await resume_diagnosis_graph(
+            DiagnosisResumeRequest(
+                tenant_id="tenant_1",
+                incident_id="inc_1",
+                diagnosis_id="diag_1",
+                trace_id="trace_1",
+                checkpoint_id="agcp_1",
+            ),
+            context,
+        )

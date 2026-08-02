@@ -6,44 +6,28 @@ offline:
   enabled: true
 
 security:
-  jwtSecret: "CHANGE_ME_JWT_SECRET"
-  zabbixWebhookSigningSecret: ""
-  diagnosisGrantSecret: ""
-  serviceAuth:
-    issuerUri: "https://keycloak.aegisops.local/realms/aegisops"
-    jwkSetUri: "https://keycloak.aegisops.local/realms/aegisops/protocol/openid-connect/certs"
-    tokenUri: "https://keycloak.aegisops.local/realms/aegisops/protocol/openid-connect/token"
-    clients:
-      server:
-        clientId: aiops-server
-        clientSecret: ""
-      worker:
-        clientId: aiops-worker
-        clientSecret: ""
-      agent:
-        clientId: aiops-agent
-        clientSecret: ""
+  existingSecrets:
+    app: aegisops-app-security
+    agent: aegisops-agent-security
+    runner: aegisops-runner-security
 
 apps:
-  server:
+  app:
     image:
-      repository: "aiops-server"
-      tag: "0.1.0"
-  worker:
-    image:
-      repository: "aiops-worker"
-      tag: "0.1.0"
-  runner:
-    image:
-      repository: "aiops-runner"
+      repository: "aegisops-app"
       tag: "0.1.0"
   agent:
     image:
       repository: "aiops-agent"
+      tag: "0.1.0"
+  runner:
+    image:
+      repository: "aiops-runner"
       tag: "0.1.0"
 
 ingress:
   enabled: false
 
 networkPolicy:
-  enabled: true
+  # Enable after setting networkPolicy.egress.allowedCidrs for this cluster.
+  enabled: false

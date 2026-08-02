@@ -5,78 +5,107 @@ status: accepted
 phase: phase-8
 owner: ai
 created: 2026-07-30
-updated: 2026-07-31
+updated: 2026-08-01
 related:
-  - docs/adr/0010-service-authentication-oauth2-only.md
+  - docs/adr/0012-internal-mtls-task-grants.md
+  - docs/designs/phase-8/2026-08-01-mtls-task-grants.md
   - docs/deployment/production-security-checklist.md
 ---
 
 # 内部服务鉴权契约
 
-## 服务身份
+## 工作负载身份
 
-生产环境使用 OAuth2 Client Credentials。调用方发送：
+App 与 Agent 使用双向 TLS，不再发送服务 Bearer Token，也不依赖 OAuth2 Token Endpoint、
+Keycloak 或 JWKS。
 
-```http
-Authorization: Bearer <short-lived-service-jwt>
-```
+| 调用方向    | TLS 身份 URI SAN                               | 目标端口 |
+| ----------- | ---------------------------------------------- | -------- |
+| App → Agent | `spiffe://aegisops.local/service/aegisops-app` | `9008`   |
+| Agent → App | `spiffe://aegisops.local/service/aiops-agent`  | `8443`   |
 
-JWT 必须匹配目标 audience 和端点 scope：
-
-服务 JWT 必须包含可验证的 `iss`、`aud`、`sub`、`scope`、`iat` 和 `exp`。Token 生命周期
-必须满足 `0 < exp - iat <= 300s`，并且 `iat` 不得超过验证方当前时间 30 秒以上。
-
-| 调用方向              | audience                | 端点                                       | scope               |
-| --------------------- | ----------------------- | ------------------------------------------ | ------------------- |
-| server/worker → agent | `aiops-agent-api`       | `POST /v1/diagnose`                        | `agent:diagnose`    |
-| server/worker → agent | `aiops-agent-api`       | `POST /v1/auth/probe`                      | `agent:diagnose`    |
-| server → agent        | `aiops-agent-api`       | `POST /v1/diagnose/resume`                 | `agent:resume`      |
-| server/worker → agent | `aiops-agent-api`       | `POST /v1/work-record/generate`            | `agent:work-record` |
-| agent → server        | `aegisops-internal-api` | `POST /internal/agent/auth/probe`          | `evidence:read`     |
-| agent → server        | `aegisops-internal-api` | `/internal/agent/evidence/*`               | `evidence:read`     |
-| agent → server        | `aegisops-internal-api` | `/internal/agent/tools/search-cases`       | `cases:read`        |
-| agent → server        | `aegisops-internal-api` | `/internal/agent/plugins/tools/authorize`  | `plugin:authorize`  |
-| agent → server        | `aegisops-internal-api` | `POST /internal/agent/memories/search`     | `memory:read`       |
-| agent → server        | `aegisops-internal-api` | `POST /internal/agent/memories`            | `memory:write`      |
-| agent → server        | `aegisops-internal-api` | 保留：`GET /internal/agent/checkpoints/*`  | `checkpoint:read`   |
-| agent → server        | `aegisops-internal-api` | 保留：写入 `/internal/agent/checkpoints/*` | `checkpoint:write`  |
-
-Checkpoint 路径当前仅作为 scope 与客户端契约保留，Java Controller 尚未实现；在对应服务端
-接口落地前，不应将其视为可调用的生产 API。
+证书信任按角色隔离：Agent 只信任 control-plane CA；App 的内部 Connector 只信任 agent CA。
+App 公共端口 8080 不接受内部 Agent 回调，8443 不映射到宿主机或公网。健康检查可以只验证 TCP/TLS
+状态，但不能以跳过证书校验作为探针。
 
 ## Diagnosis Grant
 
-Java 发起诊断时还必须发送：
+诊断请求必须发送：
 
 ```http
-X-AegisOps-Diagnosis-Grant: <short-lived-signed-grant>
+X-AegisOps-Diagnosis-Grant: <short-lived-Ed25519-JWT>
 ```
 
-Agent 校验该 header 存在，并在本次诊断的 Java 工具调用中原样传播；Agent 不持有 HMAC
-密钥，因此不负责验证 Grant 内容。Java 校验签名、audience、issuer 和有效期，并从 Grant
-恢复租户上下文。`X-Tenant-Id` 仅保留为兼容与可观测字段，不参与授权决策。
+Grant 必须包含并校验 `iss`、`sub=diagnosis:<diagnosisId>`、`aud`、`scope`、`tenantId`、
+`incidentId`、`diagnosisId`、`traceId`、`iat`、`exp`、`jti`。TTL 最长 300 秒，算法固定为
+`EdDSA`，并通过 `kid` 支持当前/前一把公钥轮换。
 
-Evidence 请求中的 `tenantId + incidentId + traceId` 必须与 Grant 完全一致。Memory 请求使用
-`incident` scope 时，`scopeId` 必须等于 Grant 中的 `incidentId`；其他 Memory scope、历史
-案例检索和插件策略仍受 Grant 中的租户边界约束。
+| 调用方向    | audience                | 端点                                       | scope               |
+| ----------- | ----------------------- | ------------------------------------------ | ------------------- |
+| App → Agent | `aiops-agent-api`       | `POST /v1/diagnose`                        | `diagnosis:execute` |
+| App → Agent | `aiops-agent-api`       | `POST /v1/diagnose/resume`                 | `diagnosis:resume`  |
+| Agent → App | `aegisops-internal-api` | `POST /internal/agent/auth/probe`          | `evidence:read`     |
+| Agent → App | `aegisops-internal-api` | `/internal/agent/evidence/*`               | `evidence:read`     |
+| Agent → App | `aegisops-internal-api` | `/internal/agent/tools/search-cases`       | `cases:read`        |
+| Agent → App | `aegisops-internal-api` | `/internal/agent/plugins/tools/authorize`  | `plugin:authorize`  |
+| Agent → App | `aegisops-internal-api` | `POST /internal/agent/memories/search`     | `memory:read`       |
+| Agent → App | `aegisops-internal-api` | `POST /internal/agent/memories`            | `memory:write`      |
+| Agent → App | `aegisops-internal-api` | 保留：`GET /internal/agent/checkpoints/*`  | `checkpoint:read`   |
+| Agent → App | `aegisops-internal-api` | 保留：写入 `/internal/agent/checkpoints/*` | `checkpoint:write`  |
 
-Grant 签名密钥至少 32 字节，只配置在 server/worker。默认 TTL 为 300 秒，不能进入 Agent
-容器、日志、trace attribute 或错误响应。
+Agent 在执行诊断前验证 Grant，并在 Java 工具调用中原样传播。App 再次验证后从 Grant 恢复
+`TenantContext`；`X-Tenant-Id` 只用于兼容和可观测，不参与授权。Evidence 请求的
+`tenantId + incidentId + traceId` 必须与 Grant 完全一致。
 
-## 部署鉴权探针
+默认签发 scope 只有 `diagnosis:execute` 和 `diagnosis:resume`。启用表中某项内部工具能力时，
+部署方必须通过 `AIOPS_DIAGNOSIS_GRANT_SCOPES` 仅加入实际需要的 scope；未启用的工具不得固定
+授予。Resume 请求、Grant 与 checkpoint 状态必须同时匹配 tenant、Incident、diagnosis 与
+trace 四项上下文，仅租户相同不足以恢复任务。
 
-`POST /v1/auth/probe` 和 `POST /internal/agent/auth/probe` 仅回显已验证的服务主体与合成
-Diagnosis Grant 上下文，不读取或写入业务数据，也不会触发诊断、Runner、审批或通知。
-Java 端 probe 必须同时通过 `evidence:read` scope 和 Diagnosis Grant 校验。
+`POST /v1/work-record/generate` 不具备 Incident 诊断上下文，仅要求有效 App mTLS 身份；它不接收
+Diagnosis Grant。Checkpoint 路径目前只保留 scope 与客户端契约，在服务端接口落地前不应视为
+可调用的生产 API。
 
-生产部署脚本会在容器健康检查后运行 `deploy/scripts/verify-service-auth-oauth.py`：先检查 JWKS，
-再分别为 server、worker、agent 换取并校验短期 Token，最后验证 Java → Agent 和
-Agent → Java 两个实际 HTTP 调用方向。脚本和错误信息不得输出 Token、client secret、
-Diagnosis Grant 或完整 claims。
+## Execution Grant
+
+App 创建普通、重试或回滚执行时，必须写入 Ed25519 Execution Grant、稳定快照 SHA-256 和到期
+时间。Grant 绑定 `tenantId + incidentId + executionId + planId + mode + executionKind +
+snapshotSha256 + maxDurationSeconds`，audience 固定为 `aiops-runner`，scope 必须包含
+`runbook:execute`。
+
+Runner 原子领取任务后、改变任何步骤状态或调用任何 `StepExecutor` 前，必须完成以下检查：
+
+```text
+Ed25519 签名与 kid
+issuer / audience / scope / subject
+iat / exp / maxDurationSeconds
+租户、Incident、Execution、Plan、Mode
+审批 ID 与审批快照
+执行类型、回滚引用、重试次数与超时
+按 sequence 排序的全部不可变步骤字段 SHA-256
+live 审批状态为 approved，approvalId/planId 一致，approvedCount 达到 requiredApprovals 且至少为 1
+```
+
+验证失败时 Runner 将执行标记为 failed，写入不含 Token、参数或完整 claims 的
+`execution_audit_event`，且执行器调用次数必须为零。历史升级记录缺少 Grant 时同样失败关闭。
+
+## 密钥分配
+
+```text
+aegisops-app: Grant private key + public key
+aiops-agent:  Grant public key
+aiops-runner: Grant public key
+```
+
+Grant 私钥只能进入 App。证书私钥按组件分别挂载，Runner 不需要 mTLS 证书。密钥和证书不得
+进入镜像、Git、日志、trace attribute 或错误响应。
+
+轮换时接收方必须同时加载当前和前一把公钥；签发方只使用当前私钥。Compose `--force` 自动
+保存一代 previous 公钥与 `kid`，再次轮换前必须等待更早公钥签发的任务完成或过期。
 
 ## 错误语义
 
-- `401`：缺少、过期或无效的服务凭据；Agent 侧 Grant 缺失；Java internal API 侧 Grant
-  缺失、过期或无效。
-- `403`：服务身份有效，但缺少目标端点所需 scope，或请求上下文超出 Diagnosis Grant。
-- `503`：IdP/JWKS 配置或依赖不可用。
+- `401`：mTLS 身份缺失/无效，或 Grant 缺失、过期、签名/issuer/audience 无效。
+- `403`：工作负载身份有效，但 scope 或资源上下文不允许当前操作。
+- `503`：证书、公钥或内部认证配置无法加载。
+- Runner Grant 拒绝不通过 HTTP 返回；执行记录变为 `failed` 并生成脱敏审计事件。
