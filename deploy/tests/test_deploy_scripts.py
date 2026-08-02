@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import shutil
 import stat
 import subprocess
@@ -123,6 +124,68 @@ def test_build_images_builds_app_agent_and_runner_without_worker():
     assert "apps/aiops-agent/Dockerfile" in script
     assert "apps/aiops-runner/Dockerfile" in script
     assert "aiops-worker" not in script
+
+
+def test_build_images_uses_dockerfile_compatible_build_contexts(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    bash = shutil.which("bash")
+    if bash is None:
+        pytest.skip("bash is required")
+
+    calls_file = tmp_path / "docker-calls"
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    fake_docker = fake_bin / "docker"
+    fake_docker.write_text(
+        "#!/usr/bin/env bash\n"
+        'printf \'%s\\t\' "$@" >> "$DOCKER_CALLS_FILE"\n'
+        "printf '\\n' >> \"$DOCKER_CALLS_FILE\"\n",
+        encoding="utf-8",
+    )
+    fake_docker.chmod(0o755)
+    monkeypatch.setenv("DOCKER_CALLS_FILE", str(calls_file))
+    monkeypatch.setenv("PATH", f"{fake_bin}{os.pathsep}{os.environ['PATH']}")
+
+    subprocess.run(
+        [bash, str(ROOT / "scripts/deploy/build-images.sh")],
+        cwd=ROOT,
+        check=True,
+        env=os.environ.copy(),
+    )
+
+    calls = [
+        line.rstrip("\t").split("\t")
+        for line in calls_file.read_text(encoding="utf-8").splitlines()
+    ]
+    assert calls == [
+        [
+            "build",
+            "-f",
+            "apps/aiops-server/Dockerfile",
+            "--build-arg",
+            "BUILD_VERSION=0.1.0",
+            "-t",
+            "aegisops/aegisops-app:0.1.0",
+            ".",
+        ],
+        [
+            "build",
+            "-f",
+            "apps/aiops-runner/Dockerfile",
+            "-t",
+            "aegisops/aiops-runner:0.1.0",
+            ".",
+        ],
+        [
+            "build",
+            "-f",
+            "apps/aiops-agent/Dockerfile",
+            "-t",
+            "aegisops/aiops-agent:0.1.0",
+            "apps/aiops-agent",
+        ],
+    ]
 
 
 def test_legacy_oauth_release_entrypoints_are_removed():

@@ -33,6 +33,6 @@ docker build \
 # aiops-agent：Python 独立栈
 docker build \
   -f apps/aiops-agent/Dockerfile \
-  -t "${REGISTRY}/aiops-agent:${VERSION}" .
+  -t "${REGISTRY}/aiops-agent:${VERSION}" apps/aiops-agent
 
 echo "Built AegisOps images with version=${VERSION}, registry=${REGISTRY}"
