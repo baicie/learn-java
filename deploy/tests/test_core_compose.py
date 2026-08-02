@@ -148,6 +148,17 @@ def test_runner_uses_restricted_database_identity_and_no_http_dependency():
     assert "aiops-agent" not in runner["depends_on"]
 
 
+def test_java_services_default_to_highest_supported_runtime_phase():
+    services = compose()["services"]
+
+    assert services["aegisops-app"]["environment"]["AIOPS_RUNTIME_PHASE"] == (
+        "${AIOPS_RUNTIME_PHASE:-phase6}"
+    )
+    assert services["aiops-runner"]["environment"]["AIOPS_RUNTIME_PHASE"] == (
+        "${AIOPS_RUNTIME_PHASE:-phase6}"
+    )
+
+
 def test_runner_permissions_match_execution_code_access_surface():
     sql = (ROOT / "deploy/init/002-grant-runner.sql").read_text(encoding="utf-8").lower()
     role_sql = " ".join(
