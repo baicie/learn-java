@@ -47,9 +47,15 @@ grep -Fq 'aiops_agent.serve' apps/aiops-agent/Dockerfile
 echo "==> Validate deployment shell"
 for script in \
   deploy/install.sh \
+  deploy/scripts/backup-core.sh \
+  deploy/scripts/backup-zabbix.sh \
   deploy/scripts/deploy-app.sh \
   deploy/scripts/deploy-zabbix.sh \
+  deploy/scripts/ensure-zabbix-api-network.sh \
   deploy/scripts/configure-docker-mirror.sh \
+  deploy/scripts/promote-deployment-candidate.sh \
+  deploy/scripts/restore-core.sh \
+  deploy/scripts/restore-zabbix.sh \
   scripts/deploy/build-images.sh \
   scripts/deploy/deploy-app.sh \
   scripts/ci/test-deploy-zabbix.sh \

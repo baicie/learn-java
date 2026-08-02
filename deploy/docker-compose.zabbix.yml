@@ -2,7 +2,7 @@ name: aegisops-zabbix
 
 services:
   zabbix-postgres:
-    image: postgres:16-alpine
+    image: postgres:16.14-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777
     container_name: aegisops-zabbix-postgres
     environment:
       POSTGRES_DB: zabbix
@@ -20,7 +20,7 @@ services:
     restart: unless-stopped
 
   zabbix-server:
-    image: zabbix/zabbix-server-pgsql:alpine-7.0-latest
+    image: zabbix/zabbix-server-pgsql:alpine-7.0.29@sha256:97cac0f85f85e82cc5f584ce7958bd3de2b6eec6c5ce7b0df49626471024cad2
     container_name: aegisops-zabbix-server
     depends_on:
       zabbix-postgres:
@@ -32,13 +32,16 @@ services:
       POSTGRES_PASSWORD: ${ZABBIX_DB_PASSWORD:?ZABBIX_DB_PASSWORD is required}
       ZBX_CACHESIZE: "${ZABBIX_CACHESIZE:-64M}"
     ports:
-      - "10051:10051"
+      - target: 10051
+        published: "${ZABBIX_SERVER_PORT:-10051}"
+        host_ip: "${ZABBIX_BIND_ADDRESS:-127.0.0.1}"
+        protocol: tcp
     mem_limit: "${ZABBIX_SERVER_MEMORY_LIMIT:-192m}"
     mem_reservation: "${ZABBIX_SERVER_MEMORY_RESERVATION:-64m}"
     restart: unless-stopped
 
   zabbix-web:
-    image: zabbix/zabbix-web-nginx-pgsql:alpine-7.0-latest
+    image: zabbix/zabbix-web-nginx-pgsql:alpine-7.0.29@sha256:f8c2638904def2b610045726d37504271f31ec2ff1093d37d133ebdc24acfb0f
     container_name: aegisops-zabbix-web
     depends_on:
       zabbix-postgres:
@@ -54,7 +57,10 @@ services:
       ZBX_SERVER_PORT: 10051
       PHP_TZ: Asia/Shanghai
     ports:
-      - "${ZABBIX_WEB_PORT:-8083}:8080"
+      - target: 8080
+        published: "${ZABBIX_WEB_PORT:-8083}"
+        host_ip: "${ZABBIX_BIND_ADDRESS:-127.0.0.1}"
+        protocol: tcp
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O - http://localhost:8080/ >/dev/null || exit 1"]
       interval: 10s
@@ -62,21 +68,33 @@ services:
       retries: 30
     mem_limit: "${ZABBIX_WEB_MEMORY_LIMIT:-192m}"
     mem_reservation: "${ZABBIX_WEB_MEMORY_RESERVATION:-64m}"
+    networks:
+      default:
+      zabbix-api:
+        aliases:
+          - aegisops-zabbix-web
     restart: unless-stopped
 
   zabbix-agent2:
-    image: zabbix/zabbix-agent2:alpine-7.0-latest
+    image: zabbix/zabbix-agent2:alpine-7.0.29@sha256:953c3d229fcc0b2c481bd148a44f1c4a3df7ec5390aa3c5cdaf8de163b02ae1c
     container_name: aegisops-zabbix-agent2
     depends_on:
       zabbix-server:
         condition: service_started
+    network_mode: "service:zabbix-server"
     environment:
-      ZBX_HOSTNAME: zabbix-agent2
-      ZBX_SERVER_HOST: zabbix-server
-      ZBX_SERVER_ACTIVE: zabbix-server
+      ZBX_HOSTNAME: Zabbix server
+      ZBX_SERVER_HOST: 127.0.0.1
+      ZBX_SERVER_ACTIVE: 127.0.0.1
     mem_limit: "${ZABBIX_AGENT_MEMORY_LIMIT:-64m}"
     mem_reservation: "${ZABBIX_AGENT_MEMORY_RESERVATION:-16m}"
     restart: unless-stopped
 
 volumes:
   zabbix_postgres_data:
+
+networks:
+  default:
+  zabbix-api:
+    external: true
+    name: aegisops-zabbix-api

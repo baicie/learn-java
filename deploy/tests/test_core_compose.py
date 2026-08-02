@@ -113,7 +113,7 @@ def test_app_and_agent_use_role_separated_mtls_and_task_grant_secrets():
     assert "AIOPS_SECURITY_DIAGNOSIS_GRANT_PUBLIC_KEY_FILE" not in app_env
 
 
-def test_agent_and_runner_have_separate_egress_and_no_shared_network():
+def test_runtime_networks_are_separated_and_app_only_joins_zabbix_api_network():
     model = compose()
     services = model["services"]
     networks = model["networks"]
@@ -123,7 +123,12 @@ def test_agent_and_runner_have_separate_egress_and_no_shared_network():
     runner_networks = set(services["aiops-runner"]["networks"])
     postgres_networks = set(services["postgres"]["networks"])
 
-    assert app_networks == {"frontend", "app-db", "app-agent"}
+    assert app_networks == {
+        "frontend",
+        "app-db",
+        "app-agent",
+        "zabbix-api",
+    }
     assert agent_networks == {"app-agent", "agent-egress"}
     assert runner_networks == {"runner-db", "runner-egress"}
     assert postgres_networks == {"app-db", "runner-db"}
@@ -132,6 +137,10 @@ def test_agent_and_runner_have_separate_egress_and_no_shared_network():
     assert networks["app-agent"]["internal"] is True
     assert networks["app-db"]["internal"] is True
     assert networks["runner-db"]["internal"] is True
+    assert networks["zabbix-api"] == {
+        "external": True,
+        "name": "aegisops-zabbix-api",
+    }
     assert networks["agent-egress"].get("internal", False) is False
     assert networks["runner-egress"].get("internal", False) is False
 
