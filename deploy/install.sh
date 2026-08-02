@@ -107,8 +107,6 @@ REQUIRED_SECURITY_FILES=(
   postgres_admin_password
   app_db_password
   runner_db_password
-  root_ca.crt
-  root_ca.key
   control_plane_ca.crt
   control_plane_ca.key
   agent_ca.crt
@@ -223,30 +221,6 @@ if [ "$REUSE" = "0" ]; then
   JWT_SECRET="$(random_hex)"
   WEBHOOK_SECRET="$(random_hex)"
 
-cat > "$TEMP_DIR/root-ca.cnf" <<'EOF'
-[req]
-distinguished_name = dn
-prompt = no
-x509_extensions = v3_ca
-
-[dn]
-CN = AegisOps Internal Root CA
-
-[v3_ca]
-basicConstraints = critical, CA:TRUE, pathlen:1
-keyUsage = critical, keyCertSign, cRLSign
-subjectKeyIdentifier = hash
-authorityKeyIdentifier = keyid:always
-EOF
-
-cat > "$TEMP_DIR/role-ca.cnf" <<'EOF'
-[v3_ca]
-basicConstraints = critical, CA:TRUE, pathlen:0
-keyUsage = critical, keyCertSign, cRLSign
-subjectKeyIdentifier = hash
-authorityKeyIdentifier = keyid,issuer
-EOF
-
 cat > "$TEMP_DIR/app-leaf.cnf" <<'EOF'
 [v3_leaf]
 basicConstraints = critical, CA:FALSE
@@ -275,32 +249,20 @@ DNS.1 = aiops-agent
 URI.1 = spiffe://aegisops.local/service/aiops-agent
 EOF
 
-openssl req -x509 -newkey rsa:4096 -nodes \
-  -keyout "$GENERATED_SECRETS/root_ca.key" \
-  -out "$GENERATED_SECRETS/root_ca.crt" \
-  -days 3650 \
-  -config "$TEMP_DIR/root-ca.cnf" >/dev/null 2>&1
-
 generate_role_ca() {
   local name=$1
   local common_name=$2
-  openssl req -new -newkey rsa:4096 -nodes \
+  openssl req -x509 -newkey rsa:4096 -nodes \
     -keyout "$GENERATED_SECRETS/${name}_ca.key" \
-    -out "$TEMP_DIR/${name}_ca.csr" \
-    -subj "/CN=${common_name}" >/dev/null 2>&1
-  openssl x509 -req \
-    -in "$TEMP_DIR/${name}_ca.csr" \
-    -CA "$GENERATED_SECRETS/root_ca.crt" \
-    -CAkey "$GENERATED_SECRETS/root_ca.key" \
-    -set_serial "$3" \
     -out "$GENERATED_SECRETS/${name}_ca.crt" \
     -days 1825 \
-    -extfile "$TEMP_DIR/role-ca.cnf" \
-    -extensions v3_ca >/dev/null 2>&1
+    -subj "/CN=${common_name}" \
+    -addext "basicConstraints=critical,CA:TRUE,pathlen:0" \
+    -addext "keyUsage=critical,keyCertSign,cRLSign" >/dev/null 2>&1
 }
 
-generate_role_ca control_plane "AegisOps Control Plane CA" 1001
-generate_role_ca agent "AegisOps Agent CA" 1002
+generate_role_ca control_plane "AegisOps Control Plane CA"
+generate_role_ca agent "AegisOps Agent CA"
 
 generate_leaf() {
   local name=$1
@@ -344,7 +306,6 @@ openssl genpkey -algorithm ED25519 \
 
 chmod 0600 "$GENERATED_SECRETS"/*
 chmod 0644 \
-  "$GENERATED_SECRETS/root_ca.crt" \
   "$GENERATED_SECRETS/control_plane_ca.crt" \
   "$GENERATED_SECRETS/agent_ca.crt" \
   "$GENERATED_SECRETS/app.crt" \
