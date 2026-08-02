@@ -1,5 +1,14 @@
 package io.aegisops.server;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.security.GeneralSecurityException;
+import java.security.KeyStore;
+import java.security.cert.Certificate;
+import java.security.cert.CertificateFactory;
+import java.util.Collection;
 import org.apache.catalina.connector.Connector;
 import org.apache.tomcat.util.net.SSLHostConfig;
 import org.apache.tomcat.util.net.SSLHostConfigCertificate;
@@ -30,7 +39,7 @@ public class InternalMtlsConnectorConfiguration {
 
     SSLHostConfig ssl = new SSLHostConfig();
     ssl.setCertificateVerification(SSLHostConfig.CertificateVerification.REQUIRED.name());
-    ssl.setCaCertificateFile(properties.getClientCaFile());
+    ssl.setTrustStore(loadTrustStore(properties.getClientCaFile()));
     ssl.setProtocols("TLSv1.3,TLSv1.2");
     SSLHostConfigCertificate certificate =
         new SSLHostConfigCertificate(ssl, SSLHostConfigCertificate.Type.UNDEFINED);
@@ -39,5 +48,26 @@ public class InternalMtlsConnectorConfiguration {
     ssl.addCertificate(certificate);
     connector.addSslHostConfig(ssl);
     return connector;
+  }
+
+  private static KeyStore loadTrustStore(String clientCaFile) {
+    try (InputStream input = Files.newInputStream(Path.of(clientCaFile))) {
+      Collection<? extends Certificate> certificates =
+          CertificateFactory.getInstance("X.509").generateCertificates(input);
+      if (certificates.isEmpty()) {
+        throw new IllegalStateException("No certificates found in " + clientCaFile);
+      }
+
+      KeyStore trustStore = KeyStore.getInstance(KeyStore.getDefaultType());
+      trustStore.load(null, null);
+      int index = 0;
+      for (Certificate certificate : certificates) {
+        trustStore.setCertificateEntry("agent-ca-" + index++, certificate);
+      }
+      return trustStore;
+    } catch (GeneralSecurityException | IOException exception) {
+      throw new IllegalStateException(
+          "Unable to load Agent client CA from " + clientCaFile, exception);
+    }
   }
 }
