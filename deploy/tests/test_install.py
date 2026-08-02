@@ -268,10 +268,23 @@ def test_start_builds_latest_sources_and_waits_for_health(tmp_path):
     fake_bin = tmp_path / "bin"
     fake_bin.mkdir()
     docker_log = tmp_path / "docker.log"
+    network_state = tmp_path / "zabbix-network"
     fake_docker = fake_bin / "docker"
     fake_docker.write_text(
         """#!/bin/sh
 printf '%s\\n' "$*" >> "$AIOPS_TEST_DOCKER_LOG"
+case "$*" in
+  *".Containers"*) exit 0 ;;
+esac
+if [ "$1 ${2:-}" = "network inspect" ]; then
+  [ -f "$AIOPS_TEST_NETWORK_STATE" ] || exit 1
+  printf 'bridge true\\n'
+  exit 0
+fi
+if [ "$1 ${2:-}" = "network create" ]; then
+  : > "$AIOPS_TEST_NETWORK_STATE"
+  exit 0
+fi
 # A successful Docker CLI invocation with no inspect payload means no such legacy
 # container to the migration script.
 exit 0
@@ -298,6 +311,7 @@ exit 0
             **os.environ,
             "PATH": f"{fake_bin}{os.pathsep}{os.environ['PATH']}",
             "AIOPS_TEST_DOCKER_LOG": str(docker_log),
+            "AIOPS_TEST_NETWORK_STATE": str(network_state),
         },
     )
 
@@ -345,6 +359,57 @@ def test_force_rotation_preserves_previous_grant_verification_key(tmp_path):
     assert _env_value(runtime, "AIOPS_TASK_GRANT_KEY_ID") != previous_key_id
 
 
+def test_force_start_rejects_unsafe_network_before_runtime_changes(tmp_path):
+    if os.name == "nt":
+        pytest.skip("deployment installer targets POSIX hosts")
+    if shutil.which("openssl") is None or shutil.which("bash") is None:
+        pytest.skip("bash and openssl are required")
+
+    runtime = tmp_path / "runtime"
+    _run_install(runtime, "diagnostic")
+    before = _runtime_files(runtime)
+
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    fake_docker = fake_bin / "docker"
+    fake_docker.write_text(
+        "#!/usr/bin/env bash\n"
+        "set -Eeuo pipefail\n"
+        'if [ "$1 ${2:-}" = "network inspect" ]; then\n'
+        "  printf 'bridge false\\n'\n"
+        "  exit 0\n"
+        "fi\n"
+        "exit 99\n",
+        encoding="utf-8",
+    )
+    fake_docker.chmod(0o755)
+
+    result = subprocess.run(
+        [
+            "bash",
+            str(INSTALL),
+            "--mode",
+            "diagnostic",
+            "--runtime-dir",
+            str(runtime),
+            "--force",
+        ],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        env={
+            **os.environ,
+            "PATH": f"{fake_bin}{os.pathsep}{os.environ['PATH']}",
+        },
+        check=False,
+    )
+
+    assert result.returncode != 0
+    assert "must be an internal bridge network" in result.stderr
+    assert _runtime_files(runtime) == before
+    assert not list(runtime.glob("secrets.backup.*"))
+
+
 def _run_install(runtime: Path, mode: str) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         [
@@ -367,6 +432,14 @@ def _security_material(runtime: Path) -> dict[str, bytes]:
     return {
         path.name: path.read_bytes()
         for path in (runtime / "secrets").iterdir()
+        if path.is_file()
+    }
+
+
+def _runtime_files(runtime: Path) -> dict[str, bytes]:
+    return {
+        path.relative_to(runtime).as_posix(): path.read_bytes()
+        for path in runtime.rglob("*")
         if path.is_file()
     }
 

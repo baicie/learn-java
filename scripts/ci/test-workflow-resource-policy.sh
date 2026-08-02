@@ -49,7 +49,8 @@ for workflow in "$ROOT_DIR"/.github/workflows/*.yml; do
   reject_text "$workflow" "bash scripts/ci/prepare-docker.sh"
 done
 require_text "$RELEASE_WORKFLOW" "for attempt in 1 2 3; do"
-require_text "$RELEASE_WORKFLOW" 'retry docker push "$remote_image"'
+require_text "$RELEASE_WORKFLOW" 'push_with_digest "$remote_image"'
+require_text "$RELEASE_WORKFLOW" 'docker buildx imagetools inspect "$exact_image"'
 require_text "$RELEASE_WORKFLOW" "uses: docker/login-action@v4"
 require_text "$RELEASE_WORKFLOW" "run: bash scripts/deploy/build-images.sh"
 require_text "$RELEASE_WORKFLOW" "deploy/docker-compose.core.yml"
@@ -63,7 +64,7 @@ require_text "$MANUAL_DOCKER_WORKFLOW" 'remote_image="${IMAGE_PREFIX}:${IMAGE_TA
 require_text "$RELEASE_PREFLIGHT" "deploy/install.sh"
 require_text "$RELEASE_PREFLIGHT" "docker-compose.core.yml"
 require_text "$RELEASE_WORKFLOW" 'AIOPS_AGENT_OPENAI_API_KEY: ${{ secrets.AIOPS_AGENT_OPENAI_API_KEY }}'
-require_text "$RELEASE_WORKFLOW" "envs: IMAGE_PREFIX,IMAGE_TAG,AIOPS_DEPLOY_MODE,AIOPS_AGENT_OPENAI_API_KEY"
+require_text "$RELEASE_WORKFLOW" "envs: STAGING_ID,AIOPS_APP_IMAGE,AIOPS_AGENT_IMAGE,AIOPS_RUNNER_IMAGE,AIOPS_DEPLOY_MODE,AIOPS_AGENT_OPENAI_API_KEY"
 require_text "$RELEASE_WORKFLOW" "needs: runtime-smoke"
 require_text "$AGENT_DOCKERFILE" "pip install --timeout 300 --retries 10 --no-cache-dir ."
 require_text "$BACKEND_SCRIPT" "modules/aiops-worker-runtime"

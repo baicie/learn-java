@@ -4,8 +4,8 @@ type: operation
 status: accepted
 phase: global
 owner: script
-created: 2026-08-01
-updated: 2026-08-01
+created: 2026-08-02
+updated: 2026-08-02
 related: []
 ---
 
@@ -27,10 +27,10 @@ Do not edit it manually.
 | Title                       | Status   | Phase   | Updated    | Path                                                                                            |
 | --------------------------- | -------- | ------- | ---------- | ----------------------------------------------------------------------------------------------- |
 | Automation Safety Rules     | accepted | global  | 2026-08-02 | [docs/automation-safety.md](automation-safety.md)                                               |
-| 生产安全检查清单            | accepted | global  | 2026-08-01 | [docs/deployment/production-security-checklist.md](deployment/production-security-checklist.md) |
+| 生产安全检查清单            | accepted | global  | 2026-08-03 | [docs/deployment/production-security-checklist.md](deployment/production-security-checklist.md) |
 | Agent Skill 管理            | accepted | global  | 2026-07-14 | [docs/operations/agent-skills.md](operations/agent-skills.md)                                   |
-| Git 工作流                  | accepted | phase-8 | 2026-07-22 | [docs/operations/git-workflow.md](operations/git-workflow.md)                                   |
-| AegisOps Production Runbook | accepted | global  | 2026-08-01 | [docs/operations/runbook.md](operations/runbook.md)                                             |
+| Git 工作流                  | accepted | phase-8 | 2026-08-03 | [docs/operations/git-workflow.md](operations/git-workflow.md)                                   |
+| AegisOps Production Runbook | accepted | global  | 2026-08-03 | [docs/operations/runbook.md](operations/runbook.md)                                             |
 | 项目文档导航                | accepted | global  | 2026-07-14 | [docs/README.md](README.md)                                                                     |
 
 ## adr
@@ -47,6 +47,7 @@ Do not edit it manually.
 | 服务间鉴权统一为 OAuth2                                        | accepted | phase-8     | 2026-07-30 | [docs/adr/0010-service-authentication-oauth2-only.md](adr/0010-service-authentication-oauth2-only.md)             |
 | 默认采用 Core 最小部署                                         | accepted | phase-8     | 2026-08-01 | [docs/adr/0011-default-core-deployment.md](adr/0011-default-core-deployment.md)                                   |
 | 内部 mTLS 与任务授权分离                                       | accepted | phase-8     | 2026-08-02 | [docs/adr/0012-internal-mtls-task-grants.md](adr/0012-internal-mtls-task-grants.md)                               |
+| 隔离可选 Zabbix API 网络                                       | accepted | phase-8     | 2026-08-02 | [docs/adr/0013-isolate-optional-zabbix-api-network.md](adr/0013-isolate-optional-zabbix-api-network.md)           |
 
 ## ai
 

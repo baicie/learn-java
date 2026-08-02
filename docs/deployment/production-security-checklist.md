@@ -5,7 +5,7 @@ status: accepted
 phase: global
 owner: ai
 created: 2026-06-30
-updated: 2026-08-01
+updated: 2026-08-03
 related:
   - docs/adr/0012-internal-mtls-task-grants.md
   - docs/api/internal-service-authentication.md
@@ -15,6 +15,9 @@ related:
 
 ## 必须配置
 
+- [ ] `aegisops-prod` Environment 已配置 required reviewers 与仅允许 `mvp` 的 deployment branch policy
+- [ ] `mvp` 已启用 branch protection，required checks 与审批规则不能被普通写入者绕过
+- [ ] 生产 VM、DockerHub 与模型凭据已迁移为 `aegisops-prod` Environment secrets
 - [ ] 用户 JWT 签名密钥已替换默认值并通过 Secret 注入
 - [ ] PostgreSQL `aegisops_app` 使用随机密码
 - [ ] PostgreSQL `aegisops_runner` 使用不同随机密码和最小表权限
@@ -35,6 +38,8 @@ related:
 - [ ] Kubernetes 使用独立 ServiceAccount、Secret 与 NetworkPolicy
 - [ ] 出站 CIDR 仅包含实际外部依赖，不使用 `0.0.0.0/0` 或 `::/0`
 - [ ] 禁止使用 `latest` 镜像标签，并配置 resource requests / limits
+- [ ] Core 生产镜像均为 smoke job 输出并经 registry 校验的 `repository@sha256:<digest>`
+- [ ] 携带生产凭据的第三方 SSH/SCP Action 固定完整 commit SHA，且每次连接校验 ED25519 主机指纹
 
 ## AegisOps
 
@@ -54,5 +59,10 @@ related:
 - [ ] 证书到期监控已启用，轮换演练支持新旧 CA 短期并存
 - [ ] Grant 公钥轮换演练支持当前/前一把 `kid`
 - [ ] PostgreSQL backup 已验证恢复
+- [ ] Core 回滚包不含 runtime `.env` 或 Secret，Core rescue backup 与完整恢复已演练
+- [ ] promotion 强制使用 `flock`，强杀后 `--recover-only` journal 恢复已演练
+- [ ] Zabbix 普通回滚包不含 `.env.zabbix`，数据库 Secret 已独立加密备份
+- [ ] Zabbix 停机容器与孤立数据卷升级会在 candidate 提升和镜像拉取前失败关闭
+- [ ] Zabbix 恢复会在替换 active 描述符、停栈和删库前预拉全部精确回滚镜像
 - [ ] 可选 ClickHouse / MinIO 已配置备份
 - [ ] Helm/Compose Secret 有加密备份且不进入 Git

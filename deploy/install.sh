@@ -5,6 +5,7 @@ umask 077
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 COMPOSE_FILE="$SCRIPT_DIR/docker-compose.core.yml"
 RUNTIME_DIR="$SCRIPT_DIR/runtime"
+ZABBIX_NETWORK_SCRIPT="$SCRIPT_DIR/scripts/ensure-zabbix-api-network.sh"
 MODE="diagnostic"
 START=1
 FORCE=0
@@ -74,6 +75,11 @@ require_command openssl
 require_command mktemp
 if [ "$START" = "1" ]; then
   require_command docker
+  if [ ! -f "$ZABBIX_NETWORK_SCRIPT" ]; then
+    echo "Required deployment file is missing: $ZABBIX_NETWORK_SCRIPT" >&2
+    exit 1
+  fi
+  bash "$ZABBIX_NETWORK_SCRIPT"
 fi
 
 OPENSSL_EXECUTABLE=""

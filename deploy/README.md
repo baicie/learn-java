@@ -89,6 +89,7 @@ deploy/install.sh
 deploy/init/001-create-roles.sql
 deploy/init/002-grant-runner.sql
 deploy/init/003-migrate-legacy-owner.sql
+deploy/scripts/ensure-zabbix-api-network.sh
 deploy/scripts/migrate-legacy-compose.sh
 deploy/scripts/verify-internal-mtls.py
 ```
@@ -96,6 +97,8 @@ deploy/scripts/verify-internal-mtls.py
 手工操作现有 runtime：
 
 ```bash
+bash deploy/scripts/ensure-zabbix-api-network.sh
+
 docker compose --env-file deploy/runtime/.env \
   -f deploy/docker-compose.core.yml --profile ai up -d --wait
 
@@ -145,10 +148,94 @@ python3 -m pytest deploy/tests -q
 bash scripts/ci/release-preflight.sh
 ```
 
-发布流水线复用 `deploy/install.sh`，构建并验证三个不可变镜像，再从 Agent 容器执行 App 8443
-mTLS 探针。任何镜像健康、证书、Grant 或数据库权限校验失败都不得提升为成功发布。
+发布流水线复用 `deploy/install.sh`，构建并验证三个镜像，再从 Agent 容器执行 App 8443 mTLS
+探针。smoke 通过后才推送镜像，并校验仓库返回的 digest；生产部署只接收三个
+`repository@sha256:<digest>` 引用，不使用可被覆盖的 commit SHA 标签。任何镜像健康、证书、
+Grant、数据库权限或 registry digest 校验失败都不得进入生产部署。
+
+## 生产发布与 Core 恢复
+
+生产材料先上传到 run 级 `deploy/staging/`，校验 manifest 后再提升到 active 目录。
+`promote-deployment-candidate.sh` 使用部署锁和持久化 journal；每次发布在读取 active 描述符前先
+执行恢复检查：
+
+```bash
+PROMOTION_REQUIRE_FLOCK=1 bash deploy/scripts/promote-deployment-candidate.sh \
+  --active-root "$HOME/workspace/aegisops" \
+  --recover-only
+```
+
+若进程在逐文件提升期间被强制终止，下一次 `--recover-only` 会校验 promotion 备份中的旧文件
+清单、候选副本和校验和，再恢复完整旧 active 状态。生产目标机必须提供 `flock`；不得手工删除
+`deploy/backups/.promotion-in-progress` 或半成品备份来跳过恢复。
+
+Core 独立备份与校验：
+
+```bash
+bash deploy/scripts/backup-core.sh
+bash deploy/scripts/backup-core.sh \
+  --validate deploy/backups/core-<UTC>-<pid>
+```
+
+备份位于 `deploy/backups/core-<UTC>-<pid>/`，包含数据库 custom-format dump、部署档位、旧
+Compose、精确镜像 override、镜像 ID 和 `SHA256SUMS`。普通回滚包不复制
+`deploy/runtime/.env`、数据库密码、mTLS 私钥或 Grant 私钥；这些 Secret 必须独立加密备份。
+
+Core 恢复会先校验备份和共享网络、保存当前状态的 rescue backup，并用临时旧 Compose 预拉
+全部回滚镜像。只有预拉成功后才原子替换 active Compose、停栈和重建数据库：
+
+```bash
+bash deploy/scripts/restore-core.sh \
+  --backup-dir deploy/backups/core-<UTC>-<pid> \
+  --execute --confirm RESTORE-CORE
+```
+
+恢复使用当前 `deploy/runtime/.env`，因此必须先确认它与目标 dump、卷名和证书材料兼容。只在
+维护窗口执行；恢复后重新验证容器镜像 ID、App/Agent mTLS、数据库权限和关键业务路径。失败时
+使用命令输出的 rescue backup 恢复操作前状态。
 
 ## 可选 Zabbix
 
 腾讯云或单机演示可单独使用 `deploy/docker-compose.zabbix.yml` 与
-`deploy/scripts/deploy-zabbix.sh`。该栈不是默认安装依赖，Zabbix Web 端口也不应直接对公网开放。
+`deploy/scripts/deploy-zabbix.sh`。该栈不是默认安装依赖。脚本创建并校验 internal bridge 网络
+`aegisops-zabbix-api`，Compose 只将 App 与 Zabbix Web 接入该网络用于 API 通信；Web 与 Server
+的宿主机端口默认绑定 `127.0.0.1`，不应直接对公网开放。
+
+四个 Zabbix 镜像直接固定到明确版本与 digest，不接受环境变量覆盖。升级时必须修改 Compose、
+通过 PR 与恢复演练后再部署。Agent2 与 Zabbix Server 共享网络命名空间，使内置
+`Zabbix server` 主机通过 `127.0.0.1:10050` 检查 Agent，同时不发布 Agent 端口。
+
+部署脚本会先区分首次安装与已有状态。只有 PostgreSQL 容器和对应 Compose 数据卷都不存在时，
+才允许无备份安装；容器停止或只剩数据卷时会在 `pull/up` 前失败，必须先用旧描述符与旧镜像
+恢复容器运行，再创建备份。已有 PostgreSQL 正在运行时，脚本会在拉取或启动新镜像前创建
+custom-format dump，用 `pg_restore --list` 校验，并记录部署前后的镜像 ID/digest。备份中的
+`docker-compose.rollback.yml` 由实际运行镜像生成，恢复时与旧 active 描述符叠加，避免浮动标签
+或已提升的新描述符把旧数据库重新交给新镜像。备份默认位于
+`deploy/backups/zabbix-<UTC>-<pid>/`；该目录与 `deploy/staging/` 已整体 Git 忽略，但数据库 dump
+仍可能包含敏感业务数据，目录和文件必须保持仅部署账号可读。
+
+普通回滚包不包含 `.env.zabbix` 或数据库密码。生产 Secret 必须通过独立、加密且不进入 Git 的
+方式备份。恢复使用当前持久化 `.env.zabbix`；本部署流程不会轮换 Zabbix 数据库密码，执行恢复前
+必须确认当前 Secret 与目标数据库一致。
+
+独立创建备份：
+
+```bash
+bash deploy/scripts/backup-zabbix.sh
+```
+
+恢复会停止 Zabbix 栈、替换数据库并重新启动。它先保存恢复前的 rescue backup，且只有同时提供
+执行开关和确认口令才会调用 Docker：
+
+```bash
+bash deploy/scripts/restore-zabbix.sh \
+  --backup-dir deploy/backups/zabbix-<UTC>-<pid> \
+  --execute --confirm RESTORE-ZABBIX
+```
+
+只在维护窗口内执行恢复，并先核对备份 `SHA256SUMS`、目标镜像和数据库兼容性。恢复入口只操作
+`aegisops-zabbix` Compose 项目，并在 rescue backup、停栈或数据库替换前执行共享网络属性与成员
+guard。脚本先用临时旧 Compose 预拉四个精确回滚镜像，成功后才替换 active 描述符并停栈；
+PostgreSQL 启动后还会比对备份记录的 image ID，再执行数据库恢复。不得停止或删除 AegisOps
+Core、Nebula 容器或其卷。`pg_restore` 使用单事务并在首个错误退出，避免留下部分恢复的 schema；
+失败时使用输出的 rescue backup 回滚恢复前状态。

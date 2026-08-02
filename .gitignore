@@ -29,6 +29,8 @@ infra/.env.*
 deploy/**/.env
 deploy/**/.env.*
 deploy/runtime/
+deploy/backups/
+deploy/staging/
 
 # Generated deployment secret values (must NEVER be committed)
 **/generated-secrets*.yaml

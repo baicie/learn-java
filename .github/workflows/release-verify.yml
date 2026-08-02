@@ -17,6 +17,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: release-verify-${{ github.event.workflow_run.head_branch || github.ref }}
@@ -38,24 +39,56 @@ jobs:
       release_required: ${{ steps.scope.outputs.release_required }}
 
     steps:
+      - name: Authorize release ref and CI
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+          WORKFLOW_HEAD_REPOSITORY: ${{ github.event.workflow_run.head_repository.full_name }}
+          WORKFLOW_EVENT: ${{ github.event.workflow_run.event }}
+          WORKFLOW_HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          WORKFLOW_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+        run: |
+          set -Eeuo pipefail
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            if [ "$GITHUB_REF" != "refs/heads/mvp" ]; then
+              echo "::error::Production release requires refs/heads/mvp."
+              exit 1
+            fi
+            successful_runs="$(gh api --method GET \
+              "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs" \
+              -f "head_sha=$RELEASE_REF" \
+              -f branch=mvp \
+              -f event=push \
+              -f status=success \
+              -f per_page=1 \
+              --jq '.total_count')"
+            if [ "$successful_runs" -lt 1 ]; then
+              echo "::error::No successful CI run found for $RELEASE_REF."
+              exit 1
+            fi
+          elif [ "$EVENT_NAME" = "workflow_run" ]; then
+            if [ "$WORKFLOW_HEAD_REPOSITORY" != "$GITHUB_REPOSITORY" ] \
+              || [ "$WORKFLOW_EVENT" != "push" ] \
+              || [ "$WORKFLOW_HEAD_BRANCH" != "mvp" ] \
+              || [ "$WORKFLOW_CONCLUSION" != "success" ]; then
+              echo "::error::Release requires a successful internal mvp push CI workflow run."
+              exit 1
+            fi
+          elif [ "$EVENT_NAME" != "pull_request" ]; then
+            echo "::error::Unsupported release event: $EVENT_NAME"
+            exit 1
+          fi
+
       - name: Checkout
         uses: actions/checkout@v7
         with:
           ref: ${{ env.RELEASE_REF }}
           fetch-depth: 2
 
-      - name: Require successful upstream CI
-        if: github.event_name == 'workflow_run'
-        run: |
-          if [ "${{ github.event.workflow_run.conclusion }}" != "success" ]; then
-            echo "::error::Upstream CI did not pass."
-            exit 1
-          fi
-
       - name: Detect release-relevant changes
         id: scope
         run: |
-          if [ "${{ github.event_name }}" != "workflow_run" ] \
+          if [ "$GITHUB_EVENT_NAME" != "workflow_run" ] \
             || ! git rev-parse HEAD^ >/dev/null 2>&1 \
             || ! git diff --quiet HEAD^ HEAD -- \
               apps modules web contracts deploy scripts \
@@ -104,6 +137,10 @@ jobs:
     timeout-minutes: 45
     needs: preflight
     if: needs.preflight.outputs.release_required == 'true'
+    outputs:
+      app_image: ${{ steps.publish.outputs.app_image }}
+      agent_image: ${{ steps.publish.outputs.agent_image }}
+      runner_image: ${{ steps.publish.outputs.runner_image }}
 
     steps:
       - name: Checkout
@@ -132,6 +169,7 @@ jobs:
             --mode automation \
             --runtime-dir "$runtime_dir" \
             --no-start
+          bash deploy/scripts/ensure-zabbix-api-network.sh
 
           compose=(
             docker compose
@@ -163,19 +201,55 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Push verified images
+        id: publish
         if: github.event_name != 'pull_request'
         run: |
           set -Eeuo pipefail
 
-          retry() {
+          push_with_digest() {
+            local remote_image=$1
             local attempt
+            local digest
+            local push_output
             for attempt in 1 2 3; do
-              "$@" && return 0
-              if [ "$attempt" -eq 3 ]; then
-                return 1
+              if push_output="$(docker push "$remote_image" 2>&1)"; then
+                printf '%s\n' "$push_output" >&2
+                digest="$(printf '%s\n' "$push_output" | awk '
+                  {
+                    for (field = 1; field < NF; field++) {
+                      if ($field == "digest:") print $(field + 1)
+                    }
+                  }
+                ' | tail -n 1)"
+                if [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+                  printf '%s\n' "$digest"
+                  return 0
+                fi
+                echo "Push returned no immutable digest for $remote_image." >&2
+              else
+                printf '%s\n' "$push_output" >&2
               fi
+              [ "$attempt" -lt 3 ] || return 1
               sleep "$((attempt * 10))"
             done
+          }
+
+          verify_registry_digest() {
+            local digest=$1
+            local exact_image="${IMAGE_PREFIX}@${digest}"
+            local attempt
+            local observed
+            for attempt in 1 2 3; do
+              observed="$(docker buildx imagetools inspect "$exact_image" 2>/dev/null \
+                | awk '$1 == "Digest:" { print $2; exit }')"
+              if [ "$observed" = "$digest" ]; then
+                return 0
+              fi
+              [ "$attempt" -lt 3 ] || break
+              sleep "$((attempt * 5))"
+            done
+            echo "Registry did not resolve the pushed digest: $exact_image" >&2
+            return 1
           }
 
           for component in app agent runner; do
@@ -186,7 +260,13 @@ jobs:
             fi
             remote_image="${IMAGE_PREFIX}:${IMAGE_TAG}-${component}"
             docker tag "$local_image" "$remote_image"
-            retry docker push "$remote_image"
+            digest="$(push_with_digest "$remote_image")"
+            verify_registry_digest "$digest"
+            case "$component" in
+              app) printf 'app_image=%s@%s\n' "$IMAGE_PREFIX" "$digest" >> "$GITHUB_OUTPUT" ;;
+              agent) printf 'agent_image=%s@%s\n' "$IMAGE_PREFIX" "$digest" >> "$GITHUB_OUTPUT" ;;
+              runner) printf 'runner_image=%s@%s\n' "$IMAGE_PREFIX" "$digest" >> "$GITHUB_OUTPUT" ;;
+            esac
           done
 
       - name: Capture runtime diagnostics
@@ -248,46 +328,115 @@ jobs:
         with:
           ref: ${{ env.RELEASE_REF }}
 
-      - name: Copy deployment tooling
-        uses: appleboy/scp-action@v1
+      - name: Generate deployment manifest
+        run: |
+          sha256sum \
+            deploy/docker-compose.core.yml \
+            deploy/install.sh \
+            deploy/init/001-create-roles.sh \
+            deploy/init/001-create-roles.sql \
+            deploy/init/002-grant-runner.sql \
+            deploy/init/003-migrate-legacy-owner.sql \
+            deploy/init/004-finalize-legacy-role.sql \
+            deploy/scripts/backup-core.sh \
+            deploy/scripts/deploy-app.sh \
+            deploy/scripts/configure-docker-mirror.sh \
+            deploy/scripts/ensure-zabbix-api-network.sh \
+            deploy/scripts/migrate-legacy-compose.sh \
+            deploy/scripts/promote-deployment-candidate.sh \
+            deploy/scripts/restore-core.sh \
+            deploy/scripts/verify-internal-mtls.py \
+            > deployment-manifest.sha256
+
+      - name: Copy deployment candidate to staging
+        uses: appleboy/scp-action@ff85246acaad7bdce478db94a363cd2bf7c90345 # v1.0.0
         with:
           host: ${{ secrets.PERF_VM_HOST }}
+          fingerprint: SHA256:t42JX0HGVD6m/KDVHYjoudZQGMv+8B4hkrfGJdZ8axY
           username: ${{ secrets.PERF_VM_USER }}
           key: ${{ secrets.PERF_VM_KEY }}
           password: ${{ secrets.PERF_VM_PASSWORD }}
           port: ${{ secrets.PERF_VM_SSH_PORT || '22' }}
-          source: "deploy/docker-compose.core.yml,deploy/install.sh,deploy/init,deploy/scripts/deploy-app.sh,deploy/scripts/configure-docker-mirror.sh,deploy/scripts/migrate-legacy-compose.sh,deploy/scripts/verify-internal-mtls.py"
-          target: "~/workspace/aegisops"
+          source: "deployment-manifest.sha256,deploy/docker-compose.core.yml,deploy/install.sh,deploy/init,deploy/scripts/backup-core.sh,deploy/scripts/deploy-app.sh,deploy/scripts/configure-docker-mirror.sh,deploy/scripts/ensure-zabbix-api-network.sh,deploy/scripts/migrate-legacy-compose.sh,deploy/scripts/promote-deployment-candidate.sh,deploy/scripts/restore-core.sh,deploy/scripts/verify-internal-mtls.py"
+          target: "~/workspace/aegisops/deploy/staging/app-${{ env.RELEASE_REF }}-${{ github.run_id }}-${{ github.run_attempt }}"
           overwrite: true
           timeout: 10m
           command_timeout: 10m
 
-      - name: Apply immutable release
-        uses: appleboy/ssh-action@v1
+      - name: Apply staged immutable release
+        uses: appleboy/ssh-action@823bd89e131d8d508129f9443cad5855e9ba96f0 # v1.2.4
         env:
-          IMAGE_PREFIX: ${{ env.IMAGE_PREFIX }}
-          IMAGE_TAG: ${{ env.IMAGE_TAG }}
+          STAGING_ID: app-${{ env.RELEASE_REF }}-${{ github.run_id }}-${{ github.run_attempt }}
+          AIOPS_APP_IMAGE: ${{ needs.runtime-smoke.outputs.app_image }}
+          AIOPS_AGENT_IMAGE: ${{ needs.runtime-smoke.outputs.agent_image }}
+          AIOPS_RUNNER_IMAGE: ${{ needs.runtime-smoke.outputs.runner_image }}
           AIOPS_DEPLOY_MODE: ${{ vars.AIOPS_DEPLOY_MODE || 'diagnostic' }}
           AIOPS_AGENT_OPENAI_API_KEY: ${{ secrets.AIOPS_AGENT_OPENAI_API_KEY }}
         with:
           host: ${{ secrets.PERF_VM_HOST }}
+          fingerprint: SHA256:t42JX0HGVD6m/KDVHYjoudZQGMv+8B4hkrfGJdZ8axY
           username: ${{ secrets.PERF_VM_USER }}
           key: ${{ secrets.PERF_VM_KEY }}
           password: ${{ secrets.PERF_VM_PASSWORD }}
           port: ${{ secrets.PERF_VM_SSH_PORT || '22' }}
           timeout: 10m
           command_timeout: 20m
-          envs: IMAGE_PREFIX,IMAGE_TAG,AIOPS_DEPLOY_MODE,AIOPS_AGENT_OPENAI_API_KEY
+          envs: STAGING_ID,AIOPS_APP_IMAGE,AIOPS_AGENT_IMAGE,AIOPS_RUNNER_IMAGE,AIOPS_DEPLOY_MODE,AIOPS_AGENT_OPENAI_API_KEY
           script: |
             bash -lc '
               set -Eeuo pipefail
               APP_DIR="$HOME/workspace/aegisops"
+              CANDIDATE_ROOT="$APP_DIR/deploy/staging/$STAGING_ID"
+              cd "$CANDIDATE_ROOT"
+              sha256sum -c deployment-manifest.sha256
+              NETWORK_SCRIPT="$CANDIDATE_ROOT/deploy/scripts/ensure-zabbix-api-network.sh"
+              bash -n "$CANDIDATE_ROOT/deploy/install.sh" \
+                "$CANDIDATE_ROOT/deploy/scripts/"*.sh
+              PROMOTE_SCRIPT="$CANDIDATE_ROOT/deploy/scripts/promote-deployment-candidate.sh"
+              PROMOTION_REQUIRE_FLOCK=1 bash "$PROMOTE_SCRIPT" \
+                --active-root "$APP_DIR" \
+                --recover-only
+              bash "$NETWORK_SCRIPT"
+              AIOPS_JWT_SECRET=preflight-only \
+              AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN=preflight-only \
+                docker compose \
+                  -f "$CANDIDATE_ROOT/deploy/docker-compose.core.yml" \
+                  config --quiet
+              predeploy_backup=""
+              core_state="$( \
+                APP_DIR="$APP_DIR" \
+                COMPOSE_FILE="$APP_DIR/deploy/docker-compose.core.yml" \
+                bash "$CANDIDATE_ROOT/deploy/scripts/backup-core.sh" --probe-only \
+              )"
+              if [ "$core_state" = "running" ]; then
+                predeploy_backup="$( \
+                  APP_DIR="$APP_DIR" \
+                  COMPOSE_FILE="$APP_DIR/deploy/docker-compose.core.yml" \
+                  bash "$CANDIDATE_ROOT/deploy/scripts/backup-core.sh" \
+                )"
+                APP_DIR="$APP_DIR" \
+                  bash "$CANDIDATE_ROOT/deploy/scripts/backup-core.sh" \
+                    --validate "$predeploy_backup" >/dev/null
+                echo "Validated pre-promotion Core backup: $predeploy_backup"
+              elif [ "$core_state" = "legacy" ]; then
+                echo "Supported legacy PostgreSQL detected; the migration path will back it up before modification."
+              elif [ "$core_state" != "empty" ]; then
+                echo "Unexpected Core state probe result: $core_state" >&2
+                exit 1
+              fi
+              promotion_backup="$(PROMOTION_REQUIRE_FLOCK=1 bash "$PROMOTE_SCRIPT" \
+                --candidate-root "$CANDIDATE_ROOT" \
+                --active-root "$APP_DIR" \
+                --manifest "$CANDIDATE_ROOT/deployment-manifest.sha256" \
+                --backup-dir "$APP_DIR/deploy/backups/promotion-$STAGING_ID")"
+              echo "Active deployment files backed up at $promotion_backup"
               MIRROR_SCRIPT="$APP_DIR/deploy/scripts/configure-docker-mirror.sh"
               DEPLOY_SCRIPT="$APP_DIR/deploy/scripts/deploy-app.sh"
-              test -f "$MIRROR_SCRIPT"
-              test -f "$DEPLOY_SCRIPT"
-              chmod +x "$MIRROR_SCRIPT" "$DEPLOY_SCRIPT" "$APP_DIR/deploy/install.sh"
+              chmod +x "$MIRROR_SCRIPT" "$DEPLOY_SCRIPT" "$APP_DIR/deploy/install.sh" \
+                "$APP_DIR/deploy/scripts/backup-core.sh" \
+                "$APP_DIR/deploy/scripts/restore-core.sh"
               bash "$MIRROR_SCRIPT"
               export APP_DIR
+              export CORE_PREDEPLOY_BACKUP_DIR="$predeploy_backup"
               exec bash "$DEPLOY_SCRIPT"
             '
