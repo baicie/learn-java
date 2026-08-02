@@ -69,13 +69,7 @@ class ExcelImportTemplateServiceTest {
                   records.getRow(1).getCell(3).getStringCellValue(),
                   records.getRow(1).getCell(4).getStringCellValue(),
                   records.getRow(1).getCell(5).getStringCellValue()))
-          .containsExactly(
-              "示例工作记录（请替换）",
-              "",
-              "",
-              "2026-01-01T09:00:00+08:00",
-              "1",
-              "示例填写内容");
+          .containsExactly("示例工作记录（请替换）", "", "", "2026-01-01T09:00:00+08:00", "1", "示例填写内容");
 
       var instructions = workbook.getSheet("字段说明");
       assertThat(instructions).isNotNull();
