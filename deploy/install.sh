@@ -121,6 +121,20 @@ REQUIRED_SECURITY_FILES=(
   grant-public.pem
 )
 DATABASE_PASSWORD_FILES=(postgres_admin_password app_db_password runner_db_password)
+COMPOSE_SECRET_FILES=(
+  postgres_admin_password
+  app_db_password
+  runner_db_password
+  control_plane_ca.crt
+  agent_ca.crt
+  app.crt
+  app.key
+  agent.crt
+  agent.key
+  grant-private.pem
+  grant-public.pem
+  grant-previous-public.pem
+)
 
 require_files() {
   local directory=$1
@@ -353,6 +367,25 @@ if [ -n "$PREVIOUS_GRANT_KEY_ID" ] \
   exit 1
 fi
 
+# Docker Compose bind-mounts file-backed secrets and cannot remap their uid/gid/mode.
+# Keep canonical material private, then expose only the mounted allowlist behind a 0700 directory.
+COMPOSE_SECRETS_DIR="$RUNTIME_DIR/compose-secrets"
+if [ -L "$COMPOSE_SECRETS_DIR" ] \
+  || { [ -e "$COMPOSE_SECRETS_DIR" ] && [ ! -d "$COMPOSE_SECRETS_DIR" ]; }; then
+  echo "Compose secrets path exists but is not a regular directory: $COMPOSE_SECRETS_DIR" >&2
+  exit 1
+fi
+mkdir -p "$COMPOSE_SECRETS_DIR"
+chmod 0700 "$COMPOSE_SECRETS_DIR"
+for name in "${COMPOSE_SECRET_FILES[@]}"; do
+  if [ ! -e "$SECRETS_DIR/$name" ]; then
+    echo "Required Compose secret is missing: $SECRETS_DIR/$name" >&2
+    exit 1
+  fi
+  cp "$SECRETS_DIR/$name" "$COMPOSE_SECRETS_DIR/$name"
+  chmod 0644 "$COMPOSE_SECRETS_DIR/$name"
+done
+
 case "$MODE" in
   core)
     AGENT_ENABLED=false
@@ -369,7 +402,7 @@ fi
 
 ENV_TEMP="$(mktemp "$RUNTIME_DIR/.env.XXXXXX")"
 cat > "$ENV_TEMP" <<EOF
-AIOPS_SECRETS_DIR=$SECRETS_DIR
+AIOPS_SECRETS_DIR=$COMPOSE_SECRETS_DIR
 AIOPS_JWT_SECRET=$JWT_SECRET
 AIOPS_INTEGRATIONS_ZABBIX_WEBHOOK_TOKEN=$WEBHOOK_SECRET
 AIOPS_AGENT_ENABLED=$AGENT_ENABLED

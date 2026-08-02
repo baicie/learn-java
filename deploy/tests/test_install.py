@@ -161,6 +161,51 @@ def test_install_generates_private_runtime_material(tmp_path):
     assert wrong_agent_chain.returncode != 0
 
 
+def test_install_projects_compose_secrets_without_relaxing_source_material(tmp_path):
+    if os.name == "nt":
+        pytest.skip("deployment installer targets POSIX hosts")
+    if shutil.which("openssl") is None or shutil.which("bash") is None:
+        pytest.skip("bash and openssl are required")
+
+    runtime = tmp_path / "runtime"
+    _run_install(runtime, "automation")
+
+    source_dir = runtime / "secrets"
+    compose_dir = runtime / "compose-secrets"
+    projected_names = {
+        "postgres_admin_password",
+        "app_db_password",
+        "runner_db_password",
+        "control_plane_ca.crt",
+        "agent_ca.crt",
+        "app.crt",
+        "app.key",
+        "agent.crt",
+        "agent.key",
+        "grant-private.pem",
+        "grant-public.pem",
+        "grant-previous-public.pem",
+    }
+
+    assert stat.S_IMODE(source_dir.stat().st_mode) == 0o700
+    assert stat.S_IMODE(compose_dir.stat().st_mode) == 0o700
+    assert {path.name for path in compose_dir.iterdir()} == projected_names
+    for name in projected_names:
+        assert (compose_dir / name).read_bytes() == (source_dir / name).read_bytes()
+        assert stat.S_IMODE((compose_dir / name).stat().st_mode) == 0o644
+
+    for private_name in (
+        "app_db_password",
+        "runner_db_password",
+        "app.key",
+        "agent.key",
+        "grant-private.pem",
+    ):
+        assert stat.S_IMODE((source_dir / private_name).stat().st_mode) == 0o600
+
+    assert _env_value(runtime, "AIOPS_SECRETS_DIR") == str(compose_dir)
+
+
 def test_install_is_idempotent_and_mode_can_change_without_rotation(tmp_path):
     if os.name == "nt":
         pytest.skip("deployment installer targets POSIX hosts")
