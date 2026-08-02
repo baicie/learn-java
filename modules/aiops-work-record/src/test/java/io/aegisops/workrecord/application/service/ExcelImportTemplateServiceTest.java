@@ -61,6 +61,15 @@ class ExcelImportTemplateServiceTest {
               "记录时间 [recordTime]",
               "工时 [hours]",
               "处理结果 [result]");
+      assertThat(
+              List.of(
+                  records.getRow(1).getCell(0).getStringCellValue(),
+                  records.getRow(1).getCell(1).getStringCellValue(),
+                  records.getRow(1).getCell(2).getStringCellValue(),
+                  records.getRow(1).getCell(3).getStringCellValue(),
+                  records.getRow(1).getCell(4).getStringCellValue(),
+                  records.getRow(1).getCell(5).getStringCellValue()))
+          .containsExactly("示例工作记录（请替换）", "", "", "2026-01-01T09:00:00+08:00", "1", "示例填写内容");
 
       var instructions = workbook.getSheet("字段说明");
       assertThat(instructions).isNotNull();
@@ -70,6 +79,51 @@ class ExcelImportTemplateServiceTest {
       assertThat(instructions.getRow(5).getCell(3).getStringCellValue()).isEqualTo("否");
       assertThat(instructions.getRow(6).getCell(0).getStringCellValue()).isEqualTo("result");
       assertThat(instructions.getRow(6).getCell(3).getStringCellValue()).isEqualTo("是");
+    }
+  }
+
+  @Test
+  void generatesExamplesForEverySupportedFieldType() throws Exception {
+    when(versions.findByTemplateAndVersion("tenant-1", "template-1", "version-1"))
+        .thenReturn(Optional.of(WorkRecordFixtures.version("version-1")));
+    when(fields.listEnabledByVersion("tenant-1", "version-1"))
+        .thenReturn(
+            List.of(
+                field("text", "Text", FieldType.TEXT, false, 10),
+                field("textarea", "Textarea", FieldType.TEXTAREA, false, 20),
+                field("number", "Number", FieldType.NUMBER, false, 30),
+                field("date", "Date", FieldType.DATE, false, 40),
+                field("datetime", "Datetime", FieldType.DATETIME, false, 50),
+                field("select", "Select", FieldType.SELECT, false, 60),
+                field("multi-select", "Multi-select", FieldType.MULTI_SELECT, false, 70),
+                field("user", "User", FieldType.USER, false, 80),
+                field("boolean", "Boolean", FieldType.BOOLEAN, false, 90)));
+
+    var template = service.generate("tenant-1", "template-1", "version-1");
+
+    try (var workbook = new XSSFWorkbook(new ByteArrayInputStream(template.content()))) {
+      var records = workbook.getSheet("records");
+      assertThat(
+              List.of(
+                  records.getRow(1).getCell(4).getStringCellValue(),
+                  records.getRow(1).getCell(5).getStringCellValue(),
+                  records.getRow(1).getCell(6).getStringCellValue(),
+                  records.getRow(1).getCell(7).getStringCellValue(),
+                  records.getRow(1).getCell(8).getStringCellValue(),
+                  records.getRow(1).getCell(9).getStringCellValue(),
+                  records.getRow(1).getCell(10).getStringCellValue(),
+                  records.getRow(1).getCell(11).getStringCellValue(),
+                  records.getRow(1).getCell(12).getStringCellValue()))
+          .containsExactly(
+              "示例填写内容",
+              "示例填写内容",
+              "1",
+              "2026-01-01",
+              "2026-01-01T09:00:00+08:00",
+              "示例填写内容",
+              "选项一,选项二",
+              "示例填写内容",
+              "true");
     }
   }
 
