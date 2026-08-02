@@ -105,9 +105,8 @@ compose up -d --wait --remove-orphans --no-build
 
 if [ "$DEPLOY_MODE" != "core" ]; then
   echo "==> Verifying Agent to App internal mTLS"
-  compose cp "$MTLS_PROBE_SCRIPT" aiops-agent:/tmp/verify-internal-mtls.py
   compose exec -T aiops-agent \
-    python /tmp/verify-internal-mtls.py \
+    python - \
       --host aegisops-app \
       --port 8443 \
       --server-name aegisops-app \
@@ -115,7 +114,8 @@ if [ "$DEPLOY_MODE" != "core" ]; then
       --cert /run/secrets/agent_tls_cert \
       --key /run/secrets/agent_tls_key \
       --ca /run/secrets/control_plane_ca_cert \
-      --expected-spiffe spiffe://aegisops.local/service/aegisops-app
+      --expected-spiffe spiffe://aegisops.local/service/aegisops-app \
+      < "$MTLS_PROBE_SCRIPT"
 fi
 
 compose ps

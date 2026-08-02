@@ -51,3 +51,19 @@ def test_remote_deployer_reuses_generated_mtls_runtime():
     assert "oauth" not in lowered
     assert "jwks" not in lowered
     assert "keycloak" not in lowered
+
+
+def test_mtls_probe_streams_into_read_only_agent_container():
+    workflow = (ROOT / ".github/workflows/release-verify.yml").read_text(
+        encoding="utf-8"
+    )
+    deploy_script = (ROOT / "deploy/scripts/deploy-app.sh").read_text(
+        encoding="utf-8"
+    )
+
+    assert '"${compose[@]}" cp' not in workflow
+    assert "compose cp" not in deploy_script
+    assert '"${compose[@]}" exec -T aiops-agent \\\n            python - \\' in workflow
+    assert "< deploy/scripts/verify-internal-mtls.py" in workflow
+    assert "compose exec -T aiops-agent \\\n    python - \\" in deploy_script
+    assert '< "$MTLS_PROBE_SCRIPT"' in deploy_script
