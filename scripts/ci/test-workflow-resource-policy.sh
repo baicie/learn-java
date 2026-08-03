@@ -37,6 +37,8 @@ require_text "$CI_WORKFLOW" 'if: ${{ !cancelled() }}'
 reject_text "$CI_WORKFLOW" "if: always()"
 require_text "$OPS_WORKFLOW" "needs: shellcheck"
 require_text "$RELEASE_WORKFLOW" "- CI"
+require_text "$RELEASE_WORKFLOW" "Enable release for every authorized mvp commit"
+reject_text "$RELEASE_WORKFLOW" "release_required=false"
 require_text "$RELEASE_WORKFLOW" "needs.preflight.outputs.release_required == 'true'"
 reject_text "$RELEASE_WORKFLOW" "docker/build-push-action"
 reject_text "$RELEASE_WORKFLOW" "cache-to: type=gha"

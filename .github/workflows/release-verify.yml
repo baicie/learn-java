@@ -85,19 +85,12 @@ jobs:
           ref: ${{ env.RELEASE_REF }}
           fetch-depth: 2
 
-      - name: Detect release-relevant changes
+      - name: Enable release for every authorized mvp commit
         id: scope
         run: |
-          if [ "$GITHUB_EVENT_NAME" != "workflow_run" ] \
-            || ! git rev-parse HEAD^ >/dev/null 2>&1 \
-            || ! git diff --quiet HEAD^ HEAD -- \
-              apps modules web contracts deploy scripts \
-              infra/checkstyle pom.xml package.json pnpm-lock.yaml pnpm-workspace.yaml \
-              .dockerignore .github/workflows/release-verify.yml; then
-            echo "release_required=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "release_required=false" >> "$GITHUB_OUTPUT"
-          fi
+          set -Eeuo pipefail
+          echo "Every authorized mvp release event publishes a complete immutable release."
+          echo "release_required=true" >> "$GITHUB_OUTPUT"
 
       - name: Setup Java
         if: steps.scope.outputs.release_required == 'true'
