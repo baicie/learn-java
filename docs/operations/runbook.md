@@ -151,8 +151,10 @@ App 新镜像先通过 release preflight、Compose smoke、PostgreSQL migration�
 诊断不得触发 Runner、自动化审批或外部通知。
 
 携带生产 SSH 凭据的 `appleboy/scp-action` 与 `appleboy/ssh-action` 必须固定完整 commit SHA，
-并在每次连接中传入已离线核对的 ED25519 主机指纹。轮换服务器 host key 时先从独立可信通道核对
-新指纹，再通过 PR 同步两个 workflow；不得临时关闭指纹检查。
+并在每次连接前由 Runner 使用 OpenSSH `ssh-keyscan -t ed25519` 校验已离线核对的 ED25519
+主机指纹。Appleboy 的 Go SSH 客户端默认优先协商 ECDSA，因此 action 自身同时固定当前协商的
+ECDSA 指纹；两层校验都必须通过。轮换服务器 host key 时先从独立可信通道核对新指纹，再通过
+PR 同步两个 workflow；不得临时关闭指纹检查。
 
 当前生产信任材料：
 
@@ -160,6 +162,7 @@ App 新镜像先通过 release preflight、Compose smoke、PostgreSQL migration�
 appleboy/scp-action  ff85246acaad7bdce478db94a363cd2bf7c90345
 appleboy/ssh-action  823bd89e131d8d508129f9443cad5855e9ba96f0
 ED25519 fingerprint  SHA256:t42JX0HGVD6m/KDVHYjoudZQGMv+8B4hkrfGJdZ8axY
+Go SSH ECDSA fingerprint  SHA256:TtfGZDilKBdm05HX3b1i4yqG/mG0Ooas43ZBrFKyj2w
 ```
 
 Action SHA 只能依据上游正式 release 和源码审查更新。服务器指纹同时从部署人员本机已知主机
