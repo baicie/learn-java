@@ -92,10 +92,20 @@ jobs:
         run: |
           set -Eeuo pipefail
           expected='SHA256:t42JX0HGVD6m/KDVHYjoudZQGMv+8B4hkrfGJdZ8axY'
-          scan_output="$(
-            ssh-keyscan -T 10 -p "$PERF_VM_SSH_PORT" -t ed25519 "$PERF_VM_HOST" 2>/dev/null || true
-          )"
-          test -n "$scan_output"
+          scan_output=''
+          for attempt in 1 2 3 4 5; do
+            scan_output="$(
+              ssh-keyscan -4 -T 10 -p "$PERF_VM_SSH_PORT" -t ed25519 "$PERF_VM_HOST" 2>/dev/null || true
+            )"
+            if [ -n "$scan_output" ]; then
+              break
+            fi
+            sleep "$((attempt * 2))"
+          done
+          if [ -z "$scan_output" ]; then
+            echo 'ED25519 host key scan returned no output after 5 attempts' >&2
+            exit 1
+          fi
           observed="$(printf '%s\n' "$scan_output" | ssh-keygen -lf - -E sha256 | awk 'NR == 1 { print $2 }')"
           test "$observed" = "$expected"
 
