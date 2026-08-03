@@ -87,6 +87,7 @@ def test_ed25519_preflight_validates_scan_output_not_probe_exit_code():
         assert "ssh-keyscan -4" in workflow_text
         assert "for attempt in 1 2 3 4 5" in workflow_text
         assert "ED25519 host key scan returned no output after 5 attempts" in workflow_text
+        assert "ED25519 host key fingerprint mismatch: observed=" in workflow_text
         assert 'printf \'%s\\n\' "$scan_output" | ssh-keygen -lf - -E sha256' in workflow_text
 
 
