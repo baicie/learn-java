@@ -161,8 +161,8 @@ PR 同步两个 workflow；不得临时关闭指纹检查。
 ```text
 appleboy/scp-action  ff85246acaad7bdce478db94a363cd2bf7c90345
 appleboy/ssh-action  823bd89e131d8d508129f9443cad5855e9ba96f0
-ED25519 fingerprint  SHA256:t42JX0HGVD6m/KDVHYjoudZQGMv+8B4hkrfGJdZ8axY
-Go SSH ECDSA fingerprint  SHA256:TtfGZDilKBdm05HX3b1i4yqG/mG0Ooas43ZBrFKyj2w
+ED25519 fingerprint  SHA256:SmRugAjHQE7eyT6/82Dglw259NDzSVbsYtBZNRAzl/Q
+Go SSH ECDSA fingerprint  SHA256:evyJix5qirC4hepNp3FMvxZF/h+KIdESU6SVNsQ2hc8
 ```
 
 Action SHA 只能依据上游正式 release 和源码审查更新。服务器指纹同时从部署人员本机已知主机

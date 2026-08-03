@@ -361,7 +361,7 @@ jobs:
           PERF_VM_SSH_PORT: ${{ secrets.PERF_VM_SSH_PORT || '22' }}
         run: |
           set -Eeuo pipefail
-          expected='SHA256:t42JX0HGVD6m/KDVHYjoudZQGMv+8B4hkrfGJdZ8axY'
+          expected='SHA256:SmRugAjHQE7eyT6/82Dglw259NDzSVbsYtBZNRAzl/Q'
           scan_output=''
           for attempt in 1 2 3 4 5; do
             scan_output="$(
@@ -390,7 +390,7 @@ jobs:
         uses: appleboy/scp-action@ff85246acaad7bdce478db94a363cd2bf7c90345 # v1.0.0
         with:
           host: ${{ secrets.PERF_VM_HOST }}
-          fingerprint: SHA256:TtfGZDilKBdm05HX3b1i4yqG/mG0Ooas43ZBrFKyj2w
+          fingerprint: SHA256:evyJix5qirC4hepNp3FMvxZF/h+KIdESU6SVNsQ2hc8
           username: ${{ secrets.PERF_VM_USER }}
           key: ${{ secrets.PERF_VM_KEY }}
           password: ${{ secrets.PERF_VM_PASSWORD }}
@@ -412,7 +412,7 @@ jobs:
           AIOPS_AGENT_OPENAI_API_KEY: ${{ secrets.AIOPS_AGENT_OPENAI_API_KEY }}
         with:
           host: ${{ secrets.PERF_VM_HOST }}
-          fingerprint: SHA256:TtfGZDilKBdm05HX3b1i4yqG/mG0Ooas43ZBrFKyj2w
+          fingerprint: SHA256:evyJix5qirC4hepNp3FMvxZF/h+KIdESU6SVNsQ2hc8
           username: ${{ secrets.PERF_VM_USER }}
           key: ${{ secrets.PERF_VM_KEY }}
           password: ${{ secrets.PERF_VM_PASSWORD }}
