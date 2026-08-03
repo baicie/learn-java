@@ -355,11 +355,11 @@ jobs:
         run: |
           set -Eeuo pipefail
           expected='SHA256:t42JX0HGVD6m/KDVHYjoudZQGMv+8B4hkrfGJdZ8axY'
-          known_hosts="$(mktemp)"
-          trap 'rm -f "$known_hosts"' EXIT
-          ssh-keyscan -T 10 -p "$PERF_VM_SSH_PORT" -t ed25519 "$PERF_VM_HOST" > "$known_hosts" 2>/dev/null
-          test -s "$known_hosts"
-          observed="$(ssh-keygen -lf "$known_hosts" -E sha256 | awk 'NR == 1 { print $2 }')"
+          scan_output="$(
+            ssh-keyscan -T 10 -p "$PERF_VM_SSH_PORT" -t ed25519 "$PERF_VM_HOST" 2>/dev/null || true
+          )"
+          test -n "$scan_output"
+          observed="$(printf '%s\n' "$scan_output" | ssh-keygen -lf - -E sha256 | awk 'NR == 1 { print $2 }')"
           test "$observed" = "$expected"
 
       - name: Copy deployment candidate to staging
