@@ -78,6 +78,15 @@ def test_production_workflows_pin_ed25519_identity_before_go_ssh_handshake():
             assert step["with"]["fingerprint"] == PRODUCTION_GO_SSH_FINGERPRINT
 
 
+def test_ed25519_preflight_validates_scan_output_not_probe_exit_code():
+    for workflow_path in (COMPONENT_WORKFLOW, RELEASE_WORKFLOW):
+        workflow_text = workflow_path.read_text(encoding="utf-8")
+        assert 'scan_output="$(' in workflow_text
+        assert "ssh-keyscan" in workflow_text
+        assert "|| true" in workflow_text
+        assert 'printf \'%s\\n\' "$scan_output" | ssh-keygen -lf - -E sha256' in workflow_text
+
+
 def test_core_deploy_uses_smoke_verified_registry_digests():
     workflow = yaml.safe_load(RELEASE_WORKFLOW.read_text(encoding="utf-8"))
     runtime = workflow["jobs"]["runtime-smoke"]
