@@ -95,9 +95,9 @@ def test_core_deploy_uses_smoke_verified_registry_digests():
     workflow = yaml.safe_load(RELEASE_WORKFLOW.read_text(encoding="utf-8"))
     runtime = workflow["jobs"]["runtime-smoke"]
     assert runtime["outputs"] == {
-        "app_image": "${{ steps.publish.outputs.app_image }}",
-        "agent_image": "${{ steps.publish.outputs.agent_image }}",
-        "runner_image": "${{ steps.publish.outputs.runner_image }}",
+        "app_digest": "${{ steps.publish.outputs.app_digest }}",
+        "agent_digest": "${{ steps.publish.outputs.agent_digest }}",
+        "runner_digest": "${{ steps.publish.outputs.runner_digest }}",
     }
 
     publish = next(step for step in runtime["steps"] if step.get("id") == "publish")
@@ -107,20 +107,24 @@ def test_core_deploy_uses_smoke_verified_registry_digests():
     assert '"${IMAGE_PREFIX}@${digest}"' in publish_script
     assert "docker buildx imagetools inspect" in publish_script
     for component in ("app", "agent", "runner"):
-        assert f'printf \'{component}_image=%s@%s\\n\'' in publish_script
+        assert f'printf \'{component}_digest=%s\\n\'' in publish_script
 
     deploy = workflow["jobs"]["deploy"]
+    digest_validation = next(
+        step for step in deploy["steps"] if step.get("name") == "Verify published image digests"
+    )
+    assert "Published image digest output is missing or malformed" in digest_validation["run"]
     remote = next(
         step for step in deploy["steps"] if step.get("uses") == SSH_ACTION
     )
     assert remote["env"]["AIOPS_APP_IMAGE"] == (
-        "${{ needs.runtime-smoke.outputs.app_image }}"
+        "${{ secrets.DOCKERHUB_USERNAME }}/aegisops@${{ needs.runtime-smoke.outputs.app_digest }}"
     )
     assert remote["env"]["AIOPS_AGENT_IMAGE"] == (
-        "${{ needs.runtime-smoke.outputs.agent_image }}"
+        "${{ secrets.DOCKERHUB_USERNAME }}/aegisops@${{ needs.runtime-smoke.outputs.agent_digest }}"
     )
     assert remote["env"]["AIOPS_RUNNER_IMAGE"] == (
-        "${{ needs.runtime-smoke.outputs.runner_image }}"
+        "${{ secrets.DOCKERHUB_USERNAME }}/aegisops@${{ needs.runtime-smoke.outputs.runner_digest }}"
     )
     assert "AIOPS_APP_IMAGE,AIOPS_AGENT_IMAGE,AIOPS_RUNNER_IMAGE" in remote["with"][
         "envs"
