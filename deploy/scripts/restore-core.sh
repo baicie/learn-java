@@ -80,7 +80,11 @@ require_command() {
 for command_name in awk bash docker mktemp sha256sum tr; do
   require_command "$command_name"
 done
-for required_file in "$BACKUP_SCRIPT" "$NETWORK_SCRIPT" "$ENV_FILE"; do
+for required_file in \
+  "$BACKUP_SCRIPT" \
+  "$NETWORK_SCRIPT" \
+  "$ENV_FILE" \
+  "$APP_OWNERSHIP_SQL"; do
   if [ ! -f "$required_file" ]; then
     echo "Required Core restore file is missing: $required_file" >&2
     exit 1
@@ -224,6 +228,7 @@ if [ "$app_role_exists" = "1" ]; then
   echo "Applying Core application ownership normalization"
   docker exec -i "$POSTGRES_CONTAINER" sh -ec '
     exec psql --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" \
+      --single-transaction \
       --set=ON_ERROR_STOP=1 \
       --set=database_name="$POSTGRES_DB" \
       --set=legacy_owner="$POSTGRES_USER" --file=-

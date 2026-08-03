@@ -143,6 +143,10 @@ def test_core_restore_reapplies_app_ownership_after_no_owner_restore():
     assert '"$POSTGRES_USER"' in restore
     assert "rolname = '\\''aegisops_app'\\''" in restore
     assert '--set=database_name="$POSTGRES_DB"' in restore
+    assert "      --single-transaction \\\n      --set=ON_ERROR_STOP=1" in restore
+    preflight_index = restore.index('"$APP_OWNERSHIP_SQL"; do')
+    network_index = restore.index('bash "$NETWORK_SCRIPT"')
+    assert preflight_index < network_index
     apply_sql_index = restore.index('< "$APP_OWNERSHIP_SQL"')
     assert restore.index("pg_restore") < apply_sql_index
     assert apply_sql_index < restore.index(
