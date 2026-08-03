@@ -26,7 +26,7 @@ export const dictionaryKeys = {
   },
 }
 
-export function dictionaryTypesQueryOptions(includeDisabled = true) {
+function dictionaryTypesQueryOptions(includeDisabled = true) {
   return {
     queryKey: dictionaryKeys.types(includeDisabled),
     queryFn: () => listDictTypes(includeDisabled),

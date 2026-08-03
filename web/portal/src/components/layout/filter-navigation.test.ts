@@ -43,6 +43,19 @@ describe('filterNavigation', () => {
     expect(JSON.stringify(result)).toContain('/platform/roles')
   })
 
+  it('shows each incident center route only with its read permission', () => {
+    const alertsOnly = filterNavigation(navigation, principal(['alert:read']))
+    const incidentsOnly = filterNavigation(
+      navigation,
+      principal(['incident:read'])
+    )
+
+    expect(JSON.stringify(alertsOnly)).toContain('/alerts')
+    expect(JSON.stringify(alertsOnly)).not.toContain('/incidents')
+    expect(JSON.stringify(incidentsOnly)).toContain('/incidents')
+    expect(JSON.stringify(incidentsOnly)).not.toContain('/alerts')
+  })
+
   it('keeps operations for every permission accepted by its route', () => {
     for (const permission of [
       'work-record:analytics',

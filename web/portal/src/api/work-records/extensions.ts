@@ -125,16 +125,7 @@ const slaInstanceSchema = z.object({
   severity: z.enum(['info', 'warning', 'critical']),
 })
 
-export type WorkRecordStatistics = z.infer<typeof statisticsSchema>
-export type WorkloadSummary = z.infer<typeof workloadSchema>
-export type Handover = z.infer<typeof handoverSchema>
-export type MarketVersion = z.infer<typeof marketVersionSchema>
-export type WorkRecordComment = z.infer<typeof commentSchema>
-export type WorkRecordAttachment = z.infer<typeof attachmentSchema>
-export type WorkRecordRelation = z.infer<typeof relationSchema>
 export type AiGeneration = z.infer<typeof aiGenerationSchema>
-export type ApprovalTask = z.infer<typeof approvalTaskSchema>
-export type SlaInstance = z.infer<typeof slaInstanceSchema>
 
 export async function getStatistics(from: string, to: string) {
   const { data } = await apiClient.get(

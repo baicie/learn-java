@@ -160,6 +160,40 @@ describe('useTableUrlState', () => {
     })
   })
 
+  it('resynchronizes filters when router search changes', async () => {
+    const navigate = vi.fn() as Mock<NavigateFn>
+    const { result, rerender } = await renderHook(
+      (props?: { search: { keyword: string; statuses: string[] } }) =>
+        useTableUrlState({
+          search: props?.search ?? { keyword: '', statuses: [] },
+          navigate,
+          globalFilter: { key: 'keyword' },
+          columnFilters: [
+            { columnId: 'status', searchKey: 'statuses', type: 'array' },
+          ],
+        }),
+      {
+        initialProps: {
+          search: { keyword: 'cpu', statuses: ['open'] },
+        },
+      }
+    )
+
+    expect(result.current.globalFilter).toBe('cpu')
+    expect(result.current.columnFilters).toEqual([
+      { id: 'status', value: ['open'] },
+    ])
+
+    await rerender({
+      search: { keyword: 'disk', statuses: ['resolved'] },
+    })
+
+    expect(result.current.globalFilter).toBe('disk')
+    expect(result.current.columnFilters).toEqual([
+      { id: 'status', value: ['resolved'] },
+    ])
+  })
+
   it('clears filter key in URL when global filter becomes empty after trim', async () => {
     const navigate = vi.fn() as Mock<NavigateFn>
     const { result, act } = await renderHook(() =>

@@ -18,10 +18,13 @@ import { Route as errors500RouteImport } from './routes/(errors)/500'
 import { Route as errors503RouteImport } from './routes/(errors)/503'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as AuthenticatedSettingsRouteRouteImport } from './routes/_authenticated/settings/route'
+import { Route as AuthenticatedAlertsIndexRouteImport } from './routes/_authenticated/alerts/index'
 import { Route as AuthenticatedAssetsIndexRouteImport } from './routes/_authenticated/assets/index'
 import { Route as AuthenticatedAssetsAssetIdRouteImport } from './routes/_authenticated/assets/$assetId'
 import { Route as AuthenticatedDatasourcesIndexRouteImport } from './routes/_authenticated/datasources/index'
 import { Route as AuthenticatedErrorsErrorRouteImport } from './routes/_authenticated/errors/$error'
+import { Route as AuthenticatedIncidentsIndexRouteImport } from './routes/_authenticated/incidents/index'
+import { Route as AuthenticatedIncidentsIncidentIdRouteImport } from './routes/_authenticated/incidents/$incidentId'
 import { Route as AuthenticatedPlatformAiModelsRouteImport } from './routes/_authenticated/platform/ai-models'
 import { Route as AuthenticatedPlatformCalendarsRouteImport } from './routes/_authenticated/platform/calendars'
 import { Route as AuthenticatedPlatformDictionariesRouteImport } from './routes/_authenticated/platform/dictionaries'
@@ -86,6 +89,12 @@ const AuthenticatedSettingsRouteRoute =
     path: '/settings',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedAlertsIndexRoute =
+  AuthenticatedAlertsIndexRouteImport.update({
+    id: '/alerts/',
+    path: '/alerts/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedAssetsIndexRoute =
   AuthenticatedAssetsIndexRouteImport.update({
     id: '/assets/',
@@ -108,6 +117,18 @@ const AuthenticatedErrorsErrorRoute =
   AuthenticatedErrorsErrorRouteImport.update({
     id: '/errors/$error',
     path: '/errors/$error',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedIncidentsIndexRoute =
+  AuthenticatedIncidentsIndexRouteImport.update({
+    id: '/incidents/',
+    path: '/incidents/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedIncidentsIncidentIdRoute =
+  AuthenticatedIncidentsIncidentIdRouteImport.update({
+    id: '/incidents/$incidentId',
+    path: '/incidents/$incidentId',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedPlatformAiModelsRoute =
@@ -230,6 +251,7 @@ export interface FileRoutesByFullPath {
   '/503': typeof errors503Route
   '/assets/$assetId': typeof AuthenticatedAssetsAssetIdRoute
   '/errors/$error': typeof AuthenticatedErrorsErrorRoute
+  '/incidents/$incidentId': typeof AuthenticatedIncidentsIncidentIdRoute
   '/platform/ai-models': typeof AuthenticatedPlatformAiModelsRoute
   '/platform/calendars': typeof AuthenticatedPlatformCalendarsRoute
   '/platform/dictionaries': typeof AuthenticatedPlatformDictionariesRoute
@@ -242,8 +264,10 @@ export interface FileRoutesByFullPath {
   '/work-records/new': typeof AuthenticatedWorkRecordsNewRoute
   '/work-records/operations': typeof AuthenticatedWorkRecordsOperationsRoute
   '/work-records/templates': typeof AuthenticatedWorkRecordsTemplatesRouteWithChildren
+  '/alerts/': typeof AuthenticatedAlertsIndexRoute
   '/assets/': typeof AuthenticatedAssetsIndexRoute
   '/datasources/': typeof AuthenticatedDatasourcesIndexRoute
+  '/incidents/': typeof AuthenticatedIncidentsIndexRoute
   '/settings/': typeof AuthenticatedSettingsIndexRoute
   '/work-records/': typeof AuthenticatedWorkRecordsIndexRoute
   '/work-records/$recordId/edit': typeof AuthenticatedWorkRecordsRecordIdEditRoute
@@ -261,6 +285,7 @@ export interface FileRoutesByTo {
   '/': typeof AuthenticatedIndexRoute
   '/assets/$assetId': typeof AuthenticatedAssetsAssetIdRoute
   '/errors/$error': typeof AuthenticatedErrorsErrorRoute
+  '/incidents/$incidentId': typeof AuthenticatedIncidentsIncidentIdRoute
   '/platform/ai-models': typeof AuthenticatedPlatformAiModelsRoute
   '/platform/calendars': typeof AuthenticatedPlatformCalendarsRoute
   '/platform/dictionaries': typeof AuthenticatedPlatformDictionariesRoute
@@ -272,8 +297,10 @@ export interface FileRoutesByTo {
   '/work-records/$recordId': typeof AuthenticatedWorkRecordsRecordIdRoute
   '/work-records/new': typeof AuthenticatedWorkRecordsNewRoute
   '/work-records/operations': typeof AuthenticatedWorkRecordsOperationsRoute
+  '/alerts': typeof AuthenticatedAlertsIndexRoute
   '/assets': typeof AuthenticatedAssetsIndexRoute
   '/datasources': typeof AuthenticatedDatasourcesIndexRoute
+  '/incidents': typeof AuthenticatedIncidentsIndexRoute
   '/settings': typeof AuthenticatedSettingsIndexRoute
   '/work-records': typeof AuthenticatedWorkRecordsIndexRoute
   '/work-records/$recordId/edit': typeof AuthenticatedWorkRecordsRecordIdEditRoute
@@ -294,6 +321,7 @@ export interface FileRoutesById {
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/assets/$assetId': typeof AuthenticatedAssetsAssetIdRoute
   '/_authenticated/errors/$error': typeof AuthenticatedErrorsErrorRoute
+  '/_authenticated/incidents/$incidentId': typeof AuthenticatedIncidentsIncidentIdRoute
   '/_authenticated/platform/ai-models': typeof AuthenticatedPlatformAiModelsRoute
   '/_authenticated/platform/calendars': typeof AuthenticatedPlatformCalendarsRoute
   '/_authenticated/platform/dictionaries': typeof AuthenticatedPlatformDictionariesRoute
@@ -306,8 +334,10 @@ export interface FileRoutesById {
   '/_authenticated/work-records/new': typeof AuthenticatedWorkRecordsNewRoute
   '/_authenticated/work-records/operations': typeof AuthenticatedWorkRecordsOperationsRoute
   '/_authenticated/work-records/templates': typeof AuthenticatedWorkRecordsTemplatesRouteWithChildren
+  '/_authenticated/alerts/': typeof AuthenticatedAlertsIndexRoute
   '/_authenticated/assets/': typeof AuthenticatedAssetsIndexRoute
   '/_authenticated/datasources/': typeof AuthenticatedDatasourcesIndexRoute
+  '/_authenticated/incidents/': typeof AuthenticatedIncidentsIndexRoute
   '/_authenticated/settings/': typeof AuthenticatedSettingsIndexRoute
   '/_authenticated/work-records/': typeof AuthenticatedWorkRecordsIndexRoute
   '/_authenticated/work-records/$recordId_/edit': typeof AuthenticatedWorkRecordsRecordIdEditRoute
@@ -328,6 +358,7 @@ export interface FileRouteTypes {
     | '/503'
     | '/assets/$assetId'
     | '/errors/$error'
+    | '/incidents/$incidentId'
     | '/platform/ai-models'
     | '/platform/calendars'
     | '/platform/dictionaries'
@@ -340,8 +371,10 @@ export interface FileRouteTypes {
     | '/work-records/new'
     | '/work-records/operations'
     | '/work-records/templates'
+    | '/alerts/'
     | '/assets/'
     | '/datasources/'
+    | '/incidents/'
     | '/settings/'
     | '/work-records/'
     | '/work-records/$recordId/edit'
@@ -359,6 +392,7 @@ export interface FileRouteTypes {
     | '/'
     | '/assets/$assetId'
     | '/errors/$error'
+    | '/incidents/$incidentId'
     | '/platform/ai-models'
     | '/platform/calendars'
     | '/platform/dictionaries'
@@ -370,8 +404,10 @@ export interface FileRouteTypes {
     | '/work-records/$recordId'
     | '/work-records/new'
     | '/work-records/operations'
+    | '/alerts'
     | '/assets'
     | '/datasources'
+    | '/incidents'
     | '/settings'
     | '/work-records'
     | '/work-records/$recordId/edit'
@@ -391,6 +427,7 @@ export interface FileRouteTypes {
     | '/_authenticated/'
     | '/_authenticated/assets/$assetId'
     | '/_authenticated/errors/$error'
+    | '/_authenticated/incidents/$incidentId'
     | '/_authenticated/platform/ai-models'
     | '/_authenticated/platform/calendars'
     | '/_authenticated/platform/dictionaries'
@@ -403,8 +440,10 @@ export interface FileRouteTypes {
     | '/_authenticated/work-records/new'
     | '/_authenticated/work-records/operations'
     | '/_authenticated/work-records/templates'
+    | '/_authenticated/alerts/'
     | '/_authenticated/assets/'
     | '/_authenticated/datasources/'
+    | '/_authenticated/incidents/'
     | '/_authenticated/settings/'
     | '/_authenticated/work-records/'
     | '/_authenticated/work-records/$recordId_/edit'
@@ -488,6 +527,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsRouteRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/alerts/': {
+      id: '/_authenticated/alerts/'
+      path: '/alerts'
+      fullPath: '/alerts/'
+      preLoaderRoute: typeof AuthenticatedAlertsIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/assets/': {
       id: '/_authenticated/assets/'
       path: '/assets'
@@ -514,6 +560,20 @@ declare module '@tanstack/react-router' {
       path: '/errors/$error'
       fullPath: '/errors/$error'
       preLoaderRoute: typeof AuthenticatedErrorsErrorRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/incidents/': {
+      id: '/_authenticated/incidents/'
+      path: '/incidents'
+      fullPath: '/incidents/'
+      preLoaderRoute: typeof AuthenticatedIncidentsIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/incidents/$incidentId': {
+      id: '/_authenticated/incidents/$incidentId'
+      path: '/incidents/$incidentId'
+      fullPath: '/incidents/$incidentId'
+      preLoaderRoute: typeof AuthenticatedIncidentsIncidentIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/platform/ai-models': {
@@ -691,6 +751,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedAssetsAssetIdRoute: typeof AuthenticatedAssetsAssetIdRoute
   AuthenticatedErrorsErrorRoute: typeof AuthenticatedErrorsErrorRoute
+  AuthenticatedIncidentsIncidentIdRoute: typeof AuthenticatedIncidentsIncidentIdRoute
   AuthenticatedPlatformAiModelsRoute: typeof AuthenticatedPlatformAiModelsRoute
   AuthenticatedPlatformCalendarsRoute: typeof AuthenticatedPlatformCalendarsRoute
   AuthenticatedPlatformDictionariesRoute: typeof AuthenticatedPlatformDictionariesRoute
@@ -699,8 +760,10 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedWorkRecordsNewRoute: typeof AuthenticatedWorkRecordsNewRoute
   AuthenticatedWorkRecordsOperationsRoute: typeof AuthenticatedWorkRecordsOperationsRoute
   AuthenticatedWorkRecordsTemplatesRoute: typeof AuthenticatedWorkRecordsTemplatesRouteWithChildren
+  AuthenticatedAlertsIndexRoute: typeof AuthenticatedAlertsIndexRoute
   AuthenticatedAssetsIndexRoute: typeof AuthenticatedAssetsIndexRoute
   AuthenticatedDatasourcesIndexRoute: typeof AuthenticatedDatasourcesIndexRoute
+  AuthenticatedIncidentsIndexRoute: typeof AuthenticatedIncidentsIndexRoute
   AuthenticatedWorkRecordsIndexRoute: typeof AuthenticatedWorkRecordsIndexRoute
   AuthenticatedWorkRecordsRecordIdEditRoute: typeof AuthenticatedWorkRecordsRecordIdEditRoute
   AuthenticatedPlatformUsersIndexRoute: typeof AuthenticatedPlatformUsersIndexRoute
@@ -711,6 +774,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedAssetsAssetIdRoute: AuthenticatedAssetsAssetIdRoute,
   AuthenticatedErrorsErrorRoute: AuthenticatedErrorsErrorRoute,
+  AuthenticatedIncidentsIncidentIdRoute: AuthenticatedIncidentsIncidentIdRoute,
   AuthenticatedPlatformAiModelsRoute: AuthenticatedPlatformAiModelsRoute,
   AuthenticatedPlatformCalendarsRoute: AuthenticatedPlatformCalendarsRoute,
   AuthenticatedPlatformDictionariesRoute:
@@ -722,8 +786,10 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
     AuthenticatedWorkRecordsOperationsRoute,
   AuthenticatedWorkRecordsTemplatesRoute:
     AuthenticatedWorkRecordsTemplatesRouteWithChildren,
+  AuthenticatedAlertsIndexRoute: AuthenticatedAlertsIndexRoute,
   AuthenticatedAssetsIndexRoute: AuthenticatedAssetsIndexRoute,
   AuthenticatedDatasourcesIndexRoute: AuthenticatedDatasourcesIndexRoute,
+  AuthenticatedIncidentsIndexRoute: AuthenticatedIncidentsIndexRoute,
   AuthenticatedWorkRecordsIndexRoute: AuthenticatedWorkRecordsIndexRoute,
   AuthenticatedWorkRecordsRecordIdEditRoute:
     AuthenticatedWorkRecordsRecordIdEditRoute,
