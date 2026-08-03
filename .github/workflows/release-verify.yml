@@ -348,11 +348,25 @@ jobs:
             deploy/scripts/verify-internal-mtls.py \
             > deployment-manifest.sha256
 
+      - name: Verify ED25519 deployment host key
+        env:
+          PERF_VM_HOST: ${{ secrets.PERF_VM_HOST }}
+          PERF_VM_SSH_PORT: ${{ secrets.PERF_VM_SSH_PORT || '22' }}
+        run: |
+          set -Eeuo pipefail
+          expected='SHA256:t42JX0HGVD6m/KDVHYjoudZQGMv+8B4hkrfGJdZ8axY'
+          known_hosts="$(mktemp)"
+          trap 'rm -f "$known_hosts"' EXIT
+          ssh-keyscan -T 10 -p "$PERF_VM_SSH_PORT" -t ed25519 "$PERF_VM_HOST" > "$known_hosts" 2>/dev/null
+          test -s "$known_hosts"
+          observed="$(ssh-keygen -lf "$known_hosts" -E sha256 | awk 'NR == 1 { print $2 }')"
+          test "$observed" = "$expected"
+
       - name: Copy deployment candidate to staging
         uses: appleboy/scp-action@ff85246acaad7bdce478db94a363cd2bf7c90345 # v1.0.0
         with:
           host: ${{ secrets.PERF_VM_HOST }}
-          fingerprint: SHA256:t42JX0HGVD6m/KDVHYjoudZQGMv+8B4hkrfGJdZ8axY
+          fingerprint: SHA256:TtfGZDilKBdm05HX3b1i4yqG/mG0Ooas43ZBrFKyj2w
           username: ${{ secrets.PERF_VM_USER }}
           key: ${{ secrets.PERF_VM_KEY }}
           password: ${{ secrets.PERF_VM_PASSWORD }}
@@ -374,7 +388,7 @@ jobs:
           AIOPS_AGENT_OPENAI_API_KEY: ${{ secrets.AIOPS_AGENT_OPENAI_API_KEY }}
         with:
           host: ${{ secrets.PERF_VM_HOST }}
-          fingerprint: SHA256:t42JX0HGVD6m/KDVHYjoudZQGMv+8B4hkrfGJdZ8axY
+          fingerprint: SHA256:TtfGZDilKBdm05HX3b1i4yqG/mG0Ooas43ZBrFKyj2w
           username: ${{ secrets.PERF_VM_USER }}
           key: ${{ secrets.PERF_VM_KEY }}
           password: ${{ secrets.PERF_VM_PASSWORD }}

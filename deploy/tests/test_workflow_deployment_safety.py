@@ -20,6 +20,9 @@ SSH_ACTION = "appleboy/ssh-action@823bd89e131d8d508129f9443cad5855e9ba96f0"
 PRODUCTION_HOST_FINGERPRINT = (
     "SHA256:t42JX0HGVD6m/KDVHYjoudZQGMv+8B4hkrfGJdZ8axY"
 )
+PRODUCTION_GO_SSH_FINGERPRINT = (
+    "SHA256:TtfGZDilKBdm05HX3b1i4yqG/mG0Ooas43ZBrFKyj2w"
+)
 
 
 def test_manual_production_workflows_require_mvp_sha_with_successful_ci():
@@ -54,7 +57,25 @@ def test_production_remote_actions_are_immutable_and_pin_host_identity():
             SSH_ACTION,
         }
         for step in remote_steps:
-            assert step["with"]["fingerprint"] == PRODUCTION_HOST_FINGERPRINT
+            assert step["with"]["fingerprint"] == PRODUCTION_GO_SSH_FINGERPRINT
+
+
+def test_production_workflows_pin_ed25519_identity_before_go_ssh_handshake():
+    for workflow_path in (COMPONENT_WORKFLOW, RELEASE_WORKFLOW):
+        workflow_text = workflow_path.read_text(encoding="utf-8")
+        assert "ssh-keyscan" in workflow_text
+        assert "-t ed25519" in workflow_text
+        assert "ssh-keygen -lf" in workflow_text
+        assert PRODUCTION_HOST_FINGERPRINT in workflow_text
+
+        workflow = yaml.safe_load(workflow_text)
+        remote_steps = [
+            step
+            for step in workflow["jobs"]["deploy"]["steps"]
+            if str(step.get("uses", "")).startswith("appleboy/")
+        ]
+        for step in remote_steps:
+            assert step["with"]["fingerprint"] == PRODUCTION_GO_SSH_FINGERPRINT
 
 
 def test_core_deploy_uses_smoke_verified_registry_digests():

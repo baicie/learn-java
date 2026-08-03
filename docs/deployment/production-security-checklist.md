@@ -39,7 +39,8 @@ related:
 - [ ] 出站 CIDR 仅包含实际外部依赖，不使用 `0.0.0.0/0` 或 `::/0`
 - [ ] 禁止使用 `latest` 镜像标签，并配置 resource requests / limits
 - [ ] Core 生产镜像均为 smoke job 输出并经 registry 校验的 `repository@sha256:<digest>`
-- [ ] 携带生产凭据的第三方 SSH/SCP Action 固定完整 commit SHA，且每次连接校验 ED25519 主机指纹
+- [ ] 携带生产凭据的第三方 SSH/SCP Action 固定完整 commit SHA；连接前用 OpenSSH 校验 ED25519
+      主机指纹，Action 协商使用的 ECDSA 指纹也固定并校验
 
 ## AegisOps
 

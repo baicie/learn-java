@@ -69,8 +69,9 @@ PR 合并门禁保持稳定，不对 required workflow 使用路径级跳过：
 - 只能从 `refs/heads/mvp` 触发，目标 SHA 必须存在成功的 `CI` run。
 - 描述符只上传到 run 级 staging 目录；远端 manifest、网络与 Compose 校验通过后才能备份并提升
   active 文件，禁止 SCP 直接覆盖 active 目录。
-- 携带生产 SSH 凭据的第三方 Action 必须固定完整 commit SHA，并校验离线核对的服务器 ED25519
-  指纹；host key 轮换必须通过 PR 同步所有生产 workflow。
+- 携带生产 SSH 凭据的第三方 Action 必须固定完整 commit SHA；workflow 先用 OpenSSH 校验离线
+  核对的服务器 ED25519 指纹，再固定 Action 默认 Go SSH 协商的 ECDSA 指纹；host key 轮换必须
+  通过 PR 同步所有生产 workflow。
 - `aegisops-prod` Environment 必须配置 required reviewers 与只允许 `mvp` 的 deployment branch
   policy；生产 VM、DockerHub 与模型凭据应迁移为该 Environment 的 secrets。workflow 中的分支
   和 CI 检查不能替代仓库管理员配置。
