@@ -34,11 +34,19 @@ def test_core_backup_restore_round_trip(tmp_path: Path):
     deploy_dir = app_dir / "deploy"
     runtime_dir = deploy_dir / "runtime"
     scripts_dir = deploy_dir / "scripts"
+    init_dir = deploy_dir / "init"
     backup_root = deploy_dir / "backups"
     deploy_dir.mkdir(parents=True)
     runtime_dir.mkdir()
     scripts_dir.mkdir()
+    init_dir.mkdir()
     (runtime_dir / ".env").write_text("CORE_TEST=1\n", encoding="utf-8")
+    ownership_sql = (ROOT / "deploy/init/003-migrate-legacy-owner.sql").read_text(
+        encoding="utf-8"
+    )
+    (init_dir / "003-migrate-legacy-owner.sql").write_text(
+        ownership_sql.replace("aegisops_admin", "core_admin"), encoding="utf-8"
+    )
     network_guard = scripts_dir / "network-guard.sh"
     network_guard.write_text("#!/usr/bin/env bash\nexit 0\n", encoding="utf-8")
     network_guard.chmod(0o700)
@@ -95,8 +103,12 @@ volumes:
         subprocess.run([*compose, "up", "-d", "--wait"], check=True, cwd=ROOT)
         _psql(
             postgres_container,
+            "create role aegisops_app login; "
+            "create schema work_record; "
             "create table restore_probe(value text not null); "
-            "insert into restore_probe values ('before');",
+            "insert into restore_probe values ('before'); "
+            "create table work_record.restore_probe(value text not null); "
+            "insert into work_record.restore_probe values ('before');",
         )
         backup_result = subprocess.run(
             ["bash", str(BACKUP_SCRIPT)],
@@ -109,7 +121,11 @@ volumes:
         backup_dir = Path(backup_result.stdout.strip())
         assert backup_dir.is_dir()
 
-        _psql(postgres_container, "update restore_probe set value = 'after';")
+        _psql(
+            postgres_container,
+            "update restore_probe set value = 'after'; "
+            "update work_record.restore_probe set value = 'after';",
+        )
         assert _query(postgres_container) == "after"
 
         subprocess.run(
@@ -127,6 +143,8 @@ volumes:
             env=environment,
         )
         assert _query(postgres_container) == "before"
+        assert _query_as_app(postgres_container, "restore_probe") == "before"
+        assert _query_as_app(postgres_container, "work_record.restore_probe") == "before"
     finally:
         subprocess.run(
             [*compose, "down", "--volumes", "--remove-orphans"],
@@ -165,6 +183,29 @@ def _query(container: str) -> str:
             "-ec",
             'exec psql --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" '
             "--tuples-only --no-align --command 'select value from restore_probe'",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return result.stdout.strip()
+
+
+def _query_as_app(container: str, relation: str) -> str:
+    result = subprocess.run(
+        [
+            "docker",
+            "exec",
+            container,
+            "psql",
+            "--username",
+            "aegisops_app",
+            "--dbname",
+            "coredb",
+            "--tuples-only",
+            "--no-align",
+            "--command",
+            f"select value from {relation}",
         ],
         check=True,
         capture_output=True,

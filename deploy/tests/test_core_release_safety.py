@@ -135,6 +135,29 @@ def test_core_restore_rescue_backup_inherits_runtime_identity_overrides():
         assert assignment in restore
 
 
+def test_core_restore_reapplies_app_ownership_after_no_owner_restore():
+    restore = RESTORE_SCRIPT.read_text(encoding="utf-8")
+
+    ownership_sql = 'deploy/init/003-migrate-legacy-owner.sql'
+    assert ownership_sql in restore
+    assert '"$POSTGRES_USER"' in restore
+    assert "rolname = '\\''aegisops_app'\\''" in restore
+    assert 'Required Core database role is missing: aegisops_app' in restore
+    assert '--set=database_name="$POSTGRES_DB"' in restore
+    ownership_apply_index = restore.index('echo "Applying Core application ownership normalization"')
+    ownership_apply = restore[ownership_apply_index:]
+    assert "--single-transaction" in ownership_apply
+    assert "--set=ON_ERROR_STOP=1" in ownership_apply
+    preflight_index = restore.index('"$APP_OWNERSHIP_SQL"; do')
+    network_index = restore.index('bash "$NETWORK_SCRIPT"')
+    assert preflight_index < network_index
+    apply_sql_index = restore.index('< "$APP_OWNERSHIP_SQL"')
+    assert restore.index("pg_restore") < apply_sql_index
+    assert apply_sql_index < restore.index(
+        '"${compose[@]}" up -d --remove-orphans --wait'
+    )
+
+
 def test_core_deploy_backs_up_database_before_migration_pull_and_up():
     deploy = DEPLOY_SCRIPT.read_text(encoding="utf-8")
 

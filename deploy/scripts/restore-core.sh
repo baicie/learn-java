@@ -51,6 +51,7 @@ APP_DIR="${APP_DIR:-$HOME/workspace/aegisops}"
 BACKUP_SCRIPT="${CORE_BACKUP_SCRIPT:-$SCRIPT_DIR/backup-core.sh}"
 NETWORK_SCRIPT="${ZABBIX_NETWORK_SCRIPT:-$SCRIPT_DIR/ensure-zabbix-api-network.sh}"
 BACKUP_ROOT="${CORE_BACKUP_ROOT:-$APP_DIR/deploy/backups}"
+APP_OWNERSHIP_SQL="${CORE_APP_OWNERSHIP_SQL:-$APP_DIR/deploy/init/003-migrate-legacy-owner.sql}"
 COMPOSE_FILE="${COMPOSE_FILE:-$APP_DIR/deploy/docker-compose.core.yml}"
 RUNTIME_DIR="${AIOPS_RUNTIME_DIR:-$APP_DIR/deploy/runtime}"
 ENV_FILE="$RUNTIME_DIR/.env"
@@ -79,7 +80,11 @@ require_command() {
 for command_name in awk bash docker mktemp sha256sum tr; do
   require_command "$command_name"
 done
-for required_file in "$BACKUP_SCRIPT" "$NETWORK_SCRIPT" "$ENV_FILE"; do
+for required_file in \
+  "$BACKUP_SCRIPT" \
+  "$NETWORK_SCRIPT" \
+  "$ENV_FILE" \
+  "$APP_OWNERSHIP_SQL"; do
   if [ ! -f "$required_file" ]; then
     echo "Required Core restore file is missing: $required_file" >&2
     exit 1
@@ -209,6 +214,25 @@ docker exec -i "$POSTGRES_CONTAINER" sh -ec '
     --single-transaction \
     --exit-on-error
 ' < "$resolved_backup/core.dump"
+
+app_role_exists="$(docker exec "$POSTGRES_CONTAINER" sh -ec '
+  exec psql --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" \
+    --tuples-only --no-align \
+    --command "select 1 from pg_roles where rolname = '\''aegisops_app'\''"
+' | tr -d '[:space:]')"
+if [ "$app_role_exists" != "1" ]; then
+  echo "Required Core database role is missing: aegisops_app" >&2
+  exit 1
+fi
+echo "Applying Core application ownership normalization"
+docker exec -i "$POSTGRES_CONTAINER" sh -ec '
+  exec psql --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" \
+    --single-transaction \
+    --set=ON_ERROR_STOP=1 \
+    --set=database_name="$POSTGRES_DB" \
+    --set=legacy_owner="$POSTGRES_USER" --file=-
+' < "$APP_OWNERSHIP_SQL"
+
 "${compose[@]}" up -d --remove-orphans --wait --wait-timeout 300
 while IFS=$'\t' read -r container_name _; do
   [ -n "$container_name" ] || continue
