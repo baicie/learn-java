@@ -17,6 +17,31 @@ describe('buildDashboardMetrics', () => {
       publishedTemplateCount: 1,
       enabledCalendarCount: 2,
       workdayCount: 23,
+      alertTotal: 0,
+      openAlertCount: 0,
+      incidentTotal: 0,
+      openIncidentCount: 0,
+    })
+  })
+
+  it('summarizes open alerts and incidents for the AIOps workbench', () => {
+    expect(
+      buildDashboardMetrics({
+        recordTotal: 0,
+        recentStatuses: [],
+        templateStatuses: [],
+        enabledCalendarCount: 0,
+        workdayCount: 0,
+        alertTotal: 12,
+        openAlertCount: 4,
+        incidentTotal: 3,
+        openIncidentCount: 1,
+      })
+    ).toMatchObject({
+      alertTotal: 12,
+      openAlertCount: 4,
+      incidentTotal: 3,
+      openIncidentCount: 1,
     })
   })
 })

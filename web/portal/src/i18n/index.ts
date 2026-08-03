@@ -12,11 +12,6 @@ export const LANGUAGE_STORAGE_KEY = 'aegisops.language'
 
 export type { Translation }
 
-/**
- * 兼容旧版 `t()` 字面量键类型。新代码请使用 `Translation` 或 `useTranslation` 推导。
- */
-export type MessageKey = keyof Translation
-
 const STORED_LANGUAGE =
   typeof window !== 'undefined'
     ? window.localStorage.getItem(LANGUAGE_STORAGE_KEY)

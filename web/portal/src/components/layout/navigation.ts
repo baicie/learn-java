@@ -1,4 +1,5 @@
 import {
+  BellRing,
   CalendarDays,
   BrainCircuit,
   Boxes,
@@ -11,6 +12,7 @@ import {
   DatabaseZap,
   PlugZap,
   ShieldCheck,
+  Siren,
   Users,
 } from 'lucide-react'
 
@@ -43,6 +45,24 @@ export const navigation: NavigationItem[] = [
         to: '/assets',
         icon: Boxes,
         anyPermissions: ['asset:read'],
+      },
+    ],
+  },
+  {
+    titleKey: 'nav.incidentCenter.group',
+    icon: Siren,
+    children: [
+      {
+        titleKey: 'nav.incidentCenter.alerts',
+        to: '/alerts',
+        icon: BellRing,
+        anyPermissions: ['alert:read'],
+      },
+      {
+        titleKey: 'nav.incidentCenter.incidents',
+        to: '/incidents',
+        icon: Siren,
+        anyPermissions: ['incident:read'],
       },
     ],
   },

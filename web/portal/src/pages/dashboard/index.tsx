@@ -2,15 +2,20 @@ import { useQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import {
   ArrowRight,
+  BellRing,
   CalendarDays,
   ClipboardList,
   FilePlus2,
   LayoutTemplate,
+  Siren,
 } from 'lucide-react'
 import { listCalendars } from '@/api/calendars'
 import { fetchRecordList, fetchWorkdaySummary } from '@/api/work-records/list'
 import { listTemplates } from '@/api/work-records/templates'
+import { useAuthStore } from '@/stores/auth-store'
 import { formatDateTime } from '@/lib/date-format'
+import type { AlertEvent, Incident } from '@/lib/operations/operations'
+import { useAlerts, useIncidents } from '@/hooks/operations/use-operations'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -20,6 +25,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
   Table,
   TableBody,
@@ -28,6 +34,15 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import {
+  AlertSeverityBadge,
+  AlertStatusBadge,
+} from '@/components/alerts/alert-badges'
+import { EmptyState } from '@/components/feedback/async-state'
+import {
+  IncidentSeverityBadge,
+  IncidentStatusBadge,
+} from '@/components/incidents/list/incident-state'
 import { buildEmptyListQuery } from '@/components/work-records/list/types'
 import { buildDashboardMetrics } from './dashboard-metrics'
 
@@ -38,7 +53,14 @@ const statusText = {
   archived: '已归档',
 } as const
 
+const EMPTY_PERMISSIONS: string[] = []
+
 export function Dashboard() {
+  const permissions = useAuthStore(
+    (state) => state.auth.principal?.permissions ?? EMPTY_PERMISSIONS
+  )
+  const canReadAlerts = permissions.includes('alert:read')
+  const canReadIncidents = permissions.includes('incident:read')
   const records = useQuery({
     queryKey: ['dashboard-records'],
     queryFn: () => fetchRecordList({ ...buildEmptyListQuery(), pageSize: 6 }),
@@ -56,6 +78,8 @@ export function Dashboard() {
     queryFn: () => fetchWorkdaySummary(currentMonth()),
     retry: false,
   })
+  const alerts = useAlerts(canReadAlerts)
+  const incidents = useIncidents(canReadIncidents)
   const metrics = buildDashboardMetrics({
     recordTotal: records.data?.total ?? 0,
     recentStatuses: records.data?.items.map((record) => record.status) ?? [],
@@ -63,16 +87,35 @@ export function Dashboard() {
     enabledCalendarCount:
       calendars.data?.filter((calendar) => calendar.enabled).length ?? 0,
     workdayCount: workdays.data?.workdayCount ?? 0,
+    alertTotal: alerts.data?.length ?? 0,
+    openAlertCount:
+      alerts.data?.filter((alert) => alert.status === 'open').length ?? 0,
+    incidentTotal: incidents.data?.length ?? 0,
+    openIncidentCount:
+      incidents.data?.filter((incident) =>
+        ['open', 'investigating', 'mitigating'].includes(incident.status)
+      ).length ?? 0,
   })
   const isLoading =
-    records.isLoading || templates.isLoading || calendars.isLoading
-  const hasError = records.isError || templates.isError || calendars.isError
+    records.isLoading ||
+    templates.isLoading ||
+    calendars.isLoading ||
+    (canReadAlerts && alerts.isLoading) ||
+    (canReadIncidents && incidents.isLoading)
+  const hasError =
+    records.isError ||
+    templates.isError ||
+    calendars.isError ||
+    (canReadAlerts && alerts.isError) ||
+    (canReadIncidents && incidents.isError)
 
   const retry = () => {
     void records.refetch()
     void templates.refetch()
     void calendars.refetch()
     void workdays.refetch()
+    if (canReadAlerts) void alerts.refetch()
+    if (canReadIncidents) void incidents.refetch()
   }
 
   return (
@@ -131,6 +174,15 @@ export function Dashboard() {
           loading={calendars.isLoading}
         />
       </div>
+
+      <AIOpsSummary
+        alerts={alerts.data ?? []}
+        incidents={incidents.data ?? []}
+        metrics={metrics}
+        canReadAlerts={canReadAlerts}
+        canReadIncidents={canReadIncidents}
+        loading={alerts.isLoading || incidents.isLoading}
+      />
 
       <div className='grid gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)]'>
         <Card>
@@ -230,6 +282,192 @@ export function Dashboard() {
   )
 }
 
+function AIOpsSummary({
+  alerts,
+  incidents,
+  metrics,
+  canReadAlerts,
+  canReadIncidents,
+  loading,
+}: {
+  alerts: AlertEvent[]
+  incidents: Incident[]
+  metrics: ReturnType<typeof buildDashboardMetrics>
+  canReadAlerts: boolean
+  canReadIncidents: boolean
+  loading: boolean
+}) {
+  if (!canReadAlerts && !canReadIncidents) return null
+
+  return (
+    <section className='grid gap-4'>
+      <div className='flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between'>
+        <div>
+          <h2 className='text-lg font-semibold'>AIOps 故障态势</h2>
+          <p className='text-sm text-muted-foreground'>
+            从告警到 Incident 的当前租户运行概览。
+          </p>
+        </div>
+        <div className='flex flex-wrap gap-2'>
+          {canReadAlerts ? (
+            <Button variant='ghost' size='sm' asChild>
+              <Link
+                to='/alerts'
+                search={{
+                  page: 1,
+                  pageSize: 20,
+                  keyword: '',
+                  statuses: [],
+                  severities: [],
+                }}
+              >
+                告警中心
+                <ArrowRight data-icon='inline-end' />
+              </Link>
+            </Button>
+          ) : null}
+          {canReadIncidents ? (
+            <Button variant='ghost' size='sm' asChild>
+              <Link
+                to='/incidents'
+                search={{
+                  page: 1,
+                  pageSize: 20,
+                  keyword: '',
+                  status: '',
+                  severity: '',
+                  source: '',
+                }}
+              >
+                Incident 中心
+                <ArrowRight data-icon='inline-end' />
+              </Link>
+            </Button>
+          ) : null}
+        </div>
+      </div>
+
+      <div className='grid gap-4 sm:grid-cols-2 xl:grid-cols-4'>
+        {canReadAlerts ? (
+          <MetricCard
+            title='开放告警'
+            value={metrics.openAlertCount}
+            description={`最近共 ${metrics.alertTotal} 条告警`}
+            icon={BellRing}
+            loading={loading}
+          />
+        ) : null}
+        {canReadIncidents ? (
+          <MetricCard
+            title='活动 Incident'
+            value={metrics.openIncidentCount}
+            description={`最近共 ${metrics.incidentTotal} 个 Incident`}
+            icon={Siren}
+            loading={loading}
+          />
+        ) : null}
+      </div>
+
+      <div className='grid gap-4 xl:grid-cols-2'>
+        {canReadIncidents ? (
+          <Card>
+            <CardHeader className='flex flex-row items-center justify-between gap-3'>
+              <div>
+                <CardTitle>最近 Incident</CardTitle>
+                <CardDescription>优先处理仍在活动状态的故障。</CardDescription>
+              </div>
+              <Siren className='size-4 text-muted-foreground' />
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <AIOpsListLoading />
+              ) : incidents.length ? (
+                <div className='grid gap-2'>
+                  {incidents.slice(0, 5).map((incident) => (
+                    <div
+                      key={incident.id}
+                      className='flex flex-col gap-2 rounded-md border p-3 sm:flex-row sm:items-center sm:justify-between'
+                    >
+                      <div className='min-w-0'>
+                        <Link
+                          className='block truncate font-medium hover:underline'
+                          to='/incidents/$incidentId'
+                          params={{ incidentId: incident.id }}
+                        >
+                          {incident.title}
+                        </Link>
+                        <p className='text-xs text-muted-foreground'>
+                          {incident.alertCount} 条告警 ·{' '}
+                          {formatDateTime(incident.updatedAt)}
+                        </p>
+                      </div>
+                      <div className='flex shrink-0 gap-2'>
+                        <IncidentSeverityBadge severity={incident.severity} />
+                        <IncidentStatusBadge status={incident.status} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <EmptyState compact title='暂无 Incident' />
+              )}
+            </CardContent>
+          </Card>
+        ) : null}
+
+        {canReadAlerts ? (
+          <Card>
+            <CardHeader className='flex flex-row items-center justify-between gap-3'>
+              <div>
+                <CardTitle>最近告警</CardTitle>
+                <CardDescription>查看最新归一化事件状态。</CardDescription>
+              </div>
+              <BellRing className='size-4 text-muted-foreground' />
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <AIOpsListLoading />
+              ) : alerts.length ? (
+                <div className='grid gap-2'>
+                  {alerts.slice(0, 5).map((alert) => (
+                    <div
+                      key={alert.id}
+                      className='flex flex-col gap-2 rounded-md border p-3 sm:flex-row sm:items-center sm:justify-between'
+                    >
+                      <div className='min-w-0'>
+                        <p className='truncate font-medium'>{alert.title}</p>
+                        <p className='text-xs text-muted-foreground'>
+                          {alert.source} · {formatDateTime(alert.startsAt)}
+                        </p>
+                      </div>
+                      <div className='flex shrink-0 gap-2'>
+                        <AlertSeverityBadge severity={alert.severity} />
+                        <AlertStatusBadge status={alert.status} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <EmptyState compact title='暂无告警' />
+              )}
+            </CardContent>
+          </Card>
+        ) : null}
+      </div>
+    </section>
+  )
+}
+
+function AIOpsListLoading() {
+  return (
+    <div className='grid gap-2' aria-label='AIOps 数据加载中' aria-busy='true'>
+      {Array.from({ length: 3 }).map((_, index) => (
+        <Skeleton key={index} className='h-16 w-full' />
+      ))}
+    </div>
+  )
+}
+
 function MetricCard({
   title,
   value,
@@ -250,10 +488,19 @@ function MetricCard({
         <Icon className='size-4 text-muted-foreground' />
       </CardHeader>
       <CardContent>
-        <div className='text-2xl font-bold'>{loading ? '—' : value}</div>
-        <p className='mt-1 truncate text-xs text-muted-foreground'>
-          {description}
-        </p>
+        {loading ? (
+          <div className='grid gap-2' aria-label={`${title}加载中`}>
+            <Skeleton className='h-8 w-16' />
+            <Skeleton className='h-3 w-32 max-w-full' />
+          </div>
+        ) : (
+          <>
+            <div className='text-2xl font-bold'>{value}</div>
+            <p className='mt-1 truncate text-xs text-muted-foreground'>
+              {description}
+            </p>
+          </>
+        )}
       </CardContent>
     </Card>
   )

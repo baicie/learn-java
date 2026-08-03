@@ -4,8 +4,8 @@ type: operation
 status: accepted
 phase: global
 owner: script
-created: 2026-08-02
-updated: 2026-08-02
+created: 2026-08-03
+updated: 2026-08-03
 related: []
 ---
 
@@ -100,6 +100,7 @@ Do not edit it manually.
 | Portal 顶部页面页签布局实现计划                                  | accepted   | phase-21       | 2026-07-19 | [docs/designs/phase-21/2026-07-19-portal-top-page-tabs.md](designs/phase-21/2026-07-19-portal-top-page-tabs.md)                                                                         |
 | DeepSeek 模型管理页面设计                                        | accepted   | phase-4        | 2026-07-18 | [docs/designs/phase-4/2026-07-18-deepseek-model-management.md](designs/phase-4/2026-07-18-deepseek-model-management.md)                                                                 |
 | mTLS 与任务级授权实施计划                                        | accepted   | phase-8        | 2026-08-02 | [docs/designs/phase-8/2026-08-01-mtls-task-grants.md](designs/phase-8/2026-08-01-mtls-task-grants.md)                                                                                   |
+| Portal Zabbix Incident Center 可视化闭环                         | accepted   | phase-z9       | 2026-08-03 | [docs/designs/phase-z9/2026-08-03-portal-zabbix-incident-center.md](designs/phase-z9/2026-08-03-portal-zabbix-incident-center.md)                                                       |
 | Phase2：Incident 聚合与事故中心                                  | accepted   | global         | 2026-06-30 | [docs/mvp/design/phase2.md](mvp/design/phase2.md)                                                                                                                                       |
 | Phase3：RCA 规则引擎与证据链                                     | accepted   | global         | 2026-06-30 | [docs/mvp/design/phase3.md](mvp/design/phase3.md)                                                                                                                                       |
 | Phase4.5：jOOQ 持久层改造                                        | accepted   | global         | 2026-06-30 | [docs/mvp/design/phase4.5.md](mvp/design/phase4.5.md)                                                                                                                                   |
