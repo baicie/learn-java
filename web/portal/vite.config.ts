@@ -68,6 +68,9 @@ export default defineConfig({
       provider: playwright(),
       instances: [{ browser: 'chromium' }],
     },
+    // Browser mode shares the module mock registry across concurrent files;
+    // serialize files so partial API-client mocks cannot leak between suites.
+    fileParallelism: false,
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json-summary', 'html', 'lcov'],
