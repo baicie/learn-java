@@ -192,7 +192,7 @@ Core 恢复先校验网络与备份并创建 rescue backup，再使用临时旧 
 后以单事务恢复 dump。脚本会在停栈前校验
 `deploy/init/003-migrate-legacy-owner.sql`，并在恢复 dump 后以同一事务执行该脚本，把
 `public`、`work_record` 等应用对象的 owner 恢复为 `aegisops_app`；文件缺失或 ownership
-迁移失败时会 fail closed，不会启动不完整的 Core：
+迁移失败，或 `aegisops_app` 角色不存在时会 fail closed，不会启动不完整的 Core：
 
 ```bash
 bash deploy/scripts/restore-core.sh \

@@ -142,8 +142,12 @@ def test_core_restore_reapplies_app_ownership_after_no_owner_restore():
     assert ownership_sql in restore
     assert '"$POSTGRES_USER"' in restore
     assert "rolname = '\\''aegisops_app'\\''" in restore
+    assert 'Required Core database role is missing: aegisops_app' in restore
     assert '--set=database_name="$POSTGRES_DB"' in restore
-    assert "      --single-transaction \\\n      --set=ON_ERROR_STOP=1" in restore
+    ownership_apply_index = restore.index('echo "Applying Core application ownership normalization"')
+    ownership_apply = restore[ownership_apply_index:]
+    assert "--single-transaction" in ownership_apply
+    assert "--set=ON_ERROR_STOP=1" in ownership_apply
     preflight_index = restore.index('"$APP_OWNERSHIP_SQL"; do')
     network_index = restore.index('bash "$NETWORK_SCRIPT"')
     assert preflight_index < network_index

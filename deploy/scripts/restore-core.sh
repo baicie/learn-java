@@ -220,20 +220,18 @@ app_role_exists="$(docker exec "$POSTGRES_CONTAINER" sh -ec '
     --tuples-only --no-align \
     --command "select 1 from pg_roles where rolname = '\''aegisops_app'\''"
 ' | tr -d '[:space:]')"
-if [ "$app_role_exists" = "1" ]; then
-  if [ ! -f "$APP_OWNERSHIP_SQL" ]; then
-    echo "Core application ownership SQL is missing: $APP_OWNERSHIP_SQL" >&2
-    exit 1
-  fi
-  echo "Applying Core application ownership normalization"
-  docker exec -i "$POSTGRES_CONTAINER" sh -ec '
-    exec psql --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" \
-      --single-transaction \
-      --set=ON_ERROR_STOP=1 \
-      --set=database_name="$POSTGRES_DB" \
-      --set=legacy_owner="$POSTGRES_USER" --file=-
-  ' < "$APP_OWNERSHIP_SQL"
+if [ "$app_role_exists" != "1" ]; then
+  echo "Required Core database role is missing: aegisops_app" >&2
+  exit 1
 fi
+echo "Applying Core application ownership normalization"
+docker exec -i "$POSTGRES_CONTAINER" sh -ec '
+  exec psql --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" \
+    --single-transaction \
+    --set=ON_ERROR_STOP=1 \
+    --set=database_name="$POSTGRES_DB" \
+    --set=legacy_owner="$POSTGRES_USER" --file=-
+' < "$APP_OWNERSHIP_SQL"
 
 "${compose[@]}" up -d --remove-orphans --wait --wait-timeout 300
 while IFS=$'\t' read -r container_name _; do
