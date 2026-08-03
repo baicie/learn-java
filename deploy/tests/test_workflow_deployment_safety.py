@@ -18,10 +18,10 @@ DEPLOY_APP_SCRIPT = ROOT / "deploy/scripts/deploy-app.sh"
 SCP_ACTION = "appleboy/scp-action@ff85246acaad7bdce478db94a363cd2bf7c90345"
 SSH_ACTION = "appleboy/ssh-action@823bd89e131d8d508129f9443cad5855e9ba96f0"
 PRODUCTION_HOST_FINGERPRINT = (
-    "SHA256:t42JX0HGVD6m/KDVHYjoudZQGMv+8B4hkrfGJdZ8axY"
+    "SHA256:SmRugAjHQE7eyT6/82Dglw259NDzSVbsYtBZNRAzl/Q"
 )
 PRODUCTION_GO_SSH_FINGERPRINT = (
-    "SHA256:TtfGZDilKBdm05HX3b1i4yqG/mG0Ooas43ZBrFKyj2w"
+    "SHA256:evyJix5qirC4hepNp3FMvxZF/h+KIdESU6SVNsQ2hc8"
 )
 
 
