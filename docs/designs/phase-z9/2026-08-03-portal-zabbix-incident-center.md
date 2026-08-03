@@ -60,7 +60,7 @@ Diagnosis 和 Report 接口，但 Portal 只有数据源、资产和工作记录
 - [x] API 响应解析失败、401/403、空数据和移动窄屏均有明确状态，不出现空白页面。
 - [x] Portal format、lint、typecheck、test、knip、build 全部通过。
 - [x] 本地 Portal 接入真实服务器 API，复验 Dashboard、告警、Incident 列表与 Z9 Incident 详情。
-- [ ] 合并发布后在线复验同一组页面与真实数据。
+- [x] 合并发布后在线复验同一组页面与真实数据。
 
 ## 非目标
 
@@ -93,3 +93,21 @@ typecheck、knip 和 build 均通过。真实服务器 `default` 租户包含 `1
 
 合并后由 Release Verify 发布 Core，再以服务器真实数据复验 Dashboard、`/alerts`、
 `/incidents` 和上述 Incident 详情；发布结果记录在对应 PR 与 workflow run 中。
+
+## 发布后复验记录
+
+- PR #106（Portal Zabbix Incident Center）已合并；PR #107（Vitest Browser 并行隔离修复）
+  已合并。
+- `mvp` 合并提交：`d3cc49ada3046a7162bc62d2b61f8fcc9c3b19af`。
+- Release Verify：
+  [30811607048](https://github.com/baicie/learn-java/actions/runs/30811607048)，Release contract、
+  三镜像构建与 mTLS smoke、镜像发布、腾讯云 VM 部署全部通过。
+- 发布镜像摘要：`aegisops-app@sha256:76cdc7cd8035d4e6e2b932389b338e331a1180bbc02b62b4d95c5274b000477b`、
+  `aiops-agent@sha256:d53b82c42bbb59ebbd8a12d25b3cf77fa20f2be777a57a11af22e05b55e6d56d`、
+  `aiops-runner@sha256:dbf7a69a3138b26c9e6de621f7834137c93e0eba2038b320ea2ec7a876c2dd47`。
+- 服务器线上状态：`aegisops-app` 与 `aiops-agent` 均为 healthy；当前部署变量使用诊断模式，
+  因此 `aiops-runner` 未启动，未扩大本次 Portal 可视化验收范围。
+- 真实在线 Playwright：`zabbix-incident-center.spec.ts` 通过（1/1，Chromium，6.3 秒），
+  覆盖管理员登录、Dashboard、告警中心、Incident 列表、代表 Incident
+  `inc_0b9d0aca0e24492ebe4e8f26f57422bb` 详情、时间线、AI 诊断和复盘 Tab；API、Console 与
+  Page error 均为 0。
