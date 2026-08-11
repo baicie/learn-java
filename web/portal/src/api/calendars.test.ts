@@ -45,7 +45,7 @@ describe('calendar import api', () => {
       )
       expect(template).toEqual({
         blob,
-        fileName: 'work-calendar-holidays-2026-template.xlsx',
+        fileName: '法定节假日-2026-导入模板.xlsx',
       })
     } finally {
       get.mockRestore()

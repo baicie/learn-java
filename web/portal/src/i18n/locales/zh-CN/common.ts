@@ -18,6 +18,10 @@ export const common = {
   'common.preview': '预览',
   'common.enabled': '启用',
   'common.disabled': '禁用',
+
+  'common.file.chooseFile': '选择文件',
+  'common.file.noFileSelected': '未选择文件',
+
   'common.close': '关闭',
   'common.back': '返回',
   'common.yes': '是',

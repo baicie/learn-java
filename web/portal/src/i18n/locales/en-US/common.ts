@@ -18,6 +18,10 @@ export const common = {
   'common.preview': 'Preview',
   'common.enabled': 'Enabled',
   'common.disabled': 'Disabled',
+
+  'common.file.chooseFile': 'Choose file',
+  'common.file.noFileSelected': 'No file selected',
+
   'common.close': 'Close',
   'common.back': 'Back',
   'common.yes': 'Yes',

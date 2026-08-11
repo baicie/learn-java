@@ -247,8 +247,18 @@ public class WorkRecordExportService {
 
     byte[] content = csvWriter.write(headers, rows);
 
+    String templateName =
+        query.templateId() == null
+            ? null
+            : meta.templates().stream()
+                .filter(t -> query.templateId().equals(t.id()))
+                .map(t -> t.name() == null || t.name().isBlank() ? null : t.name())
+                .findFirst()
+                .orElse(null);
+    String fileStem =
+        (templateName == null ? "工作记录" : safeFileSegment(templateName) + "-工作记录");
     String fileName =
-        "work-records-" + OffsetDateTime.now(clock).format(FILE_TIME_FORMATTER) + ".csv";
+        fileStem + "-" + OffsetDateTime.now(clock).format(FILE_TIME_FORMATTER) + ".csv";
 
     String contentSha256 = sha256(content);
     String exportId = Ids.newId();
@@ -686,6 +696,27 @@ public class WorkRecordExportService {
 
   private String blank(String value) {
     return value == null ? "" : value;
+  }
+
+  private static String safeFileSegment(String value) {
+    String safe =
+        value
+            .replaceAll("[\\\\/:*?\"<>|\\p{Cntrl}]", "_")
+            .replaceAll("\\s+", "_")
+            .replaceAll("_+", "_")
+            .replaceAll("^_+|_+$", "");
+    if (safe.isEmpty()) {
+      safe = "工作记录";
+    }
+    byte[] bytes = safe.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+    if (bytes.length <= 80) {
+      return safe;
+    }
+    int limit = 80;
+    while (limit > 0 && (bytes[limit] & 0xC0) == 0x80) {
+      limit--;
+    }
+    return new String(bytes, 0, limit, java.nio.charset.StandardCharsets.UTF_8);
   }
 
   private record ParsedRecord(WorkRecord record, JsonNode customData) {}

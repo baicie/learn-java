@@ -104,7 +104,7 @@ class ExcelImportControllerWebTest {
     when(importTemplates.generate("tenant-1", "template-1", "version-1"))
         .thenReturn(
             new ExcelImportTemplateService.ExcelImportTemplate(
-                workbook, "work-record-import-template-1-v1.xlsx"));
+                workbook, "日报-导入模板-v1.xlsx"));
 
     mockMvc
         .perform(
@@ -120,7 +120,7 @@ class ExcelImportControllerWebTest {
             header()
                 .string(
                     HttpHeaders.CONTENT_DISPOSITION,
-                    containsString("work-record-import-template-1-v1.xlsx")))
+                    containsString("日报-导入模板-v1.xlsx")))
         .andExpect(content().bytes(workbook));
   }
 

@@ -15,7 +15,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
 import { notify } from '@/components/feedback/app-toaster'
 import { FormFieldShell } from '@/components/form/form-field-shell'
 
@@ -120,14 +119,33 @@ export function CalendarImportDialog({
             label={t('calendars.import.file')}
             error={fileError}
           >
-            {(controlProps) => (
-              <Input
-                {...controlProps}
-                type='file'
-                accept='.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-                onChange={(event) => setFile(event.target.files?.[0] ?? null)}
-              />
-            )}
+            {(controlProps) => {
+              const inputId =
+                (controlProps as Record<string, unknown>)?.['id'] as
+                  | string
+                  | undefined ?? 'calendar-import-file'
+              return (
+                <div className='flex flex-wrap items-center gap-3'>
+                  <input
+                    {...controlProps}
+                    type='file'
+                    accept='.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                    className='sr-only'
+                    onChange={(event) =>
+                      setFile(event.target.files?.[0] ?? null)
+                    }
+                  />
+                  <Button asChild variant='outline' type='button' size='sm'>
+                    <label htmlFor={inputId}>
+                      {t('common.file.chooseFile')}
+                    </label>
+                  </Button>
+                  <span className='truncate text-sm text-muted-foreground'>
+                    {file?.name ?? t('common.file.noFileSelected')}
+                  </span>
+                </div>
+              )
+            }}
           </FormFieldShell>
         </div>
         <DialogFooter>

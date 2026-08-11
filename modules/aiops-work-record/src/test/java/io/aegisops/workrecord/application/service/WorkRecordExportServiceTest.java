@@ -21,8 +21,10 @@ import io.aegisops.workrecord.application.port.WorkRecordUserPort;
 import io.aegisops.workrecord.domain.model.FieldType;
 import io.aegisops.workrecord.domain.model.OptionSource;
 import io.aegisops.workrecord.domain.model.RecordStatus;
+import io.aegisops.workrecord.domain.model.TemplateStatus;
 import io.aegisops.workrecord.domain.model.WorkRecord;
 import io.aegisops.workrecord.domain.model.WorkRecordField;
+import io.aegisops.workrecord.domain.model.WorkRecordTemplate;
 import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
@@ -96,7 +98,7 @@ class WorkRecordExportServiceTest {
     when(metaService.meta("t1", "tpl1"))
         .thenReturn(
             new RecordListMeta(
-                List.of(),
+                List.of(dailyTemplate()),
                 List.of(
                     column("title", "标题", "builtin", null, "text", null, null, true),
                     column("ownerId", "负责人", "builtin", null, "user", null, null, true),
@@ -153,7 +155,7 @@ class WorkRecordExportServiceTest {
     String csv = new String(result.content(), StandardCharsets.UTF_8);
 
     assertThat(result.rowCount()).isEqualTo(1);
-    assertThat(result.fileName()).isEqualTo("work-records-20260710-153000.csv");
+    assertThat(result.fileName()).isEqualTo("日常运维记录-工作记录-20260710-153000.csv");
 
     assertThat(csv).contains("\"标题\",\"负责人\",\"优先级\"").contains("\"日报\",\"张三\",\"高\"");
 
@@ -461,6 +463,7 @@ class WorkRecordExportServiceTest {
   }
 
   private UserPrincipal cachedUser;
+  private WorkRecordTemplate cachedDailyTemplate;
 
   @BeforeEach
   void setUpUser() {
@@ -470,9 +473,30 @@ class WorkRecordExportServiceTest {
             Set.of("admin"),
             Set.of("work-record:export", "work-record:read:self"),
             java.util.Map.of());
+    cachedDailyTemplate =
+        new WorkRecordTemplate(
+            "tpl1",
+            "t1",
+            "daily",
+            "日常运维记录",
+            "日常运维记录模板",
+            TemplateStatus.PUBLISHED,
+            true,
+            false,
+            "v1",
+            "{}",
+            "{}",
+            "u1",
+            OffsetDateTime.parse("2026-07-01T10:00:00+08:00"),
+            OffsetDateTime.parse("2026-07-01T10:00:00+08:00"),
+            null);
   }
 
   private UserPrincipal user() {
     return cachedUser;
+  }
+
+  private WorkRecordTemplate dailyTemplate() {
+    return cachedDailyTemplate;
   }
 }

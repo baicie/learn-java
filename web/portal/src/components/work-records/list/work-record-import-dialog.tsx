@@ -15,7 +15,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
 import {
   Select,
   SelectContent,
@@ -140,19 +139,31 @@ export function WorkRecordImportDialog({ open, onOpenChange, meta }: Props) {
               {t('workRecords.import.templateHint')}
             </p>
           </div>
-          <label className='grid gap-2 text-sm'>
+          <div className='grid gap-2 text-sm'>
             <span>{t('workRecords.import.file')}</span>
-            <Input
-              type='file'
-              accept='.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-              onChange={(event) => setFile(event.target.files?.[0] ?? null)}
-            />
+            <div className='flex flex-wrap items-center gap-3'>
+              <input
+                id='work-record-import-file'
+                type='file'
+                accept='.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                className='sr-only'
+                onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+              />
+              <Button asChild variant='outline' type='button' size='sm'>
+                <label htmlFor='work-record-import-file'>
+                  {t('common.file.chooseFile')}
+                </label>
+              </Button>
+              <span className='truncate text-sm text-muted-foreground'>
+                {file?.name ?? t('common.file.noFileSelected')}
+              </span>
+            </div>
             {file && !validFile ? (
               <span className='text-destructive'>
                 {t('workRecords.import.invalidFile')}
               </span>
             ) : null}
-          </label>
+          </div>
           <label className='grid gap-2 text-sm'>
             <span>{t('workRecords.import.defaultStatus')}</span>
             <Select

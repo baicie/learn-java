@@ -90,17 +90,17 @@ export async function importWorkRecords(
 }
 
 function parseFileName(contentDisposition?: string) {
-  if (!contentDisposition) return 'work-record-import-template.xlsx'
+  if (!contentDisposition) return '工作记录导入模板.xlsx'
 
   const encoded = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i)
   if (encoded?.[1]) {
     try {
       return decodeURIComponent(encoded[1].replace(/^"|"$/g, ''))
     } catch {
-      return 'work-record-import-template.xlsx'
+      return '工作记录导入模板.xlsx'
     }
   }
 
   const normal = contentDisposition.match(/filename="?([^";]+)"?/i)
-  return normal?.[1] ?? 'work-record-import-template.xlsx'
+  return normal?.[1] ?? '工作记录导入模板.xlsx'
 }
