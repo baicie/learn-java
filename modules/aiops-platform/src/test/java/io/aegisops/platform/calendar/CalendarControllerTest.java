@@ -57,16 +57,13 @@ class CalendarControllerTest {
     mvc.perform(get("/api/platform/calendars/import-template").param("year", "2026"))
         .andExpect(status().isOk())
         .andExpect(content().contentType(XLSX_MEDIA_TYPE))
+        .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION, containsString("filename*=UTF-8''")))
         .andExpect(
             header()
                 .string(
                     HttpHeaders.CONTENT_DISPOSITION,
-                    containsString("filename*=UTF-8''")))
-        .andExpect(
-            header()
-                .string(
-                    HttpHeaders.CONTENT_DISPOSITION,
-                    containsString("%E6%B3%95%E5%AE%9A%E8%8A%82%E5%81%87%E6%97%A5-2026-%E5%AF%BC%E5%85%A5%E6%A8%A1%E6%9D%BF.xlsx")))
+                    containsString(
+                        "%E6%B3%95%E5%AE%9A%E8%8A%82%E5%81%87%E6%97%A5-2026-%E5%AF%BC%E5%85%A5%E6%A8%A1%E6%9D%BF.xlsx")))
         .andExpect(header().string(HttpHeaders.CACHE_CONTROL, "no-store"))
         .andExpect(content().bytes(template));
 

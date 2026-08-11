@@ -12,6 +12,7 @@ import {
 import { assetKeys } from '@/api/assets/query-keys'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { FileSelect } from '@/components/ui/file-select'
 import {
   Dialog,
   DialogContent,
@@ -145,26 +146,20 @@ export function AssetImportDialog({
               <p className='mb-4 text-sm text-muted-foreground'>
                 最大 5 MiB、5000 行；先下载模板可避免表头错误。
               </p>
-              <div className='mx-auto flex max-w-xs flex-wrap items-center justify-center gap-3'>
-                <input
-                  id='asset-import-file'
-                  type='file'
-                  accept='.csv,text/csv'
-                  className='sr-only'
-                  onChange={(event) => setFile(event.target.files?.[0] ?? null)}
-                />
-                <Button asChild variant='outline' type='button' size='sm'>
-                  <label htmlFor='asset-import-file'>
+              <FileSelect
+                id='asset-import-file'
+                accept='.csv,text/csv'
+                file={file}
+                onFileChange={setFile}
+                className='mx-auto max-w-xs justify-center'
+                buttonChildren={
+                  <>
                     <FileUp className='size-4' />
                     {file?.name ?? '选择文件'}
-                  </label>
-                </Button>
-                {file ? null : (
-                  <span className='text-sm text-muted-foreground'>
-                    未选择文件
-                  </span>
-                )}
-              </div>
+                  </>
+                }
+                showFileNameHint={!!file === false}
+              />
             </div>
             <div className='grid gap-2'>
               <Label>来源实例标识</Label>

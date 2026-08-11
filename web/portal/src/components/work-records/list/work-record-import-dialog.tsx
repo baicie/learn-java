@@ -15,6 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
 import {
   Select,
   SelectContent,
@@ -22,6 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { FileSelect } from '@/components/ui/file-select'
 import { notify } from '@/components/feedback/app-toaster'
 import type { RecordListMeta } from './types'
 
@@ -141,23 +143,11 @@ export function WorkRecordImportDialog({ open, onOpenChange, meta }: Props) {
           </div>
           <div className='grid gap-2 text-sm'>
             <span>{t('workRecords.import.file')}</span>
-            <div className='flex flex-wrap items-center gap-3'>
-              <input
-                id='work-record-import-file'
-                type='file'
-                accept='.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-                className='sr-only'
-                onChange={(event) => setFile(event.target.files?.[0] ?? null)}
-              />
-              <Button asChild variant='outline' type='button' size='sm'>
-                <label htmlFor='work-record-import-file'>
-                  {t('common.file.chooseFile')}
-                </label>
-              </Button>
-              <span className='truncate text-sm text-muted-foreground'>
-                {file?.name ?? t('common.file.noFileSelected')}
-              </span>
-            </div>
+            <FileSelect
+              accept='.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+              file={file}
+              onFileChange={setFile}
+            />
             {file && !validFile ? (
               <span className='text-destructive'>
                 {t('workRecords.import.invalidFile')}

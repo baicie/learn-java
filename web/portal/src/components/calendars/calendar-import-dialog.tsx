@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/dialog'
 import { notify } from '@/components/feedback/app-toaster'
 import { FormFieldShell } from '@/components/form/form-field-shell'
+import { FileSelect } from '@/components/ui/file-select'
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024
 
@@ -119,33 +120,15 @@ export function CalendarImportDialog({
             label={t('calendars.import.file')}
             error={fileError}
           >
-            {(controlProps) => {
-              const inputId =
-                (controlProps as Record<string, unknown>)?.['id'] as
-                  | string
-                  | undefined ?? 'calendar-import-file'
-              return (
-                <div className='flex flex-wrap items-center gap-3'>
-                  <input
-                    {...controlProps}
-                    type='file'
-                    accept='.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-                    className='sr-only'
-                    onChange={(event) =>
-                      setFile(event.target.files?.[0] ?? null)
-                    }
-                  />
-                  <Button asChild variant='outline' type='button' size='sm'>
-                    <label htmlFor={inputId}>
-                      {t('common.file.chooseFile')}
-                    </label>
-                  </Button>
-                  <span className='truncate text-sm text-muted-foreground'>
-                    {file?.name ?? t('common.file.noFileSelected')}
-                  </span>
-                </div>
-              )
-            }}
+            {(controlProps) => (
+              <FileSelect
+                id='calendar-import-file'
+                accept='.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                file={file}
+                onFileChange={setFile}
+                nativeInputProps={controlProps as React.InputHTMLAttributes<HTMLInputElement>}
+              />
+            )}
           </FormFieldShell>
         </div>
         <DialogFooter>
