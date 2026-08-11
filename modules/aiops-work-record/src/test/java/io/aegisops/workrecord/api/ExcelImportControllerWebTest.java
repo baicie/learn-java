@@ -117,10 +117,13 @@ class ExcelImportControllerWebTest {
             content()
                 .contentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
         .andExpect(
+            header().string(HttpHeaders.CONTENT_DISPOSITION, containsString("filename*=UTF-8''")))
+        .andExpect(
             header()
                 .string(
                     HttpHeaders.CONTENT_DISPOSITION,
-                    containsString("日报-导入模板-v1.xlsx")))
+                    containsString(
+                        "%E6%97%A5%E6%8A%A5-%E5%AF%BC%E5%85%A5%E6%A8%A1%E6%9D%BF-v1.xlsx")))
         .andExpect(content().bytes(workbook));
   }
 
