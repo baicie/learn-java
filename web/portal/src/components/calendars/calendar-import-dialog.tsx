@@ -15,9 +15,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { FileSelect } from '@/components/ui/file-select'
 import { notify } from '@/components/feedback/app-toaster'
 import { FormFieldShell } from '@/components/form/form-field-shell'
-import { FileSelect } from '@/components/ui/file-select'
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024
 
@@ -126,7 +126,9 @@ export function CalendarImportDialog({
                 accept='.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
                 file={file}
                 onFileChange={setFile}
-                nativeInputProps={controlProps as React.InputHTMLAttributes<HTMLInputElement>}
+                nativeInputProps={
+                  controlProps as React.InputHTMLAttributes<HTMLInputElement>
+                }
               />
             )}
           </FormFieldShell>

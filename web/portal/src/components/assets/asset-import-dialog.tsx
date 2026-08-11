@@ -12,7 +12,6 @@ import {
 import { assetKeys } from '@/api/assets/query-keys'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { FileSelect } from '@/components/ui/file-select'
 import {
   Dialog,
   DialogContent,
@@ -21,6 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { FileSelect } from '@/components/ui/file-select'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {

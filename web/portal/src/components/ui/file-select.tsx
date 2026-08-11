@@ -1,7 +1,7 @@
 import { type ReactNode, useId } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
 
 type FileSelectProps = {
   accept?: string
@@ -10,7 +10,8 @@ type FileSelectProps = {
   id?: string
   className?: string
   disabled?: boolean
-  buttonVariant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link'
+  buttonVariant?:
+    'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link'
   buttonSize?: 'default' | 'sm' | 'lg' | 'icon'
   buttonClassName?: string
   /**

@@ -15,7 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
+import { FileSelect } from '@/components/ui/file-select'
 import {
   Select,
   SelectContent,
@@ -23,7 +23,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { FileSelect } from '@/components/ui/file-select'
 import { notify } from '@/components/feedback/app-toaster'
 import type { RecordListMeta } from './types'
 
