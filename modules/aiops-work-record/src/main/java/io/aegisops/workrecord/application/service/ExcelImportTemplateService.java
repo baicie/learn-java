@@ -3,6 +3,7 @@ package io.aegisops.workrecord.application.service;
 import io.aegisops.common.exception.ResourceNotFoundException;
 import io.aegisops.workrecord.application.port.WorkRecordDictionaryPort;
 import io.aegisops.workrecord.application.port.WorkRecordFieldIndexRepository;
+import io.aegisops.workrecord.application.port.WorkRecordTemplateRepository;
 import io.aegisops.workrecord.application.port.WorkRecordTemplateVersionRepository;
 import io.aegisops.workrecord.domain.model.FieldType;
 import io.aegisops.workrecord.domain.model.OptionSource;
@@ -34,14 +35,17 @@ public class ExcelImportTemplateService {
           new ImportColumn("recordTime", "记录时间", "datetime", true, "填写 ISO 8601 日期时间"));
 
   private final WorkRecordTemplateVersionRepository versions;
+  private final WorkRecordTemplateRepository templates;
   private final WorkRecordFieldIndexRepository fields;
   private final WorkRecordDictionaryPort dictionaries;
 
   public ExcelImportTemplateService(
       WorkRecordTemplateVersionRepository versions,
+      WorkRecordTemplateRepository templates,
       WorkRecordFieldIndexRepository fields,
       WorkRecordDictionaryPort dictionaries) {
     this.versions = versions;
+    this.templates = templates;
     this.fields = fields;
     this.dictionaries = dictionaries;
   }
@@ -57,6 +61,11 @@ public class ExcelImportTemplateService {
             .findByTemplateAndVersion(tenantId, templateId, templateVersionId)
             .orElseThrow(
                 () -> new ResourceNotFoundException("work record template version not found"));
+    var templateName =
+        templates
+            .find(tenantId, templateId)
+            .map(t -> t.name() == null || t.name().isBlank() ? templateId : t.name())
+            .orElse(templateId);
     List<WorkRecordField> enabledFields =
         fields.listEnabledByVersion(tenantId, templateVersionId).stream()
             .sorted(
@@ -72,7 +81,7 @@ public class ExcelImportTemplateService {
 
     return new ExcelImportTemplate(
         writeWorkbook(columns),
-        "work-record-import-" + safeFileSegment(templateId) + "-v" + version.versionNo() + ".xlsx");
+        safeFileSegment(templateName) + "-导入模板-v" + version.versionNo() + ".xlsx");
   }
 
   private static byte[] writeWorkbook(List<ImportColumn> columns) {
@@ -252,8 +261,27 @@ public class ExcelImportTemplateService {
   }
 
   private static String safeFileSegment(String value) {
-    String safe = value.replaceAll("[^a-zA-Z0-9_-]", "_");
-    return safe.length() <= 80 ? safe : safe.substring(0, 80);
+    // Windows/Mac 通用非法文件名: / \ : * ? " < > | 以及控制字符
+    String safe =
+        value
+            .replaceAll("[\\\\/:*?\"<>|\\p{Cntrl}]", "_")
+            .replaceAll("\\s+", "_")
+            .replaceAll("_+", "_")
+            .replaceAll("^_+|_+$", "");
+    if (safe.isEmpty()) {
+      safe = "template";
+    }
+    // UTF-8 最多 80 个字节，中文 3 字节/字，约 26 个字；截断避免路径过长
+    byte[] bytes = safe.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+    if (bytes.length <= 80) {
+      return safe;
+    }
+    int limit = 80;
+    // 确保不在 UTF-8 多字节中间截断
+    while (limit > 0 && (bytes[limit] & 0xC0) == 0x80) {
+      limit--;
+    }
+    return new String(bytes, 0, limit, java.nio.charset.StandardCharsets.UTF_8);
   }
 
   private static void requireText(String value, String field) {

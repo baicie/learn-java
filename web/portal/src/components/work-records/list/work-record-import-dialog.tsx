@@ -15,7 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
+import { FileSelect } from '@/components/ui/file-select'
 import {
   Select,
   SelectContent,
@@ -140,19 +140,19 @@ export function WorkRecordImportDialog({ open, onOpenChange, meta }: Props) {
               {t('workRecords.import.templateHint')}
             </p>
           </div>
-          <label className='grid gap-2 text-sm'>
+          <div className='grid gap-2 text-sm'>
             <span>{t('workRecords.import.file')}</span>
-            <Input
-              type='file'
+            <FileSelect
               accept='.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-              onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+              file={file}
+              onFileChange={setFile}
             />
             {file && !validFile ? (
               <span className='text-destructive'>
                 {t('workRecords.import.invalidFile')}
               </span>
             ) : null}
-          </label>
+          </div>
           <label className='grid gap-2 text-sm'>
             <span>{t('workRecords.import.defaultStatus')}</span>
             <Select

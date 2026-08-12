@@ -3,6 +3,7 @@ package io.aegisops.platform.calendar;
 import io.aegisops.common.api.ApiResponse;
 import io.aegisops.common.tenant.TenantContext;
 import io.aegisops.security.UserPrincipal;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.List;
 import org.springframework.http.CacheControl;
@@ -64,15 +65,18 @@ public class CalendarController {
   @GetMapping("/calendars/import-template")
   @PreAuthorize("hasAuthority('platform:calendar:import')")
   public ResponseEntity<byte[]> downloadImportTemplate(@RequestParam int year) {
-    String filename = "work-calendar-holidays-" + year + "-template.xlsx";
+    String filename = "法定节假日-" + year + "-导入模板.xlsx";
+    String disposition =
+        ContentDisposition.attachment()
+            .filename(filename, StandardCharsets.UTF_8)
+            .build()
+            .toString();
     return ResponseEntity.ok()
         .cacheControl(CacheControl.noStore())
         .contentType(
             MediaType.parseMediaType(
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
-        .header(
-            HttpHeaders.CONTENT_DISPOSITION,
-            ContentDisposition.attachment().filename(filename).build().toString())
+        .header(HttpHeaders.CONTENT_DISPOSITION, disposition)
         .body(service.createHolidayImportTemplate(year));
   }
 

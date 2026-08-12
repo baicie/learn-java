@@ -104,7 +104,7 @@ export function downloadExport(download: ExportDownload) {
 
 function parseExportFileName(contentDisposition?: string) {
   if (!contentDisposition) {
-    return 'work-records.csv'
+    return '工作记录导出.csv'
   }
 
   const encoded = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i)
@@ -113,13 +113,13 @@ function parseExportFileName(contentDisposition?: string) {
     try {
       return decodeURIComponent(encoded[1].replace(/^"|"$/g, ''))
     } catch {
-      return 'work-records.csv'
+      return '工作记录导出.csv'
     }
   }
 
   const normal = contentDisposition.match(/filename="?([^";]+)"?/i)
 
-  return normal?.[1] ?? 'work-records.csv'
+  return normal?.[1] ?? '工作记录导出.csv'
 }
 
 function parseRowCount(value: string | undefined) {

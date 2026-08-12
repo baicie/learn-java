@@ -15,7 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
+import { FileSelect } from '@/components/ui/file-select'
 import { notify } from '@/components/feedback/app-toaster'
 import { FormFieldShell } from '@/components/form/form-field-shell'
 
@@ -121,11 +121,14 @@ export function CalendarImportDialog({
             error={fileError}
           >
             {(controlProps) => (
-              <Input
-                {...controlProps}
-                type='file'
+              <FileSelect
+                id='calendar-import-file'
                 accept='.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-                onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+                file={file}
+                onFileChange={setFile}
+                nativeInputProps={
+                  controlProps as React.InputHTMLAttributes<HTMLInputElement>
+                }
               />
             )}
           </FormFieldShell>

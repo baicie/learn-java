@@ -101,13 +101,34 @@ export async function downloadCalendarImportTemplate(
     '/api/platform/calendars/import-template',
     { params: { year }, responseType: 'blob' }
   )
+  const fileName = parseCalendarFileName(
+    response.headers?.['content-disposition'] ??
+      response.headers?.['Content-Disposition'],
+    year
+  )
   return {
     blob:
       response.data instanceof Blob
         ? response.data
         : new Blob([response.data], { type: XLSX_CONTENT_TYPE }),
-    fileName: `work-calendar-holidays-${year}-template.xlsx`,
+    fileName,
   }
+}
+
+function parseCalendarFileName(contentDisposition?: string, year?: number) {
+  const fallback = `法定节假日-${year ?? new Date().getFullYear()}-导入模板.xlsx`
+  if (!contentDisposition) return fallback
+  const utf8Match = /filename\*=UTF-8''([^;]+)/i.exec(contentDisposition)
+  if (utf8Match) {
+    try {
+      return decodeURIComponent(utf8Match[1])
+    } catch {
+      // fallthrough
+    }
+  }
+  const plainMatch = /filename="?([^";]+)"?/i.exec(contentDisposition)
+  if (plainMatch) return plainMatch[1]
+  return fallback
 }
 
 export function saveCalendarImportTemplate(template: CalendarImportTemplate) {

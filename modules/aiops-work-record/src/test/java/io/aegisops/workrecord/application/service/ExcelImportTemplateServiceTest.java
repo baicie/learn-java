@@ -10,6 +10,7 @@ import static org.mockito.Mockito.when;
 import io.aegisops.common.exception.ResourceNotFoundException;
 import io.aegisops.workrecord.application.port.WorkRecordDictionaryPort;
 import io.aegisops.workrecord.application.port.WorkRecordFieldIndexRepository;
+import io.aegisops.workrecord.application.port.WorkRecordTemplateRepository;
 import io.aegisops.workrecord.application.port.WorkRecordTemplateVersionRepository;
 import io.aegisops.workrecord.domain.model.FieldType;
 import io.aegisops.workrecord.domain.model.OptionSource;
@@ -25,15 +26,18 @@ import org.junit.jupiter.api.Test;
 class ExcelImportTemplateServiceTest {
   private final WorkRecordTemplateVersionRepository versions =
       mock(WorkRecordTemplateVersionRepository.class);
+  private final WorkRecordTemplateRepository templates = mock(WorkRecordTemplateRepository.class);
   private final WorkRecordFieldIndexRepository fields = mock(WorkRecordFieldIndexRepository.class);
   private final WorkRecordDictionaryPort dictionaries = mock(WorkRecordDictionaryPort.class);
   private final ExcelImportTemplateService service =
-      new ExcelImportTemplateService(versions, fields, dictionaries);
+      new ExcelImportTemplateService(versions, templates, fields, dictionaries);
 
   @Test
   void generatesWorkbookFromEnabledFieldsInTemplateOrder() throws Exception {
     when(versions.findByTemplateAndVersion("tenant-1", "template-1", "version-1"))
         .thenReturn(Optional.of(WorkRecordFixtures.version("version-1")));
+    when(templates.find("tenant-1", "template-1"))
+        .thenReturn(Optional.of(WorkRecordFixtures.template("version-1")));
     when(fields.listEnabledByVersion("tenant-1", "version-1"))
         .thenReturn(
             List.of(
@@ -42,7 +46,7 @@ class ExcelImportTemplateServiceTest {
 
     var template = service.generate("tenant-1", "template-1", "version-1");
 
-    assertThat(template.fileName()).isEqualTo("work-record-import-template-1-v1.xlsx");
+    assertThat(template.fileName()).isEqualTo("日报-导入模板-v1.xlsx");
     try (var workbook = new XSSFWorkbook(new ByteArrayInputStream(template.content()))) {
       var records = workbook.getSheet("records");
       assertThat(records).isNotNull();
@@ -86,6 +90,8 @@ class ExcelImportTemplateServiceTest {
   void generatesExamplesForEverySupportedFieldType() throws Exception {
     when(versions.findByTemplateAndVersion("tenant-1", "template-1", "version-1"))
         .thenReturn(Optional.of(WorkRecordFixtures.version("version-1")));
+    when(templates.find("tenant-1", "template-1"))
+        .thenReturn(Optional.of(WorkRecordFixtures.template("version-1")));
     when(fields.listEnabledByVersion("tenant-1", "version-1"))
         .thenReturn(
             List.of(
@@ -135,13 +141,15 @@ class ExcelImportTemplateServiceTest {
     assertThatThrownBy(() -> service.generate("tenant-1", "template-1", "version-2"))
         .isInstanceOf(ResourceNotFoundException.class)
         .hasMessageContaining("template version");
-    verifyNoInteractions(fields);
+    verifyNoInteractions(templates, fields);
   }
 
   @Test
   void addsTenantDictionaryDropdownsForSelectAndMultiSelectColumns() throws Exception {
     when(versions.findByTemplateAndVersion("tenant-1", "template-1", "version-1"))
         .thenReturn(Optional.of(WorkRecordFixtures.version("version-1")));
+    when(templates.find("tenant-1", "template-1"))
+        .thenReturn(Optional.of(WorkRecordFixtures.template("version-1")));
     when(fields.listEnabledByVersion("tenant-1", "version-1"))
         .thenReturn(
             List.of(
@@ -182,6 +190,8 @@ class ExcelImportTemplateServiceTest {
   void skipsDropdownWhenDictionaryHasNoEnabledItems() throws Exception {
     when(versions.findByTemplateAndVersion("tenant-1", "template-1", "version-1"))
         .thenReturn(Optional.of(WorkRecordFixtures.version("version-1")));
+    when(templates.find("tenant-1", "template-1"))
+        .thenReturn(Optional.of(WorkRecordFixtures.template("version-1")));
     when(fields.listEnabledByVersion("tenant-1", "version-1"))
         .thenReturn(
             List.of(dictionaryField("priority", "优先级", FieldType.SELECT, "empty_dict", 10)));

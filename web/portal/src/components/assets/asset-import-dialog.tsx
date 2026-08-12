@@ -20,6 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { FileSelect } from '@/components/ui/file-select'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -145,10 +146,19 @@ export function AssetImportDialog({
               <p className='mb-4 text-sm text-muted-foreground'>
                 最大 5 MiB、5000 行；先下载模板可避免表头错误。
               </p>
-              <Input
-                type='file'
+              <FileSelect
+                id='asset-import-file'
                 accept='.csv,text/csv'
-                onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+                file={file}
+                onFileChange={setFile}
+                className='mx-auto max-w-xs justify-center'
+                buttonChildren={
+                  <>
+                    <FileUp className='size-4' />
+                    {file?.name ?? '选择文件'}
+                  </>
+                }
+                showFileNameHint={!!file === false}
               />
             </div>
             <div className='grid gap-2'>
