@@ -103,8 +103,7 @@ class ExcelImportControllerWebTest {
     byte[] workbook = {1, 2, 3};
     when(importTemplates.generate("tenant-1", "template-1", "version-1"))
         .thenReturn(
-            new ExcelImportTemplateService.ExcelImportTemplate(
-                workbook, "日报-导入模板-v1.xlsx"));
+            new ExcelImportTemplateService.ExcelImportTemplate(workbook, "日报-导入模板-v1.xlsx"));
 
     mockMvc
         .perform(

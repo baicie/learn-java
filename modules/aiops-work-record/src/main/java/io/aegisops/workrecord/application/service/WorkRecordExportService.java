@@ -255,8 +255,7 @@ public class WorkRecordExportService {
                 .map(t -> t.name() == null || t.name().isBlank() ? null : t.name())
                 .findFirst()
                 .orElse(null);
-    String fileStem =
-        (templateName == null ? "工作记录" : safeFileSegment(templateName) + "-工作记录");
+    String fileStem = (templateName == null ? "工作记录" : safeFileSegment(templateName) + "-工作记录");
     String fileName =
         fileStem + "-" + OffsetDateTime.now(clock).format(FILE_TIME_FORMATTER) + ".csv";
 
