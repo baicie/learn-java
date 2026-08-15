@@ -13,10 +13,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.aegisops.ai.client.workrecord.WorkRecordGenerationRequest;
 import io.aegisops.common.outbox.OutboxMessage;
 import io.aegisops.common.outbox.OutboxWriter;
+import io.aegisops.security.DataScope;
 import io.aegisops.security.PermissionCodes;
 import io.aegisops.security.UserPrincipal;
 import io.aegisops.workrecord.application.port.AiGenerationRepository;
 import io.aegisops.workrecord.domain.model.AiGeneration;
+import io.aegisops.workrecord.domain.model.WorkRecord;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.Map;
@@ -37,6 +39,7 @@ class AiGenerationServiceTest {
             repository,
             inputs,
             mock(WorkRecordQueryService.class),
+            new WorkRecordPermissionService(),
             outbox,
             new ObjectMapper(),
             audit);
@@ -67,6 +70,52 @@ class AiGenerationServiceTest {
   }
 
   @Test
+  void createsWeeklyGenerationFromTheContainingIsoWeek() {
+    AiGenerationRepository repository = mock(AiGenerationRepository.class);
+    AiInputBuilder inputs = mock(AiInputBuilder.class);
+    OutboxWriter outbox = mock(OutboxWriter.class);
+    var service =
+        new AiGenerationService(
+            repository,
+            inputs,
+            mock(WorkRecordQueryService.class),
+            new WorkRecordPermissionService(),
+            outbox,
+            new ObjectMapper(),
+            mock(WorkRecordAuditService.class));
+    when(inputs.weeklyReport(any(), any(), any(), any()))
+        .thenReturn(generationRequest("weekly_report"));
+    when(repository.findReusable(any(), any(), any(), any(), any())).thenReturn(Optional.empty());
+    java.util.concurrent.atomic.AtomicReference<AiGenerationRepository.CreateGeneration> command =
+        new java.util.concurrent.atomic.AtomicReference<>();
+    when(repository.create(any()))
+        .thenAnswer(
+            invocation -> {
+              command.set(invocation.getArgument(0));
+              return generation("queued");
+            });
+
+    service.requestWeeklyReport(
+        "tenant-1",
+        LocalDate.of(2026, 7, 15),
+        principal(PermissionCodes.WORK_RECORD_AI_GENERATE, PermissionCodes.WORK_RECORD_READ_ALL));
+
+    verify(inputs)
+        .weeklyReport(
+            org.mockito.ArgumentMatchers.eq("tenant-1"),
+            org.mockito.ArgumentMatchers.eq(LocalDate.of(2026, 7, 13)),
+            any(),
+            any());
+    assertThat(command.get().generationType()).isEqualTo("weekly_report");
+    assertThat(command.get().resourceType()).isEqualTo("tenant_week");
+    assertThat(command.get().resourceId()).isEqualTo("2026-07-13");
+    assertThat(command.get().periodStart()).isEqualTo(LocalDate.of(2026, 7, 13));
+    assertThat(command.get().periodEnd()).isEqualTo(LocalDate.of(2026, 7, 19));
+    assertThat(command.get().promptVersion()).isEqualTo("work-record-weekly-v1");
+    verify(outbox).enqueue(any(OutboxMessage.class));
+  }
+
+  @Test
   void reusesIdenticalGenerationWithoutDuplicateJob() {
     AiGenerationRepository repository = mock(AiGenerationRepository.class);
     AiInputBuilder inputs = mock(AiInputBuilder.class);
@@ -77,6 +126,7 @@ class AiGenerationServiceTest {
             repository,
             inputs,
             mock(WorkRecordQueryService.class),
+            new WorkRecordPermissionService(),
             outbox,
             new ObjectMapper(),
             audit);
@@ -114,6 +164,7 @@ class AiGenerationServiceTest {
             repository,
             inputs,
             mock(WorkRecordQueryService.class),
+            new WorkRecordPermissionService(),
             outbox,
             new ObjectMapper(),
             mock(WorkRecordAuditService.class));
@@ -153,6 +204,7 @@ class AiGenerationServiceTest {
             repository,
             mock(AiInputBuilder.class),
             mock(WorkRecordQueryService.class),
+            new WorkRecordPermissionService(),
             mock(OutboxWriter.class),
             new ObjectMapper(),
             mock(WorkRecordAuditService.class));
@@ -163,12 +215,59 @@ class AiGenerationServiceTest {
   }
 
   @Test
+  void reviewerWithTenantWideReadCanListPeriodReports() {
+    AiGenerationRepository repository = mock(AiGenerationRepository.class);
+    WorkRecordQueryService records = mock(WorkRecordQueryService.class);
+    WorkRecord visible = mock(WorkRecord.class);
+    UserPrincipal principal =
+        principal(PermissionCodes.WORK_RECORD_AI_REVIEW, PermissionCodes.WORK_RECORD_READ_ALL);
+    when(repository.listByResource("tenant-1", "tenant_week", "2026-07-13"))
+        .thenReturn(java.util.List.of(generation("success", GENERATION_INPUT_WITH_SECRET)));
+    when(records.get("tenant-1", "record-1", principal)).thenReturn(visible);
+    when(visible.customDataJson()).thenReturn("{\"secret\":\"value\"}");
+    var service =
+        new AiGenerationService(
+            repository,
+            mock(AiInputBuilder.class),
+            records,
+            new WorkRecordPermissionService(),
+            mock(OutboxWriter.class),
+            new ObjectMapper(),
+            mock(WorkRecordAuditService.class));
+
+    assertThat(service.list("tenant-1", "tenant_week", "2026-07-13", principal)).hasSize(1);
+  }
+
+  @Test
+  void reviewerCannotListPeriodReportsWithoutTenantWideRead() {
+    var service =
+        new AiGenerationService(
+            mock(AiGenerationRepository.class),
+            mock(AiInputBuilder.class),
+            mock(WorkRecordQueryService.class),
+            new WorkRecordPermissionService(),
+            mock(OutboxWriter.class),
+            new ObjectMapper(),
+            mock(WorkRecordAuditService.class));
+
+    assertThatThrownBy(
+            () ->
+                service.list(
+                    "tenant-1",
+                    "tenant_month",
+                    "2026-07",
+                    principal(PermissionCodes.WORK_RECORD_AI_REVIEW)))
+        .isInstanceOf(AccessDeniedException.class);
+  }
+
+  @Test
   void monthlyGenerationRequiresTenantWideReadPermission() {
     var service =
         new AiGenerationService(
             mock(AiGenerationRepository.class),
             mock(AiInputBuilder.class),
             mock(WorkRecordQueryService.class),
+            new WorkRecordPermissionService(),
             mock(OutboxWriter.class),
             new ObjectMapper(),
             mock(WorkRecordAuditService.class));
@@ -178,6 +277,27 @@ class AiGenerationServiceTest {
                 service.requestMonthlyReport(
                     "tenant-1",
                     LocalDate.of(2026, 7, 1),
+                    principal(PermissionCodes.WORK_RECORD_AI_GENERATE)))
+        .isInstanceOf(AccessDeniedException.class);
+  }
+
+  @Test
+  void weeklyGenerationRequiresTenantWideReadPermission() {
+    var service =
+        new AiGenerationService(
+            mock(AiGenerationRepository.class),
+            mock(AiInputBuilder.class),
+            mock(WorkRecordQueryService.class),
+            new WorkRecordPermissionService(),
+            mock(OutboxWriter.class),
+            new ObjectMapper(),
+            mock(WorkRecordAuditService.class));
+
+    assertThatThrownBy(
+            () ->
+                service.requestWeeklyReport(
+                    "tenant-1",
+                    LocalDate.of(2026, 7, 13),
                     principal(PermissionCodes.WORK_RECORD_AI_GENERATE)))
         .isInstanceOf(AccessDeniedException.class);
   }
@@ -193,11 +313,16 @@ class AiGenerationServiceTest {
             repository,
             mock(AiInputBuilder.class),
             mock(WorkRecordQueryService.class),
+            new WorkRecordPermissionService(),
             mock(OutboxWriter.class),
             new ObjectMapper(),
             audit);
 
-    service.review("tenant-1", "ai-1", true, principal(PermissionCodes.WORK_RECORD_AI_REVIEW));
+    service.review(
+        "tenant-1",
+        "ai-1",
+        true,
+        principal(PermissionCodes.WORK_RECORD_AI_REVIEW, PermissionCodes.WORK_RECORD_READ_ALL));
 
     verify(audit)
         .record(
@@ -211,12 +336,149 @@ class AiGenerationServiceTest {
             "{\"status\":\"accepted\"}");
   }
 
+  @Test
+  void reviewerCannotReviewPeriodReportWithoutTenantWideRead() {
+    AiGenerationRepository repository = mock(AiGenerationRepository.class);
+    when(repository.find("tenant-1", "ai-1")).thenReturn(Optional.of(generation("success")));
+    var service =
+        new AiGenerationService(
+            repository,
+            mock(AiInputBuilder.class),
+            mock(WorkRecordQueryService.class),
+            new WorkRecordPermissionService(),
+            mock(OutboxWriter.class),
+            new ObjectMapper(),
+            mock(WorkRecordAuditService.class));
+
+    assertThatThrownBy(
+            () ->
+                service.review(
+                    "tenant-1", "ai-1", true, principal(PermissionCodes.WORK_RECORD_AI_REVIEW)))
+        .isInstanceOf(AccessDeniedException.class);
+    verify(repository, org.mockito.Mockito.never()).review(any(), any(), any(), any());
+  }
+
+  @Test
+  void periodGenerationRejectsReadAllPermissionWithSelfDataScope() {
+    var service =
+        new AiGenerationService(
+            mock(AiGenerationRepository.class),
+            mock(AiInputBuilder.class),
+            mock(WorkRecordQueryService.class),
+            new WorkRecordPermissionService(),
+            mock(OutboxWriter.class),
+            new ObjectMapper(),
+            mock(WorkRecordAuditService.class));
+    UserPrincipal principal =
+        selfScopePrincipal(
+            PermissionCodes.WORK_RECORD_AI_GENERATE, PermissionCodes.WORK_RECORD_READ_ALL);
+
+    assertThatThrownBy(
+            () -> service.requestWeeklyReport("tenant-1", LocalDate.of(2026, 7, 13), principal))
+        .isInstanceOf(AccessDeniedException.class);
+    assertThatThrownBy(
+            () -> service.requestMonthlyReport("tenant-1", LocalDate.of(2026, 7, 1), principal))
+        .isInstanceOf(AccessDeniedException.class);
+  }
+
+  @Test
+  void reviewerCannotListOrReviewPeriodReportWithSelfDataScope() {
+    AiGenerationRepository repository = mock(AiGenerationRepository.class);
+    when(repository.find("tenant-1", "ai-1")).thenReturn(Optional.of(generation("success")));
+    var service =
+        new AiGenerationService(
+            repository,
+            mock(AiInputBuilder.class),
+            mock(WorkRecordQueryService.class),
+            new WorkRecordPermissionService(),
+            mock(OutboxWriter.class),
+            new ObjectMapper(),
+            mock(WorkRecordAuditService.class));
+    UserPrincipal principal =
+        selfScopePrincipal(
+            PermissionCodes.WORK_RECORD_AI_REVIEW, PermissionCodes.WORK_RECORD_READ_ALL);
+
+    assertThatThrownBy(() -> service.list("tenant-1", "tenant_week", "2026-07-13", principal))
+        .isInstanceOf(AccessDeniedException.class);
+    assertThatThrownBy(() -> service.review("tenant-1", "ai-1", true, principal))
+        .isInstanceOf(AccessDeniedException.class);
+    verify(repository, never()).review(any(), any(), any(), any());
+  }
+
+  @Test
+  void reviewerCannotListOrReviewGenerationContainingUnreadableFields() {
+    AiGenerationRepository repository = mock(AiGenerationRepository.class);
+    WorkRecordQueryService records = mock(WorkRecordQueryService.class);
+    WorkRecord visible = mock(WorkRecord.class);
+    AiGeneration generation = generation("success", GENERATION_INPUT_WITH_SECRET);
+    UserPrincipal principal =
+        principal(PermissionCodes.WORK_RECORD_AI_REVIEW, PermissionCodes.WORK_RECORD_READ_ALL);
+    when(repository.listByResource("tenant-1", "tenant_week", "2026-07-13"))
+        .thenReturn(java.util.List.of(generation));
+    when(repository.find("tenant-1", "ai-1")).thenReturn(Optional.of(generation));
+    when(records.get("tenant-1", "record-1", principal)).thenReturn(visible);
+    when(visible.customDataJson()).thenReturn("{}");
+    var service =
+        new AiGenerationService(
+            repository,
+            mock(AiInputBuilder.class),
+            records,
+            new WorkRecordPermissionService(),
+            mock(OutboxWriter.class),
+            new ObjectMapper(),
+            mock(WorkRecordAuditService.class));
+
+    assertThatThrownBy(() -> service.list("tenant-1", "tenant_week", "2026-07-13", principal))
+        .isInstanceOf(AccessDeniedException.class);
+    assertThatThrownBy(() -> service.review("tenant-1", "ai-1", true, principal))
+        .isInstanceOf(AccessDeniedException.class);
+    verify(repository, never()).review(any(), any(), any(), any());
+  }
+
+  @Test
+  void reviewerCannotListOrReviewGenerationWhenVisibleFieldValueIsMasked() {
+    AiGenerationRepository repository = mock(AiGenerationRepository.class);
+    WorkRecordQueryService records = mock(WorkRecordQueryService.class);
+    WorkRecord visible = mock(WorkRecord.class);
+    AiGeneration generation = generation("success", GENERATION_INPUT_WITH_SECRET);
+    UserPrincipal principal =
+        principal(PermissionCodes.WORK_RECORD_AI_REVIEW, PermissionCodes.WORK_RECORD_READ_ALL);
+    when(repository.listByResource("tenant-1", "tenant_week", "2026-07-13"))
+        .thenReturn(java.util.List.of(generation));
+    when(repository.find("tenant-1", "ai-1")).thenReturn(Optional.of(generation));
+    when(records.get("tenant-1", "record-1", principal)).thenReturn(visible);
+    when(visible.customDataJson()).thenReturn("{\"secret\":\"******\"}");
+    var service =
+        new AiGenerationService(
+            repository,
+            mock(AiInputBuilder.class),
+            records,
+            new WorkRecordPermissionService(),
+            mock(OutboxWriter.class),
+            new ObjectMapper(),
+            mock(WorkRecordAuditService.class));
+
+    assertThatThrownBy(() -> service.list("tenant-1", "tenant_week", "2026-07-13", principal))
+        .isInstanceOf(AccessDeniedException.class);
+    assertThatThrownBy(() -> service.review("tenant-1", "ai-1", true, principal))
+        .isInstanceOf(AccessDeniedException.class);
+    verify(repository, never()).review(any(), any(), any(), any());
+  }
+
   private static UserPrincipal principal(String... permissions) {
+    return principalWithScope(DataScope.ALL, permissions);
+  }
+
+  private static UserPrincipal selfScopePrincipal(String... permissions) {
+    return principalWithScope(DataScope.SELF, permissions);
+  }
+
+  private static UserPrincipal principalWithScope(DataScope scope, String... permissions) {
     return new UserPrincipal(
         new UserPrincipal.Identity("user-1", "tenant-1", "alice", "Alice"),
         Set.of(),
         Set.of(permissions),
-        Map.of());
+        Map.of("work-record", scope));
   }
 
   private static WorkRecordGenerationRequest generationRequest(String type) {
@@ -240,6 +502,10 @@ class AiGenerationServiceTest {
   }
 
   private static AiGeneration generation(String status) {
+    return generation(status, EMPTY_GENERATION_INPUT);
+  }
+
+  private static AiGeneration generation(String status, String inputJson) {
     return new AiGeneration(
         "ai-1",
         "tenant-1",
@@ -251,7 +517,7 @@ class AiGenerationServiceTest {
         status,
         "v1",
         "hash",
-        "{}",
+        inputJson,
         null,
         null,
         null,
@@ -268,4 +534,14 @@ class AiGenerationServiceTest {
         OffsetDateTime.parse("2026-07-14T00:00:00Z"),
         null);
   }
+
+  private static final String EMPTY_GENERATION_INPUT =
+      """
+      {"contractVersion":"work-record-generation.v1","generationType":"monthly_report","tenantId":"tenant-1","resourceId":"2026-07","actorId":"user-1","periodStart":null,"periodEnd":null,"locale":"zh-CN","promptVersion":"work-record-monthly-v1","records":[],"statistics":{},"traceId":"trace-1"}
+      """;
+
+  private static final String GENERATION_INPUT_WITH_SECRET =
+      """
+      {"contractVersion":"work-record-generation.v1","generationType":"weekly_report","tenantId":"tenant-1","resourceId":"2026-07-13","actorId":"user-1","periodStart":null,"periodEnd":null,"locale":"zh-CN","promptVersion":"work-record-weekly-v1","records":[{"id":"record-1","title":"Record","status":"done","recordTime":null,"ownerName":"Alice","fields":{"secret":"value"},"relations":[]}],"statistics":{},"traceId":"trace-1"}
+      """;
 }

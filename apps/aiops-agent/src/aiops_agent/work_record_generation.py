@@ -21,7 +21,11 @@ class WorkRecordGenerationService:
     async def generate(
         self, request: WorkRecordGenerateRequest
     ) -> WorkRecordGenerateResponse:
-        if request.generationType not in {"record_summary", "monthly_report"}:
+        if request.generationType not in {
+            "record_summary",
+            "weekly_report",
+            "monthly_report",
+        }:
             raise ValueError("unsupported work-record generation type")
         if self._settings.normalized_work_record_provider() == "dify":
             return await self._generate_with_dify(request)
@@ -92,11 +96,10 @@ class WorkRecordGenerationService:
         provider_workflow_version: str | None = None,
         raw: dict[str, object] | None = None,
     ) -> WorkRecordGenerateResponse:
-        markdown = (
-            self._record_summary(request)
-            if request.generationType == "record_summary"
-            else self._monthly_report(request)
-        )
+        if request.generationType == "record_summary":
+            markdown = self._record_summary(request)
+        else:
+            markdown = self._period_report(request)
         return WorkRecordGenerateResponse(
             provider="deterministic",
             model=self._settings.model,
@@ -210,31 +213,70 @@ class WorkRecordGenerationService:
             ]
         )
 
-    def _monthly_report(self, request: WorkRecordGenerateRequest) -> str:
-        statuses = Counter(record.status for record in request.records)
-        owners = Counter(record.ownerName or "未分配" for record in request.records)
+    def _period_report(self, request: WorkRecordGenerateRequest) -> str:
+        sampled_statuses = Counter(record.status for record in request.records)
+        status_counts = request.statistics.get("statusCounts")
+        statuses = status_counts if isinstance(status_counts, dict) else sampled_statuses
+        sampled_owners = Counter(record.ownerName or "未分配" for record in request.records)
+        owner_counts = request.statistics.get("ownerCounts")
+        owners = self._owner_counts(owner_counts, sampled_owners)
+        record_count = request.statistics.get("recordCount", len(request.records))
+        title = "工作周报" if request.generationType == "weekly_report" else "工作月报"
+        statistics = [
+            f"- **{key}**：{self._render(value)}"
+            for key, value in request.statistics.items()
+        ]
         return "\n".join(
             [
-                "# 工作月报",
+                f"# {title}",
                 "",
                 f"统计周期：{request.periodStart} 至 {request.periodEnd}",
-                f"记录总数：{len(request.records)}",
+                f"记录总数：{record_count}",
                 "",
                 "## 状态分布",
                 *[f"- {key}：{value}" for key, value in sorted(statuses.items())],
                 "",
                 "## 工作量分布",
-                *[f"- {key}：{value}" for key, value in owners.most_common(10)],
+                *[f"- {label}：{count}" for label, count in owners],
                 "",
                 "## 系统统计",
-                "```json",
-                json.dumps(request.statistics, ensure_ascii=False, indent=2),
-                "```",
+                *(statistics or ["- 暂无系统统计。"]),
                 "",
                 "## 风险与改进",
                 "- 请结合未完成记录、关联事件与 SLA 超时情况人工复核。",
             ]
         )
+
+    @staticmethod
+    def _owner_counts(
+        value: object, fallback: Counter[str]
+    ) -> list[tuple[str, int]]:
+        if isinstance(value, list):
+            structured: list[tuple[str, int, str]] = []
+            for item in value:
+                if not isinstance(item, dict):
+                    continue
+                display_name = str(item.get("displayName") or "未分配")
+                owner_id = str(item.get("ownerId") or "")
+                try:
+                    count = int(item.get("count", 0))
+                except (TypeError, ValueError):
+                    continue
+                label = f"{display_name} ({owner_id})" if owner_id else display_name
+                structured.append((label, count, owner_id))
+            return [
+                (label, count)
+                for label, count, _ in sorted(
+                    structured, key=lambda item: (-item[1], item[2], item[0])
+                )[:10]
+            ]
+        owners = value if isinstance(value, dict) else fallback
+        return [
+            (str(key), int(count))
+            for key, count in sorted(
+                owners.items(), key=lambda item: (-int(item[1]), str(item[0]))
+            )[:10]
+        ]
 
     @staticmethod
     def _render(value: object) -> str:

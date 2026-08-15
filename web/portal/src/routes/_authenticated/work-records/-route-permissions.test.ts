@@ -5,18 +5,27 @@ import { useAuthStore } from '@/stores/auth-store'
 import { Route as DetailRoute } from './$recordId'
 import { Route as EditRoute } from './$recordId_.edit'
 import { Route as NewRoute } from './new'
+import { Route as OperationsRoute } from './operations'
 import { Route as DesignerRoute } from './templates.$templateId.designer'
 
-function principal(permissions: string[]) {
-  useAuthStore.getState().auth.setPrincipal({
+function principal(
+  permissions: string[],
+  workRecordDataScope?: 'SELF' | 'ALL'
+) {
+  const auth = useAuthStore.getState().auth
+  auth.setAccessToken('test-token')
+  auth.setPrincipal({
     userId: 'u1',
     tenantId: 't1',
     username: 'u1',
     displayName: 'U1',
     roles: [],
     permissions,
-    dataScopes: {},
+    dataScopes: workRecordDataScope
+      ? { 'work-record': workRecordDataScope }
+      : {},
   })
+  auth.setAuthorizationLoaded(true)
 }
 
 async function callBeforeLoad(route: typeof DetailRoute) {
@@ -64,5 +73,22 @@ describe('work record route permissions', () => {
       caught = error
     }
     expect(isRedirect(caught)).toBe(true)
+  })
+
+  it('requires ALL data scope for AI-only operations access', async () => {
+    principal(['work-record:ai:review', 'work-record:read:all'], 'SELF')
+
+    let caught: unknown = null
+    try {
+      await callBeforeLoad(OperationsRoute as unknown as typeof DetailRoute)
+    } catch (error) {
+      caught = error
+    }
+    expect(isRedirect(caught)).toBe(true)
+
+    principal(['work-record:ai:review', 'work-record:read:all'], 'ALL')
+    await expect(
+      callBeforeLoad(OperationsRoute as unknown as typeof DetailRoute)
+    ).resolves.toMatchObject({ userId: 'u1' })
   })
 })

@@ -101,6 +101,58 @@ async def test_run_maps_blocking_response_and_uses_hmac_user() -> None:
 
 @respx.mock
 @pytest.mark.asyncio
+async def test_run_reads_period_end_output_names_from_multi_end_workflow() -> None:
+    route = respx.post("https://dify.example.com/v1/workflows/run").mock(
+        return_value=httpx.Response(
+            200,
+            json=_success_response(
+                outputs={
+                    "period_markdown": "# 工作周报",
+                    "period_warnings": [],
+                    "period_workflow_version": "version-1",
+                }
+            ),
+        )
+    )
+
+    result = await dify.DifyWorkflowClient(_settings(), sleep=_no_sleep).run(
+        _request(), "{}"
+    )
+
+    assert result.markdown == "# 工作周报"
+    assert result.workflow_version == "version-1"
+    assert route.called
+
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_run_ignores_empty_inactive_end_outputs() -> None:
+    route = respx.post("https://dify.example.com/v1/workflows/run").mock(
+        return_value=httpx.Response(
+            200,
+            json=_success_response(
+                outputs={
+                    "summary_markdown": None,
+                    "summary_warnings": None,
+                    "summary_workflow_version": None,
+                    "period_markdown": "# 工作周报",
+                    "period_warnings": [],
+                    "period_workflow_version": "version-1",
+                }
+            ),
+        )
+    )
+
+    result = await dify.DifyWorkflowClient(_settings(), sleep=_no_sleep).run(
+        _request(), "{}"
+    )
+
+    assert result.markdown == "# 工作周报"
+    assert route.called
+
+
+@respx.mock
+@pytest.mark.asyncio
 async def test_run_uses_fixed_published_workflow_endpoint() -> None:
     route = respx.post(
         "https://dify.example.com/v1/workflows/published-42/run"

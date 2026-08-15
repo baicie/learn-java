@@ -5,7 +5,7 @@ status: draft
 phase: phase-20
 owner: ai
 created: 2026-07-19
-updated: 2026-07-21
+updated: 2026-08-13
 related:
   - docs/adr/0003-aiops-agent-boundary.md
   - docs/ai-agent-design.md
@@ -19,7 +19,7 @@ related:
 > 面向实施 Agent：按本文 PR1 至 PR4 顺序实施，每个 PR 都必须独立可验证。实施时使用
 > `executing-plans` Skill，并在声称完成前使用 `verification-before-completion` Skill。
 
-**目标：** 在不改变 AegisOps 业务入口、安全边界和人工审核流程的前提下，将工作记录摘要与月报的内容生成接入 Dify Workflow，并保留确定性降级能力。
+**目标：** 在不改变 AegisOps 业务入口、安全边界和人工审核流程的前提下，将工作记录摘要、周报与月报的内容生成接入 Dify Workflow，并保留确定性降级能力。
 
 **架构：** `aiops-agent` 继续作为唯一 AI 网关，在其内部新增 Dify Workflow Client。Java 侧继续负责租户隔离、RBAC、事实数据准备、Outbox、持久化和审核；Dify 只接收经过过滤和裁剪的事实材料并生成 Markdown 草稿。
 
@@ -61,6 +61,7 @@ Portal
 ### 2.1 本次范围
 
 - 工作记录单条摘要 `record_summary`。
+- 工作周报 `weekly_report`。
 - 工作月报 `monthly_report`。
 - Dify Workflow HTTP Client。
 - 工作记录生成 Provider 选择和确定性降级。
@@ -157,19 +158,23 @@ aegisops-work-record-generation
 禁止：HTTP Request / Agent Tool / Knowledge Retrieval / 外部执行工具
 ```
 
-第一版使用一个 App，通过 `generation_type` 分支处理摘要和月报。开发、测试和生产使用独立 App 与独立 API Key。
+第一版使用一个 App，通过 `generation_type` 分支处理摘要、周报和月报。开发、测试和生产使用独立 App 与独立 API Key。
+
+仓库提供的可导入文件为
+`infra/dify/workflows/工作记录摘要周报与月报生成-Dify-Workflow-v1.yml`。Dify 1.16.1
+对应 DSL 顶层版本 `0.7.0`；导入后必须在两个 LLM 节点选择目标实例中已安装并配置凭据的模型，随后重新导出以固定真实 provider 与插件 `dependencies`。
 
 ### 5.2 输入契约
 
 Dify Start 节点固定输入：
 
-| 字段                  | 类型   | 必填 | 说明                                 |
-| --------------------- | ------ | ---- | ------------------------------------ |
-| `generation_type`     | string | 是   | `record_summary` 或 `monthly_report` |
-| `report_context_json` | string | 是   | 经过过滤、脱敏和裁剪的事实材料       |
-| `locale`              | string | 是   | 第一版固定 `zh-CN`                   |
-| `prompt_version`      | string | 是   | AegisOps 侧声明的 Prompt 版本        |
-| `trace_id`            | string | 是   | 只用于端到端追踪，不参与去重 Hash    |
+| 字段                  | 类型   | 必填 | 说明                                                  |
+| --------------------- | ------ | ---- | ----------------------------------------------------- |
+| `generation_type`     | string | 是   | `record_summary`、`weekly_report` 或 `monthly_report` |
+| `report_context_json` | string | 是   | 经过过滤、脱敏和裁剪的事实材料                        |
+| `locale`              | string | 是   | 第一版固定 `zh-CN`                                    |
+| `prompt_version`      | string | 是   | AegisOps 侧声明的 Prompt 版本                         |
+| `trace_id`            | string | 是   | 只用于端到端追踪，不参与去重 Hash                     |
 
 月报事实材料示例：
 
@@ -203,13 +208,15 @@ Dify Start 节点固定输入：
 
 ### 5.3 输出契约
 
-Dify End 节点只输出：
+Dify 多个 End 节点的变量名必须全局唯一，摘要分支输出 `summary_markdown`、
+`summary_warnings`、`summary_workflow_version`，周期报告分支输出 `period_markdown`、
+`period_warnings`、`period_workflow_version`。Agent 同时兼容旧工作流的无前缀输出。逻辑契约等价于：
 
 ```json
 {
   "markdown": "# 工作月报\n\n## 本月工作概述\n本月共完成 35 项工作。",
   "warnings": [],
-  "workflow_version": "work-record-2026-07-19.1"
+  "workflow_version": "work-record-2026-08-13.1"
 }
 ```
 
@@ -317,7 +324,7 @@ AIOPS_AGENT_WORK_RECORD_PROVIDER=deterministic
 AIOPS_AGENT_DIFY_BASE_URL=https://dify.example.com/v1
 AIOPS_AGENT_DIFY_WORK_RECORD_API_KEY=
 AIOPS_AGENT_DIFY_WORK_RECORD_WORKFLOW_ID=
-AIOPS_AGENT_DIFY_WORK_RECORD_WORKFLOW_VERSION=work-record-2026-07-19.1
+AIOPS_AGENT_DIFY_WORK_RECORD_WORKFLOW_VERSION=work-record-2026-08-13.1
 AIOPS_AGENT_DIFY_TIMEOUT_SECONDS=75
 AIOPS_AGENT_DIFY_MAX_RETRIES=2
 AIOPS_AGENT_DIFY_MAX_INPUT_BYTES=65536
@@ -332,6 +339,11 @@ Secret 规则：
 - 不写入 Git、数据库、前端配置、普通 ConfigMap 或审计正文。
 - Helm 不得通过所有 App 共用的 `envFrom` Secret 将 Dify Key 泄露给 server、worker、runner。
 - 开发、测试、生产使用不同 API Key，生产 Key 定期轮换。
+
+Portal 的“AI 模型”页面当前管理租户级模型参数，Dify Workflow 则是
+`aiops-agent` 的全局运行时 Provider，两者的作用域和 Secret 生命周期不同。因此本次不在该页面保存
+Dify Base URL、Workflow ID 或 API Key。后续可以增加只读的 Provider 状态、已发布 Workflow
+版本和连通性检测，但 API Key 与 HMAC Secret 仍必须由 Helm/Kubernetes Secret 注入 Agent。
 
 ## 8. 数据模型变更
 
@@ -357,7 +369,9 @@ alter table work_record.wr_ai_generation
         check (jsonb_typeof(warnings_json) = 'array');
 ```
 
-只保存必要元数据，不保存 Dify 原始响应。`input_json` 继续作为权限过滤后的输入快照，但必须遵守现有数据保留和访问控制。
+只保存必要元数据，不保存 Dify 原始响应。`input_json` 继续作为权限过滤后的内部输入快照，但公共 API 只返回不含 `tenantId`、`input_hash` 和 `input_json` 的安全响应 DTO。查询或审核草稿时，服务端必须用当前用户重新读取输入记录，并确认生成时的字段和值与当前可见快照一致；否则拒绝返回草稿。
+
+周期报告使用专用 SQL 一次聚合记录总数、状态分布和按用户 ID 区分的 Top 10 负责人，再单独读取最早 50 条样本并应用字段策略。该路径不使用普通列表的 `OFFSET` 分页，统计不受查询页窗上限影响；`ownerCounts` 使用 `ownerId`、`displayName`、`count` 结构，避免同名负责人被合并。
 
 建议审计动作：
 
@@ -666,7 +680,7 @@ AIOPS_AGENT_WORK_RECORD_PROVIDER=deterministic
 
 ## 15. 验收标准
 
-- [ ] Portal 可创建单条摘要和月报生成任务。
+- [ ] Portal 可创建单条摘要、周报和月报生成任务。
 - [ ] 相同业务输入在不同 trace 下复用结果，不重复调用 Dify。
 - [ ] Dify API Key 只存在于 Agent 运行环境。
 - [ ] Dify 收到的数据经过租户权限过滤、敏感字段删除和体积限制。
@@ -688,7 +702,7 @@ AIOPS_AGENT_WORK_RECORD_PROVIDER=deterministic
 | Prompt Injection            | 输入作为不可信数据，无工具节点，System Prompt 固定  |
 | 重复调用和计费              | 规范化 inputHash，超时未知时不盲目重试              |
 | 工作流发布后不可复现        | 固定 published workflow ID，记录版本与 DSL checksum |
-| Dify 故障阻断月报           | 确定性降级，Provider 开关一键回滚                   |
+| Dify 故障阻断周期报告       | 确定性降级，Provider 开关一键回滚                   |
 | Dify Key 扩散               | Agent 专属 Secret，部署测试检查其他 App 环境        |
 | 长耗时导致超时              | blocking 设预算，必要时仅在 Agent 内切 SSE          |
 | 结果被误认为事实            | 数值由 Java 计算，输出标记草稿并人工审核            |

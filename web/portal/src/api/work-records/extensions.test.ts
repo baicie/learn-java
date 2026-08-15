@@ -4,9 +4,11 @@ import {
   actOnApprovalTask,
   createComment,
   getStatistics,
+  listWeeklyAiGenerations,
   listRecordAiGenerations,
   listComments,
   requestMonthlyAiReport,
+  requestWeeklyAiReport,
 } from './extensions'
 
 vi.mock('@/lib/api-client', () => ({
@@ -116,5 +118,41 @@ describe('work-record extension api', () => {
     await expect(
       requestMonthlyAiReport('2026-07-01T00:00:00Z')
     ).resolves.toMatchObject({ id: 'ai-monthly-1', status: 'queued' })
+  })
+
+  it('requests a weekly report using the ISO week start date', async () => {
+    vi.mocked(apiClient.post).mockResolvedValueOnce(
+      envelope({
+        id: 'ai-weekly-1',
+        generationType: 'weekly_report',
+        resourceType: 'tenant_week',
+        resourceId: '2026-07-13',
+        status: 'queued',
+        requestedBy: 'user-1',
+        createdAt: '2026-07-13T00:00:00Z',
+      })
+    )
+
+    await expect(requestWeeklyAiReport('2026-07-13')).resolves.toMatchObject({
+      id: 'ai-weekly-1',
+      resourceType: 'tenant_week',
+    })
+    expect(apiClient.post).toHaveBeenCalledWith(
+      '/api/work-record/ai-generations/weekly',
+      undefined,
+      { params: { week: '2026-07-13' } }
+    )
+  })
+
+  it('queries weekly reports by tenant week resource key', async () => {
+    vi.mocked(apiClient.get).mockResolvedValueOnce(envelope([]))
+
+    await expect(listWeeklyAiGenerations('2026-07-27')).resolves.toEqual([])
+    expect(apiClient.get).toHaveBeenCalledWith(
+      '/api/work-record/ai-generations',
+      {
+        params: { resourceType: 'tenant_week', resourceId: '2026-07-27' },
+      }
+    )
   })
 })

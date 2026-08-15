@@ -65,4 +65,28 @@ describe('getNavGroups', () => {
       '/platform/ai-models'
     )
   })
+
+  it('shows period-report operations to tenant-wide reviewers only', () => {
+    const auth = useAuthStore.getState().auth
+    const reviewer = {
+      userId: 'reviewer',
+      tenantId: 'tenant-1',
+      username: 'reviewer',
+      displayName: 'Reviewer',
+      roles: ['reviewer'],
+      permissions: ['work-record:ai:review', 'work-record:read:all'],
+      dataScopes: { 'work-record': 'SELF' as const },
+    }
+    auth.setPrincipal(reviewer)
+
+    const selfOnly = getNavGroups((key) => key)
+    expect(JSON.stringify(selfOnly)).not.toContain('/work-records/operations')
+
+    auth.setPrincipal({
+      ...reviewer,
+      dataScopes: { 'work-record': 'ALL' },
+    })
+    const tenantWide = getNavGroups((key) => key)
+    expect(JSON.stringify(tenantWide)).toContain('/work-records/operations')
+  })
 })

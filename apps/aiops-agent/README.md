@@ -133,8 +133,8 @@ identity, Diagnosis Grant, and optional contract-version headers as `POST /v1/di
 
 ## Work-record generation with Dify
 
-Work-record summaries and monthly reports use a capability-specific provider. The default
-remains deterministic and does not require Dify:
+Work-record summaries, weekly reports, and monthly reports use a capability-specific provider.
+The default remains deterministic and does not require Dify:
 
 ```bash
 AIOPS_AGENT_WORK_RECORD_PROVIDER=deterministic
@@ -147,7 +147,7 @@ AIOPS_AGENT_WORK_RECORD_PROVIDER=dify
 AIOPS_AGENT_DIFY_BASE_URL=https://dify.example.com/v1
 AIOPS_AGENT_DIFY_WORK_RECORD_API_KEY=agent-only-secret
 AIOPS_AGENT_DIFY_WORK_RECORD_WORKFLOW_ID=published-workflow-id
-AIOPS_AGENT_DIFY_WORK_RECORD_WORKFLOW_VERSION=work-record-2026-07-19.1
+AIOPS_AGENT_DIFY_WORK_RECORD_WORKFLOW_VERSION=work-record-2026-08-13.1
 AIOPS_AGENT_DIFY_TIMEOUT_SECONDS=75
 AIOPS_AGENT_DIFY_MAX_RETRIES=2
 AIOPS_AGENT_DIFY_MAX_INPUT_BYTES=65536
@@ -156,8 +156,9 @@ AIOPS_AGENT_DIFY_USER_HMAC_SECRET=agent-only-hmac-secret
 
 `DIFY_WORK_RECORD_WORKFLOW_ID` is optional. When configured, the client calls the fixed
 published workflow endpoint; otherwise it calls the app's current published workflow. The
-workflow must return `markdown`, `warnings`, and the configured `workflow_version` from its
-End node.
+workflow must return `markdown`, `warnings`, and the configured `workflow_version`. Workflows
+with multiple End nodes may use the `summary_` and `period_` output prefixes from the repository
+DSL.
 
 The Agent sends a blocking request because the Java work-record flow is already asynchronous.
 It retries only rate limiting, explicit server errors without a known run ID, and connection

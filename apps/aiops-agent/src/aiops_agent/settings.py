@@ -61,7 +61,7 @@ class Settings(BaseSettings):
     dify_base_url: str = ""
     dify_work_record_api_key: str = ""
     dify_work_record_workflow_id: str = ""
-    dify_work_record_workflow_version: str = "work-record-2026-07-19.1"
+    dify_work_record_workflow_version: str = "work-record-2026-08-13.1"
     dify_timeout_seconds: float = Field(default=75.0, gt=0)
     dify_max_retries: int = Field(default=2, ge=0, le=5)
     dify_max_input_bytes: int = Field(default=65536, gt=0)
