@@ -62,45 +62,42 @@ public class AiInputBuilder {
       String tenantId, LocalDate month, UserPrincipal principal, String traceId) {
     LocalDate start = month.withDayOfMonth(1);
     return periodReport(
-        tenantId,
-        start,
-        start.plusMonths(1),
-        "monthly_report",
-        "work-record-monthly-v1",
-        start.toString().substring(0, 7),
-        principal,
-        traceId);
+        new PeriodRequestContext(
+            tenantId,
+            start,
+            start.plusMonths(1),
+            "monthly_report",
+            "work-record-monthly-v1",
+            start.toString().substring(0, 7),
+            principal.id(),
+            traceId),
+        principal);
   }
 
   public WorkRecordGenerationRequest weeklyReport(
       String tenantId, LocalDate weekStart, UserPrincipal principal, String traceId) {
     return periodReport(
-        tenantId,
-        weekStart,
-        weekStart.plusWeeks(1),
-        "weekly_report",
-        "work-record-weekly-v1",
-        weekStart.toString(),
-        principal,
-        traceId);
+        new PeriodRequestContext(
+            tenantId,
+            weekStart,
+            weekStart.plusWeeks(1),
+            "weekly_report",
+            "work-record-weekly-v1",
+            weekStart.toString(),
+            principal.id(),
+            traceId),
+        principal);
   }
 
   private WorkRecordGenerationRequest periodReport(
-      String tenantId,
-      LocalDate start,
-      LocalDate end,
-      String generationType,
-      String promptVersion,
-      String resourceId,
-      UserPrincipal principal,
-      String traceId) {
+      PeriodRequestContext context, UserPrincipal principal) {
     var snapshot =
         periodReports.snapshot(
-            tenantId,
-            start.atStartOfDay(clock.getZone()).toOffsetDateTime(),
-            end.atStartOfDay(clock.getZone()).toOffsetDateTime(),
+            context.tenantId(),
+            context.start().atStartOfDay(clock.getZone()).toOffsetDateTime(),
+            context.end().atStartOfDay(clock.getZone()).toOffsetDateTime(),
             MAX_PERIOD_SAMPLES);
-    List<WorkRecord> samples = records.visible(tenantId, snapshot.samples(), principal);
+    List<WorkRecord> samples = records.visible(context.tenantId(), snapshot.samples(), principal);
     long recordCount = snapshot.recordCount();
     Map<String, Object> statistics = new LinkedHashMap<>();
     statistics.put("recordCount", recordCount);
@@ -121,19 +118,9 @@ public class AiInputBuilder {
     LinkedHashSet<String> relevantOwnerIds = new LinkedHashSet<>();
     samples.stream().map(WorkRecord::ownerId).forEach(relevantOwnerIds::add);
     topOwners.stream().map(Entry::getKey).forEach(relevantOwnerIds::add);
-    Map<String, String> ownerNames = ownerNames(tenantId, relevantOwnerIds);
+    Map<String, String> ownerNames = ownerNames(context.tenantId(), relevantOwnerIds);
     statistics.put("ownerCounts", ownerCounts(topOwners, ownerNames));
     List<WorkRecordGenerationRequest.RecordItem> items = new ArrayList<>();
-    var context =
-        new PeriodRequestContext(
-            tenantId,
-            start,
-            end,
-            generationType,
-            promptVersion,
-            resourceId,
-            principal.id(),
-            traceId);
     for (WorkRecord sample : samples) {
       items.add(item(sample, ownerNames));
       statistics.put("sampledRecordCount", items.size());

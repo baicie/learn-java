@@ -70,21 +70,7 @@ public class JdbcAiPeriodReportRepository implements AiPeriodReportRepository {
                       statistic_key
             """,
             params);
-    long recordCount = 0L;
-    List<Count> statusCounts = new ArrayList<>();
-    List<Count> ownerCounts = new ArrayList<>();
-    for (Map<String, Object> row : rows) {
-      String type = String.valueOf(row.get("statistic_type"));
-      String key = String.valueOf(row.get("statistic_key"));
-      long value = number(row.get("item_count"));
-      if ("total".equals(type)) {
-        recordCount = value;
-      } else if ("status".equals(type)) {
-        statusCounts.add(new Count(key, value));
-      } else if ("owner".equals(type)) {
-        ownerCounts.add(new Count(key, value));
-      }
-    }
+    Aggregates aggregates = aggregates(rows);
     List<WorkRecord> samples =
         jdbc.query(
             """
@@ -102,7 +88,27 @@ public class JdbcAiPeriodReportRepository implements AiPeriodReportRepository {
             """,
             params,
             (rs, rowNum) -> mapRecord(rs));
-    return new PeriodSnapshot(recordCount, statusCounts, ownerCounts, samples);
+    return new PeriodSnapshot(
+        aggregates.recordCount(), aggregates.statusCounts(), aggregates.ownerCounts(), samples);
+  }
+
+  private static Aggregates aggregates(List<Map<String, Object>> rows) {
+    long recordCount = 0L;
+    List<Count> statusCounts = new ArrayList<>();
+    List<Count> ownerCounts = new ArrayList<>();
+    for (Map<String, Object> row : rows) {
+      String type = String.valueOf(row.get("statistic_type"));
+      String key = String.valueOf(row.get("statistic_key"));
+      long value = number(row.get("item_count"));
+      if ("total".equals(type)) {
+        recordCount = value;
+      } else if ("status".equals(type)) {
+        statusCounts.add(new Count(key, value));
+      } else if ("owner".equals(type)) {
+        ownerCounts.add(new Count(key, value));
+      }
+    }
+    return new Aggregates(recordCount, statusCounts, ownerCounts);
   }
 
   private static WorkRecord mapRecord(ResultSet rs) throws SQLException {
@@ -127,4 +133,6 @@ public class JdbcAiPeriodReportRepository implements AiPeriodReportRepository {
   private static long number(Object value) {
     return value instanceof Number number ? number.longValue() : 0L;
   }
+
+  private record Aggregates(long recordCount, List<Count> statusCounts, List<Count> ownerCounts) {}
 }

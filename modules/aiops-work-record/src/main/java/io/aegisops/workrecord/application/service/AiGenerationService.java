@@ -2,7 +2,6 @@ package io.aegisops.workrecord.application.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import io.aegisops.ai.client.workrecord.WorkRecordGenerationRequest;
 import io.aegisops.common.id.Ids;
 import io.aegisops.common.outbox.OutboxMessage;
 import io.aegisops.common.outbox.OutboxWriter;
@@ -19,7 +18,6 @@ import java.time.temporal.TemporalAdjusters;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,27 +26,24 @@ import org.springframework.transaction.annotation.Transactional;
 public class AiGenerationService {
   private final AiGenerationRepository generations;
   private final AiInputBuilder inputs;
-  private final WorkRecordQueryService records;
-  private final WorkRecordPermissionService permissions;
   private final OutboxWriter outbox;
   private final ObjectMapper objectMapper;
   private final WorkRecordAuditService audit;
+  private final AiGenerationAccessGuard guard;
 
   public AiGenerationService(
       AiGenerationRepository generations,
       AiInputBuilder inputs,
-      WorkRecordQueryService records,
-      WorkRecordPermissionService permissions,
+      AiGenerationAccessGuard guard,
       OutboxWriter outbox,
       ObjectMapper objectMapper,
       WorkRecordAuditService audit) {
     this.generations = generations;
     this.inputs = inputs;
-    this.records = records;
-    this.permissions = permissions;
     this.outbox = outbox;
     this.objectMapper = objectMapper;
     this.audit = audit;
+    this.guard = guard;
   }
 
   @Transactional
@@ -72,7 +67,7 @@ public class AiGenerationService {
   public AiGeneration requestMonthlyReport(
       String tenantId, LocalDate month, UserPrincipal principal) {
     requireGenerate(tenantId, principal);
-    requireTenantWideRead(principal);
+    guard.requireTenantWideRead(principal);
     if (month == null) {
       throw new IllegalArgumentException("month is required");
     }
@@ -93,7 +88,7 @@ public class AiGenerationService {
   public AiGeneration requestWeeklyReport(
       String tenantId, LocalDate week, UserPrincipal principal) {
     requireGenerate(tenantId, principal);
-    requireTenantWideRead(principal);
+    guard.requireTenantWideRead(principal);
     if (week == null) {
       throw new IllegalArgumentException("week is required");
     }
@@ -114,15 +109,15 @@ public class AiGenerationService {
       String tenantId, String resourceType, String resourceId, UserPrincipal principal) {
     if ("record".equals(resourceType)) {
       requireGenerate(tenantId, principal);
-      records.get(tenantId, resourceId, principal);
+      guard.visibleRecord(tenantId, resourceId, principal);
     } else if ("tenant_week".equals(resourceType) || "tenant_month".equals(resourceType)) {
       requireGenerateOrReview(tenantId, principal);
-      requireTenantWideRead(principal);
+      guard.requireTenantWideRead(principal);
     } else {
       throw new IllegalArgumentException("unsupported AI generation resource type");
     }
     List<AiGeneration> result = generations.listByResource(tenantId, resourceType, resourceId);
-    result.forEach(generation -> requireInputReadable(generation, principal));
+    result.forEach(generation -> guard.requireInputReadable(generation, principal));
     return result;
   }
 
@@ -135,68 +130,14 @@ public class AiGenerationService {
       throw new AccessDeniedException("not allowed to review AI result");
     }
     AiGeneration generation = generations.find(tenantId, id).orElseThrow();
-    requireResourceRead(generation, principal);
-    requireInputReadable(generation, principal);
+    guard.requireResourceRead(generation, principal);
+    guard.requireInputReadable(generation, principal);
     if (!generations.review(tenantId, id, accepted ? "accepted" : "rejected", principal.id())) {
       throw new IllegalStateException("AI result cannot be reviewed");
     }
     AiGeneration reviewed = generations.find(tenantId, id).orElseThrow();
     audit(reviewed, WorkRecordAuditActions.AI_GENERATION_REVIEWED, principal.id());
     return reviewed;
-  }
-
-  private void requireResourceRead(AiGeneration generation, UserPrincipal principal) {
-    if ("record".equals(generation.resourceType())) {
-      records.get(generation.tenantId(), generation.resourceId(), principal);
-    } else if ("tenant_week".equals(generation.resourceType())
-        || "tenant_month".equals(generation.resourceType())) {
-      requireTenantWideRead(principal);
-    } else {
-      throw new IllegalArgumentException("unsupported AI generation resource type");
-    }
-  }
-
-  private void requireInputReadable(AiGeneration generation, UserPrincipal principal) {
-    WorkRecordGenerationRequest input;
-    try {
-      input = objectMapper.readValue(generation.inputJson(), WorkRecordGenerationRequest.class);
-    } catch (Exception ex) {
-      throw new AccessDeniedException("AI generation input is not readable", ex);
-    }
-    if (!generation.tenantId().equals(input.tenantId())) {
-      throw new AccessDeniedException("AI generation input tenant mismatch");
-    }
-    for (WorkRecordGenerationRequest.RecordItem item : input.records()) {
-      if (item.id() == null || item.id().isBlank()) {
-        throw new AccessDeniedException("AI generation input contains an invalid record");
-      }
-      var visible = records.get(generation.tenantId(), item.id(), principal);
-      ObjectNode visibleFields = readableFields(visible.customDataJson());
-      ObjectNode inputFields = objectMapper.valueToTree(item.fields());
-      var fields = inputFields.fields();
-      while (fields.hasNext()) {
-        var field = fields.next();
-        if (!visibleFields.has(field.getKey())
-            || !Objects.equals(visibleFields.get(field.getKey()), field.getValue())) {
-          throw new AccessDeniedException(
-              "AI generation contains fields that are not currently readable");
-        }
-      }
-    }
-  }
-
-  private ObjectNode readableFields(String customDataJson) {
-    try {
-      var node = objectMapper.readTree(customDataJson);
-      if (node == null || !node.isObject()) {
-        throw new AccessDeniedException("work-record fields are not readable");
-      }
-      return (ObjectNode) node;
-    } catch (AccessDeniedException ex) {
-      throw ex;
-    } catch (Exception ex) {
-      throw new AccessDeniedException("work-record fields are not readable", ex);
-    }
   }
 
   private AiGeneration createOrReuse(GenerationRequest request) {
@@ -296,12 +237,6 @@ public class AiGenerationService {
         || !tenantId.equals(principal.tenantId())
         || !principal.hasPermission(PermissionCodes.WORK_RECORD_AI_GENERATE)) {
       throw new AccessDeniedException("not allowed to generate AI work-record content");
-    }
-  }
-
-  private void requireTenantWideRead(UserPrincipal principal) {
-    if (!permissions.canReadAll(principal)) {
-      throw new AccessDeniedException("tenant-wide AI generation requires read-all permission");
     }
   }
 
