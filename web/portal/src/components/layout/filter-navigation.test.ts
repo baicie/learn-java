@@ -5,7 +5,8 @@ import { navigation } from './navigation'
 
 function principal(
   permissions: string[],
-  roles: string[] = ['normal_user']
+  roles: string[] = ['normal_user'],
+  workRecordDataScope?: 'SELF' | 'ALL'
 ): AuthorizationPrincipal {
   return {
     userId: 'u1',
@@ -14,7 +15,9 @@ function principal(
     displayName: 'U1',
     roles,
     permissions,
-    dataScopes: {},
+    dataScopes: workRecordDataScope
+      ? { 'work-record': workRecordDataScope }
+      : {},
   }
 }
 
@@ -56,16 +59,34 @@ describe('filterNavigation', () => {
     expect(JSON.stringify(incidentsOnly)).not.toContain('/alerts')
   })
 
-  it('keeps operations for every permission accepted by its route', () => {
+  it('keeps operations for its independent operational permissions', () => {
     for (const permission of [
       'work-record:analytics',
       'work-record:handover',
-      'work-record:ai:generate',
       'work-record:approval:act',
     ]) {
       const result = filterNavigation(navigation, principal([permission]))
 
       expect(JSON.stringify(result)).toContain('/work-records/operations')
+    }
+  })
+
+  it('requires tenant-wide read permission and scope for AI-only operations access', () => {
+    for (const permission of [
+      'work-record:ai:generate',
+      'work-record:ai:review',
+    ]) {
+      const tenantWide = filterNavigation(
+        navigation,
+        principal([permission, 'work-record:read:all'], ['normal_user'], 'ALL')
+      )
+      const selfOnly = filterNavigation(
+        navigation,
+        principal([permission, 'work-record:read:all'], ['normal_user'], 'SELF')
+      )
+
+      expect(JSON.stringify(tenantWide)).toContain('/work-records/operations')
+      expect(JSON.stringify(selfOnly)).not.toContain('/work-records/operations')
     }
   })
 

@@ -5,7 +5,7 @@ status: accepted
 phase: work-record-20
 owner: ai
 created: 2026-07-14
-updated: 2026-07-21
+updated: 2026-08-13
 related:
   - modules/aiops-work-record/src/main/java/io/aegisops/workrecord/api
   - apps/aiops-server/src/main/resources/db/migration/V0030__init_phase20_async_foundation.sql
@@ -13,6 +13,7 @@ related:
   - apps/aiops-server/src/main/resources/db/migration/V0032__init_phase20_collaboration.sql
   - apps/aiops-server/src/main/resources/db/migration/V0042__init_async_job_permissions.sql
   - apps/aiops-server/src/main/resources/db/migration/V0044__init_work_record_ai_generation_trace.sql
+  - apps/aiops-server/src/main/resources/db/migration/V0052__init_work_record_weekly_ai_generation.sql
 ---
 
 # 工作记录 Phase 20 异步与协作 API
@@ -65,7 +66,9 @@ related:
 - `GET|POST|PUT /api/work-record/reminder-rules`：日报缺失提醒规则。
 - `GET /api/work-record/notifications/unread`、`POST /api/work-record/notifications/{id}/read`：个人通知。
 - `GET|POST /api/work-record/handovers` 与 `POST /api/work-record/handovers/{id}/submit|accept|complete`：值班交接状态机。
-- `POST /api/work-record/ai-generations/records/{recordId}/summary` 与 `POST /api/work-record/ai-generations/monthly`：异步生成 AI 草稿。
+- `POST /api/work-record/ai-generations/records/{recordId}/summary`：异步生成单条工作记录摘要草稿。
+- `POST /api/work-record/ai-generations/weekly?week=YYYY-MM-DD`：按传入日期所在的 ISO 周（周一至周日）异步生成周报草稿。
+- `POST /api/work-record/ai-generations/monthly?month=YYYY-MM-DD`：按传入日期所在自然月异步生成月报草稿。
 - `GET /api/work-record/ai-generations`、`POST /api/work-record/ai-generations/{id}/review`：查询及审核 AI 结果。
 - `GET|POST /api/work-record/template-market`、`POST /api/work-record/template-market/{versionId}/install`：模板市场。
 - `GET|PUT /api/work-record/template-versions/{versionId}/field-policies`：查询或原子替换字段级读写与脱敏策略。
@@ -78,7 +81,9 @@ related:
 
 ## AI 生成结果与 Dify 追踪
 
-`POST /api/work-record/ai-generations/records/{recordId}/summary` 和 `POST /api/work-record/ai-generations/monthly` 只创建异步任务。Portal 对 `queued`、`running` 每 2 秒轮询，进入 `success`、`failed`、`accepted` 或 `rejected` 后停止。
+上述三个生成端点只创建异步任务。周报和月报都要求 `work-record:ai:generate`、`work-record:read:all`，并要求 `dataScopes['work-record'] = ALL`；周期报告的查询与审核也要求同一租户级数据范围，审核还要求 `work-record:ai:review`。Portal 对 `queued`、`running` 每 2 秒轮询，进入 `success`、`failed`、`accepted` 或 `rejected` 后停止。
+
+周期报告查询通过 `GET /api/work-record/ai-generations` 完成：周报使用 `resourceType=tenant_week` 和周一日期形式的 `resourceId=YYYY-MM-DD`，月报使用 `resourceType=tenant_month` 和 `resourceId=YYYY-MM`。
 
 AI 生成结果在原有字段之外返回以下可空追踪字段：
 
@@ -91,6 +96,8 @@ AI 生成结果在原有字段之外返回以下可空追踪字段：
 | `providerTotalTokens`     | Dify 返回的总 Token 数                             |
 | `warningsJson`            | JSON 字符串数组；Portal 解析失败时按空数组处理     |
 | `fallbackReason`          | 降级原因，如 `timeout`、`http_503`、`empty_output` |
+
+公共 API 只返回 `AiGenerationResponse` 安全投影，不返回内部 `tenantId`、`inputHash` 或 `inputJson`。查询和审核已有草稿前，后端会重新应用当前用户的记录读取与字段级策略；只要生成输入包含当前用户不可读的字段，整个结果即拒绝返回，避免 Markdown 草稿跨角色泄露受限字段。
 
 `status=success` 仅表示草稿已经生成，不表示 Dify 一定成功。当 `fallbackReason` 非空时，结果由确定性模板降级生成，Portal 必须同时显示降级原因和 warnings，仍需具备 `work-record:ai:review` 权限的用户审核。后端不保存 Dify 原始响应、完整 Prompt 或推理过程。
 

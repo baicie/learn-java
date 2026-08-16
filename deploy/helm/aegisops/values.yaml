@@ -69,7 +69,7 @@ dify:
   baseUrl: "https://dify.example.com/v1"
   workRecordApiKey: ""
   workRecordWorkflowId: ""
-  workRecordWorkflowVersion: "work-record-2026-07-19.1"
+  workRecordWorkflowVersion: "work-record-2026-08-13.1"
   timeoutSeconds: 75
   maxRetries: 2
   maxInputBytes: 65536

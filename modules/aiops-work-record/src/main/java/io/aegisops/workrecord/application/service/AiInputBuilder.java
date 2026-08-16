@@ -4,33 +4,40 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.aegisops.ai.client.workrecord.WorkRecordGenerationRequest;
 import io.aegisops.security.UserPrincipal;
-import io.aegisops.workrecord.application.command.RecordQuery;
+import io.aegisops.workrecord.application.port.AiPeriodReportRepository;
 import io.aegisops.workrecord.domain.model.WorkRecord;
+import java.time.Clock;
 import java.time.LocalDate;
-import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
 @Service
 public class AiInputBuilder {
-  private static final int PAGE_SIZE = 100;
-  private static final int MAX_MONTH_SAMPLES = 50;
-  private static final int MAX_MONTH_INPUT_BYTES = 65_536;
+  private static final int MAX_PERIOD_SAMPLES = 50;
+  private static final int MAX_PERIOD_INPUT_BYTES = 65_536;
   private final WorkRecordQueryService records;
+  private final AiPeriodReportRepository periodReports;
   private final WorkRecordUserLookupService users;
   private final ObjectMapper objectMapper;
+  private final Clock clock;
 
   public AiInputBuilder(
       WorkRecordQueryService records,
+      AiPeriodReportRepository periodReports,
       WorkRecordUserLookupService users,
-      ObjectMapper objectMapper) {
+      ObjectMapper objectMapper,
+      @Qualifier("workRecordClock") Clock clock) {
     this.records = records;
+    this.periodReports = periodReports;
     this.users = users;
     this.objectMapper = objectMapper;
+    this.clock = clock;
   }
 
   public WorkRecordGenerationRequest recordSummary(
@@ -54,54 +61,70 @@ public class AiInputBuilder {
   public WorkRecordGenerationRequest monthlyReport(
       String tenantId, LocalDate month, UserPrincipal principal, String traceId) {
     LocalDate start = month.withDayOfMonth(1);
-    LocalDate end = start.plusMonths(1);
-    List<WorkRecord> samples = new ArrayList<>();
-    Map<String, Long> statusCounts = new LinkedHashMap<>();
-    long recordCount = 0;
-    for (int page = 1; ; page++) {
-      RecordQuery query =
-          new RecordQuery(
-              page,
-              PAGE_SIZE,
-              null,
-              null,
-              List.of(),
-              null,
-              start.atStartOfDay().atOffset(ZoneOffset.UTC),
-              end.atStartOfDay().atOffset(ZoneOffset.UTC),
-              null,
-              null,
-              false,
-              null,
-              List.of(),
-              "recordTime",
-              "asc",
-              "all",
-              null,
-              null);
-      var result = records.page(tenantId, query, principal);
-      for (WorkRecord record : result.items()) {
-        recordCount++;
-        statusCounts.merge(record.status().value(), 1L, Long::sum);
-        if (samples.size() < MAX_MONTH_SAMPLES) {
-          samples.add(record);
-        }
-      }
-      if (result.items().isEmpty() || recordCount >= result.total()) {
-        break;
-      }
-    }
+    return periodReport(
+        new PeriodRequestContext(
+            tenantId,
+            start,
+            start.plusMonths(1),
+            "monthly_report",
+            "work-record-monthly-v1",
+            start.toString().substring(0, 7),
+            principal.id(),
+            traceId),
+        principal);
+  }
+
+  public WorkRecordGenerationRequest weeklyReport(
+      String tenantId, LocalDate weekStart, UserPrincipal principal, String traceId) {
+    return periodReport(
+        new PeriodRequestContext(
+            tenantId,
+            weekStart,
+            weekStart.plusWeeks(1),
+            "weekly_report",
+            "work-record-weekly-v1",
+            weekStart.toString(),
+            principal.id(),
+            traceId),
+        principal);
+  }
+
+  private WorkRecordGenerationRequest periodReport(
+      PeriodRequestContext context, UserPrincipal principal) {
+    var snapshot =
+        periodReports.snapshot(
+            context.tenantId(),
+            context.start().atStartOfDay(clock.getZone()).toOffsetDateTime(),
+            context.end().atStartOfDay(clock.getZone()).toOffsetDateTime(),
+            MAX_PERIOD_SAMPLES);
+    List<WorkRecord> samples = records.visible(context.tenantId(), snapshot.samples(), principal);
+    long recordCount = snapshot.recordCount();
     Map<String, Object> statistics = new LinkedHashMap<>();
     statistics.put("recordCount", recordCount);
-    statistics.put("statusCounts", Map.copyOf(statusCounts));
+    statistics.put(
+        "statusCounts",
+        snapshot.statusCounts().stream()
+            .collect(
+                java.util.stream.Collectors.toMap(
+                    AiPeriodReportRepository.Count::key,
+                    AiPeriodReportRepository.Count::count,
+                    Long::sum,
+                    LinkedHashMap::new)));
     statistics.put("truncated", recordCount > samples.size());
-    Map<String, String> ownerNames = ownerNames(tenantId, samples);
+    List<Entry<String, Long>> topOwners =
+        snapshot.ownerCounts().stream()
+            .map(value -> Map.entry(value.key(), value.count()))
+            .toList();
+    LinkedHashSet<String> relevantOwnerIds = new LinkedHashSet<>();
+    samples.stream().map(WorkRecord::ownerId).forEach(relevantOwnerIds::add);
+    topOwners.stream().map(Entry::getKey).forEach(relevantOwnerIds::add);
+    Map<String, String> ownerNames = ownerNames(context.tenantId(), relevantOwnerIds);
+    statistics.put("ownerCounts", ownerCounts(topOwners, ownerNames));
     List<WorkRecordGenerationRequest.RecordItem> items = new ArrayList<>();
-    var context = new MonthlyRequestContext(tenantId, start, end, principal.id(), traceId);
     for (WorkRecord sample : samples) {
       items.add(item(sample, ownerNames));
       statistics.put("sampledRecordCount", items.size());
-      if (!fitsMonthlyLimit(context, items, statistics)) {
+      if (!fitsPeriodLimit(context, items, statistics)) {
         items.removeLast();
         break;
       }
@@ -112,43 +135,66 @@ public class AiInputBuilder {
   }
 
   private WorkRecordGenerationRequest request(
-      MonthlyRequestContext context,
+      PeriodRequestContext context,
       List<WorkRecordGenerationRequest.RecordItem> items,
       Map<String, Object> statistics) {
     return new WorkRecordGenerationRequest(
         "work-record-generation.v1",
-        "monthly_report",
+        context.generationType(),
         context.tenantId(),
-        context.start().toString().substring(0, 7),
+        context.resourceId(),
         context.actorId(),
         context.start(),
         context.end().minusDays(1),
         "zh-CN",
-        "work-record-monthly-v1",
+        context.promptVersion(),
         items,
         statistics,
         context.traceId());
   }
 
-  private boolean fitsMonthlyLimit(
-      MonthlyRequestContext context,
+  private boolean fitsPeriodLimit(
+      PeriodRequestContext context,
       List<WorkRecordGenerationRequest.RecordItem> items,
       Map<String, Object> statistics) {
     try {
       return objectMapper.writeValueAsBytes(request(context, items, statistics)).length
-          <= MAX_MONTH_INPUT_BYTES;
+          <= MAX_PERIOD_INPUT_BYTES;
     } catch (Exception ex) {
       throw new IllegalStateException("failed to size AI input", ex);
     }
   }
 
-  private Map<String, String> ownerNames(String tenantId, List<WorkRecord> source) {
+  private List<Map<String, Object>> ownerCounts(
+      List<Entry<String, Long>> owners, Map<String, String> ownerNames) {
+    List<Map<String, Object>> result = new ArrayList<>();
+    owners.forEach(
+        owner -> {
+          String ownerId = owner.getKey();
+          String displayName =
+              ownerId.isEmpty() ? "anonymous" : ownerNames.getOrDefault(ownerId, "anonymous");
+          Map<String, Object> item = new LinkedHashMap<>();
+          item.put("ownerId", ownerId);
+          item.put("displayName", displayName);
+          item.put("count", owner.getValue());
+          result.add(Map.copyOf(item));
+        });
+    return List.copyOf(result);
+  }
+
+  private Map<String, String> ownerNames(String tenantId, Iterable<String> source) {
     LinkedHashSet<String> ownerIds = new LinkedHashSet<>();
-    source.stream()
-        .map(WorkRecord::ownerId)
-        .filter(value -> value != null && !value.isBlank())
-        .forEach(ownerIds::add);
+    source.forEach(
+        value -> {
+          if (value != null && !value.isBlank()) {
+            ownerIds.add(value);
+          }
+        });
     return users.displayNames(tenantId, ownerIds);
+  }
+
+  private Map<String, String> ownerNames(String tenantId, List<WorkRecord> source) {
+    return ownerNames(tenantId, source.stream().map(WorkRecord::ownerId).toList());
   }
 
   private WorkRecordGenerationRequest.RecordItem item(
@@ -175,6 +221,13 @@ public class AiInputBuilder {
     }
   }
 
-  private record MonthlyRequestContext(
-      String tenantId, LocalDate start, LocalDate end, String actorId, String traceId) {}
+  private record PeriodRequestContext(
+      String tenantId,
+      LocalDate start,
+      LocalDate end,
+      String generationType,
+      String promptVersion,
+      String resourceId,
+      String actorId,
+      String traceId) {}
 }

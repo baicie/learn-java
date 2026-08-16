@@ -1,5 +1,30 @@
-# 本地覆盖：修复 agent 端口与 compose 端口映射不一致（容器内监听 9008）
+# 本地覆盖：
+#   1) 修复 agent 端口与 compose 端口映射不一致（容器内监听 9008）
+#   2) 补充 Redis 服务（Spring Boot 自动配置需要，即使 QUOTA_BACKEND=memory 也会初始化 Redis 连接）
+#   3) 让 aegisops-app 通过 AIOPS_REDIS_HOST=redis 访问同网络内的 Redis
 services:
   aiops-agent:
     environment:
       AIOPS_AGENT_PORT: "9008"
+
+  redis:
+    image: redis:7-alpine
+    container_name: aegisops-redis
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - core_redis_data:/data
+    networks:
+      - app-db
+    restart: unless-stopped
+
+  aegisops-app:
+    environment:
+      # 注意: 容器内 SPRING_PROFILES_ACTIVE=private (非 prod)
+      # application.yml 未定义 spring.data.redis.*，prod profile 又不生效，导致 Spring Boot 退化为 localhost:6379
+      # 用 Spring Boot 原生的 SPRING_DATA_REDIS_* 环境变量覆盖所有 profile
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: "6379"
+      AIOPS_REDIS_HEALTH_ENABLED: "true"
+
+volumes:
+  core_redis_data:

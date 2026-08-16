@@ -1,3 +1,5 @@
+import type { AuthorizationPrincipal } from '@/auth/authorization-types'
+import { canAccessWorkRecordOperations } from '@/auth/work-record-access'
 import {
   BellRing,
   CalendarDays,
@@ -21,6 +23,7 @@ export type NavigationItem = {
   to?: string
   icon?: React.ComponentType<{ className?: string }>
   anyPermissions?: string[]
+  isAllowed?: (principal: AuthorizationPrincipal | null) => boolean
   children?: NavigationItem[]
 }
 
@@ -80,12 +83,7 @@ export const navigation: NavigationItem[] = [
         titleKey: 'nav.workRecords.operations',
         to: '/work-records/operations',
         icon: ChartNoAxesCombined,
-        anyPermissions: [
-          'work-record:analytics',
-          'work-record:handover',
-          'work-record:ai:generate',
-          'work-record:approval:act',
-        ],
+        isAllowed: canAccessWorkRecordOperations,
       },
     ],
   },

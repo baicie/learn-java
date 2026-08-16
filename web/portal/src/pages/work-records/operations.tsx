@@ -5,8 +5,17 @@ import { Activity, Boxes, ClipboardCheck, UsersRound } from 'lucide-react'
 import {
   actOnApprovalTask,
   requestMonthlyAiReport,
+  requestWeeklyAiReport,
+  reviewAiGeneration,
+  type AiGeneration,
 } from '@/api/work-records/extensions'
-import { formatDateTime } from '@/lib/date-format'
+import { useAuthStore } from '@/stores/auth-store'
+import {
+  formatDateTime,
+  startOfIsoWeek,
+  toCalendarDate,
+  toLocalOffsetDateTime,
+} from '@/lib/date-format'
 import { useWorkRecordOperations } from '@/hooks/work-records/use-work-record-operations'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -35,7 +44,10 @@ import { AiGenerationNotice } from '@/components/work-records/runtime/ai-generat
 function defaultDates() {
   const now = new Date()
   const start = new Date(now.getFullYear(), now.getMonth(), 1)
-  return { from: start.toISOString(), to: now.toISOString() }
+  return {
+    from: toLocalOffsetDateTime(start),
+    to: toLocalOffsetDateTime(now),
+  }
 }
 
 export function WorkRecordOperationsPage() {
@@ -43,14 +55,29 @@ export function WorkRecordOperationsPage() {
   const navigate = useNavigate()
   const search = useSearch({ strict: false }) as { from?: string; to?: string }
   const defaults = useMemo(() => defaultDates(), [])
-  const from = search.from || defaults.from
-  const to = search.to || defaults.to
+  const from = validDateOrDefault(search.from, defaults.from)
+  const to = validDateOrDefault(search.to, defaults.to)
+  const tenantId = useAuthStore(
+    (state) => state.auth.principal?.tenantId ?? null
+  )
   const queries = useWorkRecordOperations(from, to)
-  const generateMonthly = useMutation({
-    mutationFn: () => requestMonthlyAiReport(from),
+  const fromDate = toCalendarDate(from)
+  const toDate = toCalendarDate(to)
+  const weekStart = startOfIsoWeek(from)
+  const month = fromDate.slice(0, 7)
+  const generateWeekly = useMutation({
+    mutationFn: () => requestWeeklyAiReport(weekStart),
     onSuccess: async () => {
       await queryClient.invalidateQueries({
-        queryKey: ['work-record-monthly-ai', from.slice(0, 7)],
+        queryKey: ['work-record-weekly-ai', tenantId, weekStart],
+      })
+    },
+  })
+  const generateMonthly = useMutation({
+    mutationFn: () => requestMonthlyAiReport(fromDate),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ['work-record-monthly-ai', tenantId, month],
       })
     },
   })
@@ -59,8 +86,22 @@ export function WorkRecordOperationsPage() {
       actOnApprovalTask(id, approved, approved ? '同意' : '拒绝'),
     onSuccess: async () => {
       await queryClient.invalidateQueries({
-        queryKey: ['work-record-approval-tasks'],
+        queryKey: ['work-record-approval-tasks', tenantId],
       })
+    },
+  })
+  const reviewReport = useMutation({
+    mutationFn: ({ id, accepted }: { id: string; accepted: boolean }) =>
+      reviewAiGeneration(id, accepted),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ['work-record-weekly-ai', tenantId, weekStart],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ['work-record-monthly-ai', tenantId, month],
+        }),
+      ])
     },
   })
   const error = queries.statistics.error ?? queries.workload.error
@@ -69,7 +110,10 @@ export function WorkRecordOperationsPage() {
     if (!value) return
     void navigate({
       to: '/work-records/operations',
-      search: { ...search, [key]: new Date(`${value}T00:00:00`).toISOString() },
+      search: {
+        ...search,
+        [key]: toLocalOffsetDateTime(new Date(`${value}T00:00:00`)),
+      },
     } as never)
   }
 
@@ -99,7 +143,7 @@ export function WorkRecordOperationsPage() {
             <Input
               id='analytics-from'
               type='date'
-              value={from.slice(0, 10)}
+              value={fromDate}
               onChange={(event) => changeDate('from', event.target.value)}
             />
           </div>
@@ -108,7 +152,7 @@ export function WorkRecordOperationsPage() {
             <Input
               id='analytics-to'
               type='date'
-              value={to.slice(0, 10)}
+              value={toDate}
               onChange={(event) => changeDate('to', event.target.value)}
             />
           </div>
@@ -244,43 +288,32 @@ export function WorkRecordOperationsPage() {
           </Card>
         </div>
       </section>
-      <PermissionGate all={['work-record:ai:generate', 'work-record:read:all']}>
-        <Card>
-          <CardHeader className='flex-row items-start justify-between gap-4'>
-            <div>
-              <CardTitle>AI 月报</CardTitle>
-              <CardDescription>
-                基于 {from.slice(0, 7)} 的可见工作记录生成待审核草稿。
-              </CardDescription>
-            </div>
-            <Button
-              disabled={generateMonthly.isPending}
-              onClick={() => generateMonthly.mutate()}
-            >
-              {generateMonthly.isPending ? '创建中…' : '生成月报'}
-            </Button>
-          </CardHeader>
-          <CardContent className='space-y-3'>
-            {queries.monthlyReports.data?.map((item) => (
-              <div key={item.id} className='rounded-md border p-4'>
-                <div className='mb-2 flex items-center justify-between gap-3'>
-                  <span className='text-sm font-medium'>{item.resourceId}</span>
-                  <Badge variant='secondary'>{item.status}</Badge>
-                </div>
-                {item.outputMarkdown && (
-                  <pre className='font-sans text-sm leading-6 whitespace-pre-wrap'>
-                    {item.outputMarkdown}
-                  </pre>
-                )}
-                <AiGenerationNotice generation={item} />
-              </div>
-            ))}
-            {queries.monthlyReports.data?.length === 0 && (
-              <p className='text-sm text-muted-foreground'>本月尚未生成月报</p>
-            )}
-          </CardContent>
-        </Card>
-      </PermissionGate>
+      {queries.canReadPeriodReports && (
+        <section className='grid gap-4 xl:grid-cols-2'>
+          <ReportCard
+            title='AI 周报'
+            description={`基于 ${weekStart} 起一周的可见工作记录生成待审核草稿。`}
+            actionLabel='生成周报'
+            pending={generateWeekly.isPending}
+            canGenerate={queries.canGeneratePeriodReports}
+            reviewPending={reviewReport.isPending}
+            generations={queries.weeklyReports.data}
+            onGenerate={() => generateWeekly.mutate()}
+            onReview={(id, accepted) => reviewReport.mutate({ id, accepted })}
+          />
+          <ReportCard
+            title='AI 月报'
+            description={`基于 ${month} 的可见工作记录生成待审核草稿。`}
+            actionLabel='生成月报'
+            pending={generateMonthly.isPending}
+            canGenerate={queries.canGeneratePeriodReports}
+            reviewPending={reviewReport.isPending}
+            generations={queries.monthlyReports.data}
+            onGenerate={() => generateMonthly.mutate()}
+            onReview={(id, accepted) => reviewReport.mutate({ id, accepted })}
+          />
+        </section>
+      )}
       <PermissionGate any={['work-record:approval:act']}>
         <Card>
           <CardHeader>
@@ -335,6 +368,94 @@ export function WorkRecordOperationsPage() {
         </Card>
       </PermissionGate>
     </main>
+  )
+}
+
+function validDateOrDefault(value: string | undefined, fallback: string) {
+  if (!value) return fallback
+  try {
+    toCalendarDate(value)
+    return value
+  } catch {
+    return fallback
+  }
+}
+
+function ReportCard({
+  title,
+  description,
+  actionLabel,
+  pending,
+  canGenerate,
+  reviewPending,
+  generations,
+  onGenerate,
+  onReview,
+}: {
+  title: string
+  description: string
+  actionLabel: string
+  pending: boolean
+  canGenerate: boolean
+  reviewPending: boolean
+  generations?: AiGeneration[]
+  onGenerate: () => void
+  onReview: (id: string, accepted: boolean) => void
+}) {
+  return (
+    <Card>
+      <CardHeader className='flex-row items-start justify-between gap-4'>
+        <div>
+          <CardTitle>{title}</CardTitle>
+          <CardDescription>{description}</CardDescription>
+        </div>
+        {canGenerate && (
+          <Button disabled={pending} onClick={onGenerate}>
+            {pending ? '创建中…' : actionLabel}
+          </Button>
+        )}
+      </CardHeader>
+      <CardContent className='flex flex-col gap-3'>
+        {generations?.map((item) => (
+          <div key={item.id} className='rounded-md border p-4'>
+            <div className='mb-2 flex items-center justify-between gap-3'>
+              <span className='text-sm font-medium'>{item.resourceId}</span>
+              <Badge variant='secondary'>{item.status}</Badge>
+            </div>
+            {item.outputMarkdown && (
+              <pre className='font-sans text-sm leading-6 whitespace-pre-wrap'>
+                {item.outputMarkdown}
+              </pre>
+            )}
+            <AiGenerationNotice generation={item} />
+            {item.status === 'success' && (
+              <PermissionGate any={['work-record:ai:review']}>
+                <div className='mt-3 flex gap-2'>
+                  <Button
+                    size='sm'
+                    disabled={reviewPending}
+                    onClick={() => onReview(item.id, true)}
+                  >
+                    采纳
+                  </Button>
+                  <Button
+                    size='sm'
+                    variant='outline'
+                    disabled={reviewPending}
+                    onClick={() => onReview(item.id, false)}
+                  >
+                    拒绝
+                  </Button>
+                </div>
+              </PermissionGate>
+            )}
+          </div>
+        ))}
+        {generations?.length === 0 && (
+          <p className='text-sm text-muted-foreground'>当前周期尚未生成报告</p>
+        )}
+      </CardContent>
+    </Card>
   )
 }
 

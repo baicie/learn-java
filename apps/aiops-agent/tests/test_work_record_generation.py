@@ -53,6 +53,67 @@ def test_monthly_report_counts_records() -> None:
     assert "done：1" in response.markdown
 
 
+def test_weekly_report_uses_weekly_title() -> None:
+    response = asyncio.run(WorkRecordGenerationService(settings).generate(
+        WorkRecordGenerateRequest(
+            generationType="weekly_report",
+            tenantId="tenant-1",
+            resourceId="2026-07-13",
+            periodStart=date(2026, 7, 13),
+            periodEnd=date(2026, 7, 19),
+            records=[],
+            traceId="trace-weekly",
+        )))
+
+    assert response.markdown.startswith("# 工作周报")
+    assert "统计周期：2026-07-13 至 2026-07-19" in response.markdown
+
+
+def test_period_report_uses_authoritative_statistics_when_samples_are_truncated() -> None:
+    response = asyncio.run(WorkRecordGenerationService(settings).generate(
+        WorkRecordGenerateRequest(
+            generationType="weekly_report",
+            tenantId="tenant-1",
+            resourceId="2026-07-13",
+            periodStart=date(2026, 7, 13),
+            periodEnd=date(2026, 7, 19),
+            records=[],
+            statistics={
+                "recordCount": 42,
+                "statusCounts": {"done": 40, "draft": 2},
+                "ownerCounts": [
+                    {"ownerId": "user-1", "displayName": "Alex", "count": 32},
+                    {"ownerId": "user-2", "displayName": "Alex", "count": 10},
+                ],
+            },
+            traceId="trace-weekly-statistics",
+        )))
+
+    assert "记录总数：42" in response.markdown
+    assert "done：40" in response.markdown
+    assert "draft：2" in response.markdown
+    assert "Alex (user-1)：32" in response.markdown
+    assert "Alex (user-2)：10" in response.markdown
+    assert '- **statusCounts**：{"done": 40, "draft": 2}' in response.markdown
+    assert "```" not in response.markdown
+
+
+def test_period_report_keeps_legacy_owner_count_mapping_compatible() -> None:
+    response = asyncio.run(WorkRecordGenerationService(settings).generate(
+        WorkRecordGenerateRequest(
+            generationType="monthly_report",
+            tenantId="tenant-1",
+            resourceId="2026-07",
+            periodStart=date(2026, 7, 1),
+            periodEnd=date(2026, 7, 31),
+            records=[],
+            statistics={"ownerCounts": {"Alice": 2}},
+            traceId="trace-legacy-owner-statistics",
+        )))
+
+    assert "Alice：2" in response.markdown
+
+
 def _dify_settings(**overrides: object) -> Settings:
     values = {
         "work_record_provider": "dify",
@@ -152,7 +213,7 @@ def test_dify_failure_returns_explicit_deterministic_fallback() -> None:
 
     assert response.provider == "deterministic"
     assert response.model == "langgraph-deterministic"
-    assert "记录总数：0" in response.markdown
+    assert "记录总数：42" in response.markdown
     assert response.warnings == ["Dify 生成失败，已使用确定性模板。"]
     assert response.fallbackReason == "http_401"
     assert response.providerRunId is None

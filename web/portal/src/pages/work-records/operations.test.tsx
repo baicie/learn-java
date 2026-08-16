@@ -8,6 +8,8 @@ import { WorkRecordOperationsPage } from './operations'
 const api = vi.hoisted(() => ({
   actOnApprovalTask: vi.fn(async () => ({ status: 'approved' })),
   requestMonthlyAiReport: vi.fn(async () => ({})),
+  requestWeeklyAiReport: vi.fn(async () => ({})),
+  reviewAiGeneration: vi.fn(async () => ({})),
 }))
 
 vi.mock('@/api/work-records/extensions', () => api)
@@ -19,65 +21,90 @@ vi.mock('@tanstack/react-router', () => ({
   }),
 }))
 vi.mock('@/hooks/work-records/use-work-record-operations', () => ({
-  useWorkRecordOperations: () => ({
-    statistics: {
-      data: { totalRecords: 12, completedRecords: 9, distinctOwners: 3 },
-      error: null,
-      isLoading: false,
-    },
-    workload: {
-      data: {
-        workdayCount: 23,
-        users: [
+  useWorkRecordOperations: () => {
+    const principal = useAuthStore.getState().auth.principal
+    const permissions = principal?.permissions ?? []
+    const hasTenantWideRead =
+      permissions.includes('work-record:read:all') &&
+      principal?.dataScopes['work-record'] === 'ALL'
+    return {
+      statistics: {
+        data: { totalRecords: 12, completedRecords: 9, distinctOwners: 3 },
+        error: null,
+        isLoading: false,
+      },
+      workload: {
+        data: {
+          workdayCount: 23,
+          users: [
+            {
+              userId: 'user-1',
+              displayName: 'Alice',
+              recordCount: 12,
+              completedCount: 9,
+              numericWorkload: 30,
+              recordsPerWorkday: 0.5,
+            },
+          ],
+        },
+        error: null,
+        isLoading: false,
+      },
+      handovers: {
+        data: [
           {
-            userId: 'user-1',
-            displayName: 'Alice',
-            recordCount: 12,
-            completedCount: 9,
-            numericWorkload: 30,
-            recordsPerWorkday: 0.5,
+            id: 'handover-1',
+            fromUserId: 'Alice',
+            toUserId: 'Bob',
+            status: 'submitted',
+            summary: '夜班交接',
           },
         ],
       },
-      error: null,
-      isLoading: false,
-    },
-    handovers: {
-      data: [
-        {
-          id: 'handover-1',
-          fromUserId: 'Alice',
-          toUserId: 'Bob',
-          status: 'submitted',
-          summary: '夜班交接',
-        },
-      ],
-    },
-    market: {
-      data: [{ id: 'market-1', name: '标准日报', versionNo: 2 }],
-    },
-    monthlyReports: {
-      data: [
-        {
-          id: 'ai-1',
-          resourceId: '2026-07',
-          status: 'success',
-          outputMarkdown: '## 七月月报',
-          warningsJson: '["Dify 月报生成失败，已使用确定性模板"]',
-          fallbackReason: 'timeout',
-        },
-      ],
-    },
-    approvals: {
-      data: [
-        {
-          id: 'task-1',
-          recordTitle: '生产日报',
-          dueAt: '2026-07-15T00:00:00Z',
-        },
-      ],
-    },
-  }),
+      market: {
+        data: [{ id: 'market-1', name: '标准日报', versionNo: 2 }],
+      },
+      monthlyReports: {
+        data: [
+          {
+            id: 'ai-1',
+            resourceId: '2026-07',
+            status: 'success',
+            outputMarkdown: '## 七月月报',
+            warningsJson: '["Dify 月报生成失败，已使用确定性模板"]',
+            fallbackReason: 'timeout',
+          },
+        ],
+      },
+      weeklyReports: {
+        data: [
+          {
+            id: 'ai-weekly-1',
+            resourceId: '2026-06-29',
+            status: 'success',
+            outputMarkdown: '## 本周周报',
+            warningsJson: '[]',
+            fallbackReason: null,
+          },
+        ],
+      },
+      approvals: {
+        data: [
+          {
+            id: 'task-1',
+            recordTitle: '生产日报',
+            dueAt: '2026-07-15T00:00:00Z',
+          },
+        ],
+      },
+      canReadPeriodReports:
+        hasTenantWideRead &&
+        (permissions.includes('work-record:ai:generate') ||
+          permissions.includes('work-record:ai:review')),
+      canGeneratePeriodReports:
+        hasTenantWideRead && permissions.includes('work-record:ai:generate'),
+    }
+  },
 }))
 
 function authorize(
@@ -85,9 +112,11 @@ function authorize(
     'work-record:analytics',
     'work-record:handover',
     'work-record:ai:generate',
+    'work-record:ai:review',
     'work-record:read:all',
     'work-record:approval:act',
-  ]
+  ],
+  dataScope: 'SELF' | 'ALL' = 'ALL'
 ) {
   const principal: AuthorizationPrincipal = {
     userId: 'user-1',
@@ -96,7 +125,7 @@ function authorize(
     displayName: 'Alice',
     roles: ['record_admin'],
     permissions,
-    dataScopes: {},
+    dataScopes: { 'work-record': dataScope },
   }
   useAuthStore.getState().auth.setPrincipal(principal)
 }
@@ -107,7 +136,7 @@ describe('WorkRecordOperationsPage', () => {
     vi.clearAllMocks()
   })
 
-  it('renders analytics, handover, market, monthly report and approval actions', async () => {
+  it('renders analytics, handover, market, weekly/monthly reports and approval actions', async () => {
     const screen = await render(
       <QueryClientProvider client={new QueryClient()}>
         <WorkRecordOperationsPage />
@@ -121,6 +150,7 @@ describe('WorkRecordOperationsPage', () => {
     await expect.element(screen.getByText('夜班交接')).toBeVisible()
     await expect.element(screen.getByText('标准日报')).toBeVisible()
     await expect.element(screen.getByText('## 七月月报')).toBeVisible()
+    await expect.element(screen.getByText('## 本周周报')).toBeVisible()
     await expect
       .element(screen.getByText('Dify 月报生成失败，已使用确定性模板'))
       .toBeVisible()
@@ -128,15 +158,33 @@ describe('WorkRecordOperationsPage', () => {
     await expect.element(screen.getByText('生产日报')).toBeVisible()
 
     await screen.getByRole('button', { name: '生成月报' }).click()
-    expect(api.requestMonthlyAiReport).toHaveBeenCalledWith(
-      '2026-07-01T00:00:00.000Z'
-    )
+    expect(api.requestMonthlyAiReport).toHaveBeenCalledWith('2026-07-01')
+    await screen.getByRole('button', { name: '生成周报' }).click()
+    expect(api.requestWeeklyAiReport).toHaveBeenCalledWith('2026-06-29')
+    await screen.getByRole('button', { name: '采纳' }).first().click()
+    expect(api.reviewAiGeneration).toHaveBeenCalledWith('ai-weekly-1', true)
     await screen.getByRole('button', { name: '同意' }).click()
     expect(api.actOnApprovalTask).toHaveBeenCalledWith('task-1', true, '同意')
   })
 
-  it('hides monthly reports when the user cannot read tenant-wide records', async () => {
-    authorize(['work-record:ai:generate'])
+  it('lets a tenant-wide reviewer inspect reports without generation actions', async () => {
+    authorize(['work-record:ai:review', 'work-record:read:all'])
+    const screen = await render(
+      <QueryClientProvider client={new QueryClient()}>
+        <WorkRecordOperationsPage />
+      </QueryClientProvider>
+    )
+
+    await expect.element(screen.getByText('## 七月月报')).toBeVisible()
+    await expect
+      .element(screen.getByRole('button', { name: '生成月报' }))
+      .not.toBeInTheDocument()
+    await screen.getByRole('button', { name: '拒绝' }).first().click()
+    expect(api.reviewAiGeneration).toHaveBeenCalledWith('ai-weekly-1', false)
+  })
+
+  it('hides period reports when read:all is paired with SELF scope', async () => {
+    authorize(['work-record:ai:generate', 'work-record:read:all'], 'SELF')
     const screen = await render(
       <QueryClientProvider client={new QueryClient()}>
         <WorkRecordOperationsPage />
@@ -145,6 +193,9 @@ describe('WorkRecordOperationsPage', () => {
 
     await expect
       .element(screen.getByRole('button', { name: '生成月报' }))
+      .not.toBeInTheDocument()
+    await expect
+      .element(screen.getByRole('button', { name: '生成周报' }))
       .not.toBeInTheDocument()
   })
 })

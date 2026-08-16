@@ -207,8 +207,7 @@ class DifyWorkflowClient:
         if not isinstance(outputs, dict):
             raise DifyWorkflowError("invalid_outputs", "Dify outputs must be an object")
 
-        markdown = outputs.get("markdown")
-        warnings = outputs.get("warnings", [])
+        markdown, warnings, workflow_version = self._extract_outputs(outputs)
         if (
             not isinstance(markdown, str)
             or not markdown.strip()
@@ -222,7 +221,6 @@ class DifyWorkflowClient:
         ):
             raise DifyWorkflowError("invalid_outputs", "Dify outputs are invalid")
 
-        workflow_version = outputs.get("workflow_version")
         expected_version = self._settings.dify_work_record_workflow_version.strip()
         if expected_version and workflow_version != expected_version:
             raise DifyWorkflowError(
@@ -265,6 +263,29 @@ class DifyWorkflowClient:
     @staticmethod
     def _optional_text(value: object) -> str | None:
         return value.strip() if isinstance(value, str) and value.strip() else None
+
+    @staticmethod
+    def _extract_outputs(outputs: dict[str, Any]) -> tuple[Any, Any, Any]:
+        """Read the executed branch from Dify workflows with multiple End nodes."""
+        prefixes = ("summary_", "period_", "weekly_", "monthly_", "")
+        for prefix in prefixes:
+            markdown_key = f"{prefix}markdown"
+            markdown = outputs.get(markdown_key)
+            if isinstance(markdown, str) and markdown.strip():
+                return (
+                    markdown,
+                    outputs.get(f"{prefix}warnings", []),
+                    outputs.get(f"{prefix}workflow_version"),
+                )
+        for prefix in prefixes:
+            markdown_key = f"{prefix}markdown"
+            if markdown_key in outputs:
+                return (
+                    outputs.get(markdown_key),
+                    outputs.get(f"{prefix}warnings", []),
+                    outputs.get(f"{prefix}workflow_version"),
+                )
+        return None, [], None
 
     @staticmethod
     def _response_has_run_id(response: httpx.Response) -> bool:

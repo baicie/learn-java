@@ -162,6 +162,15 @@ public class WorkRecordQueryService {
     return fieldPolicies == null ? record : visible(tenantId, record, user);
   }
 
+  public List<WorkRecord> visible(String tenantId, List<WorkRecord> source, UserPrincipal user) {
+    permissionService.requireQueryAccess(user);
+    source.forEach(value -> permissionService.requireRead(user, value));
+    if (fieldPolicies == null) {
+      return List.copyOf(source);
+    }
+    return source.stream().map(value -> visible(tenantId, value, user)).toList();
+  }
+
   private WorkRecord visible(String tenantId, WorkRecord source, UserPrincipal user) {
     String json =
         fieldPolicies.filterReadableJson(

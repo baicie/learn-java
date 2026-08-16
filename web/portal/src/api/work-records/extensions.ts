@@ -280,6 +280,22 @@ export async function requestMonthlyAiReport(month: string) {
   return apiResponseSchema(aiGenerationSchema).parse(data).data
 }
 
+export async function listWeeklyAiGenerations(week: string) {
+  const { data } = await apiClient.get('/api/work-record/ai-generations', {
+    params: { resourceType: 'tenant_week', resourceId: week.slice(0, 10) },
+  })
+  return apiResponseSchema(z.array(aiGenerationSchema)).parse(data).data
+}
+
+export async function requestWeeklyAiReport(week: string) {
+  const { data } = await apiClient.post(
+    '/api/work-record/ai-generations/weekly',
+    undefined,
+    { params: { week: week.slice(0, 10) } }
+  )
+  return apiResponseSchema(aiGenerationSchema).parse(data).data
+}
+
 export async function listPendingApprovalTasks() {
   const { data } = await apiClient.get(
     '/api/work-record/workflow/approval-tasks'

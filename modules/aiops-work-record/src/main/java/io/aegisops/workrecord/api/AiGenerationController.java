@@ -4,7 +4,6 @@ import io.aegisops.common.api.ApiResponse;
 import io.aegisops.common.tenant.TenantContext;
 import io.aegisops.security.UserPrincipal;
 import io.aegisops.workrecord.application.service.AiGenerationService;
-import io.aegisops.workrecord.domain.model.AiGeneration;
 import java.time.LocalDate;
 import java.util.List;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -33,36 +32,51 @@ public class AiGenerationController {
 
   @PostMapping("/records/{recordId}/summary")
   @PreAuthorize("hasAuthority('work-record:ai:generate')")
-  public ApiResponse<AiGeneration> summary(
+  public ApiResponse<AiGenerationResponse> summary(
       @PathVariable String recordId, @AuthenticationPrincipal UserPrincipal principal) {
     return ApiResponse.ok(
-        service.requestRecordSummary(TenantContext.requireTenantId(), recordId, principal));
+        AiGenerationResponse.from(
+            service.requestRecordSummary(TenantContext.requireTenantId(), recordId, principal)));
   }
 
   @PostMapping("/monthly")
   @PreAuthorize("hasAuthority('work-record:ai:generate') and hasAuthority('work-record:read:all')")
-  public ApiResponse<AiGeneration> monthly(
+  public ApiResponse<AiGenerationResponse> monthly(
       @RequestParam LocalDate month, @AuthenticationPrincipal UserPrincipal principal) {
     return ApiResponse.ok(
-        service.requestMonthlyReport(TenantContext.requireTenantId(), month, principal));
+        AiGenerationResponse.from(
+            service.requestMonthlyReport(TenantContext.requireTenantId(), month, principal)));
+  }
+
+  @PostMapping("/weekly")
+  @PreAuthorize("hasAuthority('work-record:ai:generate') and hasAuthority('work-record:read:all')")
+  public ApiResponse<AiGenerationResponse> weekly(
+      @RequestParam LocalDate week, @AuthenticationPrincipal UserPrincipal principal) {
+    return ApiResponse.ok(
+        AiGenerationResponse.from(
+            service.requestWeeklyReport(TenantContext.requireTenantId(), week, principal)));
   }
 
   @GetMapping
-  @PreAuthorize("hasAuthority('work-record:ai:generate')")
-  public ApiResponse<List<AiGeneration>> list(
+  @PreAuthorize("hasAuthority('work-record:ai:generate') or hasAuthority('work-record:ai:review')")
+  public ApiResponse<List<AiGenerationResponse>> list(
       @RequestParam String resourceType,
       @RequestParam String resourceId,
       @AuthenticationPrincipal UserPrincipal principal) {
     return ApiResponse.ok(
-        service.list(TenantContext.requireTenantId(), resourceType, resourceId, principal));
+        service.list(TenantContext.requireTenantId(), resourceType, resourceId, principal).stream()
+            .map(AiGenerationResponse::from)
+            .toList());
   }
 
   @PostMapping("/{id}/review")
   @PreAuthorize("hasAuthority('work-record:ai:review')")
-  public ApiResponse<AiGeneration> review(
+  public ApiResponse<AiGenerationResponse> review(
       @PathVariable String id,
       @RequestParam boolean accepted,
       @AuthenticationPrincipal UserPrincipal principal) {
-    return ApiResponse.ok(service.review(TenantContext.requireTenantId(), id, accepted, principal));
+    return ApiResponse.ok(
+        AiGenerationResponse.from(
+            service.review(TenantContext.requireTenantId(), id, accepted, principal)));
   }
 }

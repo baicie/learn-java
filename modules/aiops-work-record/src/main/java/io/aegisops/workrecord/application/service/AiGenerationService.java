@@ -11,8 +11,10 @@ import io.aegisops.workrecord.application.port.AiGenerationRepository;
 import io.aegisops.workrecord.domain.model.AiGeneration;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.temporal.TemporalAdjusters;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
@@ -24,24 +26,24 @@ import org.springframework.transaction.annotation.Transactional;
 public class AiGenerationService {
   private final AiGenerationRepository generations;
   private final AiInputBuilder inputs;
-  private final WorkRecordQueryService records;
   private final OutboxWriter outbox;
   private final ObjectMapper objectMapper;
   private final WorkRecordAuditService audit;
+  private final AiGenerationAccessGuard guard;
 
   public AiGenerationService(
       AiGenerationRepository generations,
       AiInputBuilder inputs,
-      WorkRecordQueryService records,
+      AiGenerationAccessGuard guard,
       OutboxWriter outbox,
       ObjectMapper objectMapper,
       WorkRecordAuditService audit) {
     this.generations = generations;
     this.inputs = inputs;
-    this.records = records;
     this.outbox = outbox;
     this.objectMapper = objectMapper;
     this.audit = audit;
+    this.guard = guard;
   }
 
   @Transactional
@@ -65,7 +67,7 @@ public class AiGenerationService {
   public AiGeneration requestMonthlyReport(
       String tenantId, LocalDate month, UserPrincipal principal) {
     requireGenerate(tenantId, principal);
-    requireTenantWideRead(principal);
+    guard.requireTenantWideRead(principal);
     if (month == null) {
       throw new IllegalArgumentException("month is required");
     }
@@ -82,17 +84,41 @@ public class AiGenerationService {
             principal.id()));
   }
 
+  @Transactional
+  public AiGeneration requestWeeklyReport(
+      String tenantId, LocalDate week, UserPrincipal principal) {
+    requireGenerate(tenantId, principal);
+    guard.requireTenantWideRead(principal);
+    if (week == null) {
+      throw new IllegalArgumentException("week is required");
+    }
+    LocalDate start = week.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+    return createOrReuse(
+        new GenerationRequest(
+            tenantId,
+            "weekly_report",
+            "tenant_week",
+            start.toString(),
+            start,
+            start.plusDays(6),
+            inputs.weeklyReport(tenantId, start, principal, Ids.newId()),
+            principal.id()));
+  }
+
   public List<AiGeneration> list(
       String tenantId, String resourceType, String resourceId, UserPrincipal principal) {
-    requireGenerate(tenantId, principal);
     if ("record".equals(resourceType)) {
-      records.get(tenantId, resourceId, principal);
-    } else if ("tenant_month".equals(resourceType)) {
-      requireTenantWideRead(principal);
+      requireGenerate(tenantId, principal);
+      guard.visibleRecord(tenantId, resourceId, principal);
+    } else if ("tenant_week".equals(resourceType) || "tenant_month".equals(resourceType)) {
+      requireGenerateOrReview(tenantId, principal);
+      guard.requireTenantWideRead(principal);
     } else {
       throw new IllegalArgumentException("unsupported AI generation resource type");
     }
-    return generations.listByResource(tenantId, resourceType, resourceId);
+    List<AiGeneration> result = generations.listByResource(tenantId, resourceType, resourceId);
+    result.forEach(generation -> guard.requireInputReadable(generation, principal));
+    return result;
   }
 
   @Transactional
@@ -103,6 +129,9 @@ public class AiGenerationService {
         || !principal.hasPermission(PermissionCodes.WORK_RECORD_AI_REVIEW)) {
       throw new AccessDeniedException("not allowed to review AI result");
     }
+    AiGeneration generation = generations.find(tenantId, id).orElseThrow();
+    guard.requireResourceRead(generation, principal);
+    guard.requireInputReadable(generation, principal);
     if (!generations.review(tenantId, id, accepted ? "accepted" : "rejected", principal.id())) {
       throw new IllegalStateException("AI result cannot be reviewed");
     }
@@ -133,9 +162,7 @@ public class AiGenerationService {
                 request.resourceId(),
                 request.periodStart(),
                 request.periodEnd(),
-                request.type().equals("record_summary")
-                    ? "work-record-summary-v1"
-                    : "work-record-monthly-v1",
+                promptVersion(request.type()),
                 hash,
                 inputJson,
                 request.requestedBy()));
@@ -196,6 +223,15 @@ public class AiGenerationService {
     }
   }
 
+  private static String promptVersion(String type) {
+    return switch (type) {
+      case "record_summary" -> "work-record-summary-v1";
+      case "weekly_report" -> "work-record-weekly-v1";
+      case "monthly_report" -> "work-record-monthly-v1";
+      default -> throw new IllegalArgumentException("unsupported AI generation type");
+    };
+  }
+
   private static void requireGenerate(String tenantId, UserPrincipal principal) {
     if (principal == null
         || !tenantId.equals(principal.tenantId())
@@ -204,9 +240,12 @@ public class AiGenerationService {
     }
   }
 
-  private static void requireTenantWideRead(UserPrincipal principal) {
-    if (!principal.hasPermission(PermissionCodes.WORK_RECORD_READ_ALL)) {
-      throw new AccessDeniedException("tenant-wide AI generation requires read-all permission");
+  private static void requireGenerateOrReview(String tenantId, UserPrincipal principal) {
+    if (principal == null
+        || !tenantId.equals(principal.tenantId())
+        || !(principal.hasPermission(PermissionCodes.WORK_RECORD_AI_GENERATE)
+            || principal.hasPermission(PermissionCodes.WORK_RECORD_AI_REVIEW))) {
+      throw new AccessDeniedException("not allowed to read AI work-record content");
     }
   }
 
