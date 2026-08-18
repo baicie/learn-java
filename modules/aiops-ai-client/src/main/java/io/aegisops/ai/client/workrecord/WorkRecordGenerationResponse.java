@@ -1,5 +1,6 @@
 package io.aegisops.ai.client.workrecord;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -19,6 +20,16 @@ public record WorkRecordGenerationResponse(
     Map<String, Object> raw) {
   public WorkRecordGenerationResponse {
     warnings = warnings == null ? List.of() : List.copyOf(warnings);
-    raw = raw == null ? Map.of() : Map.copyOf(raw);
+    if (raw == null || raw.isEmpty()) {
+      raw = Map.of();
+    } else {
+      Map<String, Object> sanitized = new LinkedHashMap<>(raw.size());
+      for (var e : raw.entrySet()) {
+        if (e.getKey() != null && e.getValue() != null) {
+          sanitized.put(e.getKey(), e.getValue());
+        }
+      }
+      raw = sanitized.isEmpty() ? Map.of() : Map.copyOf(sanitized);
+    }
   }
 }

@@ -348,14 +348,17 @@ workflow:
                 </AEGISOPS_CTX>
 
                 generation_type 为 {{ generation_type }}。
-                当值为 weekly_report 时生成「工作周报」，当值为 monthly_report 时生成「工作月报」。要求：
-                - H1 标题按 generation_type 固定写「工作周报」或「工作月报」。
-                - H2 分节：
-                  1.「本期工作概述」：写明统计周期（使用输入 periodStart / periodEnd）、记录总数（recordCount 或 statistics.recordCount）、总体说明；无信息时写概述占位。
-                  2.「状态分布」：按输入中的状态分布统计值逐条列出，原样使用数字，不得自己重新算。
-                  3.「工作量分布」：只使用 statistics.ownerCounts 的负责人统计数组；每项包含 ownerId、displayName 和 count，必须同时展示 displayName 与 ownerId，并原样使用 count，最多列前 10 项；没有该字段时写「- 暂无负责人统计」。不得合并同名负责人，也不得根据 records 样本重新统计。
-                  4.「系统统计」：按 statistics 顶层字段逐条输出 Markdown 列表；嵌套对象使用单行 JSON 文本，数值不得改写；不得使用代码块。
-                  5.「风险与改进」：如果输入没有明确的风险项，就写默认占位：「- 请结合未完成记录、关联事件与 SLA 超时情况人工复核。」
+                当值为 weekly_report 时生成「工作周报」，当值为 monthly_report 时生成「工作月报」。
+                请面向中文读者撰写：像一位同事写给领导看的工作报告，自然、流畅、有信息量；不要写成系统日志或数据罗列。要求：
+
+                - H1 标题：使用输入的 periodStart / periodEnd 值，周报写「工作周报（periodStart 至 periodEnd）」，月报写「工作月报（periodEnd 所在年-月）」。
+                - H2 分节与写法：
+                  1.「本期工作概述」：2～4 句自然语言。必须包含统计周期与记录总数（statistics.recordCount）；若 records 样本非空，用一两句话概括本期工作的主题方向（从各条 title 归纳）。禁止无依据的评价性表述（如「整体完成情况良好」「成效显著」）；无记录时写「本期暂无工作记录」。
+                  2.「主要工作内容」：逐条列出 records 样本（按 recordTime 先后），每条一行：- **{title}**（{M月d日}，{状态中文}，负责人：{displayName}）；若该条 customData 中存在工作内容、处理过程或结果类字段，另起一行用一句话简述。状态中文映射：done=已办结、processing=进行中、pending=待处理、canceled=已取消，其余状态原样。无样本记录时写「- 本期暂无记录明细」。若 statistics.truncated 为 true，末尾补一行「- 其余 {recordCount 与 sampledRecordCount 之差} 条记录未展开」。
+                  3.「状态分布」：用中文写成一句话或短列表（如「已办结 2 条、进行中 1 条」）；数字必须来自 statistics.statusCounts，禁止重算；不输出原始 JSON。
+                  4.「工作量分布」：仅按 statistics.ownerCounts 列「- {displayName}：N 条」，最多前 10 项；禁止展示 ownerId；不输出原始 JSON；无数据时写「- 暂无负责人统计」。不得合并同名负责人，也不得根据 records 样本重新统计。
+                  5.「风险与关注」：若存在未办结记录（processing、pending 等），逐条列出其 title 提醒跟进；若全部办结或无记录，写「- 本期无未办结事项，请结合关联事件与 SLA 情况人工复核。」
+                - 全文禁止出现：ownerId、UUID、JSON 对象或数组原文（如 {"count":1}）、代码块、表格。
 
       # ---------- 6. End：单条摘要的输出（3 字段：markdown / warnings / workflow_version）----------
       - id: "end-summary"
