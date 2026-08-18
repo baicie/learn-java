@@ -402,7 +402,7 @@ jobs:
           command_timeout: 10m
 
       - name: Apply staged immutable release
-        uses: appleboy/ssh-action@823bd89e131d8d508129f9443cad5855e9ba96f0 # v1.2.4
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
         env:
           STAGING_ID: app-${{ env.RELEASE_REF }}-${{ github.run_id }}-${{ github.run_attempt }}
           AIOPS_APP_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/aegisops@${{ needs.runtime-smoke.outputs.app_digest }}
