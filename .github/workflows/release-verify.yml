@@ -94,7 +94,7 @@ jobs:
 
       - name: Setup Java
         if: steps.scope.outputs.release_required == 'true'
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: ${{ env.JAVA_VERSION }}
